@@ -14573,6 +14573,14 @@ void Game::update(float dt, const InputState &incoming) {
     updateMarchGroups(dt);
     for (Object &o : objects_) {
         if (!o.active) continue;
+        if (o.unit->heroMode && o.hitPoints >= 1.f && o.hitPoints < o.maxHitPoints) {
+            // Original 0x55a760 retains the timer at full health and restores whole HP every two seconds.
+            o.recoveryTime += dt;
+            while (o.recoveryTime >= 2.f && o.hitPoints < o.maxHitPoints) {
+                o.recoveryTime -= 2.f;
+                o.hitPoints = std::min(o.maxHitPoints,o.hitPoints+1.f);
+            }
+        }
         o.animTime += dt;
         o.approachRetry = std::max(0.0f, o.approachRetry - dt);
         o.flashTime = std::max(0.0f, o.flashTime - dt);

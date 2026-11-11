@@ -153,5 +153,34 @@ static void healingChecks(swgb::Assets &assets, swgb::SoftRenderer &renderer) {
     before=garrison.objectHitPoints(passenger);
     for(int i=0;i<20;++i) garrison.update(.1f,{});
     check(garrison.objectHitPoints(passenger)==before,"Garrison healing ends on leaving building");
-    std::printf("PASS: medic UI, Republic bonus/upgrade, Bacta garrison healing, pause and target exclusions\n");
+    swgb::Game heroes(assets);
+    check(heroes.init(0x5A17,64,&error,1,1),error.c_str());
+    const auto hero=heroes.spawnObjectForTesting(1,252,1,10.5f,10.5f);
+    const auto royal=heroes.spawnObjectForTesting(1,4,1,12.5f,10.5f);
+    heroes.damageObjectForTesting(hero,10); heroes.damageObjectForTesting(royal,10);
+    before=heroes.objectHitPoints(hero);
+    const float royalBefore=heroes.objectHitPoints(royal);
+    for(int i=0;i<7;++i) heroes.update(.25f,{});
+    check(heroes.objectHitPoints(hero)==before,"Hero recovery is discrete, not continuous");
+    heroes.updatePaused(10,{});
+    check(heroes.objectHitPoints(hero)==before,"Pause freezes hero recovery timer");
+    heroes.update(.25f,{});
+    check(heroes.objectHitPoints(hero)==before+1.f && heroes.objectHitPoints(royal)==royalBefore,
+          "Hero flag grants one HP per two seconds; special units without flag do not regenerate");
+    const auto capped=heroes.spawnObjectForTesting(1,252,1,14.5f,10.5f);
+    const float cap=heroes.objectHitPoints(capped);
+    heroes.damageObjectForTesting(capped,1);
+    heroes.update(2.5f,{});
+    check(heroes.objectHitPoints(capped)==cap,"Hero recovery stops at maximum health");
+    heroes.update(10.f,{});
+    heroes.damageObjectForTesting(capped,5.f);
+    heroes.update(1.25f,{});
+    check(heroes.objectHitPoints(capped)==cap-5.f,"Full health freezes the retained recovery remainder");
+    heroes.update(.25f,{});
+    check(heroes.objectHitPoints(capped)==cap-4.f,"Hero retains partial recovery timer across wounds");
+    heroes.damageObjectForTesting(capped,100000);
+    const float deadHealth=heroes.objectHitPoints(capped);
+    heroes.update(10.f,{});
+    check(heroes.objectHitPoints(capped)==deadHealth,"Recovery does not revive dead heroes");
+    std::printf("PASS: medic UI, Republic bonus/upgrade, Bacta garrison healing, hero recovery and pause\n");
 }

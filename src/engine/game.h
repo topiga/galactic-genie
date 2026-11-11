@@ -616,6 +616,7 @@ private:
         float stateTime = 0;
         float targetX = 0, targetY = 0;
         float hitPoints = 1, maxHitPoints = 1;
+        float recoveryTime = 0;
         float shieldPoints = 0, maxShieldPoints = 0;
         float resourceAmount = 0;
         float carriedAmount = 0;
