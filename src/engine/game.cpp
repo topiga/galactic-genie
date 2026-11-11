@@ -383,6 +383,7 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     players_ = {};
     resources_ = {};
     researchedTechs_ = {};
+    researchedTechOrder_ = {};
     civilizationEffects_ = {};
     playerEffects_ = {};
     aiPlayers_ = {};
@@ -911,6 +912,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err) {
     players_ = scenario.players;
     resources_ = {};
     researchedTechs_ = {};
+    researchedTechOrder_ = {};
     civilizationEffects_ = {};
     playerEffects_ = {};
     aiPlayers_ = {};
@@ -1898,6 +1900,7 @@ bool Game::researchTechnology(int player, int technologyId) {
              .insert(technologyId)
              .second)
         return true;
+    researchedTechOrder_[(size_t)player].push_back(technologyId);
     techGeneration_++;
     refreshAutomaticTechnologies(player);
     return true;
@@ -3699,13 +3702,14 @@ void Game::refreshAutomaticTechnologies(int player) {
                         player, technology))
                     continue;
             researchedTechs_[(size_t)player].insert((int)id);
+            researchedTechOrder_[(size_t)player].push_back((int)id);
             techGeneration_++;
             changed = true;
         }
     }
     auto &effects=playerEffects_[(size_t)player];
     effects=civilizationEffects_[(size_t)player];
-    for (int id:researchedTechs_[(size_t)player]) {
+    for (int id:researchedTechOrder_[(size_t)player]) {
         if (id<0 || size_t(id)>=assets_.dat().techs.size()) continue;
         const int effect=assets_.dat().techs[size_t(id)].effectId;
         if (effect>=0 && size_t(effect)<assets_.dat().effects.size()) effects.push_back(effect);
@@ -13681,7 +13685,8 @@ void Game::update(float dt, const InputState &incoming) {
         else {
             const float rate =
                 isPowered(building) ? 1.0f : 0.25f;
-            building.productionRemaining -= dt * rate;
+            building.productionRemaining -= dt * rate *
+                std::max(0.f,modifiedUnitAttribute(building,13,building.unit->workRate));
         }
         if (building.productionRemaining > 0) continue;
         const ProductionItem item =

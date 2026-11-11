@@ -1303,6 +1303,7 @@ private:
     std::array<ScenarioPlayer, 16> players_{};
     std::array<std::map<int, float>, 17> resources_{};
     std::array<std::set<int>, 17> researchedTechs_{};
+    std::array<std::vector<int>, 17> researchedTechOrder_{};
     std::array<std::vector<int>, 17> civilizationEffects_{}, playerEffects_{};
     std::array<AiPlayerState, 17> aiPlayers_{};
     std::array<std::set<int>, 17> disabledTechs_{};

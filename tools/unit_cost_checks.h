@@ -41,8 +41,28 @@ static void unitCostChecks(swgb::Assets &assets) {
     game.update(0,{});
     check(game.productionQueueSizeForTesting(game.commandCenterId(1))==1 &&
           game.resource(1,0)==food-25,"AI purchase pays modified worker cost through the real queue");
+    auto faster=effect(5,13,2);
+    faster.a=109;
+    commands.push_back(faster);
+    const auto center=game.commandCenterId(1);
+    const float remaining=game.productionRemainingForTesting(center);
+    const float power=game.objectPoweredForTesting(center)?1.f:.25f;
+    game.update(1,{});
+    check(std::abs(game.productionRemainingForTesting(center)-(remaining-2*power))<.0001f,
+          "Building work-rate effects reach the actual production progress");
     commands={effect(5,100,.8f)};
     check(game.cancelProductionForTesting(game.commandCenterId(1)),"Cancel discounted purchase");
     check(game.resource(1,0)==food-25+40,"Original cancellation refunds current modified costs");
+    auto &later=data.effects[size_t(data.techs[174].effectId)].commands;
+    Restore restoreLater{later,later};
+    commands={effect(4,100,10)};
+    later={effect(5,100,2)};
+    check(game.researchTechnologyForTesting(1,174),"Acquire lower-ID technology after higher-ID technology");
+    const auto workerCosts=game.unitCostsForTesting(1,data.civs[1].units[83]);
+    check(workerCosts[0].amount==120,
+          "Effects follow acquisition order: add ten then double fifty costs120, not110");
+    check(game.researchTechnologyForTesting(1,174) &&
+          game.unitCostsForTesting(1,data.civs[1].units[83])[0].amount==120,
+          "Repeated research does not append another effect application");
     std::puts("PASS: original cost/time arithmetic, resource mapping, AI payment and current-cost refunds");
 }
