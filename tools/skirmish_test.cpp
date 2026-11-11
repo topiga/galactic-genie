@@ -11,6 +11,7 @@ static void check(bool value, const char *message) {
 #include "memory_inspection_checks.h"
 #include "rubble_checks.h"
 #include "healing_checks.h"
+#include "combat_modifier_checks.h"
 #include "ai_fog_checks.h"
 #include "selection_checks.h"
 #include "civilization_checks.h"
@@ -238,6 +239,7 @@ int main(int argc, char **argv) {
     fogRendering(assets,renderer);
     memoryInspectionChecks(assets,renderer);
     healingChecks(assets,renderer);
+    combatModifierChecks(assets);
     rubbleChecks(assets,renderer);
     aiFogChecks(assets);
     additiveSelectionChecks(assets,renderer);

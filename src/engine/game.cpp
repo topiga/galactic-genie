@@ -2690,15 +2690,16 @@ int Game::modifiedAttackAmount(
             if (command.c != 9 ||
                 !technologyCommandApplies(command, source))
                 continue;
-            if (command.type == 5) {
-                amount *= command.d;
+            if (command.type != 0 && command.type != 4 && command.type != 5)
                 continue;
-            }
-            if (command.type != 0 && command.type != 4)
-                continue;
-            const int packed = (int)std::lround(command.d);
+            const int packed = (int)command.d;
             if (((packed >> 8) & 0xFF) != attack.cls)
                 continue;
+            if (command.type == 5) {
+                // Original 0x489d20 keeps the float constant in x87 precision and rounds each command.
+                amount = float(std::trunc(double(amount)*(packed & 0xFF)*double(0.01f)+0.5));
+                continue;
+            }
             const int value =
                 (int)(int8_t)(packed & 0xFF);
             amount = command.type == 0
@@ -2742,15 +2743,16 @@ int Game::modifiedArmourAmount(const Object &target,
             if (command.c != 8 ||
                 !technologyCommandApplies(command, target))
                 continue;
-            if (command.type == 5) {
-                if (present) amount *= command.d;
+            if (command.type != 0 && command.type != 4 && command.type != 5)
                 continue;
-            }
-            if (command.type != 0 && command.type != 4)
-                continue;
-            const int packed = (int)std::lround(command.d);
+            const int packed = (int)command.d;
             if (((packed >> 8) & 0xFF) != armourClass)
                 continue;
+            if (command.type == 5) {
+                if (present)
+                    amount = float(std::trunc(double(amount)*(packed & 0xFF)*double(0.01f)+0.5));
+                continue;
+            }
             const int value =
                 (int)(int8_t)(packed & 0xFF);
             if (!present) {
