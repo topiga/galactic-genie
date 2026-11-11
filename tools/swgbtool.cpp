@@ -13,11 +13,13 @@
 #include "../src/core/scenario.h"
 #include "../src/engine/assets.h"
 #include "../src/engine/ai_script.h"
+#include "../src/engine/rms_script.h"
 #include "../src/engine/game.h"
 #include "../src/render/soft_renderer.h"
 
 #include <algorithm>
 #include <chrono>
+#include <charconv>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -59,6 +61,7 @@ static int usage() {
             "  swgbtool test-combat <DataDir> [out.png]\n"
             "  swgbtool ai-script <entry.per>\n"
             "  swgbtool test-ai <DataDir> <AiDir>\n"
+            "  swgbtool rms-script <archive.drs> <resourceId>\n"
             "  swgbtool mp3 <file.mp3>\n");
     return 2;
 }
@@ -5785,6 +5788,29 @@ static int cmdBenchUi(const char *dataDir) {
     return 0;
 }
 
+static int cmdRmsScript(const char *path,const char *number) {
+    int32_t id=-1;
+    const char *end=number+std::strlen(number);
+    const auto parsed=std::from_chars(number,end,id);
+    if (parsed.ec!=std::errc{} || parsed.ptr!=end || id<0) {
+        std::fprintf(stderr,"error: invalid RMS resource ID\n");
+        return 2;
+    }
+    ResourceSet resources;
+    RmsScript script;
+    std::string error;
+    if (!resources.add(path,&error) || !script.load(id,resources,&error)) {
+        std::fprintf(stderr,"error: %s\n",error.c_str());
+        return 1;
+    }
+    size_t stages=0;
+    for(const auto &token:script.tokens())
+        if(token.text.front()=='<') ++stages;
+    std::printf("RMS loaded: %zu tokens, %zu stages. Includes resolved; controls and generation not evaluated.\n",
+                script.tokens().size(),stages);
+    return 0;
+}
+
 static int cmdAiScript(const char *path) {
     AiProgram program;
     std::string err;
@@ -6056,6 +6082,7 @@ int main(int argc, char **argv) {
     if (!strcmp(cmd, "options") && argc >= 5)
         return cmdOptions(argv[2], atoi(argv[3]), atoi(argv[4]));
     if (!strcmp(cmd, "sound") && argc >= 4) return cmdSound(argv[2], atoi(argv[3]));
+    if (!strcmp(cmd, "rms-script") && argc >= 4) return cmdRmsScript(argv[2],argv[3]);
     if (!strcmp(cmd, "drs")) return cmdDrs(argv[2]);
     if (!strcmp(cmd, "drs-slps")) return cmdDrsSlps(argv[2]);
     if (!strcmp(cmd, "campaign")) return cmdCampaign(argv[2]);

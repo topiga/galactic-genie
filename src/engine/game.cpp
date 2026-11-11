@@ -18,6 +18,19 @@ namespace swgb {
 
 namespace {
 
+// Original signed-short attributes round each command, retaining x87 precision for multiplication.
+int16_t applyShortEffect(int16_t current,const dat::EffectCommand &command) {
+    if (!std::isfinite(command.d)) return current;
+    double value=current;
+    if (command.type==0) value=std::trunc(double(command.d));
+    else if (command.type==4) value+=std::trunc(double(command.d));
+    else if (command.type==5) value=std::trunc(double(current)*double(command.d)+.5);
+    else return current;
+    value=std::fmod(value,65536.);
+    if (value<0) value+=65536.;
+    return int16_t(value>=32768. ? value-65536. : value);
+}
+
 constexpr float kPi = 3.14159265358979f;
 constexpr uint8_t kSequenceAnimated = 0x1;
 constexpr int kCursorSlp = 51000;
@@ -2661,11 +2674,32 @@ float Game::modifiedUnitAttribute(const Object &object,
     return value;
 }
 
+std::array<dat::ResourceCost,3> Game::unitCosts(int player,const dat::Unit &unit) const {
+    auto costs=unit.costs;
+    for (auto &cost:costs) cost.flag &= 0xff;
+    if (player<0 || size_t(player)>=playerEffects_.size()) return costs;
+    Object candidate; candidate.unit=&unit; candidate.player=player;
+    for (int effect:playerEffects_[size_t(player)])
+        for (const auto &command:assets_.dat().effects[size_t(effect)].commands) {
+            if (!technologyCommandApplies(command,candidate)) continue;
+            const int type=command.c==103?0:command.c==104?1:command.c==105?3:command.c==106?2:-1;
+            if (command.c!=100 && type<0) continue;
+            for (auto &cost:costs)
+                if ((cost.flag & 0xff) && (command.c==100 || cost.type==type))
+                    cost.amount=applyShortEffect(cost.amount,command);
+        }
+    return costs;
+}
+
 float Game::unitTrainingTime(int player,const dat::Unit &unit) const {
-    Object candidate;
-    candidate.unit=&unit;
-    candidate.player=player;
-    return std::max(.1f,modifiedUnitAttribute(candidate,101,float(unit.trainTime)));
+    int16_t duration=unit.trainTime;
+    Object candidate; candidate.unit=&unit; candidate.player=player;
+    if (player>=0 && size_t(player)<playerEffects_.size())
+        for (int effect:playerEffects_[size_t(player)])
+            for (const auto &command:assets_.dat().effects[size_t(effect)].commands)
+                if (command.c==101 && technologyCommandApplies(command,candidate))
+                    duration=applyShortEffect(duration,command);
+    return std::max(.1f,float(duration));
 }
 
 int Game::modifiedAttackAmount(
@@ -4638,13 +4672,13 @@ bool Game::queueFarmReseed(const Object &building, const dat::Unit &farm) {
         playInterfaceFeedback(kInterfaceCannotDoSound);
         return false;
     }
-    for (const dat::ResourceCost &cost : farm.costs)
+    for (const dat::ResourceCost &cost : unitCosts(player,farm))
         if (cost.flag && cost.type >= 0 && cost.amount > 0 &&
             resource(player, cost.type) + 0.001f < cost.amount) {
             showResourceShortage(cost.type);
             return false;
         }
-    for (const dat::ResourceCost &cost : farm.costs)
+    for (const dat::ResourceCost &cost : unitCosts(player,farm))
         if (cost.flag && cost.type >= 0 && cost.amount > 0)
             resources_[(size_t)player][cost.type] -= cost.amount;
     queued++;
@@ -4843,7 +4877,8 @@ std::string Game::originalHelpText(int stringId, const dat::Unit *unit,
         cost += std::to_string(amount) + " " + label(4301 + type);
     };
     if (unit)
-        for (const dat::ResourceCost &c : unit->costs) addCost(c.type, c.amount);
+        for (const dat::ResourceCost &c : unitCosts(localPlayer_,*unit))
+            if (c.flag) addCost(c.type, c.amount);
     if (technology)
         for (const dat::Tech::Cost &c : technology->costs) addCost(c.type, c.amount);
     replaceAll("<cost>", label(20200) + cost);
@@ -5874,7 +5909,7 @@ void Game::updateRepairing(float dt) {
                             : worker.unit
                                   ->workRate));
         for (const dat::ResourceCost &cost :
-             target->unit->costs) {
+             unitCosts(target->player,*target->unit)) {
             if (!cost.flag || cost.type < 0 ||
                 cost.amount <= 0)
                 continue;
@@ -5909,7 +5944,7 @@ void Game::updateRepairing(float dt) {
             continue;
         }
         for (const dat::ResourceCost &cost :
-             target->unit->costs) {
+             unitCosts(target->player,*target->unit)) {
             if (!cost.flag || cost.type < 0 ||
                 cost.amount <= 0)
                 continue;
@@ -6898,7 +6933,7 @@ bool Game::cancelProductionItem(Object &building,
         building.productionQueue[index];
     if (item.unit) {
         for (const dat::ResourceCost &cost :
-             item.unit->costs)
+             unitCosts(building.player,*item.unit))
             if (cost.flag && cost.type >= 0 &&
                 cost.amount > 0)
                 resources_[(size_t)building.player]
@@ -7165,7 +7200,7 @@ bool Game::activateActionMenuOption(size_t optionIndex) {
             productionOptions(*subject);
         if (optionIndex >= options.size()) return true;
         const dat::Unit *unit = options[optionIndex];
-        for (const dat::ResourceCost &cost : unit->costs) {
+        for (const dat::ResourceCost &cost : unitCosts(localPlayer_,*unit)) {
             if (!cost.flag || cost.type < 0 ||
                 cost.amount <= 0)
                 continue;
@@ -7175,7 +7210,7 @@ bool Game::activateActionMenuOption(size_t optionIndex) {
                 return true;
             }
         }
-        for (const dat::ResourceCost &cost : unit->costs)
+        for (const dat::ResourceCost &cost : unitCosts(localPlayer_,*unit))
             if (cost.flag && cost.type >= 0 &&
                 cost.amount > 0)
                 resources_[(size_t)localPlayer_][cost.type] -=
@@ -7391,7 +7426,7 @@ bool Game::placeWallLine(int x1, int y1, int x2, int y2) {
             !positionPassable(candidate, x, y, true))
             continue;
         bool affordable = true;
-        for (const dat::ResourceCost &cost : unit->costs)
+        for (const dat::ResourceCost &cost : unitCosts(localPlayer_,*unit))
             if (cost.flag && cost.type >= 0 && cost.amount > 0 &&
                 resource(localPlayer_, cost.type) + 0.001f < cost.amount)
                 affordable = false;
@@ -7399,7 +7434,7 @@ bool Game::placeWallLine(int x1, int y1, int x2, int y2) {
             outOfMoney = true;
             break;
         }
-        for (const dat::ResourceCost &cost : unit->costs)
+        for (const dat::ResourceCost &cost : unitCosts(localPlayer_,*unit))
             if (cost.flag && cost.type >= 0 && cost.amount > 0)
                 resources_[(size_t)localPlayer_][cost.type] -= cost.amount;
         Object *building = createFoundation(*unit, localPlayer_, x, y);
@@ -7448,12 +7483,12 @@ bool Game::placeWallLine(int x1, int y1, int x2, int y2) {
             }
             for (int i = 1; i <= count; i++) {
                 bool affordable = true;
-                for (const dat::ResourceCost &cost : unit->costs)
+                for (const dat::ResourceCost &cost : unitCosts(localPlayer_,*unit))
                     if (cost.flag && cost.type >= 0 && cost.amount > 0 &&
                         resource(localPlayer_, cost.type) + 0.001f < cost.amount)
                         affordable = false;
                 if (!affordable) return;
-                for (const dat::ResourceCost &cost : unit->costs)
+                for (const dat::ResourceCost &cost : unitCosts(localPlayer_,*unit))
                     if (cost.flag && cost.type >= 0 && cost.amount > 0)
                         resources_[(size_t)localPlayer_][cost.type] -= cost.amount;
                 Object *building = createFoundation(*unit, localPlayer_, x + dx * i + 0.5f,
@@ -7706,7 +7741,7 @@ bool Game::placeBuildingWorld(float worldX, float worldY) {
         return true;
     }
     for (const dat::ResourceCost &cost :
-         placementUnit_->costs) {
+         unitCosts(localPlayer_,*placementUnit_)) {
         if (!cost.flag || cost.type < 0 ||
             cost.amount <= 0)
             continue;
@@ -7717,7 +7752,7 @@ bool Game::placeBuildingWorld(float worldX, float worldY) {
         }
     }
     for (const dat::ResourceCost &cost :
-         placementUnit_->costs)
+         unitCosts(localPlayer_,*placementUnit_))
         if (cost.flag && cost.type >= 0 &&
             cost.amount > 0)
             resources_[(size_t)localPlayer_][cost.type] -=
@@ -12362,7 +12397,7 @@ bool Game::aiCanAfford(
             resources_.size())
         return false;
     for (const dat::ResourceCost &cost :
-         unit.costs)
+         unitCosts(player,unit))
         if (cost.flag && cost.type >= 0 &&
             cost.amount > 0 &&
             resource(player, cost.type) <
@@ -12503,7 +12538,7 @@ bool Game::aiBuild(
         }
     if (!found) return false;
     for (const dat::ResourceCost &cost :
-         unit.costs)
+         unitCosts(player,unit))
         if (cost.flag && cost.type >= 0 &&
             cost.amount > 0)
             resources_[(size_t)player]
@@ -12515,7 +12550,7 @@ bool Game::aiBuild(
             unit, player, buildX, buildY);
     if (!foundation) {
         for (const dat::ResourceCost &cost :
-             unit.costs)
+             unitCosts(player,unit))
             if (cost.flag &&
                 cost.type >= 0 &&
                 cost.amount > 0)
@@ -12567,7 +12602,7 @@ bool Game::aiTrain(
     }
     if (!producer) return false;
     for (const dat::ResourceCost &cost :
-         unit.costs)
+         unitCosts(player,unit))
         if (cost.flag && cost.type >= 0 &&
             cost.amount > 0)
             resources_[(size_t)player]
@@ -12781,6 +12816,16 @@ Game::AiTruth Game::evaluateAiCondition(
         return AiTruth::True;
     if (fact == "false")
         return AiTruth::False;
+    if (fact == "timer-triggered") {
+        if (condition.children.size()!=2) return AiTruth::Unknown;
+        bool known=false;
+        const int id=resolveAiValue(player,state,condition.children[1].value,known);
+        if (!known) return AiTruth::Unknown;
+        if (id<1 || id>20) return AiTruth::False;
+        const auto timer=state.timers.find(id);
+        return timer!=state.timers.end() && gameTime_>=timer->second
+            ? AiTruth::True : AiTruth::False;
+    }
     if (fact == "not") {
         if (condition.children.size() != 2)
             return AiTruth::Unknown;
@@ -13011,6 +13056,21 @@ bool Game::executeAiAction(
         normalizeAiSymbol(action.name());
     if (name == "disable-self") {
         rule.enabled = false;
+        return true;
+    }
+    if (name == "enable-timer" || name == "disable-timer") {
+        const bool enable=name=="enable-timer";
+        if (action.children.size()!=(enable?3u:2u)) return false;
+        bool known=false;
+        const int id=resolveAiValue(player,state,action.children[1].value,known);
+        if (!known || id<1 || id>20) return false;
+        if (!enable) state.timers.erase(id);
+        else {
+            const int seconds=resolveAiValue(player,state,action.children[2].value,known);
+            if (!known || seconds<0) return false;
+            // Original 0x4181f0 overwrites the deadline; querying a timer never consumes it.
+            state.timers[id]=gameTime_+seconds;
+        }
         return true;
     }
     if (name == "set-goal" &&
@@ -15966,7 +16026,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
         candidate.player = localPlayer_;
         bool valid = placementValid(*placementUnit_, worldX, worldY);
         for (const dat::ResourceCost &cost :
-             placementUnit_->costs)
+             unitCosts(localPlayer_,*placementUnit_))
             if (cost.flag && cost.type >= 0 &&
                 cost.amount > 0 &&
                 resource(localPlayer_, cost.type) +
@@ -17960,9 +18020,9 @@ void Game::render(Renderer &r, int screenW, int screenH) {
             if (selectedUnit) {
                 duration =
                     std::max<int16_t>(
-                        0, selectedUnit->trainTime);
+                        0, int(unitTrainingTime(localPlayer_,*selectedUnit)));
                 for (const dat::ResourceCost &cost :
-                     selectedUnit->costs)
+                     unitCosts(localPlayer_,*selectedUnit))
                     appendCost(
                         cost.type, cost.amount,
                         cost.flag != 0);
@@ -18450,7 +18510,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
                     };
                 if (unit)
                     for (const dat::ResourceCost &cost :
-                         unit->costs)
+                         unitCosts(localPlayer_,*unit))
                         appendCost(
                             cost.type, cost.amount,
                             cost.flag != 0);
@@ -18473,7 +18533,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
                                unit
                                    ? std::max<int16_t>(
                                          0,
-                                         unit->trainTime)
+                                         int(unitTrainingTime(localPlayer_,*unit)))
                                    : std::max<int16_t>(
                                          0,
                                          technology

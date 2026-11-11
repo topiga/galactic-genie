@@ -525,6 +525,16 @@ public:
                (size_t)player < researchedTechs_.size() &&
                researchedTechs_[(size_t)player].count(technologyId);
     }
+    bool cancelProductionForTesting(uint32_t id) {
+        auto *object=findObject(id);
+        return object && cancelProductionItem(*object,0);
+    }
+    std::array<dat::ResourceCost,3> unitCostsForTesting(int player,const dat::Unit &unit) const {
+        return unitCosts(player,unit);
+    }
+    float unitTrainingTimeForTesting(int player,const dat::Unit &unit) const {
+        return unitTrainingTime(player,unit);
+    }
     void initializeCivilizationBonusesForTesting() {
         initializeCivilizationBonuses();
         refreshAllAutomaticTechnologies();
@@ -769,6 +779,7 @@ private:
     struct AiPlayerState {
         AiProgram program;
         std::unordered_map<int, int> goals;
+        std::map<int, double> timers;
         std::unordered_map<std::string, int>
             strategicNumbers;
         std::unordered_set<std::string>
@@ -936,6 +947,7 @@ private:
     bool technologyCommandApplies(
         const dat::EffectCommand &command,
         const Object &object) const;
+    std::array<dat::ResourceCost,3> unitCosts(int player,const dat::Unit &unit) const;
     float unitTrainingTime(int player,const dat::Unit &unit) const;
     float modifiedUnitAttribute(const Object &object,
                                 int attribute,

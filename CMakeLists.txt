@@ -25,6 +25,7 @@ set(SWGB_CORE_SOURCES
     src/core/language_strings.cpp
     src/engine/assets.cpp
     src/engine/ai_script.cpp
+    src/engine/rms_script.cpp
     src/engine/game.cpp
     src/engine/pathfinding.cpp
 )
