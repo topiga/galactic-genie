@@ -673,7 +673,7 @@ int main(int argc, char **argv) {
         const char *home = std::getenv("HOME");
         const char *configured = std::getenv("SWGB_GAME_DIR");
         std::string root = argc >= 2 ? argv[1] : configured ? configured :
-            home ? std::string(home) + "/Library/Application Support/Galactic Genie/Game" : "";
+            home ? std::string(home) + "/Library/Application Support/Galactic Genie/Game-CloneCampaigns" : "";
         if (root.empty()) throw std::runtime_error("Set SWGB_GAME_DIR to your installed Game directory");
         result = run(root, argc == 3);
     }
