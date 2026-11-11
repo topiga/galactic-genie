@@ -14573,14 +14573,24 @@ void Game::update(float dt, const InputState &incoming) {
     updateMarchGroups(dt);
     for (Object &o : objects_) {
         if (!o.active) continue;
-        if (o.unit->heroMode && o.hitPoints >= 1.f && o.hitPoints < o.maxHitPoints) {
-            // Original 0x55a760 retains the timer at full health and restores whole HP every two seconds.
+        const auto recover = [&](float period) {
+            if (period <= 0 || o.hitPoints < 1.f || o.hitPoints >= o.maxHitPoints) return;
             o.recoveryTime += dt;
-            while (o.recoveryTime >= 2.f && o.hitPoints < o.maxHitPoints) {
-                o.recoveryTime -= 2.f;
+            while (o.recoveryTime >= period && o.hitPoints < o.maxHitPoints) {
+                o.recoveryTime -= period;
                 o.hitPoints = std::min(o.maxHitPoints,o.hitPoints+1.f);
             }
-        }
+        };
+        // Original 0x55a760 runs both branches in order, sharing the retained timer.
+        if (o.unit->heroMode) recover(2.f);
+        constexpr std::array<int,8> masterCopies = {115,125,136,134,89,140,643,645};
+        constexpr std::array<int,16> masterHeroes = {
+            1077,1085,1082,1084,1080,725,728,731,747,753,761,770,778,784,806,792};
+        const bool master =
+            std::find(masterCopies.begin(),masterCopies.end(),o.unit->copyId) != masterCopies.end() ||
+            std::find(masterHeroes.begin(),masterHeroes.end(),o.unit->id) != masterHeroes.end();
+        if (master) recover(playerAttribute(o.player,49));
+        else if (o.unit->trait & 0x20) recover(playerAttribute(o.player,96));
         o.animTime += dt;
         o.approachRetry = std::max(0.0f, o.approachRetry - dt);
         o.flashTime = std::max(0.0f, o.flashTime - dt);

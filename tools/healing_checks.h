@@ -182,5 +182,42 @@ static void healingChecks(swgb::Assets &assets, swgb::SoftRenderer &renderer) {
     const float deadHealth=heroes.objectHitPoints(capped);
     heroes.update(10.f,{});
     check(heroes.objectHitPoints(capped)==deadHealth,"Recovery does not revive dead heroes");
-    std::printf("PASS: medic UI, Republic bonus/upgrade, Bacta garrison healing, hero recovery and pause\n");
+    swgb::Game recovery(assets);
+    check(recovery.init(0x5A17,64,&error,6,1),error.c_str());
+    const auto master=recovery.spawnObjectForTesting(6,140,1,10.5f,10.5f);
+    const auto jediHero=recovery.spawnObjectForTesting(6,1080,1,12.5f,10.5f);
+    const auto biological=recovery.spawnObjectForTesting(6,307,1,14.5f,10.5f);
+    const auto mechanical=recovery.spawnObjectForTesting(6,317,1,18.5f,10.5f);
+    const auto foreign=recovery.spawnObjectForTesting(1,307,1,14.5f,14.5f);
+    for(auto id:{master,jediHero,biological,mechanical,foreign})
+        check(id && recovery.damageObjectForTesting(id,10),"Wound regeneration fixtures");
+    const float masterBefore=recovery.objectHitPoints(master);
+    const float heroBefore=recovery.objectHitPoints(jediHero);
+    float biologicalBefore=recovery.objectHitPoints(biological);
+    const float mechanicalBefore=recovery.objectHitPoints(mechanical);
+    float foreignBefore=recovery.objectHitPoints(foreign);
+    for(int i=0;i<8;++i) recovery.update(.25f,{});
+    check(recovery.objectHitPoints(master)==masterBefore+1.f,
+          "Jedi Master recovers one HP every two seconds without a hero flag");
+    check(recovery.objectHitPoints(jediHero)==heroBefore+2.f,
+          "Named Jedi hero shares timer across hero and master branches");
+    check(recovery.objectHitPoints(biological)==biologicalBefore,
+          "Wookiee biological unit does not regenerate before research");
+    check(recovery.researchTechnologyForTesting(1,133),"Research Wookiee Self Regeneration");
+    biologicalBefore=recovery.objectHitPoints(biological);
+    foreignBefore=recovery.objectHitPoints(foreign);
+    recovery.updatePaused(10,{});
+    for(int i=0;i<11;++i) recovery.update(.25f,{});
+    check(recovery.objectHitPoints(biological)==biologicalBefore,
+          "Self Regeneration waits three simulation seconds");
+    recovery.update(.25f,{});
+    check(recovery.objectHitPoints(biological)==biologicalBefore+1.f &&
+          recovery.objectHitPoints(foreign)==foreignBefore+1.f,
+          "Self Regeneration uses owner research and biological trait, not unit civilization");
+    check(recovery.objectHitPoints(mechanical)==mechanicalBefore,
+          "Self Regeneration does not repair mechanical units");
+    check(recovery.objectHitPoints(master)==masterBefore+2.f &&
+          recovery.objectHitPoints(jediHero)==heroBefore+5.f,
+          "Self Regeneration does not replace or add to Jedi Master recovery");
+    std::printf("PASS: medic UI, Republic bonus/upgrade, Bacta garrison healing, hero/Jedi/Wookiee recovery and pause\n");
 }
