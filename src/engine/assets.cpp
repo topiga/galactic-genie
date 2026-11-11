@@ -30,6 +30,7 @@ std::string findFileNoCase(const std::string &dir, const std::string &name) {
 }
 
 Assets::~Assets() {
+    for(const auto &entry:fogMasks_) renderer_->destroyTexture(entry.second.tex);
     for (auto &kv : sheets_)
         if (kv.second)
             for (Texture *t : kv.second->pages) renderer_->destroyTexture(t);
@@ -248,7 +249,30 @@ bool Assets::init(const std::string &dataDir, std::string *err) {
         elevationMaps_ = std::move(maps);
         log("loaded terrain elevation maps: " + std::to_string(kSlopeCount) + " slope types");
     }
+    const auto tileEdges=findFileNoCase(dataDir,"TileEdge.Dat"),blackEdges=findFileNoCase(dataDir,"BlkEdge.Dat");
+    if(!tileEdges.empty() && !blackEdges.empty()) {
+        auto edges=std::make_unique<FogEdges>();
+        if(!edges->load(tileEdges,blackEdges,err)) return false;
+        fogEdges_=std::move(edges);
+    } else log("original fog edge files not found; using flat fog fallback");
     return true;
+}
+
+const SpriteFrame *Assets::fogMask(int slope,int pattern,int kind) {
+    if(!fogEdges_ || slope<0 || slope>=17 || pattern<0 || pattern>=47 || kind<0 || kind>2) return nullptr;
+    if(kind==2) pattern=0;
+    const int key=(slope*47+pattern)*3+kind;
+    auto found=fogMasks_.find(key);if(found!=fogMasks_.end()) return &found->second;
+    const auto &shape=fogEdges_->shape(slope,pattern);
+    const auto &spans=kind==0?shape.fog:(kind==1?shape.black:shape.clear);
+    if(spans.empty()) return nullptr;
+    const int width=97,height=fogEdges_->height(slope);
+    std::vector<uint8_t> alpha(size_t(width)*height,0);
+    for(const auto &span:spans) for(int x=span.left;x<=span.right;++x) alpha[size_t(span.y)*width+x]=255;
+    Texture *texture=renderer_->createMaskTexture(width,height,alpha.data());
+    if(!texture) return nullptr;
+    textureBytes_+=alpha.size();
+    return &fogMasks_.emplace(key,SpriteFrame{texture,0,0,width,height,0,0}).first->second;
 }
 
 bool Assets::readSound(int soundId, int civilization, uint32_t choice,

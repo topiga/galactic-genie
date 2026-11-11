@@ -1,5 +1,8 @@
 # Galactic Genie
 
+For the native macOS skirmish frontend, controls and tests, see [DESKTOP.md](DESKTOP.md).
+
+
 A from-scratch, portable reimplementation of the Genie engine, as used by *Star Wars: Galactic Battlegrounds Saga*. The current targets are PS Vita and PC. It loads the original Clone Campaigns data files from your own copy of the game; no game assets are included in this repository.
 
 It is written clean-room style: file formats come from public documentation (openage, genieutils). Game behaviour is to be matched by observation, and by using Ghidra only to answer "how does X work" questions. Decompiled code is never copied into the tree.

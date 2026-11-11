@@ -15,6 +15,7 @@ set(SWGB_CORE_SOURCES
     src/core/blendomatic.cpp
     src/core/cpx.cpp
     src/core/drs.cpp
+    src/core/fog_edges.cpp
     src/core/elevation.cpp
     src/core/palette.cpp
     src/core/scenario.cpp
@@ -82,5 +83,30 @@ else()
     target_link_libraries(swgbtool PRIVATE ZLIB::ZLIB)
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(swgbtool PRIVATE -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers)
+    endif()
+endif()
+
+if(NOT VITA)
+    option(SWGB_BUILD_DESKTOP "Build the SDL desktop frontend" OFF)
+    if(SWGB_BUILD_DESKTOP)
+        find_package(SDL2 REQUIRED)
+        find_package(Threads REQUIRED)
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(VORBISFILE REQUIRED IMPORTED_TARGET vorbisfile)
+        add_executable(swgb-desktop src/platform/desktop/main_sdl.cpp
+            ${SWGB_CORE_SOURCES} src/render/soft_renderer.cpp)
+        target_link_libraries(swgb-desktop PRIVATE ZLIB::ZLIB SDL2::SDL2 PkgConfig::VORBISFILE Threads::Threads)
+        if(APPLE)
+            target_link_libraries(swgb-desktop PRIVATE "-framework CoreText" "-framework CoreGraphics" "-framework CoreFoundation")
+        endif()
+    endif()
+endif()
+
+if(NOT VITA)
+    option(SWGB_BUILD_SKIRMISH_TEST "Build the asset-dependent skirmish test" OFF)
+    if(SWGB_BUILD_SKIRMISH_TEST)
+        add_executable(swgb-skirmish-test tools/skirmish_test.cpp
+            ${SWGB_CORE_SOURCES} src/render/soft_renderer.cpp)
+        target_link_libraries(swgb-skirmish-test PRIVATE ZLIB::ZLIB)
     endif()
 endif()

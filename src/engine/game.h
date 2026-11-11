@@ -27,11 +27,16 @@ struct InputState {
     float pointerX = 0, pointerY = 0;
     float boxStartX = 0, boxStartY = 0, boxEndX = 0, boxEndY = 0;
     int screenW = 960, screenH = 544;
+    int controlGroup = -1;         // 0..9; -1 means no group input
+    bool storeControlGroup = false;
     int zoomStep = 0;               // -1 zoom out, +1 zoom in (edge-triggered)
     bool toggleDebug = false;
     bool cursorVisible = false;
+    bool pointerPressed = false, pointerHeld = false;
     bool selectPressed = false;
+    bool addToSelection = false;
     bool commandPressed = false;
+    bool healPressed = false;
     bool cycleAttackMode = false;
     bool pointerTap = false;
     bool boxSelectActive = false;
@@ -99,7 +104,19 @@ class Game {
 public:
     explicit Game(Assets &assets) : assets_(assets) {}
 
-    bool init(uint32_t seed, int mapSize, std::string *err);
+    bool init(uint32_t seed, int mapSize, std::string *err, int humanCiv = 1, int aiCiv = 3);
+    bool initSkirmish(uint32_t seed, std::string *err, bool initiallyExplored = true, int humanCiv = 1, int aiCiv = 3, int populationLimit = 200, bool conquest = false);
+    void setKeyboardMouseControls(bool enabled) { keyboardMouseControls_ = enabled; }
+    void setClassicHud(bool enabled) { classicHud_=enabled; }
+    bool classicHudSubmenuOpen() const { return classicHud_ && !classicHudRoot_; }
+    bool takeHudMenuRequest() { const bool requested=classicHudMenuRequested_; classicHudMenuRequested_=false; return requested; }
+    bool skirmishActive() const { return skirmish_; }
+    int matchResult() const { return victoryState_; }
+    float matchTime() const { return matchTime_; }
+    uint32_t commandCenterId(int player) const {
+        return player >= 1 && player <= 2 ? skirmishCenters_[(size_t)player] : 0;
+    }
+    void resignSkirmish();
     bool initCompactTestMap(
         uint32_t seed, int mapSize,
         std::string *err);
@@ -129,6 +146,8 @@ public:
     size_t aiGathererCountForTesting(
         int player, int resourceType) const;
     void update(float dt, const InputState &in);
+    void updatePaused(float uiDt, const InputState &in);
+    std::array<float,2> cameraForTesting() const { return {camX_,camY_}; }
     void render(Renderer &r, int screenW, int screenH);
 
     // Centre the camera on a tile (used by tools and at startup).
@@ -178,6 +197,12 @@ public:
     // Plays an interface sound by sounds-DRS resource id.
     void setInterfaceSoundPlayer(std::function<void(int)> fn) {
         playInterfaceSound_ = std::move(fn);
+    }
+    void setSpatialInterfaceSoundPlayer(std::function<void(int,int,int)> fn) {
+        playSpatialInterfaceSound_=std::move(fn);
+    }
+    void setSpatialUnitSoundPlayer(std::function<void(int,int,int,int)> fn) {
+        playSpatialUnitSound_=std::move(fn);
     }
     void setUnitSoundPlayer(std::function<void(int, int)> fn) {
         playUnitSound_ = std::move(fn);
@@ -254,6 +279,10 @@ public:
         uint32_t spawnId, bool locked);
     bool positionPassableForTesting(
         uint32_t spawnId, float x, float y) const;
+    bool issueHealForTesting(uint32_t source, uint32_t target) {
+        auto *a=findObject(source), *b=findObject(target);
+        return a && b && issueHealCommand(*a,*b);
+    }
     bool issueRepairForTesting(
         uint32_t workerId, uint32_t targetId);
     bool issueGatherForTesting(
@@ -270,6 +299,9 @@ public:
     void setDiplomacyForTesting(
         int sourcePlayer, int targetPlayer,
         uint32_t stance);
+    int classicHudIconForTesting(size_t slot) { const auto buttons=classicHudButtons(); return slot<buttons.size()?buttons[slot].icon:-1; }
+    int formationForTesting() const { return int(selectedFormation_); }
+    bool healingCursorActive() const { return unitCommandCursorActive_ && pendingUnitCommand_ == UnitCommand::Heal; }
     bool actionMenuOpenForTesting() const {
         return actionMenuOpen_;
     }
@@ -350,6 +382,9 @@ public:
         return object &&
                object->attackShotPending;
     }
+    std::array<float,2> moveAnchorForTesting(uint32_t id) const {const auto *o=findObject(id);return o?std::array<float,2>{o->moveAnchorX,o->moveAnchorY}:std::array<float,2>{};}
+    void updateSkirmishArmyForTesting(int player) {refreshVisibility();updateSkirmishArmy(player);}
+    bool observedForTesting(int player,int x,int y) {refreshVisibility();return x>=0 && y>=0 && x<mapSize_ && y<mapSize_ && (observedTiles_[size_t(y)*mapSize_+x]&sharedSightMask(player));}
     uint32_t attackTargetForTesting(
         uint32_t spawnId) const {
         const Object *object =
@@ -381,6 +416,18 @@ public:
     }
     bool attackGroundCursorActiveForTesting() const {
         return attackGroundCursorActive_;
+    }
+    std::array<int,2> worldSoundMixForTesting(float x,float y) const {return worldSoundMix(x,y);}
+    bool alarmActiveForTesting(uint32_t id) const { const auto *o=findObject(id); return o && o->alarmActive; }
+    uint32_t repairTargetForTesting(uint32_t id) const { const auto *o=findObject(id); return o?o->repairTargetId:0; }
+    int32_t garrisonContainerForTesting(uint32_t id) const { const auto *o=findObject(id); return o?o->garrisonedInId:-1; }
+    bool issueUnloadForTesting(uint32_t id, float x, float y) {
+        Object *unit = findObject(id);
+        return unit && issueUnloadOrder(*unit, x, y);
+    }
+    bool unloadActiveForTesting(uint32_t id) const {
+        const Object *unit = findObject(id);
+        return unit && unit->unloadActive;
     }
     bool issuePatrolForTesting(
         uint32_t spawnId, float x, float y);
@@ -417,6 +464,15 @@ public:
     bool selectedCanAttackGroundForTesting() const {
         return selectedCanAttackGround();
     }
+    int tileVisibilityForTesting(int x,int y) {refreshVisibility();return tileVisibility(x,y);}
+    bool objectVisibleForTesting(uint32_t id) const {const auto *o=findObject(id);return o && objectVisible(*o);}
+    uint32_t rememberedAttackForTesting(uint32_t id) const {const auto *o=findObject(id);return o?o->rememberedAttackId:0;}
+    bool rememberedForTesting(uint32_t id) {refreshVisibility();return rememberedObjects_.count(id)!=0;}
+    float rememberedHitPointsForTesting(uint32_t id) {refreshVisibility();const auto it=rememberedObjects_.find(id);return it==rememberedObjects_.end()?-1:it->second.hitPoints;}
+    void setInitiallyExploredForTesting(bool explored) {initiallyExplored_=explored;visibleTiles_.clear();exploredTiles_.clear();observedTiles_.clear();rememberedObjects_.clear();rememberedPlayer_=0;}
+    bool worldSoundVisibleForTesting(float x,float y) const {return worldSoundVisible(x,y);}
+    void worldSoundForTesting(int sound,int player,float x,float y) {playWorldSound(sound,player,x,y);}
+    float elevationForTesting(float x,float y) const {return elevationAt(x,y);}
     float minimumRangeForTesting(uint32_t id) const { const Object *o = findObject(id); return o ? minimumRange(*o) : -1.0f; }
     void clearSelectionForTesting() { clearSelection(); }
     int terrainAtForTesting(int x, int y) const { return terrainAt(x, y); }
@@ -499,6 +555,7 @@ private:
         Build,
         Gather,
         Repair,
+        Heal,
     };
     enum class CursorMode : uint8_t {
         Normal,
@@ -506,6 +563,7 @@ private:
         Garrison,
         ContextWork,
         RepairCommand,
+        Heal,
         Guard,
         Follow,
         AttackGround,
@@ -530,10 +588,12 @@ private:
     };
     enum class UnitCommand : uint8_t {
         Stop,
+        Heal,
         Patrol,
         Guard,
         Follow,
         AttackGround,
+        Unload,
     };
 
     struct ProductionItem {
@@ -579,6 +639,8 @@ private:
         float attackBestDistance = 0;
         float autoAcquireTime = 0;
         uint32_t attackTargetId = 0;
+        uint32_t rememberedAttackId=0;
+        float attackLastSeenX=0,attackLastSeenY=0;
         uint32_t moveGroupId = 0;
         uint8_t attackSlotRetries = 0;
         uint8_t moveSpreadRetries = 0;
@@ -590,12 +652,21 @@ private:
         bool attackGroundActive = false;
         float attackGroundX = 0;
         float attackGroundY = 0;
+        struct ShelteredWork {
+            uint32_t gather=0, build=0, repair=0, dropOff=0;
+            float x=0, y=0;
+            bool valid=false, manualDropOff=false, alarm=false;
+        } shelteredWork;
+        bool alarmActive = false;
+        bool unloadActive = false;
+        float unloadX = 0, unloadY = 0, unloadRetry = 0;
         bool patrolActive = false;
         bool patrolTowardEnd = true;
         float patrolStartX = 0;
         float patrolStartY = 0;
         float patrolEndX = 0;
         float patrolEndY = 0;
+        uint32_t healTargetId = 0;
         uint32_t guardTargetId = 0;
         uint32_t followTargetId = 0;
         bool moveGoalActive = false;
@@ -693,6 +764,10 @@ private:
         float economyTime = 0.0f;
         float ageTime = 0.0f;
         int age = 1;
+        int scoutGoal=-1;
+        bool scoutRevisit=false, assaultStarted=false;
+        float scoutGoalTime=0;
+        std::map<int,float> scoutRetryAfter;
         bool loaded = false;
     };
 
@@ -715,6 +790,7 @@ private:
     };
 
     struct Remains {
+        uint32_t farmId = 0;
         const dat::Unit *deadUnit = nullptr;
         int dyingGraphic = -1;
         int player = 0;
@@ -867,16 +943,21 @@ private:
     float buildingProjectileTotal(const Object &building) const;
     int garrisonVolleySize(const Object &building) const;
     void launchVolleyBolt(Object &source, const Object &target);
-    enum class BuildingCommand : uint8_t { Eject, ToggleGate, SetGatherPoint, RemoveGatherPoint };
+    enum class BuildingCommand : uint8_t { Eject, ToggleGate, SetGatherPoint, RemoveGatherPoint, Alarm, ReturnToWork };
     std::vector<BuildingCommand> buildingCommands(const Object &building) const;
     std::vector<UnitCommand> unitCommands(const Object &unit) const;
     int unitCommandIcon(UnitCommand command) const;
     std::string unitCommandTitle(UnitCommand command) const;
     std::string unitCommandHelp(UnitCommand command) const;
     void executeUnitCommand(UnitCommand command);
+    bool issueUnloadOrder(Object &unit, float x, float y);
     void clearUnitCommandOrder(Object &unit);
     void stopUnit(Object &unit);
     void updateUnitCommandOrder(Object &unit, float dt);
+    const dat::Task *healingTask(const Object &unit) const;
+    bool canHeal(const Object &source, const Object &target) const;
+    bool issueHealCommand(Object &source, Object &target);
+    void updateHealing(Object &source, float dt);
     int buildingCommandIcon(const Object &building, BuildingCommand command) const;
     std::string buildingCommandTitle(const Object &building, BuildingCommand command) const;
     std::string buildingCommandHelp(const Object &building, BuildingCommand command) const;
@@ -926,9 +1007,9 @@ private:
     Object *gatherableAtScreen(float screenX, float screenY,
                                int screenW, int screenH);
     Object *enemyAtScreen(float screenX, float screenY, int screenW, int screenH);
-    void selectAtScreen(float screenX, float screenY, int screenW, int screenH);
+    void selectAtScreen(float screenX, float screenY, int screenW, int screenH, bool additive = false);
     void selectBox(float startX, float startY, float endX, float endY,
-                   int screenW, int screenH);
+                   int screenW, int screenH, bool additive = false);
     bool handleSelectionPanelClick(float screenX, float screenY,
                                    int screenW, int screenH);
     bool handleActionMenuClick(float screenX, float screenY,
@@ -1031,6 +1112,9 @@ private:
         Object &building, Object &unit,
         size_t placementOffset = 0);
     size_t ejectGarrisoned(Object &building);
+    bool returnWorkerToWork(Object &worker);
+    size_t returnGarrisonedWorkers(Object &building);
+    void toggleAlarm(Object &building, bool enable);
     bool destroyLastSelected();
     void setGateLocked(Object &gate, bool locked);
     bool beginBuildingPlacement(Object &worker,
@@ -1047,6 +1131,7 @@ private:
                      bool automatic = false,
                      float approachDistance = 0);
     void acquireAutomaticTarget(Object &source);
+    bool combatTargetVisible(const Object &source,const Object &target) const;
     void finishAttack(Object &source, bool returnToPost);
     void retryAttackApproach(Object &source);
     float automaticAcquisitionRadius(const Object &source) const;
@@ -1074,7 +1159,23 @@ private:
                        float &worldX, float &worldY) const;
     void playUnitAcknowledgement(const Object &object, bool attack);
     void playWorldUnitSound(const Object &object, int soundId);
-    bool worldSoundAudible(float x, float y) const;
+    bool worldSoundVisible(float x,float y) const;
+    uint16_t sharedSightMask(int viewer) const;
+    bool playerSees(int viewer,float x,float y) const;
+    bool sourceSeesTile(const Object &source,int originalX,int originalY,int radius) const;
+    bool objectVisible(const Object &object) const;
+    int tileVisibility(int x,int y) const;
+    int rememberedTerrainAt(int x,int y) const;
+    std::vector<uint8_t> rememberedTerrain_;
+    void refreshVisibility();
+    std::vector<uint16_t> visibleTiles_,exploredTiles_,observedTiles_;
+    std::unordered_map<uint32_t,Object> rememberedObjects_;
+    int rememberedPlayer_=0;
+    Object *rememberedBuildingAtScreen(float x,float y,int width,int height);
+    uint16_t viewSightMask_=0;
+    bool initiallyExplored_=true;
+    void playWorldSound(int soundId,int player,float x,float y);
+    std::array<int,2> worldSoundMix(float x,float y) const;
     void updateAmbience(float dt, int screenW, int screenH);
     void updateAi(float dt);
     void updateAiPlayer(
@@ -1187,9 +1288,38 @@ private:
     uint32_t nextMoveGroupId_ = 1;
     int difficulty_ = 2;
     int victoryState_ = -1;
+    bool keyboardMouseControls_ = false;
+    bool classicHud_=false, classicHudRoot_=true, classicHudMenuRequested_=false;
+    uint32_t classicGarrisonPressed_=0;
+    uint32_t classicHudSubject_=0;
+    ActionMenuTab classicHudTab_=ActionMenuTab::Units;
+    struct HudButton {
+        enum Kind { Empty, Action, Tab, Root, Garrison, Repair, Destroy, Formation, CancelTarget, RemoveRally } kind=Empty;
+        ActionMenuTab tab=ActionMenuTab::Units;
+        size_t option=0;
+        int slp=50721, icon=-1, preferred=0;
+        std::string label;
+    };
+    std::vector<Object *> classicGarrisonMembers();
+    void applyFormation(FormationType formation);
+    void syncClassicHud();
+    std::array<HudButton,16> classicHudButtons();
+    void handleClassicHudInput(InputState &input, bool allowOrders=true);
+    void updateCamera(float dt,const InputState &input,bool blocked);
+    void handleControlGroup(const InputState &input);
+    void renderClassicHud(Renderer &renderer,int width,int height);
+    bool activateActionMenuOption(size_t optionIndex);
+
+    bool skirmish_ = false, skirmishConquest_ = false;
+    float matchTime_ = 0, skirmishAiTime_ = 0;
+    std::array<uint32_t, 3> skirmishCenters_{};
+    void updateSkirmish(float dt);
+    void updateSkirmishArmy(int player);
+    void finishSkirmish(int result);
     std::set<int> warnedEffects_;
     std::set<int> warnedConditions_;
     int localPlayer_ = 0;
+    int soundViewWidth_=960;
     float camX_ = 0, camY_ = 0; // world-pixel position of the screen centre
     float zoom_ = 1.0f;
     float cursorX_ = 0, cursorY_ = 0;
@@ -1217,6 +1347,7 @@ private:
     float lastSelectionX_ = 0, lastSelectionY_ = 0;
     int lastSelectionUnitId_ = -1;
     std::vector<uint32_t> selectionOrder_;
+    std::array<std::vector<uint32_t>,10> controlGroups_;
     bool cursorVisible_ = false;
     CursorMode cursorMode_ = CursorMode::Normal;
     FormationType selectedFormation_ = FormationType::Line;
@@ -1255,6 +1386,13 @@ private:
     uint32_t gatherPointBuildingId_ = 0; // "click an area to set gather point" mode
     bool gatherPointJustBegun_ = false;
 public:
+    bool gatherPointActiveForTesting(uint32_t id) const {
+        const Object *unit = findObject(id);
+        return unit && unit->rallyActive;
+    }
+    bool gatherPointCursorActiveForTesting() const {
+        return gatherPointBuildingId_ != 0;
+    }
     bool setGatherPointForTesting(uint32_t buildingId, float x, float y, uint32_t targetId = 0) {
         Object *b = findObject(buildingId);
         if (!b || !canSetGatherPoint(*b)) return false;
@@ -1323,6 +1461,8 @@ private:
     std::function<void(const std::string &)> log_;
     std::function<float(const std::string &)> playSound_;
     std::function<void(int)> playInterfaceSound_;
+    std::function<void(int,int,int)> playSpatialInterfaceSound_;
+    std::function<void(int,int,int,int)> playSpatialUnitSound_;
     std::function<void(int, int)> playUnitSound_;
     std::function<float(const std::string &)> playAmbientSound_;
 };

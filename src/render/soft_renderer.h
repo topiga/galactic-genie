@@ -20,11 +20,15 @@ public:
     void drawMaskedTinted(Texture *tex, const Quad &q, Texture *mask,
                           const Quad &maskQ, uint8_t r, uint8_t g,
                           uint8_t b, uint8_t a) override;
+    void drawFog(Texture *mask,const Quad &q,uint8_t r,uint8_t g,uint8_t b) override;
     void drawTinted(Texture *tex, const Quad &q, uint8_t r, uint8_t g, uint8_t b, uint8_t a) override;
     void drawLine(float x0, float y0, float x1, float y1, float thickness,
                   uint8_t r, uint8_t g, uint8_t b, uint8_t a) override;
     void fillRect(float x, float y, float w, float h, uint8_t r, uint8_t g, uint8_t b, uint8_t a) override;
     void endFrame() override {}
+
+    // Overlay coordinates are screen pixels, independent of world zoom.
+    void beginOverlay() { scale_ = 1.0f; }
 
     bool savePng(const std::string &path) const;
     const std::vector<uint8_t> &pixels() const { return fb_; }

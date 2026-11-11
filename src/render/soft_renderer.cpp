@@ -64,6 +64,7 @@ static inline void blend(uint8_t *d, const uint8_t *s) {
 }
 
 void SoftRenderer::draw(Texture *tex, const Quad &q) {
+    if (tex->alphaOnly) { drawTinted(tex,q,255,255,255,255); return; }
     drawCalls_++;
     auto *t = static_cast<SoftTexture *>(tex);
     float x0 = q.x * scale_, y0 = q.y * scale_, x1 = (q.x + q.w) * scale_, y1 = (q.y + q.h) * scale_;
@@ -86,6 +87,27 @@ void SoftRenderer::draw(Texture *tex, const Quad &q) {
     }
 }
 
+void SoftRenderer::drawFog(Texture *mask,const Quad &q,uint8_t r,uint8_t g,uint8_t b) {
+    ++drawCalls_;
+    const auto *m=static_cast<SoftTexture *>(mask);
+    const float x0=q.x*scale_,y0=q.y*scale_,x1=(q.x+q.w)*scale_,y1=(q.y+q.h)*scale_;
+    if(x1<=x0 || y1<=y0) return;
+    const float du=(q.u1-q.u0)/(x1-x0),dv=(q.v1-q.v0)/(y1-y0);
+    for(int y=std::max(0,int(std::floor(y0)));y<std::min(h_,int(std::ceil(y1)));++y) {
+        const int v=int(std::floor(q.v0+(y+.5f-y0)*dv));
+        if(v<0 || v>=m->height) continue;
+        for(int x=std::max(0,int(std::floor(x0)));x<std::min(w_,int(std::ceil(x1)));++x) {
+            if((x+y)%2==0) continue;
+            const int u=int(std::floor(q.u0+(x+.5f-x0)*du));
+            if(u<0 || u>=m->width) continue;
+            const size_t index=size_t(v)*m->width+u;
+            const uint8_t alpha=m->px[index*(m->alphaOnly?1:4)+(m->alphaOnly?0:3)];
+            const uint8_t pixel[4]={r,g,b,alpha};
+            blend(fb_.data()+(size_t(y)*w_+x)*4,pixel);
+        }
+    }
+}
+
 void SoftRenderer::drawTinted(Texture *tex, const Quad &q, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
     drawCalls_++;
     auto *t = static_cast<SoftTexture *>(tex);
@@ -98,11 +120,16 @@ void SoftRenderer::drawTinted(Texture *tex, const Quad &q, uint8_t r, uint8_t g,
         int tv = (int)std::floor(q.v0 + (y + 0.5f - y0) * dv);
         if (tv < 0 || tv >= t->height) continue;
         uint8_t *drow = &fb_[((size_t)y * w_) * 4];
-        const uint8_t *srow = &t->px[(size_t)tv * t->width * 4];
+        const uint8_t *srow = &t->px[(size_t)tv * t->width * (t->alphaOnly ? 1 : 4)];
         for (int x = ix0; x < ix1; x++) {
             int tu = (int)std::floor(q.u0 + (x + 0.5f - x0) * du);
             if (tu < 0 || tu >= t->width) continue;
-            const uint8_t *src = srow + tu * 4;
+            const uint8_t *src = srow + tu * (t->alphaOnly ? 1 : 4);
+            if(t->alphaOnly) {
+                const uint8_t tinted[4] = {r,g,b,(uint8_t)(src[0] * a / 255)};
+                blend(drow + x * 4,tinted);
+                continue;
+            }
             const uint8_t tinted[4] = {(uint8_t)(src[0] * r / 255), (uint8_t)(src[1] * g / 255),
                                        (uint8_t)(src[2] * b / 255), (uint8_t)(src[3] * a / 255)};
             blend(drow + x * 4, tinted);

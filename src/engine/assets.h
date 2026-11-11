@@ -8,6 +8,7 @@
 #include "../core/blendomatic.h"
 #include "../core/drs.h"
 #include "../core/elevation.h"
+#include "../core/fog_edges.h"
 #include "../core/genie_dat.h"
 #include "../core/language_strings.h"
 #include "../core/palette.h"
@@ -78,6 +79,8 @@ public:
         return interfac_.read(resourceId, data) || sounds_.read(resourceId, data);
     }
     Texture *selectionRing();
+    const SpriteFrame *fogMask(int slope,int pattern,int kind); // 0 edge fog, 1 black, 2 full fog
+    bool hasFogEdges() const {return fogEdges_!=nullptr;}
     bool hasBlendMasks() const { return blendMaskTexture_ != nullptr; }
     bool hasElevationMaps() const { return elevationMaps_ != nullptr; }
     // Starts a terrain preparation pass. Generated slope textures not touched
@@ -125,6 +128,8 @@ private:
     LanguageStrings languageStrings_;
     std::unique_ptr<Blendomatic> blendomatic_;
     std::unique_ptr<ElevationMaps> elevationMaps_;
+    std::unique_ptr<FogEdges> fogEdges_;
+    std::map<int,SpriteFrame> fogMasks_;
     std::map<uint64_t, std::unique_ptr<SpriteSheet>> sheets_;
     std::map<uint64_t, uint64_t> sheetUse_;
     std::map<SlopeFrameKey, std::unique_ptr<SpriteSheet>> slopeFrames_;
