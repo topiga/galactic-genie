@@ -267,6 +267,10 @@ public:
         int civilization, int unitId, int player,
         float x, float y,
         const std::vector<uint32_t> &builderIds);
+    float constructionDurationForTesting(uint32_t id) const {
+        const auto *object=findObject(id);
+        return object?object->constructionTotal:0;
+    }
     bool completeFoundationForTesting(uint32_t spawnId);
     bool setConstructionProgressForTesting(
         uint32_t spawnId, float progress);
@@ -520,6 +524,17 @@ public:
         return player >= 0 &&
                (size_t)player < researchedTechs_.size() &&
                researchedTechs_[(size_t)player].count(technologyId);
+    }
+    void initializeCivilizationBonusesForTesting() {
+        initializeCivilizationBonuses();
+        refreshAllAutomaticTechnologies();
+    }
+    float playerAttributeForTesting(int player,int attribute) const {
+        return playerAttribute(player,attribute);
+    }
+    float unitAttributeForTesting(uint32_t id,int attribute,float base) const {
+        const auto *object=findObject(id);
+        return object?modifiedUnitAttribute(*object,attribute,base):base;
     }
     bool researchTechnologyForTesting(
         int player, int technologyId) {
@@ -921,6 +936,7 @@ private:
     bool technologyCommandApplies(
         const dat::EffectCommand &command,
         const Object &object) const;
+    float unitTrainingTime(int player,const dat::Unit &unit) const;
     float modifiedUnitAttribute(const Object &object,
                                 int attribute,
                                 float baseValue) const;
@@ -1038,6 +1054,7 @@ private:
     void applyUnitUpgrades(int player);
     bool technologyRequirementsMet(int player,
                                   const dat::Tech &technology) const;
+    void initializeCivilizationBonuses();
     void initializeCivilizationRestrictions();
     void refreshAutomaticTechnologies(int player);
     bool technologyVisible(int player, const dat::Tech &technology) const;
@@ -1274,6 +1291,7 @@ private:
     std::array<ScenarioPlayer, 16> players_{};
     std::array<std::map<int, float>, 17> resources_{};
     std::array<std::set<int>, 17> researchedTechs_{};
+    std::array<std::vector<int>, 17> civilizationEffects_{}, playerEffects_{};
     std::array<AiPlayerState, 17> aiPlayers_{};
     std::array<std::set<int>, 17> disabledTechs_{};
     std::array<std::set<int>, 17> disabledUnits_{};
@@ -1288,6 +1306,7 @@ private:
     uint32_t nextSpawnId_ = 1;
     uint32_t nextMoveGroupId_ = 1;
     int difficulty_ = 2;
+    double gameTime_ = 0;
     int victoryState_ = -1;
     bool keyboardMouseControls_ = false;
     bool classicHud_=false, classicHudRoot_=true, classicHudMenuRequested_=false;

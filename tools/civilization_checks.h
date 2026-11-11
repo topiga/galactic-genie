@@ -1,7 +1,53 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+static void civilizationBonusChecks(swgb::Assets &assets) {
+    const int units[]={1212,1212,933,579,1208,933,104,933};
+    const int attributes[]={101,100,1,13,12,1,100,2};
+    const float expected[]={90,50,101,110,103,105,90,105};
+    std::string error;
+    swgb::Game game(assets);
+    for(int civ=1;civ<=8;++civ) {
+        check(game.init(0x5A17,64,&error,civ,9-civ),error.c_str());
+        const auto id=game.spawnObjectForTesting(civ,units[civ-1],1,6.5f,6.5f);
+        check(id && std::abs(game.unitAttributeForTesting(id,attributes[civ-1],100)-expected[civ-1])<.001f,
+              "Each original civilization applies its own unit-stat bonus");
+    }
+    check(game.initSkirmish(0x5A17,&error,false,5,1,75),error.c_str());
+    check(game.populationCapacityForTesting(1)==75,
+          "Trade Federation population bonus reaches setup cap without extra housing");
+    check(game.init(0x5A17,64,&error,1,7),error.c_str());
+    const auto fortress=game.spawnFoundationForTesting(1,1212,1,6.5f,6.5f,{});
+    check(fortress && std::abs(game.constructionDurationForTesting(fortress)-
+          assets.dat().civs[1].units[1212].trainTime*.9f)<.001f,
+          "Empire construction-time bonus reaches the actual foundation timer");
+
+    const auto master=game.spawnObjectForTesting(1,115,1,8.5f,8.5f);
+    check(game.playerAttributeForTesting(1,89)==1 && game.unitAttributeForTesting(master,5,1)==1,
+          "Enemy Republic grants no healing or Jedi speed bonus");
+    game.setDiplomacyForTesting(1,2,0);
+    game.initializeCivilizationBonusesForTesting();
+    check(game.playerAttributeForTesting(1,89)==2 &&
+          std::abs(game.unitAttributeForTesting(master,5,1)-1.1f)<.0001f,
+          "Startup team bonuses follow recipient alliance without requiring reciprocity");
+    game.setDiplomacyForTesting(1,2,3);
+    check(game.playerAttributeForTesting(1,89)==2,
+          "Startup effects are not recomputed by querying stats after diplomacy changes");
+    check(game.researchTechnologyForTesting(1,578),"Research healing multiplier fixture");
+    check(std::abs(game.playerAttributeForTesting(1,89)-2.4f)<.0001f,
+          "Research effects apply after civilization and team effects");
+    check(game.init(0x5A17,64,&error,7,7),error.c_str());
+    game.setDiplomacyForTesting(1,2,0); game.initializeCivilizationBonusesForTesting();
+    const auto duplicate=game.spawnObjectForTesting(7,643,1,8.5f,8.5f);
+    check(std::abs(game.unitAttributeForTesting(duplicate,5,1)-1.1f)<.0001f,
+          "Allies of the same civilization do not multiply the team bonus twice");
+    check(game.init(0x5A17,64,&error,1,1),error.c_str());
+    check(game.playerAttributeForTesting(1,89)==1,"Restart clears prior match bonuses and research");
+    std::puts("PASS: original civilization effects, directional startup alliances, duplicate teams and research order");
+}
+
 static void civilizationChecks(swgb::Assets &assets,swgb::SoftRenderer &renderer) {
+    civilizationBonusChecks(assets);
     swgb::Game game(assets);std::string error;
     for(int civ=1;civ<=8;++civ) {
         check(game.initSkirmish(0x5A17,&error,false,civ,9-civ),error.c_str());

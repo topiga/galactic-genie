@@ -366,9 +366,12 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
         }
     }
     rng_.seed(seed);
+    gameTime_ = 0;
     players_ = {};
     resources_ = {};
     researchedTechs_ = {};
+    civilizationEffects_ = {};
+    playerEffects_ = {};
     aiPlayers_ = {};
     techGeneration_++;
     disabledTechs_ = {};
@@ -462,6 +465,7 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
         return false;
     }
     rebuildAdjacency();
+    initializeCivilizationBonuses();
     initializeCivilizationRestrictions();
     refreshAllAutomaticTechnologies();
     lookAt(mapSize * 0.30f + 2, mapSize * 0.35f + 2);
@@ -890,9 +894,12 @@ bool Game::initScenario(const Scenario &scenario, std::string *err) {
     }
 
     rng_.seed(1);
+    gameTime_ = 0;
     players_ = scenario.players;
     resources_ = {};
     researchedTechs_ = {};
+    civilizationEffects_ = {};
+    playerEffects_ = {};
     aiPlayers_ = {};
     techGeneration_++;
     disabledTechs_ = {};
@@ -1074,6 +1081,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err) {
                     if (Object *object = findObject(spawnId))
                         configureGate(*object);
     rebuildAdjacency();
+    initializeCivilizationBonuses();
     initializeCivilizationRestrictions();
     refreshAllAutomaticTechnologies();
     const Object *hero = nullptr;
@@ -2636,21 +2644,9 @@ float Game::modifiedUnitAttribute(const Object &object,
     if (object.player < 0 ||
         (size_t)object.player >= researchedTechs_.size())
         return value;
-    for (int technologyId :
-         researchedTechs_[(size_t)object.player]) {
-        if (technologyId < 0 ||
-            (size_t)technologyId >= assets_.dat().techs.size())
-            continue;
-        const dat::Tech &technology =
-            assets_.dat().techs[(size_t)technologyId];
-        if (technology.effectId < 0 ||
-            (size_t)technology.effectId >=
-                assets_.dat().effects.size())
-            continue;
+    for (int effectId : playerEffects_[(size_t)object.player]) {
         for (const dat::EffectCommand &command :
-             assets_.dat()
-                 .effects[(size_t)technology.effectId]
-                 .commands) {
+             assets_.dat().effects[(size_t)effectId].commands) {
             if (command.c != attribute ||
                 !technologyCommandApplies(command, object))
                 continue;
@@ -2665,6 +2661,13 @@ float Game::modifiedUnitAttribute(const Object &object,
     return value;
 }
 
+float Game::unitTrainingTime(int player,const dat::Unit &unit) const {
+    Object candidate;
+    candidate.unit=&unit;
+    candidate.player=player;
+    return std::max(.1f,modifiedUnitAttribute(candidate,101,float(unit.trainTime)));
+}
+
 int Game::modifiedAttackAmount(
     const Object &source,
     const dat::AttackOrArmor &attack) const {
@@ -2672,21 +2675,9 @@ int Game::modifiedAttackAmount(
     if (source.player < 0 ||
         (size_t)source.player >= researchedTechs_.size())
         return attack.amount;
-    for (int technologyId :
-         researchedTechs_[(size_t)source.player]) {
-        if (technologyId < 0 ||
-            (size_t)technologyId >= assets_.dat().techs.size())
-            continue;
-        const dat::Tech &technology =
-            assets_.dat().techs[(size_t)technologyId];
-        if (technology.effectId < 0 ||
-            (size_t)technology.effectId >=
-                assets_.dat().effects.size())
-            continue;
+    for (int effectId : playerEffects_[(size_t)source.player]) {
         for (const dat::EffectCommand &command :
-             assets_.dat()
-                 .effects[(size_t)technology.effectId]
-                 .commands) {
+             assets_.dat().effects[(size_t)effectId].commands) {
             if (command.c != 9 ||
                 !technologyCommandApplies(command, source))
                 continue;
@@ -2725,21 +2716,9 @@ int Game::modifiedArmourAmount(const Object &target,
     if (target.player < 0 ||
         (size_t)target.player >= researchedTechs_.size())
         return (int)std::lround(amount);
-    for (int technologyId :
-         researchedTechs_[(size_t)target.player]) {
-        if (technologyId < 0 ||
-            (size_t)technologyId >= assets_.dat().techs.size())
-            continue;
-        const dat::Tech &technology =
-            assets_.dat().techs[(size_t)technologyId];
-        if (technology.effectId < 0 ||
-            (size_t)technology.effectId >=
-                assets_.dat().effects.size())
-            continue;
+    for (int effectId : playerEffects_[(size_t)target.player]) {
         for (const dat::EffectCommand &command :
-             assets_.dat()
-                 .effects[(size_t)technology.effectId]
-                 .commands) {
+             assets_.dat().effects[(size_t)effectId].commands) {
             if (command.c != 8 ||
                 !technologyCommandApplies(command, target))
                 continue;
@@ -3583,24 +3562,9 @@ bool Game::buildingMatchesLocation(
     bool changed = true;
     while (changed) {
         changed = false;
-        for (int technologyId :
-             researchedTechs_[(size_t)building.player]) {
-            if (technologyId < 0 ||
-                (size_t)technologyId >=
-                    assets_.dat().techs.size())
-                continue;
-            const dat::Tech &technology =
-                assets_.dat().techs[
-                    (size_t)technologyId];
-            if (technology.effectId < 0 ||
-                (size_t)technology.effectId >=
-                    assets_.dat().effects.size())
-                continue;
+        for (int effectId : playerEffects_[(size_t)building.player]) {
             for (const dat::EffectCommand &command :
-                 assets_.dat()
-                     .effects[
-                         (size_t)technology.effectId]
-                     .commands)
+                 assets_.dat().effects[(size_t)effectId].commands)
                 if (command.type == 3 &&
                     lineage.count(command.b) &&
                     lineage.insert(command.a).second)
@@ -3705,7 +3669,37 @@ void Game::refreshAutomaticTechnologies(int player) {
             changed = true;
         }
     }
+    auto &effects=playerEffects_[(size_t)player];
+    effects=civilizationEffects_[(size_t)player];
+    for (int id:researchedTechs_[(size_t)player]) {
+        if (id<0 || size_t(id)>=assets_.dat().techs.size()) continue;
+        const int effect=assets_.dat().techs[size_t(id)].effectId;
+        if (effect>=0 && size_t(effect)<assets_.dat().effects.size()) effects.push_back(effect);
+    }
     applyUnitUpgrades(player);
+}
+
+void Game::initializeCivilizationBonuses() {
+    civilizationEffects_ = {};
+    for (size_t i=0;i<players_.size();++i) {
+        if (!players_[i].active) continue;
+        auto &effects=civilizationEffects_[i+1];
+        const int civ=civilizationForPlayer(int(i)+1);
+        const auto add=[&](int effect) {
+            if (effect>=0 && size_t(effect)<assets_.dat().effects.size()) effects.push_back(effect);
+        };
+        if (civ<=0 || size_t(civ)>=assets_.dat().civs.size()) continue;
+        add(assets_.dat().civs[size_t(civ)].techTreeId);
+        std::set<int> allies{civ};
+        for (size_t j=0;j<players_.size();++j)
+            if (players_[j].active && isFriendlyPlayer(int(i)+1,int(j)+1))
+                allies.insert(civilizationForPlayer(int(j)+1));
+        // Original 0x602050 deduplicates by civilization and applies in civilization order.
+        for (int ally:allies)
+            if (ally>0 && size_t(ally)<assets_.dat().civs.size())
+                add(assets_.dat().civs[size_t(ally)].teamBonusId);
+    }
+    techGeneration_++;
 }
 
 void Game::initializeCivilizationRestrictions() {
@@ -3761,14 +3755,9 @@ bool Game::unitAvailable(int player, int unitId) const {
     if (availableCacheGeneration_[(size_t)player] != techGeneration_) {
         availableCacheGeneration_[(size_t)player] = techGeneration_;
         cache.assign(4096, 0);
-        for (int technologyId : researchedTechs_[(size_t)player]) {
-            if (technologyId < 0 || (size_t)technologyId >= assets_.dat().techs.size()) continue;
-            const dat::Tech &technology = assets_.dat().techs[(size_t)technologyId];
-            if (technology.effectId < 0 ||
-                (size_t)technology.effectId >= assets_.dat().effects.size())
-                continue;
+        for (int effectId : playerEffects_[(size_t)player]) {
             for (const dat::EffectCommand &command :
-                 assets_.dat().effects[(size_t)technology.effectId].commands)
+                 assets_.dat().effects[(size_t)effectId].commands)
                 if (command.type == 2 && command.a >= 0 && command.a < 4096)
                     cache[(size_t)command.a] = command.b != 0 ? 1 : 0;
         }
@@ -3790,14 +3779,9 @@ const dat::Unit *Game::effectiveUnitForPlayer(
     if (upgradeCacheGeneration_[(size_t)player] != techGeneration_) {
         upgradeCacheGeneration_[(size_t)player] = techGeneration_;
         upgrades.clear();
-        for (int technologyId : researchedTechs_[(size_t)player]) {
-            if (technologyId < 0 || (size_t)technologyId >= assets_.dat().techs.size()) continue;
-            const dat::Tech &technology = assets_.dat().techs[(size_t)technologyId];
-            if (technology.effectId < 0 ||
-                (size_t)technology.effectId >= assets_.dat().effects.size())
-                continue;
+        for (int effectId : playerEffects_[(size_t)player]) {
             for (const dat::EffectCommand &command :
-                 assets_.dat().effects[(size_t)technology.effectId].commands)
+                 assets_.dat().effects[(size_t)effectId].commands)
                 if (command.type == 3 &&
                     command.a >= 0 &&
                     command.b >= 0) {
@@ -4730,7 +4714,7 @@ float Game::populationCapacity(int player) const {
     if (player <= 0 ||
         (size_t)player > players_.size())
         return 0.0f;
-    float capacity = 0.0f;
+    float capacity = std::max(0.0f,playerAttribute(player,4));
     for (const Object &object : objects_) {
         if (!object.active ||
             object.player != player ||
@@ -6296,7 +6280,7 @@ void Game::updateGathering(float dt) {
                 // foundation and its farmer rebuilds it, then farms again.
                 reseedQueue_[(size_t)resource->player]--;
                 resource->underConstruction = true;
-                resource->constructionTotal = std::max(1.0f, (float)resource->unit->trainTime);
+                resource->constructionTotal = std::max(1.f,unitTrainingTime(resource->player,*resource->unit));
                 resource->constructionRemaining = resource->constructionTotal;
                 resource->hitPoints = 1.0f;
                 resource->resourceAmount = 0.0f;
@@ -7198,7 +7182,7 @@ bool Game::activateActionMenuOption(size_t optionIndex) {
                     cost.amount;
         item.unit = unit;
         item.duration =
-            std::max(0.1f, (float)unit->trainTime);
+            unitTrainingTime(localPlayer_,*unit);
         statusMessage_ = "UNIT QUEUED";
     }
     subject->productionQueue.push_back(item);
@@ -7328,7 +7312,7 @@ Game::Object *Game::createFoundation(const dat::Unit &unit, int player, float x,
     if (!building) return nullptr;
     building->wander = false;
     building->underConstruction = true;
-    building->constructionTotal = std::max(1.0f, (float)unit.trainTime);
+    building->constructionTotal = std::max(1.f,unitTrainingTime(player,unit));
     building->constructionRemaining = building->constructionTotal;
     building->hitPoints = 1.0f;
     // Farms paint their staged terrain in syncFarmTerrain. Shore buildings
@@ -9036,32 +9020,11 @@ float Game::playerAttribute(int player, int attribute) const {
         const auto &base = assets_.dat().civs[(size_t)civilization].resources;
         if (attribute >= 0 && (size_t)attribute < base.size()) value = base[(size_t)attribute];
     }
-    if (attribute == 89 && player > 0) {
-        // Retail DAT stores zero for the neutral healing multiplier; Republic's team effect sets two.
-        if (value == 0) value = 1;
-        std::set<int> applied;
-        for (size_t i=0;i<players_.size();++i) {
-            const int ally=int(i)+1, civ=civilizationForPlayer(ally);
-            if (!players_[i].active || !isFriendlyPlayer(player,ally) ||
-                !isFriendlyPlayer(ally,player) || civ<0 || size_t(civ)>=assets_.dat().civs.size()) continue;
-            const int effect=assets_.dat().civs[size_t(civ)].teamBonusId;
-            if (effect<0 || size_t(effect)>=assets_.dat().effects.size() ||
-                !applied.insert(effect).second) continue;
-            for (const auto &command:assets_.dat().effects[size_t(effect)].commands) {
-                if (command.a!=attribute) continue;
-                if (command.type==1) value=command.b ? value+command.d : command.d;
-                else if (command.type==6) value*=command.d;
-            }
-        }
-    }
+    if (attribute == 89 && value == 0) value = 1;
     if (player < 0 || (size_t)player >= researchedTechs_.size()) return value;
-    for (int technologyId : researchedTechs_[(size_t)player]) {
-        if (technologyId < 0 || (size_t)technologyId >= assets_.dat().techs.size()) continue;
-        const dat::Tech &technology = assets_.dat().techs[(size_t)technologyId];
-        if (technology.effectId < 0 || (size_t)technology.effectId >= assets_.dat().effects.size())
-            continue;
+    for (int effectId : playerEffects_[(size_t)player]) {
         for (const dat::EffectCommand &command :
-             assets_.dat().effects[(size_t)technology.effectId].commands) {
+             assets_.dat().effects[(size_t)effectId].commands) {
             if (command.a != attribute) continue;
             if (command.type == 1) value = command.b ? value + command.d : command.d;
             else if (command.type == 6) value *= command.d;
@@ -12613,9 +12576,7 @@ bool Game::aiTrain(
     ProductionItem item;
     item.unit = &unit;
     item.duration =
-        std::max(
-            0.1f,
-            (float)unit.trainTime);
+        unitTrainingTime(player,unit);
     producer->productionQueue.push_back(
         item);
     if (producer->productionQueue.size() ==
@@ -12737,6 +12698,10 @@ bool Game::evaluateAiFactValue(
     if (fact == "current-age-time") {
         value =
             (int)std::floor(state.ageTime);
+        return true;
+    }
+    if (fact == "game-time") {
+        value = (int)std::floor(gameTime_);
         return true;
     }
     if (fact == "difficulty") {
@@ -13403,6 +13368,7 @@ void Game::update(float dt, const InputState &incoming) {
         updateSkirmish(dt);
         if (victoryState_ >= 0) return;
     }
+    gameTime_ += dt;
     handleControlGroup(in);
     // Placement armed by the build menu last frame may now take clicks.
     placementJustBegun_ = false;

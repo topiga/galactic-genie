@@ -114,6 +114,7 @@ static void healingChecks(swgb::Assets &assets, swgb::SoftRenderer &renderer) {
             rates.damageObjectForTesting(patient,100000);
         }
         rates.setDiplomacyForTesting(1,2,0); rates.setDiplomacyForTesting(2,1,0);
+        rates.initializeCivilizationBonusesForTesting();
         const auto patient=rates.spawnObjectForTesting(civ,4,1,11.5f,10.5f);
         rates.damageObjectForTesting(patient,100);
         float before=rates.objectHitPoints(patient);
