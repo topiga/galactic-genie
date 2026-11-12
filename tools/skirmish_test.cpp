@@ -13,6 +13,7 @@ static void check(bool value, const char *message) {
 #include "healing_checks.h"
 #include "combat_modifier_checks.h"
 #include "unit_cost_checks.h"
+#include "research_cost_checks.h"
 #include "ai_fog_checks.h"
 #include "ai_time_checks.h"
 #include "ai_timer_checks.h"
@@ -244,6 +245,7 @@ int main(int argc, char **argv) {
     healingChecks(assets,renderer);
     combatModifierChecks(assets);
     unitCostChecks(assets);
+    researchCostChecks(assets);
     rubbleChecks(assets,renderer);
     aiFogChecks(assets);
     aiTimeChecks(assets);

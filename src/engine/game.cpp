@@ -18,6 +18,13 @@ namespace swgb {
 
 namespace {
 
+int16_t truncateShort(double value) {
+    if (!std::isfinite(value)) return 0;
+    value=std::fmod(std::trunc(value),65536.);
+    if (value<0) value+=65536.;
+    return int16_t(value>=32768. ? value-65536. : value);
+}
+
 // Original signed-short attributes round each command, retaining x87 precision for multiplication.
 int16_t applyShortEffect(int16_t current,const dat::EffectCommand &command) {
     if (!std::isfinite(command.d)) return current;
@@ -2694,6 +2701,51 @@ std::array<dat::ResourceCost,3> Game::unitCosts(int player,const dat::Unit &unit
     return costs;
 }
 
+std::array<Game::ResearchCost,3> Game::researchCosts(int player,const dat::Tech &technology) const {
+    std::array<ResearchCost,3> costs{};
+    std::array<int16_t,3> deltas{};
+    for (size_t i=0;i<costs.size();++i)
+        costs[i]={technology.costs[i].type,technology.costs[i].amount,technology.costs[i].flag};
+    if (player<0 || size_t(player)>=playerEffects_.size()) return costs;
+    const auto &techs=assets_.dat().techs;
+    for (int effect:playerEffects_[size_t(player)])
+        for (const auto &command:assets_.dat().effects[size_t(effect)].commands) {
+            if (command.type!=101 || command.a<0 || size_t(command.a)>=techs.size() ||
+                &techs[size_t(command.a)]!=&technology || !std::isfinite(command.d)) continue;
+            for (size_t i=0;i<costs.size();++i)
+                if (costs[i].flag && costs[i].type==command.b) {
+                    // Original writes a delta relative to the base, replacing any previous delta.
+                    deltas[i]=truncateShort(truncateShort(command.d)-
+                        ((command.c & 0xff)?0:technology.costs[i].amount));
+                    break;
+                }
+        }
+    float multiplier=playerAttribute(player,85);
+    for (size_t i=0;i<std::min<size_t>(4,techs.size());++i)
+        if (&techs[i]==&technology) multiplier=0;
+    // shortcut: Bothan Network's population-based purchase multiplier needs player-status accounting.
+    for (size_t i=0;i<costs.size();++i) {
+        if (!costs[i].flag) continue;
+        costs[i].amount+=deltas[i];
+        if (multiplier>0) costs[i].amount=truncateShort(double(costs[i].amount)*multiplier);
+    }
+    return costs;
+}
+
+float Game::researchDuration(int player,const dat::Tech &technology) const {
+    int16_t delta=0;
+    if (player<0 || size_t(player)>=playerEffects_.size()) return std::max(0.f,float(technology.researchTime));
+    const auto &techs=assets_.dat().techs;
+    for (int effect:playerEffects_[size_t(player)])
+        for (const auto &command:assets_.dat().effects[size_t(effect)].commands)
+            if (command.type==103 && command.a>=0 && size_t(command.a)<techs.size() &&
+                &techs[size_t(command.a)]==&technology && std::isfinite(command.d))
+                delta=truncateShort(truncateShort(command.d)-
+                    ((command.c & 0xff)?0:technology.researchTime));
+    const float multiplier=playerAttribute(player,86);
+    return std::max(0.f,technology.researchTime*(multiplier>0?multiplier:1.f)+delta);
+}
+
 float Game::unitTrainingTime(int player,const dat::Unit &unit) const {
     int16_t duration=unit.trainTime;
     Object candidate; candidate.unit=&unit; candidate.player=player;
@@ -4884,7 +4936,8 @@ std::string Game::originalHelpText(int stringId, const dat::Unit *unit,
         for (const dat::ResourceCost &c : unitCosts(localPlayer_,*unit))
             if (c.flag) addCost(c.type, c.amount);
     if (technology)
-        for (const dat::Tech::Cost &c : technology->costs) addCost(c.type, c.amount);
+        for (const auto &c : researchCosts(localPlayer_,*technology))
+            if (c.flag) addCost(c.type, c.amount);
     replaceAll("<cost>", label(20200) + cost);
     auto stat = [&](const char *tag, int labelId, int value) {
         replaceAll(tag, unit ? label(labelId) + std::to_string(value) : std::string());
@@ -6945,10 +6998,8 @@ bool Game::cancelProductionItem(Object &building,
     } else if (item.technologyId >= 0 &&
                (size_t)item.technologyId <
                    assets_.dat().techs.size()) {
-        for (const dat::Tech::Cost &cost :
-             assets_.dat()
-                 .techs[(size_t)item.technologyId]
-                 .costs)
+        for (const auto &cost :
+             researchCosts(building.player,assets_.dat().techs[(size_t)item.technologyId]))
             if (cost.flag && cost.type >= 0 &&
                 cost.amount > 0)
                 resources_[(size_t)building.player]
@@ -7180,7 +7231,7 @@ bool Game::activateActionMenuOption(size_t optionIndex) {
                 kInterfaceCannotDoSound);
             return true;
         }
-        for (const dat::Tech::Cost &cost : technology.costs) {
+        for (const auto &cost : researchCosts(localPlayer_,technology)) {
             if (!cost.flag || cost.type < 0 ||
                 cost.amount <= 0)
                 continue;
@@ -7190,14 +7241,14 @@ bool Game::activateActionMenuOption(size_t optionIndex) {
                 return true;
             }
         }
-        for (const dat::Tech::Cost &cost : technology.costs)
+        for (const auto &cost : researchCosts(localPlayer_,technology))
             if (cost.flag && cost.type >= 0 &&
                 cost.amount > 0)
                 resources_[(size_t)localPlayer_][cost.type] -=
                     cost.amount;
         item.technologyId = technologyId;
         item.duration =
-            std::max(0.1f, (float)technology.researchTime);
+            researchDuration(localPlayer_,technology);
         statusMessage_ = "RESEARCH QUEUED";
     } else {
         const std::vector<const dat::Unit *> options =
@@ -12417,8 +12468,8 @@ bool Game::aiCanAfford(
         (size_t)player >=
             resources_.size())
         return false;
-    for (const dat::Tech::Cost &cost :
-         technology.costs)
+    for (const auto &cost :
+         researchCosts(player,technology))
         if (cost.flag && cost.type >= 0 &&
             cost.amount > 0 &&
             resource(player, cost.type) <
@@ -12660,8 +12711,8 @@ bool Game::aiResearch(
         }
     }
     if (!researcher) return false;
-    for (const dat::Tech::Cost &cost :
-         technology.costs)
+    for (const auto &cost :
+         researchCosts(player,technology))
         if (cost.flag && cost.type >= 0 &&
             cost.amount > 0)
             resources_[(size_t)player]
@@ -12670,9 +12721,7 @@ bool Game::aiResearch(
     ProductionItem item;
     item.technologyId = technologyId;
     item.duration =
-        std::max(
-            0.1f,
-            (float)technology.researchTime);
+        researchDuration(player,technology);
     researcher->productionQueue.push_back(
         item);
     if (researcher->productionQueue.size() ==
@@ -18037,9 +18086,9 @@ void Game::render(Renderer &r, int screenW, int screenH) {
                         (size_t)selectedTechnology];
                 duration =
                     std::max<int16_t>(
-                        0, technology.researchTime);
-                for (const dat::Tech::Cost &cost :
-                     technology.costs)
+                        0, int(researchDuration(localPlayer_,technology)));
+                for (const auto &cost :
+                     researchCosts(localPlayer_,technology))
                     appendCost(
                         cost.type, cost.amount,
                         cost.flag != 0);
@@ -18520,8 +18569,8 @@ void Game::render(Renderer &r, int screenW, int screenH) {
                             cost.type, cost.amount,
                             cost.flag != 0);
                 else if (technology)
-                    for (const dat::Tech::Cost &cost :
-                         technology->costs)
+                    for (const auto &cost :
+                         researchCosts(localPlayer_,*technology))
                         appendCost(
                             cost.type, cost.amount,
                             cost.flag != 0);
@@ -18541,8 +18590,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
                                          int(unitTrainingTime(localPlayer_,*unit)))
                                    : std::max<int16_t>(
                                          0,
-                                         technology
-                                             ->researchTime)) +
+                                         int(researchDuration(localPlayer_,*technology)))) +
                                "S"},
                     (kActionMenuX + 390.0f) * invZoom,
                     y + 8.0f * invZoom,

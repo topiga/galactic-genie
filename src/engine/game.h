@@ -529,6 +529,13 @@ public:
         auto *object=findObject(id);
         return object && cancelProductionItem(*object,0);
     }
+    struct ResearchCost { int type,amount,flag; };
+    std::array<ResearchCost,3> researchCostsForTesting(int player,const dat::Tech &tech) const {
+        return researchCosts(player,tech);
+    }
+    float researchDurationForTesting(int player,const dat::Tech &tech) const {
+        return researchDuration(player,tech);
+    }
     std::array<dat::ResourceCost,3> unitCostsForTesting(int player,const dat::Unit &unit) const {
         return unitCosts(player,unit);
     }
@@ -947,6 +954,8 @@ private:
     bool technologyCommandApplies(
         const dat::EffectCommand &command,
         const Object &object) const;
+    std::array<ResearchCost,3> researchCosts(int player,const dat::Tech &technology) const;
+    float researchDuration(int player,const dat::Tech &technology) const;
     std::array<dat::ResourceCost,3> unitCosts(int player,const dat::Unit &unit) const;
     float unitTrainingTime(int player,const dat::Unit &unit) const;
     float modifiedUnitAttribute(const Object &object,
