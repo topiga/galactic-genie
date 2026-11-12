@@ -57,4 +57,11 @@ bool generateRmsLandSeedTerrain(const std::vector<RmsToken> &directives,
                                 uint32_t width, uint32_t height,
                                 const dat::TerrainBlock &terrainData,
                                 std::vector<uint8_t> &out, std::string *err = nullptr);
+// Original full-map post-land terrain smoothing, operating on terrain bytes only.
+// Does not grow lands or perform the engine's tile-update side effects. Input and
+// output may alias. Rejects invalid dimensions or exhausted tile-visit budget;
+// failure leaves output empty rather than returning a partially smoothed map.
+bool smoothRmsTerrain(uint32_t width, uint32_t height, uint8_t baseTerrain,
+                      const std::vector<uint8_t> &input, std::vector<uint8_t> &out,
+                      std::string *err = nullptr, size_t maxTileVisits = 64 * 1024 * 1024);
 } // namespace swgb

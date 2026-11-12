@@ -206,6 +206,39 @@ int main(int argc, char **argv) {
     require(!landSeeds(landPrefix + "create_land { terrain_type 1 land_position 50 50 base_size -1 number_of_tiles 0 }", 7, 5), "negative radius rejected");
     require(!landSeeds(landPrefix + "create_land { terrain_type 3 land_position 50 50 base_size 1 number_of_tiles 0 }", 7, 5)
                 && terrain.empty(), "disabled seed terrain cannot leave partial output");
+    // Golden corpus from the original Windows 1.1 function 0x492ab0, executed
+    // with its tile setter reduced to the terrain-byte write. All 256 possible
+    // neighborhoods exercise boundaries, in-place ordering and convergence.
+    uint32_t smoothHash = 2166136261u;
+    constexpr int neighborPositions[] = {1, 2, 5, 8, 7, 6, 3, 0};
+    for (unsigned mask = 0; mask < 256; ++mask) {
+        std::vector<uint8_t> before(9, 1), after, repeated;
+        for (unsigned bit = 0; bit < 8; ++bit)
+            if (mask & (1u << bit)) before[neighborPositions[bit]] = 0;
+        require(smoothRmsTerrain(3, 3, 0, before, after, &err), err);
+        for (uint8_t tile : after) smoothHash = (smoothHash ^ tile) * 16777619u;
+        require(smoothRmsTerrain(3, 3, 0, after, repeated, &err) && repeated == after,
+                "smoothing must converge to an idempotent raster");
+    }
+    require(smoothHash == 2477551712u, "original executable smoothing corpus mismatch");
+    std::vector<uint8_t> rectangular;
+    require(smoothRmsTerrain(7, 5, 0,
+        {1,1,0,1,1,1,1, 1,0,1,1,1,1,0, 1,1,1,0,1,0,1, 0,1,1,1,1,1,1, 1,1,0,1,1,1,1},
+        rectangular, &err), err);
+    require(rectangular == std::vector<uint8_t>(
+        {1,1,0,1,1,1,1, 1,0,0,0,0,0,0, 0,0,0,0,0,0,1, 0,0,0,0,1,1,1, 1,1,0,1,1,1,1}),
+        "original executable rectangular smoothing result");
+    std::vector<uint8_t> smoothing = {9, 7, 9, 8, 6, 8, 9, 7, 9};
+    require(smoothRmsTerrain(3, 3, 7, smoothing, smoothing, &err), err);
+    require(smoothing == std::vector<uint8_t>({9, 7, 9, 8, 7, 8, 9, 7, 9}),
+            "smoothing opposite gap must preserve unrelated terrain IDs and support aliasing");
+    require(smoothRmsTerrain(1, 1, 0, {1}, smoothing, &err) && smoothing == std::vector<uint8_t>({1}),
+            "outside-map neighbors cannot count as base terrain");
+    require(!smoothRmsTerrain(0, 1, 0, {}, smoothing, &err) && smoothing.empty(), "invalid smoothing dimensions");
+    require(!smoothRmsTerrain(2, 2, 0, {1}, smoothing, &err) && smoothing.empty(), "invalid smoothing raster size");
+    require(!smoothRmsTerrain(3, 3, 0, {1,0,1,1,1,1,1,0,1}, smoothing, &err, 18)
+                && smoothing.empty() && err.find("limit") != std::string::npos,
+            "work limit must reject partial smoothing rather than publish it");
     if (argc == 2) {
         ResourceSet resources;
         require(resources.add(argv[1], &err), err);

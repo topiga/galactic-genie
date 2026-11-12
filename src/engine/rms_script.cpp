@@ -2,6 +2,7 @@
 #include "rms_script.h"
 #include "../core/drs.h"
 #include "../core/genie_dat.h"
+#include "../core/genie_random.h"
 
 #include <algorithm>
 #include <charconv>
@@ -217,8 +218,7 @@ bool RmsScript::preprocess(const std::unordered_set<std::string> &initialDefines
                 }
                 if (!randomState) fail(t, "random choice evaluation requires RNG state");
                 // Original 0x632bdd and 0x4e24cb: inclusive roll 0..100.
-                rng = rng * 214013u + 2531011u;
-                remaining = static_cast<int>(((rng >> 16) & 32767u) * 100u / 32767u);
+                remaining = static_cast<int>(genieRandomDraw(rng) * 100u / 32767u);
                 randomPhase = 1;
             } else if (s == "percent_chance") {
                 const auto &number = argument().text;
@@ -398,6 +398,60 @@ bool generateRmsLandSeedTerrain(const std::vector<RmsToken> &directives,
             std::fill(raster.begin() + static_cast<size_t>(y) * width + left,
                       raster.begin() + static_cast<size_t>(y) * width + right + 1, pixel[0]);
     }
+    out = std::move(raster);
+    return true;
+}
+bool smoothRmsTerrain(uint32_t width, uint32_t height, uint8_t baseTerrain,
+                      const std::vector<uint8_t> &input, std::vector<uint8_t> &out,
+                      std::string *err, size_t maxTileVisits) {
+    if (err) err->clear();
+    auto fail = [&](const char *reason) {
+        out.clear();
+        if (err) *err = std::string("RMS terrain smoothing: ") + reason;
+        return false;
+    };
+    if (!width || !height || width > 1024 || height > 1024)
+        return fail("dimensions must be 1..1024");
+    if (input.size() != static_cast<size_t>(width) * height)
+        return fail("terrain raster size does not match dimensions");
+    auto raster = input;
+    // Original 0x492ab0: two row-major, in-place passes, repeated until neither
+    // changes a tile. Outside-map neighbors never match the base terrain.
+    constexpr int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};
+    constexpr int dy[] = {-1, -1, 0, 1, 1, 1, 0, -1};
+    bool changed;
+    do {
+        changed = false;
+        for (int phase = 0; phase < 2; ++phase) {
+            if (maxTileVisits < raster.size()) return fail("tile-visit limit exceeded");
+            maxTileVisits -= raster.size();
+            for (int y = 0; y < static_cast<int>(height); ++y) {
+                for (int x = 0; x < static_cast<int>(width); ++x) {
+                    auto &tile = raster[static_cast<size_t>(y) * width + x];
+                    if (tile == baseTerrain) continue;
+                    bool neighbors[8];
+                    for (int i = 0; i < 8; ++i) {
+                        const int nx = x + dx[i], ny = y + dy[i];
+                        neighbors[i] = nx >= 0 && ny >= 0 && nx < static_cast<int>(width) &&
+                            ny < static_cast<int>(height) &&
+                            raster[static_cast<size_t>(ny) * width + nx] == baseTerrain;
+                    }
+                    bool replace = (neighbors[0] && neighbors[4]) || (neighbors[2] && neighbors[6]);
+                    if (phase == 1) {
+                        replace = false;
+                        // The second instruction block tests each diagonal and
+                        // the same five surrounding gap patterns, rotated 90°.
+                        for (int corner = 1; corner < 8 && !replace; corner += 2) {
+                            auto n = [&](int offset) { return neighbors[(corner + offset) % 8]; };
+                            replace = n(0) && ((n(2) && !n(1)) || (n(3) && !n(2)) ||
+                                (n(6) && !n(7)) || (n(5) && !n(6)) || (n(4) && !n(5) && !n(3)));
+                        }
+                    }
+                    if (replace) { tile = baseTerrain; changed = true; }
+                }
+            }
+        }
+    } while (changed);
     out = std::move(raster);
     return true;
 }

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "../core/genie_random.h"
 #include "game.h"
 #include "font_atlas.h"
 #include "sight_stencils.h"
@@ -13182,8 +13183,7 @@ bool Game::executeAiAction(
         bool known=false;
         const int limit=resolveAiValue(player,state,action.children[1].value,known);
         if (!known || !limit) return false;
-        aiRandomState_=aiRandomState_*214013u+2531011u;
-        const int draw=int((aiRandomState_>>16)&32767u);
+        const int draw=int(genieRandomDraw(aiRandomState_));
         aiRandomNumbers_[size_t(player)]=draw%limit+1;
         return true;
     }

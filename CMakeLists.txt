@@ -26,6 +26,8 @@ set(SWGB_CORE_SOURCES
     src/engine/assets.cpp
     src/engine/ai_script.cpp
     src/engine/rms_script.cpp
+    src/engine/rms_objects.cpp
+    src/engine/ai_military.cpp
     src/engine/game.cpp
     src/engine/pathfinding.cpp
 )
@@ -109,5 +111,19 @@ if(NOT VITA)
         add_executable(swgb-skirmish-test tools/skirmish_test.cpp
             ${SWGB_CORE_SOURCES} src/render/soft_renderer.cpp)
         target_link_libraries(swgb-skirmish-test PRIVATE ZLIB::ZLIB)
+    endif()
+endif()
+
+if(NOT VITA)
+    option(SWGB_BUILD_ALGORITHM_TESTS "Build asset-independent RMS and military tests" OFF)
+    if(SWGB_BUILD_ALGORITHM_TESTS)
+        enable_testing()
+        add_executable(swgb-rms-test tools/rms_test.cpp src/engine/rms_script.cpp src/core/drs.cpp)
+        add_executable(swgb-rms-object-test tools/rms_object_test.cpp src/engine/rms_objects.cpp)
+        add_executable(swgb-ai-military-test tools/ai_military_test.cpp src/engine/ai_military.cpp)
+        foreach(test rms rms-object ai-military)
+            target_include_directories(swgb-${test}-test PRIVATE src)
+            add_test(NAME ${test} COMMAND swgb-${test}-test)
+        endforeach()
     endif()
 endif()
