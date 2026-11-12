@@ -317,4 +317,88 @@ bool generateRmsBaseTerrain(const std::vector<RmsToken> &directives,
     out.assign(static_cast<size_t>(width) * height, terrain);
     return true;
 }
+bool generateRmsLandSeedTerrain(const std::vector<RmsToken> &directives,
+                                uint32_t width, uint32_t height,
+                                const dat::TerrainBlock &terrainData,
+                                std::vector<uint8_t> &out, std::string *err) {
+    out.clear();
+    if (err) err->clear();
+    auto fail = [&](const std::string &reason) {
+        if (err) *err = "RMS land seeds: " + reason;
+        return false;
+    };
+    if (!width || !height || width > 1024 || height > 1024)
+        return fail("dimensions must be 1..1024");
+    struct Seed { int32_t terrain = 0, x = 0, y = 0, radius = 0; };
+    std::vector<Seed> seeds;
+    std::vector<RmsToken> base;
+    bool landStage = false;
+    auto number = [&](size_t &i, int32_t &value) {
+        if (++i >= directives.size()) return false;
+        const auto &text = directives[i].text;
+        auto parsed = std::from_chars(text.data(), text.data() + text.size(), value);
+        return parsed.ec == std::errc{} && parsed.ptr == text.data() + text.size();
+    };
+    for (size_t i = 0; i < directives.size(); ++i) {
+        const auto &token = directives[i];
+        if (token.text == "<LAND_GENERATION>") {
+            landStage = true;
+            base.push_back(token);
+        } else if (landStage && token.text == "base_terrain") {
+            base.push_back(token);
+            if (++i == directives.size()) return fail("missing base_terrain value");
+            base.push_back(directives[i]);
+        } else if (landStage && token.text == "create_land") {
+            if (seeds.size() >= 64) return fail("at most64 seed lands supported");
+            if (++i == directives.size() || directives[i].text != "{") return fail("create_land requires a block");
+            Seed seed;
+            bool hasTerrain = false, hasPosition = false, hasRadius = false, hasBudget = false;
+            for (++i; i < directives.size() && directives[i].text != "}"; ++i) {
+                const auto &name = directives[i].text;
+                if (name == "terrain_type") {
+                    if (!number(i, seed.terrain)) return fail("terrain_type requires a resolved integer");
+                    hasTerrain = true;
+                } else if (name == "land_position") {
+                    if (!number(i, seed.x) || !number(i, seed.y) || seed.x < 0 || seed.y < 0 || seed.x > 99 || seed.y > 99)
+                        return fail("land_position must be two percentages0..99");
+                    hasPosition = true;
+                } else if (name == "base_size") {
+                    if (!number(i, seed.radius) || seed.radius < 0 || seed.radius > 1024)
+                        return fail("base_size must be0..1024");
+                    hasRadius = true;
+                } else if (name == "number_of_tiles") {
+                    int32_t budget = -1;
+                    if (!number(i, budget) || budget != 0)
+                        return fail("land growth unsupported: require number_of_tiles0");
+                    hasBudget = true;
+                } else return fail("unsupported land parameter " + name);
+            }
+            if (i == directives.size()) return fail("unterminated create_land block");
+            if (!hasTerrain || !hasPosition || !hasRadius || !hasBudget)
+                return fail("seed land requires explicit terrain, position, radius and zero growth budget");
+            seeds.push_back(seed);
+        } else return fail("unsupported directive " + token.text);
+    }
+    std::vector<uint8_t> raster;
+    if (!generateRmsBaseTerrain(base, width, height, terrainData, raster, err)) return false;
+    for (const auto &seed : seeds) {
+        // Reuse the exact terrain-byte/metadata validation of the base painter.
+        std::vector<RmsToken> color = {{"<LAND_GENERATION>", 0, 0}, {"base_terrain", 0, 0},
+                                      {std::to_string(seed.terrain), 0, 0}};
+        std::vector<uint8_t> pixel;
+        if (!generateRmsBaseTerrain(color, 1, 1, terrainData, pixel, err)) return false;
+        // Original handler0x4e2c40 converts percent positions by integer truncation.
+        const int cx = static_cast<int>(width) * seed.x / 100;
+        const int cy = static_cast<int>(height) * seed.y / 100;
+        const int left = std::max(0, cx - seed.radius), top = std::max(0, cy - seed.radius);
+        const int right = std::min(static_cast<int>(width) - 1, cx + seed.radius);
+        const int bottom = std::min(static_cast<int>(height) - 1, cy + seed.radius);
+        // 0x4da742..0x4da7b1 paints all seed rectangles before testing growth budgets.
+        for (int y = top; y <= bottom; ++y)
+            std::fill(raster.begin() + static_cast<size_t>(y) * width + left,
+                      raster.begin() + static_cast<size_t>(y) * width + right + 1, pixel[0]);
+    }
+    out = std::move(raster);
+    return true;
+}
 } // namespace swgb

@@ -177,6 +177,35 @@ int main(int argc, char **argv) {
             "unsupported object stage rejected");
     require(!baseMap("<LAND_GENERATION>", 3, 5), "unknown default terrain rejected");
     require(!baseMap("base_terrain 0", 3, 5), "base terrain outside stage rejected");
+    auto landSeeds = [&](const std::string &source, uint32_t width, uint32_t height) {
+        require(preprocess(source, {}), err);
+        return generateRmsLandSeedTerrain(processed, width, height, terrainData, terrain, &err);
+    };
+    const std::string landPrefix = "<LAND_GENERATION> base_terrain 0 ";
+    require(landSeeds(landPrefix + "create_land { terrain_type 1 land_position 50 50 base_size 1 number_of_tiles 0 }", 7, 5), err);
+    require(terrain.size() == 35, "land-seed raster dimensions");
+    for (int y = 0; y < 5; ++y) for (int x = 0; x < 7; ++x)
+        require(terrain[y * 7 + x] == (x >= 2 && x <= 4 && y >= 1 && y <= 3 ? 1 : 0),
+                "percent center truncation or inclusive seed radius");
+    require(landSeeds(landPrefix + "create_land { terrain_type 1 land_position 0 0 base_size 1 number_of_tiles 0 }", 7, 5), err);
+    require(std::count(terrain.begin(), terrain.end(), 1) == 4 && terrain[0] == 1 && terrain[8] == 1,
+            "corner seed clipping");
+    require(landSeeds(landPrefix +
+        "create_land { terrain_type 1 land_position 50 50 base_size 1 number_of_tiles 0 } "
+        "create_land { terrain_type 258 land_position 50 50 base_size 0 number_of_tiles 0 }", 7, 5), err);
+    require(terrain[17] == 2 && std::count(terrain.begin(), terrain.end(), 1) == 8,
+            "later seed overwrites overlap with narrowed source terrain ID");
+    require(landSeeds(landPrefix + "create_land { terrain_type 1 land_position 99 99 base_size 0 number_of_tiles 0 }", 7, 5), err);
+    require(terrain.back() == 1 && std::count(terrain.begin(), terrain.end(), 1) == 1,
+            "zero growth budget still paints initial seed");
+    require(!landSeeds(landPrefix + "create_land { terrain_type 1 land_position 50 50 base_size 1 number_of_tiles 1 }", 7, 5)
+                && terrain.empty(), "unsupported growth must not return a seed as finished terrain");
+    require(!landSeeds(landPrefix + "create_player_lands { terrain_type 1 }", 7, 5), "automatic player placement rejected");
+    require(!landSeeds(landPrefix + "create_land { terrain_type 1 base_size 1 number_of_tiles 0 }", 7, 5), "implicit random center rejected");
+    require(!landSeeds(landPrefix + "create_land { terrain_type 1 land_position 100 50 base_size 1 number_of_tiles 0 }", 7, 5), "off-map percent boundary rejected");
+    require(!landSeeds(landPrefix + "create_land { terrain_type 1 land_position 50 50 base_size -1 number_of_tiles 0 }", 7, 5), "negative radius rejected");
+    require(!landSeeds(landPrefix + "create_land { terrain_type 3 land_position 50 50 base_size 1 number_of_tiles 0 }", 7, 5)
+                && terrain.empty(), "disabled seed terrain cannot leave partial output");
     if (argc == 2) {
         ResourceSet resources;
         require(resources.add(argv[1], &err), err);

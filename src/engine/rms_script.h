@@ -49,4 +49,12 @@ bool generateRmsBaseTerrain(const std::vector<RmsToken> &directives,
                             uint32_t width, uint32_t height,
                             const dat::TerrainBlock &terrainData,
                             std::vector<uint8_t> &out, std::string *err = nullptr);
+// Intermediate raster after explicitly positioned nonplayer land seeds, before
+// growth and final smoothing. Requires terrain_type, land_position (0..99),
+// base_size and number_of_tiles 0 in every create_land block; all other commands
+// are rejected. This is not a completed random map and does not advance RNG.
+bool generateRmsLandSeedTerrain(const std::vector<RmsToken> &directives,
+                                uint32_t width, uint32_t height,
+                                const dat::TerrainBlock &terrainData,
+                                std::vector<uint8_t> &out, std::string *err = nullptr);
 } // namespace swgb
