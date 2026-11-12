@@ -12892,12 +12892,12 @@ Game::AiTruth Game::evaluateAiCondition(
                    ? AiTruth::True
                    : AiTruth::Unknown;
     }
-    if (fact == "and" ||
+    if (fact == "and" || fact == "nand" ||
         fact == "or" ||
         fact == "nor") {
         bool unknown = false;
         const bool conjunction =
-            fact == "and";
+            fact == "and" || fact == "nand";
         for (size_t index = 1;
              index < condition.children.size();
              ++index) {
@@ -12909,7 +12909,7 @@ Game::AiTruth Game::evaluateAiCondition(
                 unknown = true;
             if (conjunction &&
                 nested == AiTruth::False)
-                return AiTruth::False;
+                return fact == "nand" ? AiTruth::True : AiTruth::False;
             if (!conjunction &&
                 nested == AiTruth::True)
                 return fact == "nor"
@@ -12917,7 +12917,7 @@ Game::AiTruth Game::evaluateAiCondition(
                            : AiTruth::True;
         }
         if (unknown) return AiTruth::Unknown;
-        if (conjunction) return AiTruth::True;
+        if (conjunction) return fact == "nand" ? AiTruth::False : AiTruth::True;
         return fact == "nor"
                    ? AiTruth::True
                    : AiTruth::False;

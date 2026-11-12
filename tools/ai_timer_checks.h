@@ -44,5 +44,19 @@ static void aiTimerChecks(swgb::Assets &assets) {
           "(defrule (timer-triggered 4) => (set-goal 707 1))",{},&error),error.c_str());
     game.update(10,{});
     check(game.aiGoalForTesting(1,707)==0,"New games clear AI timers");
+    check(game.loadAiSourceForTesting(1,"original-nand-pattern",
+          "(defrule (nand (true) (true)) => (set-goal 708 1))"
+          "(defrule (nand (true) (false)) => (set-goal 709 1))"
+          "(defrule (nand (false) (true)) => (set-goal 710 1))"
+          "(defrule (nand (false) (false)) => (set-goal 711 1))"
+          "(defrule (nand (unimplemented-fact) (true)) => (set-goal 712 1))"
+          "(defrule (nand (unimplemented-fact) (false)) => (set-goal 713 1))"
+          "(defrule (nand (true) (not (false))) => (set-goal 714 1))",{},&error),error.c_str());
+    game.update(0,{});
+    check(game.aiGoalForTesting(1,708)==0 && game.aiGoalForTesting(1,709)==1 &&
+          game.aiGoalForTesting(1,710)==1 && game.aiGoalForTesting(1,711)==1 &&
+          game.aiGoalForTesting(1,712)==0 && game.aiGoalForTesting(1,713)==1 &&
+          game.aiGoalForTesting(1,714)==0,
+          "Original AI nand truth table, nesting and unsupported-condition propagation");
     std::puts("PASS: original AI timer reset, expiry, latch, disable, bounds, player isolation and pause");
 }
