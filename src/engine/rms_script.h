@@ -10,6 +10,7 @@
 
 namespace swgb {
 class ResourceSet;
+namespace dat { struct TerrainBlock; }
 
 struct RmsToken {
     std::string text;
@@ -41,4 +42,11 @@ public:
 private:
     std::vector<RmsToken> tokens_;
 };
+// Execute only an explicit LAND_GENERATION/base_terrain script. Every other
+// directive is rejected: this cannot silently turn a full RMS into a flat map.
+// Produces terrain IDs only, without elevation, objects, borders or player starts.
+bool generateRmsBaseTerrain(const std::vector<RmsToken> &directives,
+                            uint32_t width, uint32_t height,
+                            const dat::TerrainBlock &terrainData,
+                            std::vector<uint8_t> &out, std::string *err = nullptr);
 } // namespace swgb

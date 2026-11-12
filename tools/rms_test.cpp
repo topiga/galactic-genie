@@ -2,7 +2,9 @@
 // Standalone: c++ -std=c++17 -Isrc tools/rms_test.cpp src/engine/rms_script.cpp src/core/drs.cpp -o /tmp/rms_test
 #include "engine/rms_script.h"
 #include "core/drs.h"
+#include "core/genie_dat.h"
 #include <cstdlib>
+#include <algorithm>
 #include <iostream>
 #include <unordered_map>
 
@@ -146,6 +148,35 @@ int main(int argc, char **argv) {
             "failed random preprocessing must preserve caller RNG and clear output");
     rejectPreprocess("start_random percent_chance 100 start_random percent_chance 100 x end_random end_random",
                      "nested random");
+    dat::TerrainBlock terrainData{};
+    terrainData.terrains.resize(4);
+    terrainData.terrainsUsed = 4;
+    terrainData.terrains[0].enabled = 1;
+    terrainData.terrains[1].enabled = 1;
+    terrainData.terrains[2].terrainToDraw = 1;
+    std::vector<uint8_t> terrain;
+    auto baseMap = [&](const std::string &source, uint32_t width, uint32_t height) {
+        require(preprocess(source, {}), err);
+        return generateRmsBaseTerrain(processed, width, height, terrainData, terrain, &err);
+    };
+    require(baseMap("#const WATER 1 <LAND_GENERATION> base_terrain WATER", 3, 5), err);
+    require(terrain.size() == 15 && std::all_of(terrain.begin(), terrain.end(), [](uint8_t t) { return t == 1; }),
+            "rectangular base fill misses edges");
+    require(baseMap("<LAND_GENERATION> base_terrain 0 base_terrain 258", 1, 1), err);
+    require(terrain == std::vector<uint8_t>{2}, "last low-byte assignment and draw-alias source ID");
+    require(baseMap("<LAND_GENERATION> base_terrain 0", 1024, 1024), err);
+    require(terrain.size() == 1024u * 1024u && terrain.back() == 0, "maximum bounded fill");
+    require(!baseMap("<LAND_GENERATION> base_terrain 3", 3, 5) && terrain.empty(), "disabled terrain rejected");
+    require(!baseMap("<LAND_GENERATION> base_terrain 4", 3, 5) && terrain.empty(), "out of table terrain rejected");
+    require(!baseMap("<LAND_GENERATION> base_terrain -1", 3, 5), "wrapped invalid terrain rejected");
+    require(!baseMap("<LAND_GENERATION> base_terrain 0", 0, 5), "zero size rejected");
+    require(!baseMap("<LAND_GENERATION> base_terrain 0", 1025, 1), "oversized map rejected");
+    require(!baseMap("<LAND_GENERATION> base_terrain 0 create_land { terrain_type 1 }", 3, 5) && terrain.empty(),
+            "unsupported land placement cannot silently become flat terrain");
+    require(!baseMap("<LAND_GENERATION> base_terrain 0 <OBJECTS_GENERATION> create_object 83", 3, 5),
+            "unsupported object stage rejected");
+    require(!baseMap("<LAND_GENERATION>", 3, 5), "unknown default terrain rejected");
+    require(!baseMap("base_terrain 0", 3, 5), "base terrain outside stage rejected");
     if (argc == 2) {
         ResourceSet resources;
         require(resources.add(argv[1], &err), err);
@@ -172,6 +203,8 @@ int main(int argc, char **argv) {
                     t.text != "#const" && t.text != "#define", "unresolved Shoreline control");
         }
         require(generatedStages == 7, "seeded preprocessing lost stages");
+        require(!generateRmsBaseTerrain(processed, 64, 64, terrainData, terrain, &err) && terrain.empty(),
+                "complete Shoreline must reject unsupported generation");
         const auto firstRun = text();
         const uint32_t finalRng = rng;
         rng = 1;
@@ -195,6 +228,18 @@ int main(int argc, char **argv) {
                           "create_object 83 { terrain_to_place_on 0 } ", "packaged constants/default branch");
         require(script.preprocess({"MIGRATION"}, processed, &err), err);
         require(text().find("group_placement_radius 14") != std::string::npos, "packaged migration branch");
+        auto packagedBase = [&](int32_t id, std::vector<uint8_t> &out) {
+            if (id != 1) return resources.read(id, out);
+            const std::string source = "#include_drs random_map.def 54000\n"
+                "<LAND_GENERATION> base_terrain WATER_SHALLOW";
+            out.assign(source.begin(), source.end());
+            return true;
+        };
+        require(script.load(1, packagedBase, limits, &err), err);
+        require(script.preprocess({}, processed, &err), err);
+        require(generateRmsBaseTerrain(processed, 7, 3, terrainData, terrain, &err), err);
+        require(terrain.size() == 21 && std::all_of(terrain.begin(), terrain.end(), [](uint8_t t) { return t == 1; }),
+                "original packaged base terrain constant fill");
     }
     std::cout << "RMS loading boundary checks passed\n";
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "rms_script.h"
 #include "../core/drs.h"
+#include "../core/genie_dat.h"
 
 #include <algorithm>
 #include <charconv>
@@ -268,5 +269,52 @@ bool RmsScript::preprocess(const std::unordered_set<std::string> &initialDefines
         if (err) *err = e.what();
         return false;
     }
+}
+bool generateRmsBaseTerrain(const std::vector<RmsToken> &directives,
+                            uint32_t width, uint32_t height,
+                            const dat::TerrainBlock &terrainData,
+                            std::vector<uint8_t> &out, std::string *err) {
+    out.clear();
+    if (err) err->clear();
+    auto fail = [&](const std::string &reason) {
+        if (err) *err = "RMS base terrain: " + reason;
+        return false;
+    };
+    // Explicit implementation bounds; not a claim about original map-size limits.
+    if (!width || !height || width > 1024 || height > 1024)
+        return fail("dimensions must be 1..1024");
+    bool landStage = false, hasBase = false;
+    uint8_t terrain = 0;
+    for (size_t i = 0; i < directives.size(); ++i) {
+        const auto &token = directives[i];
+        if (token.text == "<LAND_GENERATION>") landStage = true;
+        else if (token.text == "base_terrain" && landStage) {
+            if (++i == directives.size()) return fail("missing base_terrain argument");
+            const auto &value = directives[i].text;
+            int32_t parsed = 0;
+            auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
+            if (result.ec != std::errc{} || result.ptr != value.data() + value.size())
+                return fail("base_terrain requires a resolved integer constant");
+            // Original 0x4e2d26 retains only the low byte; last assignment wins.
+            terrain = static_cast<uint8_t>(parsed);
+            hasBase = true;
+        } else {
+            return fail("unsupported directive " + token.text + " at " +
+                        std::to_string(token.resourceId) + ":" + std::to_string(token.line));
+        }
+    }
+    if (!landStage || !hasBase) return fail("explicit LAND_GENERATION/base_terrain required");
+    const auto &terrains = terrainData.terrains;
+    if (terrainData.terrainsUsed <= 0 || terrain >= terrainData.terrainsUsed || terrain >= terrains.size())
+        return fail("terrain ID outside the loaded terrain table");
+    if (!terrains[terrain].enabled) {
+        const int draw = terrains[terrain].terrainToDraw;
+        if (draw < 0 || static_cast<size_t>(draw) >= terrains.size() || terrains[draw].enabled != 1)
+            return fail("terrain and its draw alias are disabled");
+    }
+    // 0x4da380 paints the inclusive full-map rectangle through 0x495f80.
+    // A disabled source with an enabled draw alias still stores the source ID.
+    out.assign(static_cast<size_t>(width) * height, terrain);
+    return true;
 }
 } // namespace swgb
