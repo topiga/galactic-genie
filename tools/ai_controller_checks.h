@@ -95,5 +95,27 @@ static void aiControllerChecks(swgb::Assets &assets) {
     check(game.initSkirmish(0x5A17,&error,false,1,2),error.c_str()); game.update(0,{});
     check(game.productionQueueSizeForTesting(game.commandCenterId(2))>0,
           "New skirmish restores its normal fallback controller");
+    check(game.init(1,64,&error,1,1),error.c_str());
+    run(1,"(defrule (random-number == -1) => (set-goal 920 1))"
+          "(defrule (true) => (generate-random-number 6) (disable-self))"
+          "(defrule (random-number == 6) => (set-goal 921 1))");
+    check(game.aiGoalForTesting(1,920)==1 && game.aiGoalForTesting(1,921)==1,
+          "Original random fact starts at -1; seed1 first draw41 yields six");
+    run(1,"(defrule (random-number == 6) => (set-goal 921 1))");
+    check(game.aiGoalForTesting(1,921)==1,"Random result survives script reload and reading consumes no draw");
+    run(2,"(defrule (random-number == -1) => (set-goal 920 1))"
+          "(defrule (true) => (generate-random-number -6) (disable-self))"
+          "(defrule (random-number == 6) => (set-goal 921 1))");
+    check(game.aiGoalForTesting(2,920)==1 && game.aiGoalForTesting(2,921)==1,
+          "Random results are per-player while draw18467 is shared across players; negative divisor keeps signed remainder semantics");
+    run(1,"(defrule (true) => (generate-random-number 0) (generate-random-number 6) (disable-self))"
+          "(defrule (random-number == 5) => (set-goal 922 1))");
+    check(game.aiGoalForTesting(1,922)==1,"Zero limit rejects without consuming draw; third draw6334 yields five");
+    check(game.init(1,64,&error,1,1),error.c_str());
+    run(1,"(defrule (random-number == -1) => (set-goal 920 1))"
+          "(defrule (true) => (generate-random-number 40000) (disable-self))"
+          "(defrule (random-number == 42) => (set-goal 923 1))");
+    check(game.aiGoalForTesting(1,920)==1 && game.aiGoalForTesting(1,923)==1,
+          "New match resets random state/result; large limits retain original 15-bit draw range");
     std::puts("PASS: original AI population classes, civilian garrison/queues, civilization and strategic-number queries");
 }

@@ -1296,6 +1296,9 @@ private:
 
     Assets &assets_;
     std::mt19937 rng_;
+    // shortcut: AI-only legacy stream until original map/world RNG consumers are ported.
+    uint32_t aiRandomState_=1;
+    std::array<int32_t,17> aiRandomNumbers_{};
     int mapSize_ = 0;
     std::vector<uint8_t> terrain_;
     std::vector<uint8_t> cornerElevation_;

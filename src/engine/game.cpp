@@ -386,6 +386,8 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
         }
     }
     rng_.seed(seed);
+    aiRandomState_=seed;
+    aiRandomNumbers_.fill(-1);
     gameTime_ = 0;
     players_ = {};
     resources_ = {};
@@ -918,6 +920,8 @@ bool Game::initScenario(const Scenario &scenario, std::string *err) {
     }
 
     rng_.seed(1);
+    aiRandomState_=1;
+    aiRandomNumbers_.fill(-1);
     gameTime_ = 0;
     players_ = scenario.players;
     resources_ = {};
@@ -12818,6 +12822,11 @@ bool Game::evaluateAiFactValue(
     const std::string fact =
         normalizeAiSymbol(
             condition.name());
+    if (fact=="random-number") {
+        if (argumentEnd!=1) return false;
+        value=aiRandomNumbers_[size_t(player)];
+        return true;
+    }
     if (fact == "current-age") {
         value = aiTechLevel(player);
         return true;
@@ -13166,6 +13175,16 @@ bool Game::executeAiAction(
         normalizeAiSymbol(action.name());
     if (name == "disable-self") {
         rule.enabled = false;
+        return true;
+    }
+    if (name=="generate-random-number") {
+        if (action.children.size()!=2) return false;
+        bool known=false;
+        const int limit=resolveAiValue(player,state,action.children[1].value,known);
+        if (!known || !limit) return false;
+        aiRandomState_=aiRandomState_*214013u+2531011u;
+        const int draw=int((aiRandomState_>>16)&32767u);
+        aiRandomNumbers_[size_t(player)]=draw%limit+1;
         return true;
     }
     if (name == "enable-timer" || name == "disable-timer") {
