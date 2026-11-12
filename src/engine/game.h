@@ -789,7 +789,10 @@ private:
         AiProgram program;
         std::unordered_map<int, int> goals;
         std::map<int, double> timers;
-        std::unordered_map<int, int> strategicNumbers;
+        // Verified fresh profile events run before the original's first PER evaluation.
+        std::unordered_map<int, int> strategicNumbers = {
+            {0,34}, {2,66}, {4,2}, {42,0}, {74,20}, {118,0}, {120,0}, {143,1}, {226,0}
+        };
         std::unordered_set<std::string>
             warnedFacts;
         std::unordered_set<std::string>
@@ -804,6 +807,7 @@ private:
         float scoutGoalTime=0;
         std::map<int,float> scoutRetryAfter;
         bool loaded = false;
+        bool scripted = false;
     };
 
     struct Projectile {

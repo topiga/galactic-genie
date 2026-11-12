@@ -726,10 +726,10 @@ bool Game::initSkirmish(uint32_t seed, std::string *err, bool initiallyExplored,
     refreshAllAutomaticTechnologies();
     AiPlayerState state;
     state.loaded = true;
-    state.strategicNumbers = {{117, 50},
-                             {120, 35},
-                             {119, 0},
-                             {118, 15}};
+    state.strategicNumbers[117]=50;
+    state.strategicNumbers[120]=35;
+    state.strategicNumbers[119]=0;
+    state.strategicNumbers[118]=15;
     aiPlayers_[2] = std::move(state);
     skirmish_ = true;
     queueInstruction(conquest?"Conquest: defeat the enemy's units and buildings. Select units and buildings to issue orders.":
@@ -860,6 +860,7 @@ void Game::updateSkirmish(float dt) {
         return;
     }
     matchTime_ += dt;
+    if (aiPlayers_[2].scripted) return;
     skirmishAiTime_ -= dt;
     if (skirmishAiTime_ > 0) return;
     skirmishAiTime_ = 3;
@@ -1145,6 +1146,7 @@ bool Game::loadAiScript(
             path, defines, err))
         return false;
     state.loaded = true;
+    state.scripted = true;
     state.age =
         aiTechLevel(player);
     aiPlayers_[(size_t)player] =
@@ -1176,6 +1178,7 @@ bool Game::loadAiSourceForTesting(
             name, source, defines, err))
         return false;
     state.loaded = true;
+    state.scripted = true;
     state.age =
         aiTechLevel(player);
     aiPlayers_[(size_t)player] =
@@ -12949,12 +12952,19 @@ Game::AiTruth Game::evaluateAiCondition(
                    : AiTruth::Unknown;
     }
     if (fact == "and" || fact == "nand" ||
-        fact == "or" ||
+        fact == "or" || fact == "or-list" ||
         fact == "nor") {
+        size_t first=1;
+        if (fact=="or-list") {
+            if (condition.children.size()<2 || !state.program.hasConstant(condition.children[1].value)) return AiTruth::Unknown;
+            const int count=state.program.constant(condition.children[1].value);
+            if (count<0 || count>32767 || condition.children.size()!=size_t(count)+2) return AiTruth::Unknown;
+            first=2;
+        }
         bool unknown = false;
         const bool conjunction =
             fact == "and" || fact == "nand";
-        for (size_t index = 1;
+        for (size_t index = first;
              index < condition.children.size();
              ++index) {
             const AiTruth nested =
