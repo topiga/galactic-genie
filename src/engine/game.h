@@ -789,8 +789,7 @@ private:
         AiProgram program;
         std::unordered_map<int, int> goals;
         std::map<int, double> timers;
-        std::unordered_map<std::string, int>
-            strategicNumbers;
+        std::unordered_map<int, int> strategicNumbers;
         std::unordered_set<std::string>
             warnedFacts;
         std::unordered_set<std::string>
@@ -1246,6 +1245,7 @@ private:
     int aiObjectCount(
         int player, const dat::Unit &unit,
         bool includeFoundations) const;
+    int aiPopulationCount(int player,bool military) const;
     float aiSpendableResource(int player,int type,bool withEscrow=false) const;
     void addResource(int player,int type,float amount);
     bool aiResearchAvailable(int player,int id) const;

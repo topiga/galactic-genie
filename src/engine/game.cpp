@@ -726,10 +726,10 @@ bool Game::initSkirmish(uint32_t seed, std::string *err, bool initiallyExplored,
     refreshAllAutomaticTechnologies();
     AiPlayerState state;
     state.loaded = true;
-    state.strategicNumbers = {{"sn-food-gatherer-percentage", 50},
-                             {"sn-carbon-gatherer-percentage", 35},
-                             {"sn-metal-gatherer-percentage", 0},
-                             {"sn-nova-gatherer-percentage", 15}};
+    state.strategicNumbers = {{117, 50},
+                             {120, 35},
+                             {119, 0},
+                             {118, 15}};
     aiPlayers_[2] = std::move(state);
     skirmish_ = true;
     queueInstruction(conquest?"Conquest: defeat the enemy's units and buildings. Select units and buildings to issue orders.":
@@ -1218,8 +1218,7 @@ int Game::aiStrategicNumberForTesting(
         aiPlayers_[(size_t)player]
             .strategicNumbers;
     const auto found =
-        numbers.find(
-            normalizeAiSymbol(name));
+        numbers.find(aiPlayers_[(size_t)player].program.strategicNumberId(name));
     return found == numbers.end()
                ? 0
                : found->second;
@@ -12488,6 +12487,27 @@ Game::Object *Game::aiResearcher(int player,const dat::Tech &tech) {
     return nullptr;
 }
 
+int Game::aiPopulationCount(int player,bool military) const {
+    int count=0;
+    for (const auto &object:objects_) {
+        if (!object.active || object.player!=player || !object.unit || object.unit->type<70) continue;
+        const int cls=object.unit->cls;
+        const bool civilian=cls==12 || cls==14 || cls==45 || cls==58;
+        bool militaryClass=false;
+        switch (cls) {
+        case 11: case 13: case 15: case 16: case 17:
+        case 32: case 33: case 34: case 35: case 36: case 37: case 38: case 39: case 40:
+        case 43: case 44: case 46: case 47: case 48: case 49: case 50: case 51: case 52:
+        case 53: case 54: case 55: case 56: case 57: case 59: case 61: case 62: case 63: case 64:
+            militaryClass=true; break;
+        default: break;
+        }
+        if (military ? (!civilian && militaryClass) : civilian) ++count;
+    }
+    // shortcut: native inactive objects stop counting before the original destruction callback.
+    return count;
+}
+
 bool Game::aiCanAfford(
     int player,
     const dat::Unit &unit,bool withEscrow) const {
@@ -12812,6 +12832,19 @@ bool Game::evaluateAiFactValue(
         value = difficulty_;
         return true;
     }
+    if (fact=="civilian-population" || fact=="military-population") {
+        if (argumentEnd!=1) return false;
+        value=aiPopulationCount(player,fact=="military-population");
+        return true;
+    }
+    if (fact=="strategic-number") {
+        if (argumentEnd!=2 || condition.children[1].isList()) return false;
+        const auto found=state.strategicNumbers.find(state.program.strategicNumberId(condition.children[1].value));
+        // shortcut: uninitialized original strategic-number defaults remain unknown until traced.
+        if (found==state.strategicNumbers.end()) return false;
+        value=found->second;
+        return true;
+    }
     if (fact == "population") {
         value = (int)std::floor(
             populationUsed(player));
@@ -12845,7 +12878,7 @@ bool Game::evaluateAiFactValue(
                       : fact == "nova-amount"
                             ? 3
                             : 2;
-        value = (int)std::floor(
+        value = (int)std::trunc(
             resource(player, type));
         return true;
     }
@@ -12885,6 +12918,13 @@ Game::AiTruth Game::evaluateAiCondition(
         return AiTruth::True;
     if (fact == "false")
         return AiTruth::False;
+    if (fact=="civ-selected") {
+        if (condition.children.size()!=2) return AiTruth::Unknown;
+        bool known=false;
+        const int civilization=resolveAiValue(player,state,condition.children[1].value,known);
+        if (!known) return AiTruth::Unknown;
+        return civilizationForPlayer(player)==civilization ? AiTruth::True : AiTruth::False;
+    }
     if (fact == "timer-triggered") {
         if (condition.children.size()!=2) return AiTruth::Unknown;
         bool known=false;
@@ -13171,10 +13211,9 @@ bool Game::executeAiAction(
             action.children[2].value,
             known);
         if (!known) return false;
-        state.strategicNumbers[
-            normalizeAiSymbol(
-                action.children[1].value)] =
-            value;
+        const int id=state.program.strategicNumberId(action.children[1].value);
+        if (id<0) return false;
+        state.strategicNumbers[id]=value;
         return true;
     }
     if ((name == "build" ||
@@ -13262,7 +13301,7 @@ void Game::updateAiGatherers(
          ++type) {
         const auto found =
             state.strategicNumbers.find(
-                names[type]);
+                state.program.strategicNumberId(names[type]));
         if (found !=
             state.strategicNumbers.end())
             percentages[(size_t)type] =

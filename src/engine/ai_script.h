@@ -47,6 +47,7 @@ public:
         const std::string &name,
         int fallback = 0) const;
     bool hasConstant(const std::string &name) const;
+    int strategicNumberId(const std::string &name) const;
 
     std::vector<AiRule> rules;
     std::unordered_map<std::string, int> constants;
