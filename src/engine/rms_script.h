@@ -64,4 +64,17 @@ bool generateRmsLandSeedTerrain(const std::vector<RmsToken> &directives,
 bool smoothRmsTerrain(uint32_t width, uint32_t height, uint8_t baseTerrain,
                       const std::vector<uint8_t> &input, std::vector<uint8_t> &out,
                       std::string *err = nullptr, size_t maxTileVisits = 64 * 1024 * 1024);
+// Explicit single-land execution boundary, before the separate final smoother.
+// Only zero land separation and zero edge rejection are implemented. Parameters
+// are resolved engine values; this does not execute a full RMS script.
+struct RmsLandGrowth {
+    uint8_t terrain = 0;
+    uint32_t centerX = 0, centerY = 0, radius = 0, targetTiles = 0;
+    // Original land-row +0x1c, clumping_factor; native subset accepts 0..100.
+    uint32_t clumpingFactor = 8;
+};
+bool growRmsSingleLand(uint32_t width, uint32_t height, uint8_t baseTerrain,
+                       const RmsLandGrowth &land, const dat::TerrainBlock &terrainData,
+                       uint32_t &randomState, std::vector<uint8_t> &out,
+                       std::string *err = nullptr, size_t maxWork = 64 * 1024 * 1024);
 } // namespace swgb

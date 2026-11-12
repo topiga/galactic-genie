@@ -455,4 +455,119 @@ bool smoothRmsTerrain(uint32_t width, uint32_t height, uint8_t baseTerrain,
     out = std::move(raster);
     return true;
 }
+bool growRmsSingleLand(uint32_t width, uint32_t height, uint8_t baseTerrain,
+                       const RmsLandGrowth &land, const dat::TerrainBlock &terrainData,
+                       uint32_t &randomState, std::vector<uint8_t> &out,
+                       std::string *err, size_t maxWork) {
+    out.clear();
+    if (err) err->clear();
+    auto fail = [&](const char *reason) {
+        if (err) *err = std::string("RMS single land: ") + reason;
+        return false;
+    };
+    if (!width || !height || width > 1024 || height > 1024)
+        return fail("dimensions must be 1..1024");
+    // This coefficient bound keeps every computed priority exactly representable
+    // in the original single-precision node field (adjacency is at most 25).
+    if (land.centerX >= width || land.centerY >= height || land.radius > 1024 ||
+        land.targetTiles > static_cast<size_t>(width) * height || land.clumpingFactor > 100)
+        return fail("invalid center, radius, target count or clumpingFactor (0..100)");
+    auto paint = [&](uint8_t id, uint32_t w, uint32_t h, std::vector<uint8_t> &raster) {
+        return generateRmsBaseTerrain({{"<LAND_GENERATION>", 0, 0}, {"base_terrain", 0, 0},
+                                      {std::to_string(id), 0, 0}}, w, h, terrainData, raster, err);
+    };
+    std::vector<uint8_t> raster, pixel;
+    if (!paint(baseTerrain, width, height, raster) || !paint(land.terrain, 1, 1, pixel)) return false;
+    std::vector<uint8_t> owned(raster.size(), 0);
+    struct Node { int next = -1, previous = -1, priority = 0; bool queued = false; };
+    std::vector<Node> nodes(raster.size());
+    int head = -1;
+    // Original 0x4d69a0 uses one intrusive node per tile. Reinsertion moves
+    // the existing node; ascending priorities insert BEFORE equal priorities.
+    auto remove = [&](int id) {
+        auto &n = nodes[id];
+        if (!n.queued) return;
+        if (n.previous < 0) head = n.next; else nodes[n.previous].next = n.next;
+        if (n.next >= 0) nodes[n.next].previous = n.previous;
+        n.next = n.previous = -1;
+        n.queued = false;
+    };
+    auto enqueue = [&](int x, int y, int priority) {
+        if (!maxWork) return false;
+        --maxWork;
+        const int id = y * static_cast<int>(width) + x;
+        remove(id);
+        int previous = -1, next = head;
+        while (next >= 0 && nodes[next].priority < priority) {
+            if (!maxWork) return false;
+            --maxWork;
+            previous = next;
+            next = nodes[next].next;
+        }
+        nodes[id] = {next, previous, priority, true};
+        if (previous < 0) head = id; else nodes[previous].next = id;
+        if (next >= 0) nodes[next].previous = id;
+        return true;
+    };
+    const int w = static_cast<int>(width), h = static_cast<int>(height);
+    const int radius = static_cast<int>(land.radius);
+    const int left = std::max(0, static_cast<int>(land.centerX) - radius);
+    const int right = std::min(w - 1, static_cast<int>(land.centerX) + radius);
+    const int top = std::max(0, static_cast<int>(land.centerY) - radius);
+    const int bottom = std::min(h - 1, static_cast<int>(land.centerY) + radius);
+    uint32_t area = static_cast<uint32_t>((right - left + 1) * (bottom - top + 1));
+    for (int y = top; y <= bottom; ++y) for (int x = left; x <= right; ++x) {
+        raster[y * w + x] = land.terrain;
+        owned[y * w + x] = 1;
+    }
+    if (left > 0) for (int y = top; y <= bottom; ++y)
+        if (!enqueue(left - 1, y, 0)) return fail("work limit exceeded");
+    if (top > 0) for (int x = left; x <= right; ++x)
+        if (!enqueue(x, top - 1, 0)) return fail("work limit exceeded");
+    if (right + 1 < w) for (int y = top; y <= bottom; ++y)
+        if (!enqueue(right + 1, y, 0)) return fail("work limit exceeded");
+    if (bottom + 1 < h) for (int x = left; x <= right; ++x)
+        if (!enqueue(x, bottom + 1, 0)) return fail("work limit exceeded");
+    uint32_t rng = randomState;
+    auto roll = [&]() { return static_cast<int>(genieRandomDraw(rng) * 100u / 32767u); };
+    while (area < land.targetTiles && head >= 0) {
+        if (maxWork < 26) return fail("work limit exceeded");
+        maxWork -= 26;
+        const int id = head, x = id % w, y = id / w;
+        remove(id);
+        // Even a zero edge-rejection gate consumes its comparison draw.
+        roll();
+        if (owned[id]) continue;
+        int adjacency = 0;
+        // 0x4da400 with separation zero: count owned cells in clipped 5x5.
+        // Out-of-map neighbors contribute nothing for this supported subset.
+        for (int ny = std::max(0, y - 2); ny <= std::min(h - 1, y + 2); ++ny)
+            for (int nx = std::max(0, x - 2); nx <= std::min(w - 1, x + 2); ++nx)
+                adjacency += owned[ny * w + nx];
+        if (!adjacency) continue;
+        owned[id] = 1;
+        raster[id] = land.terrain;
+        ++area;
+        constexpr int dx[] = {-1, 1, 0, 0}, dy[] = {0, 0, -1, 1};
+        for (int i = 0; i < 4; ++i) {
+            const int nx = x + dx[i], ny = y + dy[i];
+            if (nx < 0 || ny < 0 || nx >= w || ny >= h || owned[ny * w + nx]) continue;
+            const int priority = 250 + roll() - static_cast<int>(land.clumpingFactor) * adjacency;
+            if (!enqueue(nx, ny, priority)) return fail("work limit exceeded");
+        }
+    }
+    // Original 0x4dac62 drains remaining frontier and paints opposite-zone gaps
+    // without changing zone membership or incrementing the land's tile budget.
+    while (head >= 0) {
+        if (!maxWork) return fail("work limit exceeded");
+        --maxWork;
+        const int id = head, x = id % w, y = id / w;
+        remove(id);
+        if ((x > 0 && x + 1 < w && owned[id - 1] && owned[id + 1]) ||
+            (y > 0 && y + 1 < h && owned[id - w] && owned[id + w])) raster[id] = land.terrain;
+    }
+    randomState = rng;
+    out = std::move(raster);
+    return true;
+}
 } // namespace swgb

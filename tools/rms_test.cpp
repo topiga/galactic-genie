@@ -239,6 +239,106 @@ int main(int argc, char **argv) {
     require(!smoothRmsTerrain(3, 3, 0, {1,0,1,1,1,1,1,0,1}, smoothing, &err, 18)
                 && smoothing.empty() && err.find("limit") != std::string::npos,
             "work limit must reject partial smoothing rather than publish it");
+    // Complete original 0x4da6f0, with only the rectangle painter intercepted.
+    // Golden terrain hashes and final RNG include frontier gap fill, before smoothing.
+    struct GrowthCase { uint32_t w, h, x, y, radius, target, coefficient, seed, finalRng, hash; };
+    const GrowthCase growthCases[] = {
+        {7u, 7u, 3u, 3u, 0u, 0u, 10u, 1u, 1u, 1720441516u},
+        {7u, 7u, 3u, 3u, 0u, 2u, 10u, 1u, 3884216597u, 648626517u},
+        {7u, 7u, 3u, 3u, 0u, 5u, 10u, 1u, 2179684817u, 111229868u},
+        {7u, 7u, 3u, 3u, 0u, 12u, 10u, 1u, 1116436030u, 3540787871u},
+        {7u, 7u, 3u, 3u, 0u, 49u, 10u, 1u, 3168190081u, 1155915612u},
+        {7u, 7u, 3u, 3u, 0u, 0u, 10u, 12345u, 12345u, 1720441516u},
+        {7u, 7u, 3u, 3u, 0u, 2u, 10u, 12345u, 1449997005u, 648626517u},
+        {7u, 7u, 3u, 3u, 0u, 5u, 10u, 12345u, 922525705u, 111229868u},
+        {7u, 7u, 3u, 3u, 0u, 12u, 10u, 12345u, 2581596540u, 1330568607u},
+        {7u, 7u, 3u, 3u, 0u, 49u, 10u, 12345u, 2907807417u, 1155915612u},
+        {9u, 5u, 0u, 0u, 1u, 0u, 0u, 12345u, 12345u, 906432951u},
+        {9u, 5u, 0u, 0u, 1u, 22u, 0u, 12345u, 2458847943u, 957096697u},
+        {9u, 5u, 0u, 0u, 1u, 45u, 0u, 12345u, 538347524u, 3816926912u},
+        {9u, 5u, 0u, 0u, 1u, 0u, 10u, 12345u, 12345u, 906432951u},
+        {9u, 5u, 0u, 0u, 1u, 22u, 10u, 12345u, 242781834u, 4086995393u},
+        {9u, 5u, 0u, 0u, 1u, 45u, 10u, 12345u, 538347524u, 3816926912u},
+        {9u, 5u, 0u, 0u, 1u, 0u, 100u, 12345u, 12345u, 906432951u},
+        {9u, 5u, 0u, 0u, 1u, 22u, 100u, 12345u, 3372601100u, 4237100985u},
+        {9u, 5u, 0u, 0u, 1u, 45u, 100u, 12345u, 538347524u, 3816926912u},
+        {9u, 5u, 8u, 4u, 1u, 0u, 0u, 12345u, 12345u, 3390298743u},
+        {9u, 5u, 8u, 4u, 1u, 22u, 0u, 12345u, 235103120u, 3909591316u},
+        {9u, 5u, 8u, 4u, 1u, 45u, 0u, 12345u, 538347524u, 3816926912u},
+        {9u, 5u, 8u, 4u, 1u, 0u, 10u, 12345u, 12345u, 3390298743u},
+        {9u, 5u, 8u, 4u, 1u, 22u, 10u, 12345u, 3999531325u, 3426947543u},
+        {9u, 5u, 8u, 4u, 1u, 45u, 10u, 12345u, 538347524u, 3816926912u},
+        {9u, 5u, 8u, 4u, 1u, 0u, 100u, 12345u, 12345u, 3390298743u},
+        {9u, 5u, 8u, 4u, 1u, 22u, 100u, 12345u, 2622461201u, 297960161u},
+        {9u, 5u, 8u, 4u, 1u, 45u, 100u, 12345u, 538347524u, 3816926912u},
+        {5u, 9u, 2u, 4u, 1u, 0u, 0u, 12345u, 12345u, 1293157564u},
+        {5u, 9u, 2u, 4u, 1u, 22u, 0u, 12345u, 4007045953u, 3645860967u},
+        {5u, 9u, 2u, 4u, 1u, 45u, 0u, 12345u, 580572337u, 3816926912u},
+        {5u, 9u, 2u, 4u, 1u, 0u, 10u, 12345u, 12345u, 1293157564u},
+        {5u, 9u, 2u, 4u, 1u, 22u, 10u, 12345u, 910293955u, 79078806u},
+        {5u, 9u, 2u, 4u, 1u, 45u, 10u, 12345u, 580572337u, 3816926912u},
+        {5u, 9u, 2u, 4u, 1u, 0u, 100u, 12345u, 12345u, 1293157564u},
+        {5u, 9u, 2u, 4u, 1u, 22u, 100u, 12345u, 3629701229u, 464830707u},
+        {5u, 9u, 2u, 4u, 1u, 45u, 100u, 12345u, 580572337u, 3816926912u},
+        {1u, 9u, 0u, 4u, 0u, 0u, 0u, 12345u, 12345u, 2185116220u},
+        {1u, 9u, 0u, 4u, 0u, 4u, 0u, 12345u, 3681394607u, 32589315u},
+        {1u, 9u, 0u, 4u, 0u, 9u, 0u, 12345u, 1424270039u, 3164567556u},
+        {1u, 9u, 0u, 4u, 0u, 0u, 10u, 12345u, 12345u, 2185116220u},
+        {1u, 9u, 0u, 4u, 0u, 4u, 10u, 12345u, 3681394607u, 2590708811u},
+        {1u, 9u, 0u, 4u, 0u, 9u, 10u, 12345u, 1424270039u, 3164567556u},
+        {1u, 9u, 0u, 4u, 0u, 0u, 100u, 12345u, 12345u, 2185116220u},
+        {1u, 9u, 0u, 4u, 0u, 4u, 100u, 12345u, 3681394607u, 2590708811u},
+        {1u, 9u, 0u, 4u, 0u, 9u, 100u, 12345u, 1424270039u, 3164567556u},
+        {9u, 1u, 4u, 0u, 1u, 0u, 0u, 12345u, 12345u, 3272250040u},
+        {9u, 1u, 4u, 0u, 1u, 4u, 0u, 12345u, 1255958651u, 32589315u},
+        {9u, 1u, 4u, 0u, 1u, 9u, 0u, 12345u, 3681310499u, 3164567556u},
+        {9u, 1u, 4u, 0u, 1u, 0u, 10u, 12345u, 12345u, 3272250040u},
+        {9u, 1u, 4u, 0u, 1u, 4u, 10u, 12345u, 1255958651u, 32589315u},
+        {9u, 1u, 4u, 0u, 1u, 9u, 10u, 12345u, 3681310499u, 3164567556u},
+        {9u, 1u, 4u, 0u, 1u, 0u, 100u, 12345u, 12345u, 3272250040u},
+        {9u, 1u, 4u, 0u, 1u, 4u, 100u, 12345u, 1255958651u, 32589315u},
+        {9u, 1u, 4u, 0u, 1u, 9u, 100u, 12345u, 3681310499u, 3164567556u},
+        {1u, 1u, 0u, 0u, 0u, 0u, 0u, 12345u, 12345u, 67918732u},
+        {1u, 1u, 0u, 0u, 0u, 1u, 0u, 12345u, 12345u, 67918732u},
+        {1u, 1u, 0u, 0u, 0u, 0u, 10u, 12345u, 12345u, 67918732u},
+        {1u, 1u, 0u, 0u, 0u, 1u, 10u, 12345u, 12345u, 67918732u},
+        {1u, 1u, 0u, 0u, 0u, 0u, 100u, 12345u, 12345u, 67918732u},
+        {1u, 1u, 0u, 0u, 0u, 1u, 100u, 12345u, 12345u, 67918732u},
+    };
+    for (const auto &c : growthCases) {
+        uint32_t state = c.seed;
+        RmsLandGrowth land{1, c.x, c.y, c.radius, c.target, c.coefficient};
+        require(growRmsSingleLand(c.w, c.h, 0, land, terrainData, state, terrain, &err), err);
+        uint32_t hash = 2166136261u;
+        for (uint8_t tile : terrain) hash = (hash ^ tile) * 16777619u;
+        require(hash == c.hash && state == c.finalRng,
+                "original single-land growth terrain/RNG mismatch: " + std::to_string(c.w) + "x" +
+                std::to_string(c.h) + " target=" + std::to_string(c.target) + " seed=" + std::to_string(c.seed));
+    }
+    require(RmsLandGrowth{}.clumpingFactor == 8, "original default clumping factor");
+    RmsLandGrowth land{1, 3, 3, 0, 12, 10};
+    land.terrain = 0;
+    uint32_t identicalTerrainState = 1;
+    require(growRmsSingleLand(7, 7, 0, land, terrainData, identicalTerrainState, terrain, &err)
+                && identicalTerrainState == 1116436030u && terrain == std::vector<uint8_t>(49, 0),
+            "original growth tracks zones and consumes RNG even when land and base terrain match");
+    land.terrain = 1;
+    uint32_t growthState = 12345;
+    require(!growRmsSingleLand(7, 7, 0, land, terrainData, growthState, terrain, &err, 40)
+                && terrain.empty() && growthState == 12345 && err.find("limit") != std::string::npos,
+            "growth work exhaustion must not publish partial terrain or RNG");
+    land.terrain = 3;
+    require(!growRmsSingleLand(7, 7, 0, land, terrainData, growthState, terrain, &err)
+                && terrain.empty() && growthState == 12345, "invalid growth terrain rejected");
+    land.terrain = 1;
+    land.centerX = 7;
+    require(!growRmsSingleLand(7, 7, 0, land, terrainData, growthState, terrain, &err), "off-map growth center rejected");
+    land.centerX = 3;
+    land.targetTiles = 50;
+    require(!growRmsSingleLand(7, 7, 0, land, terrainData, growthState, terrain, &err), "oversized growth target rejected");
+    land.targetTiles = 12;
+    land.clumpingFactor = 101;
+    require(!growRmsSingleLand(7, 7, 0, land, terrainData, growthState, terrain, &err), "unsupported coefficient rejected");
     if (argc == 2) {
         ResourceSet resources;
         require(resources.add(argv[1], &err), err);
