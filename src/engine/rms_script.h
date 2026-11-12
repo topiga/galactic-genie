@@ -32,10 +32,12 @@ public:
               const Limits &limits, std::string *err = nullptr);
     const std::vector<RmsToken> &tokens() const { return tokens_; }
     // Resolve integer constants and defined-symbol branches without modifying
-    // the loaded source. Active random blocks fail until original RNG semantics
-    // are implemented. Output is still directives, not a generated map.
+    // the loaded source. Optional RNG state enables original nonnested random
+    // blocks; it is advanced only on success. This is shared CRT state at script
+    // entry, not a promise that a map seed reproduces a generated map.
     bool preprocess(const std::unordered_set<std::string> &defines,
-                    std::vector<RmsToken> &out, std::string *err = nullptr) const;
+                    std::vector<RmsToken> &out, std::string *err = nullptr,
+                    uint32_t *randomState = nullptr) const;
 private:
     std::vector<RmsToken> tokens_;
 };

@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
         "if LEAK wrong elseif PICK selected else wrong endif", {"PRESENT"}), err);
     require(text() == "selected ", "nested inactive condition or elseif side effects");
     require(preprocess("#define HOME #undefine HOME if HOME wrong else fallback endif", {}), err);
-    require(text() == "fallback ", "undefine and else");
+    require(text() == "wrong ", "original undefine is a no-op");
     require(preprocess("if MISSING start_random percent_chance 100 #define LEAK end_random endif "
         "if LEAK wrong else safe endif", {}), err);
     require(text() == "safe ", "inactive random leaked definitions");
@@ -99,12 +99,53 @@ int main(int argc, char **argv) {
     rejectPreprocess("#const BAD", "missing");
     rejectPreprocess("#define 12", "symbol");
     rejectPreprocess("if\nendif", "missing");
-    rejectPreprocess("#const X 0 if X selected endif", "condition semantics");
+    require(preprocess("#const X 0 if X selected endif", {}), err);
+    require(text() == "selected ", "zero constant condition tests existence");
     rejectPreprocess("#const X 1 #const X 2", "conflicting");
     files[2] = "#const GRASS 0\n#define HOME";
     require(preprocess("#include_drs constants.def 2\nif HOME terrain_type GRASS endif", {}), err);
     require(text() == "terrain_type 0 " && processed[1].resourceId == 1, "included definitions");
     require(script.preprocess({}, processed, &err) && text() == "terrain_type 0 ", "repeat preprocessing changed source");
+    files[1] = "start_random percent_chance 10 first percent_chance 90 second end_random";
+    require(script.load(1, resolve, limits, &err), err);
+    uint32_t rng = 992;
+    require(script.preprocess({}, processed, &err, &rng), err);
+    require(text() == "first " && rng == 0x0cce1323u, "inclusive equality branch and CRT state");
+    rng = 1093;
+    require(script.preprocess({}, processed, &err, &rng), err);
+    require(text() == "second " && rng == 0x0e17e5f4u, "subtract chance before next branch");
+    rng = 30091;
+    require(script.preprocess({}, processed, &err, &rng), err);
+    require(text() == "second " && rng == 0x7fff2a22u, "inclusive100 roll");
+    files[1] = "start_random percent_chance 0 zero percent_chance 100 other end_random";
+    require(script.load(1, resolve, limits, &err), err);
+    rng = 0;
+    require(script.preprocess({}, processed, &err, &rng), err);
+    require(text() == "zero " && rng == 2531011u, "original zero-weight branch can win at roll zero");
+    files[1] = "start_random percent_chance 10 first percent_chance 10 second end_random after";
+    require(script.load(1, resolve, limits, &err), err);
+    rng = 30091;
+    require(script.preprocess({}, processed, &err, &rng), err);
+    require(text() == "after ", "underweight random can select nothing");
+    files[1] = "if MISSING start_random percent_chance 100 bad end_random endif "
+        "start_random percent_chance 100 #define HOME end_random if HOME good endif";
+    require(script.load(1, resolve, limits, &err), err);
+    rng = 0;
+    require(script.preprocess({}, processed, &err, &rng), err);
+    require(text() == "good " && rng == 2531011u, "inactive condition consumes no RNG");
+    files[1] = "start_random percent_chance 0 if MISSING bad else bad endif "
+        "percent_chance 100 if HOME selected else fallback endif end_random";
+    require(script.load(1, resolve, limits, &err), err);
+    rng = 1093;
+    require(script.preprocess({"HOME"}, processed, &err, &rng), err);
+    require(text() == "selected ", "unselected random conditions cannot affect selected branch");
+    files[1] = "start_random percent_chance 101 bad end_random";
+    require(script.load(1, resolve, limits, &err), err);
+    rng = 123;
+    require(!script.preprocess({}, processed, &err, &rng) && rng == 123 && processed.empty(),
+            "failed random preprocessing must preserve caller RNG and clear output");
+    rejectPreprocess("start_random percent_chance 100 start_random percent_chance 100 x end_random end_random",
+                     "nested random");
     if (argc == 2) {
         ResourceSet resources;
         require(resources.add(argv[1], &err), err);
@@ -122,6 +163,21 @@ int main(int argc, char **argv) {
                 "Shoreline stages or packaged include content missing");
         require(!script.preprocess({}, processed, &err) && err.find("random") != std::string::npos,
                 "Shoreline must not fabricate random choices");
+        rng = 1;
+        require(script.preprocess({"TINY_MAP"}, processed, &err, &rng), "seeded Shoreline: " + err);
+        size_t generatedStages = 0;
+        for (const auto &t : processed) {
+            generatedStages += t.text.front() == '<';
+            require(t.text != "start_random" && t.text != "percent_chance" && t.text != "if" &&
+                    t.text != "#const" && t.text != "#define", "unresolved Shoreline control");
+        }
+        require(generatedStages == 7, "seeded preprocessing lost stages");
+        const auto firstRun = text();
+        const uint32_t finalRng = rng;
+        rng = 1;
+        require(script.preprocess({"TINY_MAP"}, processed, &err, &rng), err);
+        require(text() == firstRun && rng == finalRng, "seeded preprocessing repeatability");
+        std::cout << "Seeded Shoreline: " << processed.size() << " directive tokens; final RNG=" << rng << '\n';
         std::cout << "Packaged Shoreline: " << script.tokens().size() << " tokens, seven stages, includes resolved\n";
         // The original constants are data, not a reconstructed fixture.
         auto packaged = [&](int32_t id, std::vector<uint8_t> &out) {

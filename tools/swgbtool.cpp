@@ -61,7 +61,7 @@ static int usage() {
             "  swgbtool test-combat <DataDir> [out.png]\n"
             "  swgbtool ai-script <entry.per>\n"
             "  swgbtool test-ai <DataDir> <AiDir>\n"
-            "  swgbtool rms-script <archive.drs> <resourceId>\n"
+            "  swgbtool rms-script <archive.drs> <resourceId> [--rng-state N] [--define SYMBOL] [--dump]\n"
             "  swgbtool mp3 <file.mp3>\n");
     return 2;
 }
@@ -5788,7 +5788,32 @@ static int cmdBenchUi(const char *dataDir) {
     return 0;
 }
 
-static int cmdRmsScript(const char *path,const char *number) {
+static int cmdRmsScript(const char *path,const char *number,int argc,char **argv) {
+    uint32_t rng=0;
+    bool evaluate=false, dump=false;
+    std::unordered_set<std::string> defines;
+    for(int index=0;index<argc;++index) {
+        if (!std::strcmp(argv[index],"--rng-state") && index+1<argc) {
+            const char *value=argv[++index];
+            const char *end=value+std::strlen(value);
+            auto parsed=std::from_chars(value,end,rng);
+            if(parsed.ec!=std::errc{} || parsed.ptr!=end) {
+                std::fprintf(stderr,"error: invalid unsigned32 RNG state\n");
+                return 2;
+            }
+            evaluate=true;
+        } else if(!std::strcmp(argv[index],"--define") && index+1<argc) {
+            defines.insert(argv[++index]);
+        } else if(!std::strcmp(argv[index],"--dump")) dump=true;
+        else {
+            std::fprintf(stderr,"error: unknown or incomplete RMS option: %s\n",argv[index]);
+            return 2;
+        }
+    }
+    if(!evaluate && !defines.empty()) {
+        std::fprintf(stderr,"error: --define requires --rng-state\n");
+        return 2;
+    }
     int32_t id=-1;
     const char *end=number+std::strlen(number);
     const auto parsed=std::from_chars(number,end,id);
@@ -5806,8 +5831,19 @@ static int cmdRmsScript(const char *path,const char *number) {
     size_t stages=0;
     for(const auto &token:script.tokens())
         if(token.text.front()=='<') ++stages;
-    std::printf("RMS loaded: %zu tokens, %zu stages. Includes resolved; controls and generation not evaluated.\n",
-                script.tokens().size(),stages);
+    std::vector<RmsToken> processed;
+    if(evaluate && !script.preprocess(defines,processed,&error,&rng)) {
+        std::fprintf(stderr,"error: %s\n",error.c_str());
+        return 1;
+    }
+    const auto &tokens=evaluate ? processed : script.tokens();
+    if(evaluate)
+        std::printf("RMS preprocessed: %zu tokens; final RNG state=%u. No map generated.\n",tokens.size(),rng);
+    else
+        std::printf("RMS loaded: %zu tokens, %zu stages. Includes resolved; controls and generation not evaluated.\n",
+                    tokens.size(),stages);
+    if(dump) for(const auto &token:tokens)
+        std::printf("%d:%zu %s\n",token.resourceId,token.line,token.text.c_str());
     return 0;
 }
 
@@ -6082,7 +6118,7 @@ int main(int argc, char **argv) {
     if (!strcmp(cmd, "options") && argc >= 5)
         return cmdOptions(argv[2], atoi(argv[3]), atoi(argv[4]));
     if (!strcmp(cmd, "sound") && argc >= 4) return cmdSound(argv[2], atoi(argv[3]));
-    if (!strcmp(cmd, "rms-script") && argc >= 4) return cmdRmsScript(argv[2],argv[3]);
+    if (!strcmp(cmd, "rms-script") && argc >= 4) return cmdRmsScript(argv[2],argv[3],argc-4,argv+4);
     if (!strcmp(cmd, "drs")) return cmdDrs(argv[2]);
     if (!strcmp(cmd, "drs-slps")) return cmdDrsSlps(argv[2]);
     if (!strcmp(cmd, "campaign")) return cmdCampaign(argv[2]);

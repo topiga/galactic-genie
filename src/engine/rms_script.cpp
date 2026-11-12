@@ -141,7 +141,7 @@ bool RmsScript::load(int32_t id, const Resolver &resolver, const Limits &limits,
     }
 }
 bool RmsScript::preprocess(const std::unordered_set<std::string> &initialDefines,
-                           std::vector<RmsToken> &out, std::string *err) const {
+                           std::vector<RmsToken> &out, std::string *err, uint32_t *randomState) const {
     out.clear();
     if (err) err->clear();
     std::vector<RmsToken> result;
@@ -149,7 +149,12 @@ bool RmsScript::preprocess(const std::unordered_set<std::string> &initialDefines
     std::unordered_map<std::string, int32_t> constants;
     struct Branch { bool parentActive; bool taken; bool active; };
     std::vector<Branch> branches;
-    auto active = [&] { return branches.empty() || branches.back().active; };
+    auto conditionActive = [&] { return branches.empty() || branches.back().active; };
+    uint32_t rng = randomState ? *randomState : 0;
+    int randomPhase = 0; // 0 outside, 1 searching, 2 selected, 3 finished
+    int remaining = 0;
+    auto randomActive = [&] { return randomPhase == 0 || randomPhase == 2; };
+    auto active = [&] { return conditionActive() && randomActive(); };
     auto fail = [](const RmsToken &token, const std::string &reason) {
         throw std::runtime_error("RMS " + std::to_string(token.resourceId) + ":" +
                                  std::to_string(token.line) + ": " + reason);
@@ -161,6 +166,15 @@ bool RmsScript::preprocess(const std::unordered_set<std::string> &initialDefines
             });
     };
     try {
+        // shortcut: reject nested random blocks until their original interactions
+        // with condition state have dedicated comparison fixtures.
+        bool inRandom = false;
+        for (const auto &t : tokens_) {
+            if (t.text == "start_random") {
+                if (inRandom) fail(t, "nested random evaluation unsupported");
+                inRandom = true;
+            } else if (t.text == "end_random") inRandom = false;
+        }
         for (size_t i = 0; i < tokens_.size(); ++i) {
             const auto &t = tokens_[i];
             const auto &s = t.text;
@@ -173,8 +187,9 @@ bool RmsScript::preprocess(const std::unordered_set<std::string> &initialDefines
             if (s == "if" || s == "elseif") {
                 const auto &name = argument().text;
                 if (!symbol(name)) fail(t, "invalid condition symbol");
-                if (constants.count(name)) fail(t, "constant condition semantics unsupported");
-                bool matches = defines.count(name) != 0;
+                if (!randomActive()) continue;
+                // Original condition argument lookup tests label existence, not value.
+                bool matches = defines.count(name) != 0 || constants.count(name) != 0;
                 if (s == "if") {
                     bool parent = active();
                     branches.push_back({parent, matches, parent && matches});
@@ -185,22 +200,39 @@ bool RmsScript::preprocess(const std::unordered_set<std::string> &initialDefines
                     b.taken = b.taken || matches;
                 }
             } else if (s == "else") {
+                if (!randomActive()) continue;
                 if (branches.empty()) fail(t, "else without if");
                 auto &b = branches.back();
                 b.active = b.parentActive && !b.taken;
                 b.taken = true;
             } else if (s == "endif") {
+                if (!randomActive()) continue;
                 if (branches.empty()) fail(t, "endif without if");
                 branches.pop_back();
             } else if (s == "start_random") {
-                if (active()) fail(t, "random choice evaluation unsupported");
-                // An unreachable random block cannot define symbols for later rules.
-                size_t depth = 1;
-                while (depth && ++i < tokens_.size()) {
-                    if (tokens_[i].text == "start_random") ++depth;
-                    if (tokens_[i].text == "end_random") --depth;
+                if (!conditionActive()) {
+                    while (++i < tokens_.size() && tokens_[i].text != "end_random") {}
+                    continue;
                 }
-                if (depth) fail(t, "unterminated random block");
+                if (!randomState) fail(t, "random choice evaluation requires RNG state");
+                // Original 0x632bdd and 0x4e24cb: inclusive roll 0..100.
+                rng = rng * 214013u + 2531011u;
+                remaining = static_cast<int>(((rng >> 16) & 32767u) * 100u / 32767u);
+                randomPhase = 1;
+            } else if (s == "percent_chance") {
+                const auto &number = argument().text;
+                int weight = 0;
+                auto parsed = std::from_chars(number.data(), number.data() + number.size(), weight);
+                if (parsed.ec != std::errc{} || parsed.ptr != number.data() + number.size() ||
+                    weight < 0 || weight > 100) fail(t, "percent_chance requires integer 0..100");
+                if (!conditionActive() || randomPhase == 0) fail(t, "invalid random branch state");
+                if (randomPhase == 1) {
+                    if (remaining > weight) remaining -= weight;
+                    else randomPhase = 2; // original selects at equality, including zero
+                } else randomPhase = 3;
+            } else if (s == "end_random") {
+                if (!conditionActive()) fail(t, "invalid random end state");
+                randomPhase = 0;
             } else if (s == "#const" || s == "#define" || s == "#undefine") {
                 const auto &name = argument().text;
                 if (!symbol(name)) fail(t, "invalid definition symbol");
@@ -216,9 +248,10 @@ bool RmsScript::preprocess(const std::unordered_set<std::string> &initialDefines
                         constants[name] = value;
                     }
                 } else if (active()) {
-                    if (constants.count(name)) fail(t, "constant redefinition unsupported: " + name);
+                    if (s == "#define" && constants.count(name)) fail(t, "constant redefinition unsupported: " + name);
                     if (s == "#define") defines.insert(name);
-                    else defines.erase(name);
+                    // Original opcode1 (#undefine) returns without deleting a label.
+                    // Preserve that observed behavior instead of assuming C macros.
                 }
             } else if (active()) {
                 auto token = t;
@@ -229,6 +262,7 @@ bool RmsScript::preprocess(const std::unordered_set<std::string> &initialDefines
         }
         if (!branches.empty()) throw std::runtime_error("RMS: unterminated condition");
         out = std::move(result);
+        if (randomState) *randomState = rng;
         return true;
     } catch (const std::runtime_error &e) {
         if (err) *err = e.what();
