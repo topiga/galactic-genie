@@ -17,6 +17,7 @@ static void check(bool value, const char *message) {
 #include "ai_fog_checks.h"
 #include "ai_time_checks.h"
 #include "ai_timer_checks.h"
+#include "ai_research_checks.h"
 #include "selection_checks.h"
 #include "civilization_checks.h"
 #include "conquest_checks.h"
@@ -250,6 +251,7 @@ int main(int argc, char **argv) {
     aiFogChecks(assets);
     aiTimeChecks(assets);
     aiTimerChecks(assets);
+    aiResearchChecks(assets);
     additiveSelectionChecks(assets,renderer);
     civilizationChecks(assets,renderer);
     conquestChecks(assets);

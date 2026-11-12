@@ -297,6 +297,8 @@ public:
     bool destroyLastSelectedForTesting();
     bool ejectGarrisonedUnitForTesting(
         uint32_t buildingId, uint32_t unitId);
+    float aiEscrowForTesting(int player,int type) const { return aiEscrow_.at(player).at(type); }
+    void addResourceForTesting(int player,int type,float amount) { addResource(player,type,amount); }
     void setResourceForTesting(
         int player, int resourceType,
         float amount);
@@ -1238,18 +1240,22 @@ private:
     const dat::Unit *aiUnit(
         int player,
         const std::string &symbol) const;
-    int aiTechnology(
+    int aiTechnology(int player,
         const std::string &symbol) const;
     int aiTechLevel(int player) const;
     int aiObjectCount(
         int player, const dat::Unit &unit,
         bool includeFoundations) const;
+    float aiSpendableResource(int player,int type,bool withEscrow=false) const;
+    void addResource(int player,int type,float amount);
+    bool aiResearchAvailable(int player,int id) const;
+    Object *aiResearcher(int player,const dat::Tech &technology);
     bool aiCanAfford(
         int player,
-        const dat::Unit &unit) const;
+        const dat::Unit &unit,bool withEscrow=false) const;
     bool aiCanAfford(
         int player,
-        const dat::Tech &technology) const;
+        const dat::Tech &technology,bool withEscrow=false) const;
     bool aiBuild(
         int player, const dat::Unit &unit);
     bool aiTrain(
@@ -1315,6 +1321,7 @@ private:
     std::array<std::vector<int>, 17> researchedTechOrder_{};
     std::array<std::vector<int>, 17> civilizationEffects_{}, playerEffects_{};
     std::array<AiPlayerState, 17> aiPlayers_{};
+    std::array<std::array<float,4>,17> aiEscrow_{},aiEscrowPercent_{};
     std::array<std::set<int>, 17> disabledTechs_{};
     std::array<std::set<int>, 17> disabledUnits_{};
     std::vector<ScenarioTrigger> triggers_;

@@ -394,6 +394,8 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     civilizationEffects_ = {};
     playerEffects_ = {};
     aiPlayers_ = {};
+    aiEscrow_ = {};
+    aiEscrowPercent_ = {};
     techGeneration_++;
     disabledTechs_ = {};
     disabledUnits_ = {};
@@ -923,6 +925,8 @@ bool Game::initScenario(const Scenario &scenario, std::string *err) {
     civilizationEffects_ = {};
     playerEffects_ = {};
     aiPlayers_ = {};
+    aiEscrow_ = {};
+    aiEscrowPercent_ = {};
     techGeneration_++;
     disabledTechs_ = {};
     disabledUnits_ = {};
@@ -5776,17 +5780,16 @@ bool Game::siteAcceptsType(const Object &worker, const Object &building, int typ
 // Returns true if anything was deposited.
 bool Game::depositAt(Object &worker, const Object &building) {
     bool deposited = false;
-    auto &bank = resources_[(size_t)worker.player];
     if (worker.carriedAmount > 0.001f &&
         siteAcceptsType(worker, building, worker.carriedResourceType)) {
-        bank[worker.carriedResourceType] += worker.carriedAmount;
+        addResource(worker.player,worker.carriedResourceType,worker.carriedAmount);
         worker.carriedAmount = 0.0f;
         worker.carriedResourceType = -1;
         deposited = true;
     }
     for (int type = 0; type < 4; type++)
         if (worker.stash[(size_t)type] > 0.001f && siteAcceptsType(worker, building, type)) {
-            bank[type] += worker.stash[(size_t)type];
+            addResource(worker.player,type,worker.stash[(size_t)type]);
             worker.stash[(size_t)type] = 0.0f;
             deposited = true;
         }
@@ -11922,8 +11925,8 @@ void Game::executeEffect(const ScenarioEffect &effect) {
     case 5:
         if (sourcePlayer >= 0 && (size_t)sourcePlayer < resources_.size() &&
             targetPlayer >= 0 && (size_t)targetPlayer < resources_.size() && resourceId >= 0) {
-            resources_[(size_t)sourcePlayer][resourceId] -= amount;
-            resources_[(size_t)targetPlayer][resourceId] += amount;
+            addResource(sourcePlayer,resourceId,-amount);
+            addResource(targetPlayer,resourceId,amount);
         }
         break;
     case 6:
@@ -12376,13 +12379,17 @@ const dat::Unit *Game::aiUnit(
                : nullptr;
 }
 
-int Game::aiTechnology(
+int Game::aiTechnology(int player,
     const std::string &symbol) const {
-    const std::string name =
-        normalizeAiSymbol(symbol);
+    const std::string name=normalizeAiSymbol(symbol);
+    // Age fact symbols are one-based; their research IDs are zero-based.
     if (name == "tech-level-2") return 1;
     if (name == "tech-level-3") return 2;
     if (name == "tech-level-4") return 3;
+    if (player>0 && size_t(player)<aiPlayers_.size() && aiPlayers_[size_t(player)].program.hasConstant(symbol)) {
+        const int id=aiPlayers_[size_t(player)].program.constant(symbol);
+        return id>=0 && size_t(id)<assets_.dat().techs.size()?id:-1;
+    }
     const auto &technologies =
         assets_.dat().techs;
     for (size_t index = 0;
@@ -12444,9 +12451,46 @@ int Game::aiObjectCount(
     return count;
 }
 
+float Game::aiSpendableResource(int player,int type,bool withEscrow) const {
+    const float total=resource(player,type);
+    // Orders debit synchronously; original pending-command reservations have no native counterpart yet.
+    return type>=0 && type<4 && !withEscrow
+        ? total-aiEscrow_[size_t(player)][size_t(type)] : total;
+}
+
+void Game::addResource(int player,int type,float amount) {
+    if (player<0 || size_t(player)>=resources_.size() || type<0 || !std::isfinite(amount)) return;
+    auto &stock=resources_[size_t(player)][type];
+    stock+=amount;
+    if (type>=4 || !aiPlayers_[size_t(player)].loaded) return;
+    auto &escrow=aiEscrow_[size_t(player)][size_t(type)];
+    if (amount>0) escrow=float(double(escrow)+double(amount)*aiEscrowPercent_[size_t(player)][size_t(type)]);
+    escrow=std::min(escrow,std::max(0.f,stock));
+}
+
+bool Game::aiResearchAvailable(int player,int id) const {
+    if (player<=0 || size_t(player)>=researchedTechs_.size() || id<0 || size_t(id)>=assets_.dat().techs.size() ||
+        researchedTechs_[size_t(player)].count(id) || disabledTechs_[size_t(player)].count(id)) return false;
+    const auto &tech=assets_.dat().techs[size_t(id)];
+    if ((tech.civ>=0 && tech.civ!=civilizationForPlayer(player)) || !technologyRequirementsMet(player,tech)) return false;
+    for (const auto &object:objects_)
+        if (object.active && object.player==player)
+            for (const auto &item:object.productionQueue)
+                if (item.technologyId==id) return false;
+    return true;
+}
+
+Game::Object *Game::aiResearcher(int player,const dat::Tech &tech) {
+    for (auto &building:objects_)
+        if (building.active && !building.hidden && !building.underConstruction && building.player==player &&
+            building.unit && building.unit->type==dat::UT_Building && building.unit->id==tech.locationId &&
+            building.productionQueue.empty()) return &building;
+    return nullptr;
+}
+
 bool Game::aiCanAfford(
     int player,
-    const dat::Unit &unit) const {
+    const dat::Unit &unit,bool withEscrow) const {
     if (player <= 0 ||
         (size_t)player >=
             resources_.size())
@@ -12455,7 +12499,7 @@ bool Game::aiCanAfford(
          unitCosts(player,unit))
         if (cost.flag && cost.type >= 0 &&
             cost.amount > 0 &&
-            resource(player, cost.type) <
+            aiSpendableResource(player,cost.type,withEscrow) <
                 cost.amount)
             return false;
     return true;
@@ -12463,7 +12507,7 @@ bool Game::aiCanAfford(
 
 bool Game::aiCanAfford(
     int player,
-    const dat::Tech &technology) const {
+    const dat::Tech &technology,bool withEscrow) const {
     if (player <= 0 ||
         (size_t)player >=
             resources_.size())
@@ -12472,7 +12516,7 @@ bool Game::aiCanAfford(
          researchCosts(player,technology))
         if (cost.flag && cost.type >= 0 &&
             cost.amount > 0 &&
-            resource(player, cost.type) <
+            aiSpendableResource(player,cost.type,withEscrow) <
                 cost.amount)
             return false;
     return true;
@@ -12678,38 +12722,10 @@ bool Game::aiTrain(
 
 bool Game::aiResearch(
     int player, int technologyId) {
-    if (technologyId < 0 ||
-        (size_t)technologyId >=
-            assets_.dat().techs.size() ||
-        researchedTechs_[(size_t)player]
-            .count(technologyId))
-        return false;
-    const dat::Tech &technology =
-        assets_.dat()
-            .techs[(size_t)technologyId];
-    if (!technologyRequirementsMet(
-            player, technology) ||
-        !aiCanAfford(player, technology))
-        return false;
-    Object *researcher = nullptr;
-    for (Object &building : objects_) {
-        if (!building.active ||
-            building.hidden ||
-            building.underConstruction ||
-            building.player != player ||
-            building.productionQueue.size() >=
-                5)
-            continue;
-        const auto &options =
-            researchOptions(building);
-        if (std::find(
-                options.begin(), options.end(),
-                technologyId) !=
-            options.end()) {
-            researcher = &building;
-            break;
-        }
-    }
+    if (!aiResearchAvailable(player,technologyId)) return false;
+    const auto &technology=assets_.dat().techs[size_t(technologyId)];
+    if (!aiCanAfford(player,technology)) return false;
+    Object *researcher=aiResearcher(player,technology);
     if (!researcher) return false;
     for (const auto &cost :
          researchCosts(player,technology))
@@ -12951,7 +12967,7 @@ Game::AiTruth Game::evaluateAiCondition(
     if (fact == "research-completed" &&
         condition.children.size() == 2) {
         const int technology =
-            aiTechnology(
+            aiTechnology(player,
                 condition.children[1]
                     .value);
         return technology < 0
@@ -12962,24 +12978,15 @@ Game::AiTruth Game::evaluateAiCondition(
                    ? AiTruth::True
                    : AiTruth::False;
     }
-    if (fact == "research-available" &&
-        condition.children.size() == 2) {
-        const int technology =
-            aiTechnology(
-                condition.children[1]
-                    .value);
-        if (technology < 0)
-            return AiTruth::Unknown;
-        const dat::Tech &tech =
-            assets_.dat().techs[
-                (size_t)technology];
-        return !researchedTechs_[
-                    (size_t)player]
-                    .count(technology) &&
-                       technologyRequirementsMet(
-                           player, tech)
-                   ? AiTruth::True
-                   : AiTruth::False;
+    if (fact=="research-available" || fact=="can-research" || fact=="can-research-with-escrow") {
+        if (condition.children.size()!=2) return AiTruth::Unknown;
+        const int id=aiTechnology(player,condition.children[1].value);
+        if (id<0) return AiTruth::Unknown;
+        if (!aiResearchAvailable(player,id)) return AiTruth::False;
+        if (fact=="research-available") return AiTruth::True;
+        const auto &tech=assets_.dat().techs[size_t(id)];
+        return aiCanAfford(player,tech,fact=="can-research-with-escrow") && aiResearcher(player,tech)
+            ? AiTruth::True : AiTruth::False;
     }
     if ((fact == "can-build" ||
          fact == "can-train" ||
@@ -12993,7 +13000,7 @@ Game::AiTruth Game::evaluateAiCondition(
         if (!unit) return AiTruth::Unknown;
         if (!unitAvailable(
                 player, unit->id) ||
-            !aiCanAfford(player, *unit))
+            !aiCanAfford(player, *unit,fact=="can-train-with-escrow"))
             return AiTruth::False;
         if (fact == "can-build") {
             const bool worker =
@@ -13126,6 +13133,19 @@ bool Game::executeAiAction(
         }
         return true;
     }
+    if (name=="set-escrow-percentage" || name=="release-escrow") {
+        const bool set=name=="set-escrow-percentage";
+        if (action.children.size()!=(set?3u:2u)) return false;
+        bool known=false;
+        const int type=resolveAiValue(player,state,action.children[1].value,known);
+        if (!known || type<0 || type>=4) return false;
+        if (set) {
+            const int percent=resolveAiValue(player,state,action.children[2].value,known);
+            if (!known) return false;
+            aiEscrowPercent_[size_t(player)][size_t(type)]=std::clamp(percent,0,100)*0.01f;
+        } else aiEscrow_[size_t(player)][size_t(type)]=0;
+        return true;
+    }
     if (name == "set-goal" &&
         action.children.size() == 3) {
         bool goalKnown = false;
@@ -13180,10 +13200,9 @@ bool Game::executeAiAction(
         action.children.size() == 2)
         return aiResearch(
             player,
-            aiTechnology(
+            aiTechnology(player,
                 action.children[1].value));
-    if (name == "chat-local-to-self" ||
-        name == "release-escrow")
+    if (name == "chat-local-to-self")
         return true;
     if (state.warnedActions.insert(name).second)
         log(
@@ -13982,8 +14001,7 @@ void Game::update(float dt, const InputState &incoming) {
         const float rate =
             animalNurseryFoodRate(nursery);
         if (rate > 0.0f)
-            resources_[(size_t)nursery.player][0] +=
-                rate * dt;
+            addResource(nursery.player,0,rate*dt);
     }
     // Damage graphics (fire/smoke stages) carry their own sound, played each
     // animation cycle like any graphic sound while the building is heard.
