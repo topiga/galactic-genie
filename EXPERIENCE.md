@@ -540,3 +540,25 @@ The original normal research/production action paths consume `dt * building.mast
 Further exact evidence is retained under `Research/windows-reference/research-modifiers/`: effects101/103 overwrite per-player cost/time deltas; research resources85/86 scale cost/time; Bothan Network62 has a separate price using capped active-opponent resource37, classes12/14/45/58, mutual-alliance exclusion and resource197. Its refund omits those special factors. Those research calculations have been traced but are not yet implemented; dying-object lifetime and nonzero player-status cases still need native representation work.
 
 Validation: `research-order-workrate-tests.log` passed the full ASan/UBSan suite and both completed-match outcomes; `research-order-workrate-smoke.log` passed the desktop menu/render/audio checks. The rebuilt native app includes these changes. The RMS inspection command also passed against54205 and rejected a malformed resource ID (`rms-tool-check.log`).
+
+## 2026-11-12 — Research cost and duration modifiers
+
+Exact Windows functions0x5c0790/0x5c085f overwrite signed-short per-player deltas for effect types101/103. The native helpers now reproduce first-enabled matching cost slots, low-byte mode selection, truncation, original-base-relative replacement, resource85 cost scaling (except technologies0–3), and resource86 duration scaling before the time delta. Unscaled base-plus-cost-delta remains wider than16 bits; positive scaling narrows after truncation. Evidence and executable identity remain under local `Research/windows-reference/research-modifiers/`.
+
+Human and AI affordability/payment, cancellation refunds, original help text and both cost displays use these helpers. The original negative-cost transaction behavior is not reproduced: existing payment/refund consumers still ignore nonpositive amounts. Bothan Network62's population-dependent purchase multiplier remains pending player-status/lifetime accounting; this pass does not claim its price matches. Queue durations remain snapshots at enqueue; dynamic thresholds were removed after the accelerated test-queue fixture exposed an integration conflict. The original progress-percent denominator's resource86 discrepancy is also not emulated.
+
+QuickDesk was observed disconnected, with no remote connections. It remained disconnected during this pass to avoid remote audio; no persistent mute preference was changed and system audio was untouched.
+
+
+Validation: `research-modifiers-tests.log` passed full ASan/UBSan, research arithmetic/current-cost refund checks, eight civilization openings, completed AI matches and scripted player victory at677.7 seconds. `research-modifiers-smoke.log` passed launcher/menu/rendering and silent effects/music-backend checks. Native app rebuilt.
+
+
+## 2026-11-12 — RMS constant and conditional preprocessing
+
+The RMS loader now offers a separate, immutable preprocessing pass for signed 32-bit integer `#const` definitions, `#define`/`#undefine`, and nested defined-symbol `if`/`elseif`/`else`/`endif`. Callers supply match-defined symbols. Selected directives retain argument/braces order and original use-site resource/line locations. Inactive definitions do not leak into later branches, and failed preprocessing returns no partial output. Processing is bounded by the loader's byte/token limits and does not expand tokens recursively.
+
+Evidence comes from the original packaged `random_map.def` (resource54000, 808 integer constants) and `GBG_land_resources.inc` (54103). Tests load those original constants and exercise the include's `MIGRATION` placement-radius branch (14 versus18), `BLDG-MAIN1`109, `UNIT-WORKER`83 and `GRASS1`0. These tests establish preprocessing, not original map generation or placement correctness. Original assets remain outside the repository.
+
+Active random blocks explicitly fail; unreachable random blocks are skipped without applying definitions. Constant-valued conditions, conflicting definitions and noninteger constant expressions are rejected rather than assigned unverified semantics. Include expansion still occurs during loading, before branch evaluation. Shoreline54205 remains fully inspectable (5,923 tokens, seven stages), but preprocessing refuses its active random choices. No RNG, terrain algorithm, object placement or desktop map/controller integration was added.
+
+Validation: the standalone `tools/rms_test.cpp` suite passed strict compiler warnings plus ASan/UBSan against the original x1 DRS, including malformed/overflow constants, missing operands, nested inactive branches, repeated preprocessing, source provenance and existing include/path/depth/token-limit checks. Exact command and output are retained locally in `Research/windows-reference/rms-preprocess-tests-2026-11-12.log`. No Windows runtime comparison was performed for this pass.

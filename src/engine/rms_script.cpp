@@ -6,6 +6,7 @@
 #include <charconv>
 #include <cctype>
 #include <stdexcept>
+#include <unordered_map>
 
 namespace swgb {
 namespace {
@@ -133,6 +134,101 @@ bool RmsScript::load(int32_t id, const Resolver &resolver, const Limits &limits,
         reader.read(id);
         reader.validate();
         tokens_ = std::move(reader.output);
+        return true;
+    } catch (const std::runtime_error &e) {
+        if (err) *err = e.what();
+        return false;
+    }
+}
+bool RmsScript::preprocess(const std::unordered_set<std::string> &initialDefines,
+                           std::vector<RmsToken> &out, std::string *err) const {
+    out.clear();
+    if (err) err->clear();
+    std::vector<RmsToken> result;
+    auto defines = initialDefines;
+    std::unordered_map<std::string, int32_t> constants;
+    struct Branch { bool parentActive; bool taken; bool active; };
+    std::vector<Branch> branches;
+    auto active = [&] { return branches.empty() || branches.back().active; };
+    auto fail = [](const RmsToken &token, const std::string &reason) {
+        throw std::runtime_error("RMS " + std::to_string(token.resourceId) + ":" +
+                                 std::to_string(token.line) + ": " + reason);
+    };
+    auto symbol = [](const std::string &name) {
+        return !name.empty() && (std::isalpha(static_cast<unsigned char>(name[0])) || name[0] == '_') &&
+            std::all_of(name.begin(), name.end(), [](unsigned char c) {
+                return std::isalnum(c) || c == '_' || c == '-';
+            });
+    };
+    try {
+        for (size_t i = 0; i < tokens_.size(); ++i) {
+            const auto &t = tokens_[i];
+            const auto &s = t.text;
+            auto argument = [&]() -> const RmsToken & {
+                if (i + 1 >= tokens_.size() || tokens_[i + 1].resourceId != t.resourceId ||
+                    tokens_[i + 1].line != t.line)
+                    fail(t, "missing argument for " + s);
+                return tokens_[++i];
+            };
+            if (s == "if" || s == "elseif") {
+                const auto &name = argument().text;
+                if (!symbol(name)) fail(t, "invalid condition symbol");
+                if (constants.count(name)) fail(t, "constant condition semantics unsupported");
+                bool matches = defines.count(name) != 0;
+                if (s == "if") {
+                    bool parent = active();
+                    branches.push_back({parent, matches, parent && matches});
+                } else {
+                    if (branches.empty()) fail(t, "elseif without if");
+                    auto &b = branches.back();
+                    b.active = b.parentActive && !b.taken && matches;
+                    b.taken = b.taken || matches;
+                }
+            } else if (s == "else") {
+                if (branches.empty()) fail(t, "else without if");
+                auto &b = branches.back();
+                b.active = b.parentActive && !b.taken;
+                b.taken = true;
+            } else if (s == "endif") {
+                if (branches.empty()) fail(t, "endif without if");
+                branches.pop_back();
+            } else if (s == "start_random") {
+                if (active()) fail(t, "random choice evaluation unsupported");
+                // An unreachable random block cannot define symbols for later rules.
+                size_t depth = 1;
+                while (depth && ++i < tokens_.size()) {
+                    if (tokens_[i].text == "start_random") ++depth;
+                    if (tokens_[i].text == "end_random") --depth;
+                }
+                if (depth) fail(t, "unterminated random block");
+            } else if (s == "#const" || s == "#define" || s == "#undefine") {
+                const auto &name = argument().text;
+                if (!symbol(name)) fail(t, "invalid definition symbol");
+                if (s == "#const") {
+                    const auto &number = argument().text;
+                    int32_t value = 0;
+                    auto parsed = std::from_chars(number.data(), number.data() + number.size(), value);
+                    if (parsed.ec != std::errc{} || parsed.ptr != number.data() + number.size())
+                        fail(t, "only signed 32-bit integer constants supported");
+                    if (active()) {
+                        if (defines.count(name) || (constants.count(name) && constants.at(name) != value))
+                            fail(t, "conflicting definition unsupported: " + name);
+                        constants[name] = value;
+                    }
+                } else if (active()) {
+                    if (constants.count(name)) fail(t, "constant redefinition unsupported: " + name);
+                    if (s == "#define") defines.insert(name);
+                    else defines.erase(name);
+                }
+            } else if (active()) {
+                auto token = t;
+                auto constant = constants.find(s);
+                if (constant != constants.end()) token.text = std::to_string(constant->second);
+                result.push_back(std::move(token));
+            }
+        }
+        if (!branches.empty()) throw std::runtime_error("RMS: unterminated condition");
+        out = std::move(result);
         return true;
     } catch (const std::runtime_error &e) {
         if (err) *err = e.what();

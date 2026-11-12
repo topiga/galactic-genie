@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace swgb {
@@ -30,6 +31,11 @@ public:
     bool load(int32_t resourceId, const Resolver &resolver,
               const Limits &limits, std::string *err = nullptr);
     const std::vector<RmsToken> &tokens() const { return tokens_; }
+    // Resolve integer constants and defined-symbol branches without modifying
+    // the loaded source. Active random blocks fail until original RNG semantics
+    // are implemented. Output is still directives, not a generated map.
+    bool preprocess(const std::unordered_set<std::string> &defines,
+                    std::vector<RmsToken> &out, std::string *err = nullptr) const;
 private:
     std::vector<RmsToken> tokens_;
 };
