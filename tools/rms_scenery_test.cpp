@@ -3,6 +3,7 @@
 #include "core/genie_dat.h"
 #include <cassert>
 #include <cmath>
+#include <cstring>
 #include <iostream>
 
 int main() {
@@ -598,5 +599,114 @@ int main() {
     }
     data.civs[0].units[413].resourceStorages[0].amount=100; fail({21});
     data.civs[0].units[413].resourceStorages[0].amount=125;
+    data.civs[0].units.resize(1342);
+    data.terrainRestrictions[8].passableBuildableDmgMultiplier.assign(55,1);
+    const int carbonSpecs[][6]={{49,43,1341,5147,11,50},{50,42,217,5140,8,100}};
+    for (const auto &spec:carbonSpecs) {
+        auto &t=data.terrainBlock.terrains[spec[0]];
+        t.terrainToDraw=spec[1];t.numTerrainUnitsUsed=1;t.terrainUnitId[0]=spec[2];
+        t.terrainUnitDensity[0]=1000;t.terrainUnitCentering[0]=1;
+        auto &unit=data.civs[0].units[spec[2]];unit=prototype;
+        unit.id=spec[2];unit.type=30;unit.standingGraphic[0]=spec[3];
+        unit.terrainRestriction=spec[4];unit.hitPoints=spec[5];
+        auto &graphicData=data.graphics[spec[3]];graphicData=graphic;
+        graphicData.frameCount=1;
+    }
+    {
+        rng=1u;
+        const std::vector<uint8_t> tiles={9,49,49,9,49,49,9,49,49,9,49,49,9,49,49,9,49,49,9,49,49,9,49,49,9,49,49,9,49,49};
+        assert(generateRmsScenery(5,6,tiles,data,rng,out,&error));
+        assert(rng==2198482029u && out.size()==20);
+        const uint8_t facets[]={0,3,7,8,1,2,9,11,4,5,3,5,4,6,4,0,7,9,1,11};
+        const uint32_t headings[]={1065749138u,1076333878u,1083624420u,1084722486u,1070141403u,1074137746u,1085820552u,0u,1078530011u,1080726143u,1076333878u,1080726143u,1078530011u,1082526354u,1078530011u,1065749138u,1083624420u,1085820552u,1070141403u,0u};
+        for (size_t i=0;i<20;++i) {
+            const size_t tile=(i/2)*3+(i%2)+1;
+            uint32_t bits;std::memcpy(&bits,&out[i].headingRadians,sizeof(bits));
+            assert(out[i].unitId==1341 && out[i].x==float(tile%5)+.5f &&
+                out[i].y==float(tile/5)+.5f && out[i].facet==facets[i] && bits==headings[i]);
+        }
+    }
+    {
+        rng=12345u;
+        const std::vector<uint8_t> tiles={9,49,49,9,49,49,9,49,49,9,49,49,9,49,49,9,49,49,9,49,49,9,49,49,9,49,49,9,49,49};
+        assert(generateRmsScenery(5,6,tiles,data,rng,out,&error));
+        assert(rng==2251791141u && out.size()==20);
+        const uint8_t facets[]={7,6,8,3,1,1,1,3,5,8,2,6,3,3,2,0,6,0,0,11};
+        const uint32_t headings[]={1083624420u,1082526354u,1084722486u,1076333878u,1070141403u,1070141403u,1070141403u,1076333878u,1080726143u,1084722486u,1074137746u,1082526354u,1076333878u,1076333878u,1074137746u,1065749138u,1082526354u,1065749138u,1057360530u,0u};
+        for (size_t i=0;i<20;++i) {
+            const size_t tile=(i/2)*3+(i%2)+1;
+            uint32_t bits;std::memcpy(&bits,&out[i].headingRadians,sizeof(bits));
+            assert(out[i].unitId==1341 && out[i].x==float(tile%5)+.5f &&
+                out[i].y==float(tile/5)+.5f && out[i].facet==facets[i] && bits==headings[i]);
+        }
+    }
+    {
+        rng=4294967295u;
+        const std::vector<uint8_t> tiles={9,49,49,9,49,49,9,49,49,9,49,49,9,49,49,9,49,49,9,49,49,9,49,49,9,49,49,9,49,49};
+        assert(generateRmsScenery(5,6,tiles,data,rng,out,&error));
+        assert(rng==326557963u && out.size()==20);
+        const uint8_t facets[]={0,0,7,8,9,0,1,4,0,2,5,6,0,6,2,5,6,7,3,0};
+        const uint32_t headings[]={1057360530u,1065749138u,1083624420u,1084722486u,1085820552u,1065749138u,1070141403u,1078530011u,1065749138u,1074137746u,1080726143u,1082526354u,1065749138u,1082526354u,1074137746u,1080726143u,1082526354u,1083624420u,1076333878u,1057360530u};
+        for (size_t i=0;i<20;++i) {
+            const size_t tile=(i/2)*3+(i%2)+1;
+            uint32_t bits;std::memcpy(&bits,&out[i].headingRadians,sizeof(bits));
+            assert(out[i].unitId==1341 && out[i].x==float(tile%5)+.5f &&
+                out[i].y==float(tile/5)+.5f && out[i].facet==facets[i] && bits==headings[i]);
+        }
+    }
+    {
+        rng=1u;
+        const std::vector<uint8_t> tiles={9,50,50,9,50,50,9,50,50,9,50,50,9,50,50,9,50,50,9,50,50,9,50,50,9,50,50,9,50,50};
+        assert(generateRmsScenery(5,6,tiles,data,rng,out,&error));
+        assert(rng==2198482029u && out.size()==20);
+        const uint8_t facets[]={0,3,7,8,1,2,9,11,4,5,3,5,4,6,4,0,7,9,1,11};
+        const uint32_t headings[]={1065749138u,1076333878u,1083624420u,1084722486u,1070141403u,1074137746u,1085820552u,0u,1078530011u,1080726143u,1076333878u,1080726143u,1078530011u,1082526354u,1078530011u,1065749138u,1083624420u,1085820552u,1070141403u,0u};
+        for (size_t i=0;i<20;++i) {
+            const size_t tile=(i/2)*3+(i%2)+1;
+            uint32_t bits;std::memcpy(&bits,&out[i].headingRadians,sizeof(bits));
+            assert(out[i].unitId==217 && out[i].x==float(tile%5)+.5f &&
+                out[i].y==float(tile/5)+.5f && out[i].facet==facets[i] && bits==headings[i]);
+        }
+    }
+    {
+        rng=12345u;
+        const std::vector<uint8_t> tiles={9,50,50,9,50,50,9,50,50,9,50,50,9,50,50,9,50,50,9,50,50,9,50,50,9,50,50,9,50,50};
+        assert(generateRmsScenery(5,6,tiles,data,rng,out,&error));
+        assert(rng==2251791141u && out.size()==20);
+        const uint8_t facets[]={7,6,8,3,1,1,1,3,5,8,2,6,3,3,2,0,6,0,0,11};
+        const uint32_t headings[]={1083624420u,1082526354u,1084722486u,1076333878u,1070141403u,1070141403u,1070141403u,1076333878u,1080726143u,1084722486u,1074137746u,1082526354u,1076333878u,1076333878u,1074137746u,1065749138u,1082526354u,1065749138u,1057360530u,0u};
+        for (size_t i=0;i<20;++i) {
+            const size_t tile=(i/2)*3+(i%2)+1;
+            uint32_t bits;std::memcpy(&bits,&out[i].headingRadians,sizeof(bits));
+            assert(out[i].unitId==217 && out[i].x==float(tile%5)+.5f &&
+                out[i].y==float(tile/5)+.5f && out[i].facet==facets[i] && bits==headings[i]);
+        }
+    }
+    {
+        rng=4294967295u;
+        const std::vector<uint8_t> tiles={9,50,50,9,50,50,9,50,50,9,50,50,9,50,50,9,50,50,9,50,50,9,50,50,9,50,50,9,50,50};
+        assert(generateRmsScenery(5,6,tiles,data,rng,out,&error));
+        assert(rng==326557963u && out.size()==20);
+        const uint8_t facets[]={0,0,7,8,9,0,1,4,0,2,5,6,0,6,2,5,6,7,3,0};
+        const uint32_t headings[]={1057360530u,1065749138u,1083624420u,1084722486u,1085820552u,1065749138u,1070141403u,1078530011u,1065749138u,1074137746u,1080726143u,1082526354u,1065749138u,1082526354u,1074137746u,1080726143u,1082526354u,1083624420u,1076333878u,1057360530u};
+        for (size_t i=0;i<20;++i) {
+            const size_t tile=(i/2)*3+(i%2)+1;
+            uint32_t bits;std::memcpy(&bits,&out[i].headingRadians,sizeof(bits));
+            assert(out[i].unitId==217 && out[i].x==float(tile%5)+.5f &&
+                out[i].y==float(tile/5)+.5f && out[i].facet==facets[i] && bits==headings[i]);
+        }
+    }
+    auto &deposit=data.civs[0].units[1341];
+    deposit.speed=1;fail({10,49});deposit.speed=0;
+    deposit.trackingUnitMode=1;fail({49});deposit.trackingUnitMode=0;
+    deposit.trackingUnit=1;fail({49});deposit.trackingUnit=-1;
+    deposit.trackingUnitDensity=1;fail({49});deposit.trackingUnitDensity=0;
+    deposit.hitPoints=100;fail({49});deposit.hitPoints=50;
+    auto &depositGraphic=data.graphics[5147];
+    depositGraphic.frameCount=2;fail({49});depositGraphic.frameCount=1;
+    depositGraphic.soundId=0;fail({49});depositGraphic.soundId=-1;
+    depositGraphic.angleSounds.resize(1);fail({49});depositGraphic.angleSounds.clear();
+    data.terrainRestrictions[11].passableBuildableDmgMultiplier[49]=.05f;
+    rng=1;assert(generateRmsScenery(1,1,{49},data,rng,out,&error) && out.empty() && rng==1);
     std::cout << "Original scenery traversal/facet fixtures and validation checks passed\n";
 }

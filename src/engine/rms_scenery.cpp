@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "rms_scenery.h"
+#include "rms_scenery_appearance.h"
 #include "../core/genie_dat.h"
 #include "../core/genie_random.h"
 #include <algorithm>
@@ -18,11 +19,12 @@ bool generateRmsScenery(uint32_t width, uint32_t height,
     if (!width || !height || width>1024 || height>1024 ||
         terrain.size()!=static_cast<size_t>(width)*height)
         return fail("invalid dimensions or terrain size");
-    struct TreeSpec { int terrain, alias, unit, graphic, restriction, angles, carbon; };
+    struct TreeSpec { int terrain, alias, unit, graphic, restriction, angles, carbon; int type=10, hitPoints=50; };
     static constexpr TreeSpec trees[]={
         {10,-1,411,5292,4,12,100}, {13,11,351,5295,11,12,100},
         {17,11,414,5286,11,12,100}, {18,10,348,5282,11,12,100},
-        {19,11,350,5298,11,12,100}, {20,10,349,5289,11,11,100}, {21,10,413,5301,11,12,125}};
+        {19,11,350,5298,11,12,100}, {20,10,349,5289,11,11,100}, {21,10,413,5301,11,12,125},
+        {49,43,1341,5147,11,12,100,30,50}, {50,42,217,5140,8,12,100,30,100}};
     bool checked[256]={};
     int unitIds[256], angleCounts[256]={};
     std::fill(std::begin(unitIds),std::end(unitIds),-1);
@@ -39,7 +41,8 @@ bool generateRmsScenery(uint32_t width, uint32_t height,
                 (tile==17 && alias==11) || (tile==18 && alias==10) ||
                 (tile==19 && alias==11) || (tile==20 && alias==10) ||
                 (tile==21 && alias==10) || (tile==28 && alias==1) || (tile==36 && alias==33) ||
-                (tile==37 && alias==35) || (tile==40 && alias==38);
+                (tile==37 && alias==35) || (tile==40 && alias==38) ||
+                (tile==49 && alias==43) || (tile==50 && alias==42);
             if (!known || alias<0 || static_cast<size_t>(alias)>=data.terrainBlock.terrains.size())
                 return fail("unsupported terrain alias");
             const auto &target=data.terrainBlock.terrains[alias];
@@ -62,7 +65,7 @@ bool generateRmsScenery(uint32_t width, uint32_t height,
             const auto &spec=*match;
             const auto &u=data.civs[0].units[id];
             const auto *g=data.graphic(spec.graphic);
-            if (!u.exists || u.id!=id || u.type!=10 || u.cls!=31 || u.hitPoints!=50 ||
+            if (!u.exists || u.id!=id || u.type!=spec.type || u.cls!=31 || u.hitPoints!=spec.hitPoints ||
                 u.standingGraphic[0]!=spec.graphic || u.standingGraphic[1]!=-1 ||
                 u.collisionSize[0]!=.5f || u.collisionSize[1]!=.5f || u.collisionSize[2]!=2.f ||
                 u.clearanceSize[0]!=.5f || u.clearanceSize[1]!=.5f ||
@@ -73,6 +76,10 @@ bool generateRmsScenery(uint32_t width, uint32_t height,
                 u.obstructionType!=2 || u.obstructionClass!=1 || u.civilization ||
                 u.enableAutoGather!=1 || !g || g->sequenceType!=6 || g->angleCount!=spec.angles)
                 return fail("unsupported tree prototype or graphic");
+            if (spec.type==30 && (u.speed!=0 || u.trackingUnit!=-1 ||
+                u.trackingUnitMode!=0 || u.trackingUnitDensity!=0 || g->frameCount!=1 ||
+                g->soundId!=-1 || !g->angleSounds.empty()))
+                return fail("unsupported carbon deposit movement or sprite metadata");
             int carbonStores=0;
             for (const auto &storage:u.resourceStorages) {
                 if (storage.flag || (storage.type>=0 && (storage.type!=1 || storage.amount!=spec.carbon)))
@@ -92,9 +99,15 @@ bool generateRmsScenery(uint32_t width, uint32_t height,
     for (size_t tile=0;tile<terrain.size();++tile) {
         const int id=unitIds[terrain[tile]], angles=angleCounts[terrain[tile]];
         if (id<0) continue;
-        // Density1000/centering1 consumes no placement draws; only the sprite facet draws.
-        const auto facet=static_cast<uint8_t>(std::min(static_cast<uint32_t>(angles-1),genieRandomDraw(rng)*static_cast<uint32_t>(angles)/32767u));
-        out.push_back({static_cast<int16_t>(id),float(tile%width)+.5f,float(tile/width)+.5f,facet});
+        const float x=float(tile%width)+.5f, y=float(tile/width)+.5f;
+        if (data.civs[0].units[id].type==30) {
+            const auto appearance=drawRmsCarbonAppearance(rng);
+            out.push_back({static_cast<int16_t>(id),x,y,appearance.facet,appearance.headingRadians});
+        } else {
+            // Centered static trees consume only the facet draw.
+            const auto facet=static_cast<uint8_t>(std::min(static_cast<uint32_t>(angles-1),genieRandomDraw(rng)*static_cast<uint32_t>(angles)/32767u));
+            out.push_back({static_cast<int16_t>(id),x,y,facet});
+        }
     }
     randomState=rng;
     return true;

@@ -27,6 +27,7 @@ set(SWGB_CORE_SOURCES
     src/engine/ai_script.cpp
     src/engine/rms_script.cpp
     src/engine/rms_scenery.cpp
+    src/engine/rms_scenery_appearance.cpp
     src/engine/rms_objects.cpp
     src/engine/rms_terrain_cleanup.cpp
     src/engine/rms_terrain.cpp
@@ -128,12 +129,13 @@ if(NOT VITA)
         add_executable(swgb-rms-object-test tools/rms_object_test.cpp src/engine/rms_objects.cpp)
         add_executable(swgb-ai-military-test tools/ai_military_test.cpp src/engine/ai_military.cpp)
         add_executable(swgb-ai-targets-test tools/ai_targets_test.cpp src/engine/ai_targets.cpp)
-        add_executable(swgb-rms-map-test tools/rms_map_test.cpp src/engine/rms_terrain_cleanup.cpp src/engine/rms_scenery.cpp src/engine/rms_terrain.cpp src/engine/rms_map.cpp src/engine/rms_script.cpp src/engine/rms_objects.cpp src/engine/rms_player_starts.cpp src/core/drs.cpp)
+        add_executable(swgb-rms-map-test tools/rms_map_test.cpp src/engine/rms_terrain_cleanup.cpp src/engine/rms_scenery.cpp src/engine/rms_scenery_appearance.cpp src/engine/rms_terrain.cpp src/engine/rms_map.cpp src/engine/rms_script.cpp src/engine/rms_objects.cpp src/engine/rms_player_starts.cpp src/core/drs.cpp)
         add_executable(swgb-rms-player-starts-test tools/rms_player_starts_test.cpp src/engine/rms_player_starts.cpp)
         add_executable(swgb-rms-terrain-test tools/rms_terrain_test.cpp src/engine/rms_terrain.cpp)
-        add_executable(swgb-rms-scenery-test tools/rms_scenery_test.cpp src/engine/rms_scenery.cpp)
+        add_executable(swgb-rms-scenery-test tools/rms_scenery_test.cpp src/engine/rms_scenery.cpp src/engine/rms_scenery_appearance.cpp)
         add_executable(swgb-rms-terrain-cleanup-test tools/rms_terrain_cleanup_test.cpp src/engine/rms_terrain_cleanup.cpp)
-        foreach(test rms rms-object rms-map rms-player-starts rms-terrain rms-scenery rms-terrain-cleanup ai-military ai-targets)
+        add_executable(swgb-rms-scenery-appearance-test tools/rms_scenery_appearance_test.cpp src/engine/rms_scenery_appearance.cpp)
+        foreach(test rms rms-object rms-map rms-player-starts rms-terrain rms-scenery rms-scenery-appearance rms-terrain-cleanup ai-military ai-targets)
             target_include_directories(swgb-${test}-test PRIVATE src)
             add_test(NAME ${test} COMMAND swgb-${test}-test)
         endforeach()

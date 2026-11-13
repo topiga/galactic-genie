@@ -161,7 +161,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         if (t.enabled!=1 || (alias!=-1 && !validAlias) || t.numTerrainUnitsUsed<0 || t.numTerrainUnitsUsed>30)
             return false;
         // Land/terrain rows write raw bytes; only the inactive base may be painted by smoothing.
-        if (allowScenery && (terrain==10 || terrain==13 || (terrain>=17 && terrain<=21))) return true;
+        if (allowScenery && (terrain==10 || terrain==13 || (terrain>=17 && terrain<=21) || terrain==49 || terrain==50)) return true;
         // Original 0x495020 skips the exact -1 sentinel before consulting other slot fields.
         for (int slot=0;slot<t.numTerrainUnitsUsed;++slot)
             if (t.terrainUnitId[slot]!=-1) return false;
