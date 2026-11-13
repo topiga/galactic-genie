@@ -371,6 +371,34 @@ int main() {
     assert(swgb::generateRmsTerrain(9,9,{valid},sequentialRng,sequential,&error));
     assert(swgb::generateRmsTerrain(9,9,{next},sequentialRng,sequential,&error));
     assert(tiles==sequential && rng==sequentialRng);
+    // Exact bytes from three independent original multi-row executions.
+    {
+        const std::string input="0030300300000030300300300300333000000030000030300000300", expected="0000300300000030000000300300300000000030000030300000300";
+        std::vector<uint8_t> tiles(input.begin(),input.end());
+        for (auto &tile:tiles) tile-='0';
+        uint32_t rng=1457167833u;
+        assert(swgb::generateRmsTerrain(11,5,{{24,0,3,10,3,15,true}, {42,0,3,8,3,91,true}, {40,0,3,5,2,34,false}, {22,0,3,1,1,6,false}},rng,tiles,&error,{{5,2,13,20},{4,2,13,20},{6,4,13,20}}));
+        assert(rng==3688918760u && tiles.size()==expected.size());
+        for (size_t i=0;i<tiles.size();++i) assert(tiles[i]==expected[i]-'0');
+    }
+    {
+        const std::string input="000000000000030330030000030000300000300003000033000030303330000", expected="330000033300003333000330000033300003000033300033330033333000033";
+        std::vector<uint8_t> tiles(input.begin(),input.end());
+        for (auto &tile:tiles) tile-='0';
+        uint32_t rng=1160059341u;
+        assert(swgb::generateRmsTerrain(7,9,{{20,0,3,3,0,71,false}, {39,0,3,10,2,11,true}, {42,0,3,9,0,62,false}, {25,3,0,5,0,70,false}},rng,tiles,&error,{}));
+        assert(rng==3750537705u && tiles.size()==expected.size());
+        for (size_t i=0;i<tiles.size();++i) assert(tiles[i]==expected[i]-'0');
+    }
+    {
+        const std::string input="030300000003303303000000300000000000300000000300033000000000003", expected="333300333333333333333333333333333333333333333333333333330033333";
+        std::vector<uint8_t> tiles(input.begin(),input.end());
+        for (auto &tile:tiles) tile-='0';
+        uint32_t rng=2966811873u;
+        assert(swgb::generateRmsTerrain(7,9,{{40,0,3,0,3,22,true}, {46,3,0,1,3,88,false}, {60,0,3,5,0,4,true}, {39,0,3,0,3,30,false}},rng,tiles,&error,{{4,2,13,20}}));
+        assert(rng==4027590471u && tiles.size()==expected.size());
+        for (size_t i=0;i<tiles.size();++i) assert(tiles[i]==expected[i]-'0');
+    }
     const auto beforeProtection=tiles; const auto beforeRng=rng;
     assert(!swgb::generateRmsTerrain(9,9,{valid},rng,tiles,&error,{{9,0,13,20}}));
     assert(tiles==beforeProtection && rng==beforeRng && !error.empty());
@@ -387,5 +415,5 @@ int main() {
     tiles.assign(1024*1024,0); rng=1;
     invalid=valid; invalid.targetTiles=1; invalid.spacing=1024; invalid.clumps=999;
     checkFailure(1024,1024,{invalid});
-    std::cout << "313 original terrain fixtures and invalid-input checks passed\n";
+    std::cout << "313 original terrain fixtures, exact multi-row bytes and invalid-input checks passed\n";
 }

@@ -101,7 +101,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 for (uint32_t owner=1;owner<=playerCount;++owner) { land.zone=owner; lands.push_back(land); }
             } else lands.push_back(land);
         } else if (stage == 2 && command == "create_terrain") {
-            if (terrainRows.size()==99 || !number(value) || i==tokens.size() || tokens[i++].text!="{")
+            if (terrainRows.size()==99 || !number(value) || value<0 || value>255 ||
+                i==tokens.size() || tokens[i++].text!="{")
                 return fail("expected terrain block, at most99 rows");
             RmsTerrainRow row;
             row.terrain=static_cast<uint8_t>(value);
@@ -115,7 +116,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if (name=="set_scale_by_groups") { scaling=2; continue; }
                 if (name=="set_avoid_player_start_areas") { row.avoidPlayerStarts=true; continue; }
                 if (!number(value)) return fail(name+" requires an integer");
-                if (name=="base_terrain") { row.baseTerrain=static_cast<uint8_t>(value); hasBase=true; }
+                if (name=="base_terrain" && value>=0 && value<=255) {
+                    row.baseTerrain=static_cast<uint8_t>(value); hasBase=true;
+                }
                 else if (name=="number_of_tiles" && value>=0 && uint32_t(value)<=width*height) tileAmount=value;
                 else if (name=="land_percent" && value>=0 && value<=100) tileAmount=-value;
                 else if (name=="number_of_clumps" && value>=0 && value<=999) row.clumps=value;

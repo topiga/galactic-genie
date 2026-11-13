@@ -54,4 +54,8 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     run(['render-rms-resource',data,work/'test.drs',-1,32,1,work/'archive.png'],2)
     run(['render-rms-resource',data,work/'test.drs',60002,32,1,work/'archive.png'],1)
     assert not (work/'archive.png').exists(), 'Rejected input created output'
+    (work/'invalid.rms').write_text(source.replace('base_terrain 0','base_terrain 256'))
+    assert 'unsupported terrain parameter/value base_terrain' in run(
+        ['render-rms',data,work/'invalid.rms',32,1,work/'rejected.png'],1)
+    assert not (work/'rejected.png').exists(), 'Wrapped terrain ID created output'
 print('RMS file/DRS parity, includes, defines and rejection checks passed')
