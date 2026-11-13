@@ -77,4 +77,10 @@ bool growRmsSingleLand(uint32_t width, uint32_t height, uint8_t baseTerrain,
                        const RmsLandGrowth &land, const dat::TerrainBlock &terrainData,
                        uint32_t &randomState, std::vector<uint8_t> &out,
                        std::string *err = nullptr, size_t maxWork = 64 * 1024 * 1024);
+// Same resolved-value boundary for 1..64 competing lands. Source order defines
+// zone IDs, seed overwrites and round-robin growth; frontier nodes are shared.
+bool growRmsLands(uint32_t width, uint32_t height, uint8_t baseTerrain,
+                  const std::vector<RmsLandGrowth> &lands, const dat::TerrainBlock &terrainData,
+                  uint32_t &randomState, std::vector<uint8_t> &out,
+                  std::string *err = nullptr, size_t maxWork = 64 * 1024 * 1024);
 } // namespace swgb

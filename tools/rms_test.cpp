@@ -339,6 +339,70 @@ int main(int argc, char **argv) {
     land.targetTiles = 12;
     land.clumpingFactor = 101;
     require(!growRmsSingleLand(7, 7, 0, land, terrainData, growthState, terrain, &err), "unsupported coefficient rejected");
+    // Original 0x4da6f0 multi-land golden corpus: source-order competition,
+    // overlapping seeds, shared queue transfers, same-terrain zones and tiny maps.
+    struct MultiGrowthCase {
+        uint32_t w, h, seed, finalRng, hash;
+        std::vector<RmsLandGrowth> lands;
+    };
+    const MultiGrowthCase multiCases[] = {
+        {9, 7, 1u, 2529530053u, 4038973349u, {{1, 2, 3, 0, 20, 10}, {2, 6, 3, 0, 20, 10}}},
+        {9, 7, 1u, 410959018u, 452018575u, {{2, 6, 3, 0, 20, 10}, {1, 2, 3, 0, 20, 10}}},
+        {9, 7, 1u, 3871632827u, 131056421u, {{1, 4, 3, 0, 30, 0}, {2, 4, 3, 0, 30, 100}}},
+        {9, 7, 1u, 3770629007u, 2585261414u, {{1, 3, 3, 1, 40, 10}, {2, 5, 3, 1, 40, 10}}},
+        {9, 7, 1u, 1587391380u, 2090768720u, {{1, 0, 0, 1, 63, 10}, {2, 8, 6, 1, 63, 10}}},
+        {9, 7, 1u, 1587391380u, 1622318865u, {{1, 0, 0, 1, 0, 10}, {2, 8, 6, 1, 63, 10}}},
+        {9, 7, 1u, 2529530053u, 1834508171u, {{1, 2, 3, 0, 20, 10}, {1, 6, 3, 0, 20, 10}}},
+        {9, 7, 1u, 805255903u, 3272050113u, {{1, 2, 3, 0, 10, 0}, {2, 6, 3, 0, 20, 100}, {0, 4, 3, 0, 30, 10}}},
+        {9, 7, 1u, 1u, 3738720020u, {{1, 2, 3, 1, 0, 10}, {2, 6, 3, 1, 0, 10}}},
+        {9, 7, 12345u, 2982061137u, 1759734513u, {{1, 2, 3, 0, 20, 10}, {2, 6, 3, 0, 20, 10}}},
+        {9, 7, 12345u, 1521716349u, 3446282018u, {{2, 6, 3, 0, 20, 10}, {1, 2, 3, 0, 20, 10}}},
+        {9, 7, 12345u, 580572337u, 2312775591u, {{1, 4, 3, 0, 30, 0}, {2, 4, 3, 0, 30, 100}}},
+        {9, 7, 12345u, 1313306631u, 3604979893u, {{1, 3, 3, 1, 40, 10}, {2, 5, 3, 1, 40, 10}}},
+        {9, 7, 12345u, 2140623980u, 4241315213u, {{1, 0, 0, 1, 63, 10}, {2, 8, 6, 1, 63, 10}}},
+        {9, 7, 12345u, 2140623980u, 1622318865u, {{1, 0, 0, 1, 0, 10}, {2, 8, 6, 1, 63, 10}}},
+        {9, 7, 12345u, 2982061137u, 558808833u, {{1, 2, 3, 0, 20, 10}, {1, 6, 3, 0, 20, 10}}},
+        {9, 7, 12345u, 157067805u, 215059669u, {{1, 2, 3, 0, 10, 0}, {2, 6, 3, 0, 20, 100}, {0, 4, 3, 0, 30, 10}}},
+        {9, 7, 12345u, 12345u, 3738720020u, {{1, 2, 3, 1, 0, 10}, {2, 6, 3, 1, 0, 10}}},
+        {9, 7, 4294967295u, 1659630298u, 1076087807u, {{1, 2, 3, 0, 20, 10}, {2, 6, 3, 0, 20, 10}}},
+        {9, 7, 4294967295u, 3992224559u, 3870843024u, {{2, 6, 3, 0, 20, 10}, {1, 2, 3, 0, 20, 10}}},
+        {9, 7, 4294967295u, 678144427u, 1285638983u, {{1, 4, 3, 0, 30, 0}, {2, 4, 3, 0, 30, 100}}},
+        {9, 7, 4294967295u, 66165533u, 3604979893u, {{1, 3, 3, 1, 40, 10}, {2, 5, 3, 1, 40, 10}}},
+        {9, 7, 4294967295u, 3893445882u, 2105001007u, {{1, 0, 0, 1, 63, 10}, {2, 8, 6, 1, 63, 10}}},
+        {9, 7, 4294967295u, 3893445882u, 1622318865u, {{1, 0, 0, 1, 0, 10}, {2, 8, 6, 1, 63, 10}}},
+        {9, 7, 4294967295u, 1659630298u, 11951401u, {{1, 2, 3, 0, 20, 10}, {1, 6, 3, 0, 20, 10}}},
+        {9, 7, 4294967295u, 987800192u, 4226924559u, {{1, 2, 3, 0, 10, 0}, {2, 6, 3, 0, 20, 100}, {0, 4, 3, 0, 30, 10}}},
+        {9, 7, 4294967295u, 4294967295u, 3738720020u, {{1, 2, 3, 1, 0, 10}, {2, 6, 3, 1, 0, 10}}},
+        {1, 9, 1u, 3673273548u, 3329763169u, {{1, 0, 0, 0, 9, 10}, {2, 0, 8, 0, 9, 10}}},
+        {9, 1, 1u, 3673273548u, 3329763169u, {{1, 0, 0, 0, 9, 10}, {2, 8, 0, 0, 9, 10}}},
+        {1, 1, 1u, 1u, 118251589u, {{1, 0, 0, 0, 1, 10}, {2, 0, 0, 0, 1, 10}}},
+    };
+    for (const auto &c : multiCases) {
+        uint32_t state = c.seed;
+        require(growRmsLands(c.w, c.h, 0, c.lands, terrainData, state, terrain, &err), err);
+        uint32_t hash = 2166136261u;
+        for (uint8_t tile : terrain) hash = (hash ^ tile) * 16777619u;
+        require(hash == c.hash && state == c.finalRng, "original competing land terrain/RNG mismatch");
+    }
+    std::vector<RmsLandGrowth> crowdedLands;
+    for (uint32_t i = 0; i < 64; ++i)
+        crowdedLands.push_back({static_cast<uint8_t>(1 + i % 2), i % 9, (i / 9) % 7, 0, 63, 10});
+    uint32_t multiState = 1;
+    require(growRmsLands(9, 7, 0, crowdedLands, terrainData, multiState, terrain, &err), err);
+    uint32_t crowdedHash = 2166136261u;
+    for (uint8_t tile : terrain) crowdedHash = (crowdedHash ^ tile) * 16777619u;
+    require(crowdedHash == 1309143968u && multiState == 3601754070u, "original 64-land boundary mismatch");
+
+    multiState = 12345;
+    require(!growRmsLands(9, 7, 0, multiCases[0].lands, terrainData, multiState, terrain, &err, 100)
+                && terrain.empty() && multiState == 12345, "multi-land work exhaustion must be transactional");
+    require(!growRmsLands(9, 7, 0, {}, terrainData, multiState, terrain, &err), "empty land plan rejected");
+    crowdedLands.push_back(crowdedLands.front());
+    require(!growRmsLands(9, 7, 0, crowdedLands, terrainData, multiState, terrain, &err), "more than64 lands rejected");
+    auto invalidLands = multiCases[0].lands;
+    invalidLands.back().terrain = 3;
+    require(!growRmsLands(9, 7, 0, invalidLands, terrainData, multiState, terrain, &err)
+                && terrain.empty() && multiState == 12345, "invalid later land cannot publish partial output");
     if (argc == 2) {
         ResourceSet resources;
         require(resources.add(argv[1], &err), err);

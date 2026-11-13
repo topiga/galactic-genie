@@ -677,3 +677,12 @@ Evidence: `rms-land-clumping-mapping-{findings,evidence}-2026-11-12.*`, `rms-gro
 Further military tracing is retained in `ai-controller-facts/attack-scheduler-{findings,assembly}.txt` and `attack-scheduler-byte-ranges.json`. Original readiness and processing are separate resumable passes. Target planning reads remembered-object records and uses additional eligibility/scoring rules; exact scoring, cadence and state transitions remain unresolved, so native `attack-now` still does not use an approximate nearest-enemy replacement.
 
 Final checks: `rms-growth-final-algorithms.log` records the complete algorithm suite after naming the verified clumping field and checking its original default 8. `rms-growth-smoke.log` passes the native app menu/render/audio-backend regression. No new live Windows gameplay comparison was performed; the growth comparisons execute isolated original instructions.
+
+
+## 2026-11-13 — Competing original land growth
+
+`growRmsLands` extends the resolved-parameter stage to 1–64 distinct land zones. It preserves source-order seed overwrites, shared per-tile frontier ownership, queue transfers between lands, newest-first priority ties, one-pop-per-land growth rounds and source-order final gap filling. The single-land API delegates to the same implementation. Work limits now include initial seed painting as well as queue traversal, avoiding unbounded repeated painting of large overlapping seeds.
+
+Thirty-one cases executed the original 0x4da6f0 instructions and matched terrain, zone bytes and final RNG against an independent model. Native fixtures check terrain and final RNG for reversed ordering, overlapping/touching/identical seeds, unequal and exhausted budgets, identical terrain IDs across distinct zones, three-way competition, narrow maps and the 64-land boundary. All previous single-land fixtures and sanitizer algorithm suites pass.
+
+Still unsupported: multiple rows sharing one land zone, nonzero separation or edge rejection, automatic/player coordinates, complete RMS interpretation and desktop random-map selection. The API takes already-resolved land rows; this is not yet an original random-map setup mode. Evidence remains local in `rms-multiland-{findings,corpus,probe,model}-2026-11-13.*` under Research/windows-reference.
