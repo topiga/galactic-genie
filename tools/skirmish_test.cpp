@@ -23,6 +23,7 @@ static void check(bool value, const char *message) {
 #include "civilization_checks.h"
 #include "conquest_checks.h"
 #include "fog_edge_checks.h"
+#include "rms_spawn_checks.h"
 
 static void fogRendering(swgb::Assets &assets,swgb::SoftRenderer &renderer) {
     swgb::Game game(assets);
@@ -242,6 +243,7 @@ int main(int argc, char **argv) {
         if(allCivilizations || conquestMatch) {civilizationMatches(assets,conquestMatch);return 0;}
         if(playerConquest) {swgb::Game game(assets);playerMatch(game,assets,renderer,true);return 0;}
         fogEdgeChecks(argv[1]);
+        rmsSpawnChecks(assets);
     fogRendering(assets,renderer);
     memoryInspectionChecks(assets,renderer);
     healingChecks(assets,renderer);

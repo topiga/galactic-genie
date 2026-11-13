@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "../core/genie_random.h"
 #include "game.h"
+#include "rms_objects.h"
 #include "font_atlas.h"
 #include "sight_stencils.h"
 
@@ -1133,6 +1134,32 @@ bool Game::initScenario(const Scenario &scenario, std::string *err) {
     } else {
         lookAt(mapSize_ * 0.5f, mapSize_ * 0.5f);
     }
+    return true;
+}
+
+bool Game::populateRmsTimber(uint32_t count, uint32_t &randomState, std::string *err) {
+    if (err) err->clear();
+    if (!objects_.empty() || mapSize_ <= 0 || cornerElevation_.empty() ||
+        std::any_of(cornerElevation_.begin(), cornerElevation_.end(), [](uint8_t h) { return h != 0; }) ||
+        !nextSpawnId_ || count > UINT32_MAX - nextSpawnId_) {
+        if (err) *err = "RMS timber requires an empty flat map and valid unused object IDs";
+        return false;
+    }
+    uint32_t rng = randomState;
+    std::vector<RmsTimberPlacement> placements;
+    if (!generateRmsTimberPlacements(mapSize_, mapSize_, terrain_, assets_.dat(),
+                                    count, rng, placements, err)) return false;
+    const auto *unit = findUnit(0, 348);
+    objects_.reserve(placements.size());
+    for (const auto &placement : placements) {
+        // Invert the renderer's isometric facing projection at the facet center.
+        const float theta = kPi*.5f + placement.facet*(2*kPi/12);
+        const float sx = std::cos(theta)*.5f, sy = std::sin(theta);
+        const float facing = std::atan2(sy-sx,sy+sx);
+        addObject(unit,0,placement.x,placement.y,facing,nextSpawnId_++);
+    }
+    rebuildAdjacency();
+    randomState = rng;
     return true;
 }
 

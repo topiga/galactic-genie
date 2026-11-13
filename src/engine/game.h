@@ -121,6 +121,8 @@ public:
         uint32_t seed, int mapSize,
         std::string *err);
     bool initScenario(const Scenario &scenario, std::string *err);
+    // Original default ungrouped timber row; requires an empty, flat initialized map.
+    bool populateRmsTimber(uint32_t count, uint32_t &randomState, std::string *err = nullptr);
     bool loadAiScript(
         int player, const std::string &path,
         const std::unordered_set<std::string> &defines,

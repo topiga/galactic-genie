@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "engine/rms_objects.h"
+#include "core/genie_dat.h"
+#include <cmath>
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
@@ -40,5 +42,54 @@ int main() {
     std::sort(out.begin(),out.end());
     check(out.size()==1024*1024, "maximum map size");
     for (uint32_t i=0;i<out.size();++i) check(out[i]==i,"candidate list is not a permutation");
+    dat::DatFile data;
+    data.civs.resize(1);
+    data.civs[0].units.resize(349);
+    auto &u=data.civs[0].units[348];
+    u.exists=true; u.id=348; u.type=10; u.cls=31; u.hitPoints=50;
+    u.standingGraphic[0]=5282;
+    u.collisionSize[0]=u.collisionSize[1]=u.clearanceSize[0]=u.clearanceSize[1]=.5f;
+    u.collisionSize[2]=2;
+    u.placementSideTerrain[0]=u.placementSideTerrain[1]=u.placementTerrain[0]=u.placementTerrain[1]=-1;
+    u.terrainRestriction=11; u.obstructionType=2; u.obstructionClass=1; u.enableAutoGather=1;
+    for (auto &storage:u.resourceStorages) storage={-1,0,0};
+    u.resourceStorages[0]={1,100,0};
+    data.graphics.resize(5283);
+    auto &g=data.graphics[5282]; g.exists=true; g.sequenceType=6; g.angleCount=12;
+    data.terrainRestrictions.resize(12);
+    auto &restriction=data.terrainRestrictions[11].passableBuildableDmgMultiplier;
+    restriction={1,0,.05f,std::nextafter(.05f,1.f),.01f};
+    std::vector<RmsTimberPlacement> placements;
+    rng=1;
+    check(generateRmsTimberPlacements(5,6,std::vector<uint8_t>(30,0),data,3,rng,placements,&err),"timber placement failed");
+    check(placements.size()==3 && rng==1766988168u,"original three-tree count/RNG");
+    check(placements[0].x==1.5f && placements[0].y==1.5f && placements[0].facet==4 &&
+          placements[1].x==.5f && placements[1].y==3.5f && placements[1].facet==10 &&
+          placements[2].x==.5f && placements[2].y==2.5f && placements[2].facet==9,
+          "original centers/facets mismatch");
+    for (uint8_t rejected:{1,2,4}) {
+        rng=1;
+        check(generateRmsTimberPlacements(5,6,std::vector<uint8_t>(30,rejected),data,3,rng,placements,&err)
+              && placements.empty() && rng==1030492215u,"terrain rejection must not draw facets");
+    }
+    rng=1;
+    check(generateRmsTimberPlacements(5,6,std::vector<uint8_t>(30,0),data,0,rng,placements,&err)
+          && placements.empty() && rng==1030492215u,"zero request still shuffles candidates");
+    rng=1;
+    check(generateRmsTimberPlacements(1,1,{3},data,1,rng,placements,&err) && placements.size()==1,
+          "restriction strictly above threshold accepted");
+    rng=948628385u;
+    check(generateRmsTimberPlacements(1,1,{0},data,1,rng,placements,&err) && placements[0].facet==11,
+          "original maximum draw facet clamps to eleven");
+    rng=1;
+    check(generateRmsTimberPlacements(5,6,std::vector<uint8_t>(30,0),data,30,rng,placements,&err)
+          && placements.size()==30,"adjacent trees must all fit");
+    u.clearanceSize[0]=1;
+    const auto before=rng;
+    check(!generateRmsTimberPlacements(1,1,{0},data,1,rng,placements,&err) && placements.empty() && rng==before,
+          "unsupported prototype must fail transactionally");
+    u.clearanceSize[0]=.5f;
+    check(!generateRmsTimberPlacements(1,1,{255},data,1,rng,placements,&err) && rng==before,
+          "missing terrain restriction rejected");
     std::cout << "RMS object candidate tests passed\n";
 }
