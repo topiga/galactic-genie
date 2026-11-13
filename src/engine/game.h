@@ -966,6 +966,7 @@ private:
         const dat::EffectCommand &command,
         const Object &object) const;
     std::array<ResearchCost,3> researchCosts(int player,const dat::Tech &technology) const;
+    int16_t researchTimeDelta(int player,const dat::Tech &technology) const;
     float researchDuration(int player,const dat::Tech &technology) const;
     std::array<dat::ResourceCost,3> unitCosts(int player,const dat::Unit &unit) const;
     float unitTrainingTime(int player,const dat::Unit &unit) const;
@@ -1087,6 +1088,7 @@ private:
     bool technologyRequirementsMet(int player,
                                   const dat::Tech &technology) const;
     void initializeCivilizationBonuses();
+    void applyTechnologyDisables(int player,int effectId);
     void initializeCivilizationRestrictions();
     void refreshAutomaticTechnologies(int player);
     bool technologyVisible(int player, const dat::Tech &technology) const;

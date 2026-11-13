@@ -16,6 +16,7 @@ cases = {
     'rms_scenery': ['src/engine/rms_scenery.cpp', 'src/engine/rms_scenery_appearance.cpp'],
     'rms_scenery_appearance': ['src/engine/rms_scenery_appearance.cpp'],
     'rms_early_forest': ['src/engine/rms_early_forest.cpp', 'src/engine/rms_scenery.cpp', 'src/engine/rms_scenery_appearance.cpp'],
+    'rms_group': ['src/engine/rms_objects.cpp', 'src/engine/rms_scenery_appearance.cpp'],
     'rms_object': ['src/engine/rms_objects.cpp', 'src/engine/rms_scenery_appearance.cpp'],
     'ai_military': ['src/engine/ai_military.cpp'],
     'ai_targets': ['src/engine/ai_targets.cpp'],

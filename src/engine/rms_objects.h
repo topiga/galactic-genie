@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include <cstdint>
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -42,4 +43,15 @@ bool generateRmsResourcePlacements(uint32_t width, uint32_t height,
     uint32_t requested, uint32_t &randomState,
     std::vector<RmsTimberPlacement> &out, std::string *err=nullptr,
     const std::vector<uint32_t> &occupiedTiles={});
+struct RmsResourceGroups {
+    uint8_t mode=1; // Original1 loose or2 tight.
+    uint32_t groups=1, perGroup=1, variance=0, radius=3;
+};
+// Default Gaia modifiers, one grouped row. Shared original queue nodes are preserved.
+// Failure clears output and preserves RNG, including exhaustion of maxWork.
+bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
+    const std::vector<uint8_t> &terrain, const dat::DatFile &data, int16_t unitId,
+    const RmsResourceGroups &groups, uint32_t &randomState,
+    std::vector<RmsTimberPlacement> &out, std::string *err=nullptr,
+    const std::vector<uint32_t> &occupiedTiles={}, size_t maxWork=16000000);
 } // namespace swgb

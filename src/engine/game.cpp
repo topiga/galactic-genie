@@ -1991,6 +1991,7 @@ bool Game::researchTechnology(int player, int technologyId) {
              .second)
         return true;
     researchedTechOrder_[(size_t)player].push_back(technologyId);
+    applyTechnologyDisables(player,assets_.dat().techs[size_t(technologyId)].effectId);
     techGeneration_++;
     refreshAutomaticTechnologies(player);
     return true;
@@ -2815,9 +2816,9 @@ std::array<Game::ResearchCost,3> Game::researchCosts(int player,const dat::Tech 
     return costs;
 }
 
-float Game::researchDuration(int player,const dat::Tech &technology) const {
+int16_t Game::researchTimeDelta(int player,const dat::Tech &technology) const {
     int16_t delta=0;
-    if (player<0 || size_t(player)>=playerEffects_.size()) return std::max(0.f,float(technology.researchTime));
+    if (player<0 || size_t(player)>=playerEffects_.size()) return 0;
     const auto &techs=assets_.dat().techs;
     for (int effect:playerEffects_[size_t(player)])
         for (const auto &command:assets_.dat().effects[size_t(effect)].commands)
@@ -2825,8 +2826,12 @@ float Game::researchDuration(int player,const dat::Tech &technology) const {
                 &techs[size_t(command.a)]==&technology && std::isfinite(command.d))
                 delta=truncateShort(truncateShort(command.d)-
                     ((command.c & 0xff)?0:technology.researchTime));
+    return delta;
+}
+
+float Game::researchDuration(int player,const dat::Tech &technology) const {
     const float multiplier=playerAttribute(player,86);
-    return std::max(0.f,technology.researchTime*(multiplier>0?multiplier:1.f)+delta);
+    return std::max(0.f,technology.researchTime*(multiplier>0?multiplier:1.f)+researchTimeDelta(player,technology));
 }
 
 float Game::unitTrainingTime(int player,const dat::Unit &unit) const {
@@ -3790,6 +3795,16 @@ void Game::refreshAutomaticTechnologies(int player) {
         (size_t)player >= researchedTechs_.size())
         return;
     const int civilization = civilizationForPlayer(player);
+    auto &effects=playerEffects_[(size_t)player];
+    effects=civilizationEffects_[(size_t)player];
+    for (int id:researchedTechOrder_[(size_t)player]) {
+        if (id<0 || size_t(id)>=assets_.dat().techs.size()) continue;
+        const int effect=assets_.dat().techs[size_t(id)].effectId;
+        if (effect>=0 && size_t(effect)<assets_.dat().effects.size()) effects.push_back(effect);
+    }
+    std::set<int> queued;
+    for (const auto &object:objects_) if (object.active && object.player==player)
+        for (const auto &item:object.productionQueue) if (item.technologyId>=0) queued.insert(item.technologyId);
     bool changed = true;
     while (changed) {
         changed = false;
@@ -3803,19 +3818,12 @@ void Game::refreshAutomaticTechnologies(int player) {
             if (technology.civ >= 0 &&
                 technology.civ != civilization)
                 continue;
-            const bool availability =
-                technology.name2.rfind("AVAIL-", 0) == 0;
-            const bool made =
-                technology.name2.rfind("MADE-", 0) == 0;
-            const bool prerequisite =
-                technology.effectId < 0 &&
-                technology.locationId < 0 &&
-                technology.researchTime == 0 &&
-                technology.requiredTechCount > 0;
-            if (id != 0 && !availability && !made &&
-                !prerequisite)
-                continue;
+            const bool made=technology.name2.rfind("MADE-",0)==0;
+            if (queued.count(int(id))) continue;
+            // Original automatic refresh compares unscaled time plus its signed modifier.
+            if (!made && int(technology.researchTime)+researchTimeDelta(player,technology)>0) continue;
             if (made) {
+                // shortcut: Scan completed buildings until original initiation callbacks are integrated.
                 const std::string unitName =
                     technology.name2.substr(5);
                 bool exists = false;
@@ -3839,15 +3847,12 @@ void Game::refreshAutomaticTechnologies(int player) {
             researchedTechs_[(size_t)player].insert((int)id);
             researchedTechOrder_[(size_t)player].push_back((int)id);
             techGeneration_++;
+            if (technology.effectId>=0 && size_t(technology.effectId)<assets_.dat().effects.size())
+                effects.push_back(technology.effectId);
+            applyTechnologyDisables(player,technology.effectId);
             changed = true;
+            break; // Original completion recursively refreshes from the first technology.
         }
-    }
-    auto &effects=playerEffects_[(size_t)player];
-    effects=civilizationEffects_[(size_t)player];
-    for (int id:researchedTechOrder_[(size_t)player]) {
-        if (id<0 || size_t(id)>=assets_.dat().techs.size()) continue;
-        const int effect=assets_.dat().techs[size_t(id)].effectId;
-        if (effect>=0 && size_t(effect)<assets_.dat().effects.size()) effects.push_back(effect);
     }
     applyUnitUpgrades(player);
 }
@@ -3875,6 +3880,25 @@ void Game::initializeCivilizationBonuses() {
     techGeneration_++;
 }
 
+void Game::applyTechnologyDisables(int player,int effectId) {
+    if (player<=0 || size_t(player)>=disabledTechs_.size() || effectId<0 ||
+        size_t(effectId)>=assets_.dat().effects.size()) return;
+    for (const auto &command:assets_.dat().effects[size_t(effectId)].commands) {
+        if (command.type!=102) continue;
+        const double value=std::trunc(double(command.d));
+        uint32_t raw=0;
+        // Original CRT converts to signed64 then keeps EAX; invalid conversions leave low32 zero.
+        if (std::isfinite(value) && value>=-std::ldexp(1.,63) && value<std::ldexp(1.,63))
+            raw=static_cast<uint32_t>(static_cast<int64_t>(value));
+        if (raw==UINT32_MAX) continue;
+        int target=int(raw&65535u);
+        if (target>=32768) target-=65536;
+        for (size_t id=0;id<assets_.dat().techs.size();++id)
+            if ((target<0 || id==size_t(target)) && !researchedTechs_[size_t(player)].count(int(id)))
+                disabledTechs_[size_t(player)].insert(int(id));
+    }
+}
+
 void Game::initializeCivilizationRestrictions() {
     for (int player = 1; player <= 8; ++player) {
         const int civilization =
@@ -3891,15 +3915,7 @@ void Game::initializeCivilizationRestrictions() {
             (size_t)effectId >=
                 assets_.dat().effects.size())
             continue;
-        for (const dat::EffectCommand &command :
-             assets_.dat()
-                 .effects[(size_t)effectId]
-                 .commands)
-            if (command.type == 102 &&
-                command.d >= 0.0f)
-                disabledTechs_[(size_t)player]
-                    .insert((int)std::lround(
-                        command.d));
+        applyTechnologyDisables(player,effectId);
     }
     techGeneration_++;
 }
@@ -13894,6 +13910,12 @@ void Game::update(float dt, const InputState &incoming) {
         if (!building.active ||
             building.productionQueue.empty())
             continue;
+        const int pendingTechnology=building.productionQueue.front().technologyId;
+        if (pendingTechnology>=0 && disabledTechs_[size_t(building.player)].count(pendingTechnology)) {
+            building.productionQueue.pop_front();
+            building.productionRemaining=building.productionQueue.empty()?0.f:building.productionQueue.front().duration;
+            continue;
+        }
         if (forceBuildCheat_ && building.player == localPlayer_)
             building.productionRemaining = 0.0f;
         else {

@@ -39,7 +39,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     bool hasObjects = false;
     bool playerLands = false;
     bool playerSetup = false;
-    uint32_t objectCount = 1;
+    RmsResourceGroups grouping;
+    grouping.mode=0;
     int32_t objectUnitId=348;
     std::vector<RmsLandGrowth> lands;
     std::vector<RmsTerrainRow> terrainRows;
@@ -141,14 +142,26 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             terrainRows.push_back(row);
         } else if (stage == 3 && command == "create_object" && !hasObjects) {
             if (!number(value) || (value!=348 && value!=66 && value!=102) || i==tokens.size() || tokens[i++].text!="{")
-                return fail("only one ungrouped Gaia348/66/102 object block is supported");
+                return fail("only one Gaia348/66/102 object block is supported");
             objectUnitId=value;
             hasObjects=true;
             while (i<tokens.size() && tokens[i].text!="}") {
                 const auto name=tokens[i++].text;
-                if (name!="number_of_objects" || !number(value) || value<0 || uint32_t(value)>width*height)
-                    return fail("unsupported object parameter/value " + name);
-                objectCount=static_cast<uint32_t>(value);
+                if (name=="set_gaia_object_only") continue;
+                if (name=="set_loose_grouping" || name=="set_tight_grouping") {
+                    if (!grouping.mode) { grouping.perGroup=grouping.groups; grouping.groups=1; }
+                    grouping.mode=name=="set_loose_grouping"?1:2;
+                    continue;
+                }
+                if (!number(value) || value<0) return fail("unsupported object parameter/value " + name);
+                if (name=="number_of_objects" && uint32_t(value)<=width*height) {
+                    if (grouping.mode) grouping.perGroup=value; else grouping.groups=value;
+                } else if (name=="number_of_groups" && uint32_t(value)<=width*height) {
+                    if (!grouping.mode) { grouping.perGroup=grouping.groups; grouping.mode=1; }
+                    grouping.groups=value;
+                } else if (name=="group_variance" && value<=1024) grouping.variance=value;
+                else if (name=="group_placement_radius" && value<=1024) grouping.radius=value;
+                else return fail("unsupported object parameter/value " + name);
             }
             if (i==tokens.size()) return fail("unterminated object block");
             ++i;
@@ -223,8 +236,12 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     std::vector<uint32_t> occupied;
     for (const auto &tree:generated.scenery) if (tree.alive)
         occupied.push_back(static_cast<uint32_t>(tree.y)*width+static_cast<uint32_t>(tree.x));
-    if (hasObjects && !generateRmsResourcePlacements(width,height,generated.terrain,data,objectUnitId,objectCount,rng,generated.objects,err,occupied))
-        return false;
+    if (hasObjects) {
+        const bool ok=grouping.mode ?
+            generateRmsGroupedResourcePlacements(width,height,generated.terrain,data,objectUnitId,grouping,rng,generated.objects,err,occupied) :
+            generateRmsResourcePlacements(width,height,generated.terrain,data,objectUnitId,grouping.groups,rng,generated.objects,err,occupied);
+        if (!ok) return false;
+    }
     genieRandomDraw(rng);
     randomState=rng;
     out=std::move(generated);

@@ -14,6 +14,7 @@ static void check(bool value, const char *message) {
 #include "combat_modifier_checks.h"
 #include "unit_cost_checks.h"
 #include "research_cost_checks.h"
+#include "automatic_technology_checks.h"
 #include "ai_fog_checks.h"
 #include "ai_time_checks.h"
 #include "ai_timer_checks.h"
@@ -24,6 +25,7 @@ static void check(bool value, const char *message) {
 #include "conquest_checks.h"
 #include "fog_edge_checks.h"
 #include "rms_spawn_checks.h"
+#include "rms_grouped_checks.h"
 #include "point_move_checks.h"
 
 static void fogRendering(swgb::Assets &assets,swgb::SoftRenderer &renderer) {
@@ -245,6 +247,7 @@ int main(int argc, char **argv) {
         if(playerConquest) {swgb::Game game(assets);playerMatch(game,assets,renderer,true);return 0;}
         fogEdgeChecks(argv[1]);
         rmsSpawnChecks(assets);
+        rmsGroupedChecks(assets);
         pointMoveChecks(assets);
     fogRendering(assets,renderer);
     memoryInspectionChecks(assets,renderer);
@@ -252,6 +255,7 @@ int main(int argc, char **argv) {
     combatModifierChecks(assets);
     unitCostChecks(assets);
     researchCostChecks(assets);
+    automaticTechnologyChecks(assets);
     rubbleChecks(assets,renderer);
     aiFogChecks(assets);
     aiTimeChecks(assets);
