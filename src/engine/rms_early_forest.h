@@ -3,18 +3,18 @@
 #include "rms_scenery.h"
 
 namespace swgb {
-// Bounded original base10 smoothing on an initially empty, flat world.
+// Bounded original static forest base smoothing (10,13,17–21) on an initially empty, flat world.
 // paintedTiles is the exact ordered setter stream from smoothRmsTerrain.
 // Failure clears output and preserves RNG.
 bool generateRmsEarlyForest(uint32_t width, uint32_t height,
     const std::vector<uint32_t> &paintedTiles, const dat::DatFile &data,
-    uint32_t &randomState, std::vector<RmsSceneryPlacement> &out, std::string *err=nullptr);
+    uint32_t &randomState, std::vector<RmsSceneryPlacement> &out, std::string *err=nullptr, uint8_t baseTerrain=10);
 // Final automatic scan after raw terrain changes, with no intervening setters.
-// Water smoothing is outside this scope. Supports terrain10 and inactive
+// Water smoothing is outside this scope. Supports the selected base and inactive
 // terrain slots only; retained early trees may stand on a changed inactive tile.
 // Keeps creation ordinals/tombstones; does not emulate visibility notifications.
 bool finishRmsEarlyForest(uint32_t width, uint32_t height,
     const std::vector<uint8_t> &terrain, const dat::DatFile &data,
     const std::vector<RmsSceneryPlacement> &early, uint32_t &randomState,
-    std::vector<RmsSceneryPlacement> &out, std::string *err=nullptr);
+    std::vector<RmsSceneryPlacement> &out, std::string *err=nullptr, uint8_t baseTerrain=10);
 }

@@ -72,6 +72,37 @@ int main() {
     auto invalid=early; invalid[0].alive=false;
     assert(!finishRmsEarlyForest(3,3,std::vector<uint8_t>(9,10),data,invalid,rng,out,&error));
     assert(out.empty() && rng==before);
+    struct ForestSpec { int terrain,unit,alias,graphic,angles,carbon; };
+    for (const auto spec: {ForestSpec{13,351,11,5295,12,100}, {17,414,11,5286,12,100},
+         {18,348,10,5282,12,100}, {19,350,11,5298,12,100}, {20,349,10,5289,11,100},
+         {21,413,10,5301,12,125}}) {
+        auto d=data;
+        d.civs[0].units.resize(415);
+        d.civs[0].units[spec.unit]=data.civs[0].units[411];
+        auto &prototype=d.civs[0].units[spec.unit];
+        prototype.id=spec.unit; prototype.standingGraphic[0]=spec.graphic;
+        prototype.terrainRestriction=11; prototype.resourceStorages[0].amount=spec.carbon;
+        d.graphics.resize(5302); d.graphics[spec.graphic]=data.graphics[5292];
+        d.graphics[spec.graphic].angleCount=spec.angles;
+        d.terrainRestrictions.resize(12);
+        d.terrainRestrictions[11].passableBuildableDmgMultiplier.assign(55,1);
+        d.terrainBlock.terrains[spec.terrain]=data.terrainBlock.terrains[10];
+        auto &t=d.terrainBlock.terrains[spec.terrain];
+        t.terrainToDraw=spec.alias; t.terrainUnitId[0]=spec.unit;
+        uint32_t state=1; std::vector<RmsSceneryPlacement> first;
+        assert(generateRmsEarlyForest(5,5,{6,8,16,18},d,state,first,&error,spec.terrain));
+        std::vector<uint8_t> tiles(25,spec.terrain); tiles[6]=9;
+        assert(finishRmsEarlyForest(5,5,tiles,d,first,state,out,&error,spec.terrain));
+        const int twelve[]={0,6,2,9,7,5,4,10,9,8,2,10,8,6,3,0,1,4,1,1,11,5,1,0,0,4,6,6};
+        const int eleven[]={0,6,2,8,6,5,3,9,9,8,1,9,7,5,3,0,1,4,1,1,10,4,1,0,0,4,5,6};
+        assert(state==1226606285u && out.size()==28);
+        for (size_t i=0;i<out.size();++i) {
+            assert(out[i].unitId==spec.unit && out[i].alive==(i==0 || i>=4));
+            assert(out[i].facet==(spec.angles==11?eleven[i]:twelve[i]));
+        }
+        assert(!generateRmsEarlyForest(5,5,{6},d,state,out,&error,49));
+        assert(state==1226606285u && out.empty());
+    }
     data.terrainBlock.terrains[9].numTerrainUnitsUsed=1;
     data.terrainBlock.terrains[9].terrainUnitId[0]=411;
     assert(!finishRmsEarlyForest(3,3,std::vector<uint8_t>(9,9),data,early,rng,out,&error));

@@ -168,7 +168,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if (t.terrainUnitId[slot]!=-1) return false;
         return true;
     };
-    const bool earlyForest=base==10;
+    const bool earlyForest=base==10 || base==13 || (base>=17 && base<=21);
     if (!safeTerrain(static_cast<uint8_t>(base),earlyForest)) return fail("unsupported base terrain metadata");
     for (const auto &land:lands) if (!safeTerrain(land.terrain,true)) return fail("unsupported land terrain metadata");
     for (const auto &row:terrainRows)
@@ -209,14 +209,14 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if (!growRmsLands(width,height,static_cast<uint8_t>(base),lands,data.terrainBlock,rng,generated.terrain,err) ||
         !smoothRmsTerrain(width,height,static_cast<uint8_t>(base),generated.terrain,generated.terrain,err,
                           64*1024*1024,earlyForest?&earlyPaints:nullptr)) return false;
-    if (earlyForest && !generateRmsEarlyForest(width,height,earlyPaints,data,rng,early,err)) return false;
+    if (earlyForest && !generateRmsEarlyForest(width,height,earlyPaints,data,rng,early,err,static_cast<uint8_t>(base))) return false;
     genieRandomDraw(rng);
     if (!generateRmsTerrain(width,height,terrainRows,rng,generated.terrain,err,protection)) return false;
     if (!smoothRmsTerrain(width,height,1,generated.terrain,generated.terrain,err) ||
         !cleanupRmsTerrain(width,height,generated.terrain,err)) return false;
     genieRandomDraw(rng);
     if (earlyForest) {
-        if (!finishRmsEarlyForest(width,height,generated.terrain,data,early,rng,generated.scenery,err)) return false;
+        if (!finishRmsEarlyForest(width,height,generated.terrain,data,early,rng,generated.scenery,err,static_cast<uint8_t>(base))) return false;
     } else if (!generateRmsScenery(width,height,generated.terrain,data,rng,generated.scenery,err)) return false;
     std::vector<uint32_t> occupied;
     for (const auto &tree:generated.scenery) if (tree.alive)

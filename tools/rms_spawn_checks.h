@@ -252,12 +252,24 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         <TERRAIN_GENERATION>
         create_terrain 6 { base_terrain 10 number_of_tiles 37 number_of_clumps 4 spacing_to_other_terrain_types 1 }
         create_terrain 44 { base_terrain 9 number_of_tiles 9 number_of_clumps 2 clumping_factor 6 })";
-    struct EarlyFixture { uint32_t seed,terrainHash,objectHash,finalState,count,dead; bool mixed=false; };
+    struct EarlyFixture { uint32_t seed,terrainHash,objectHash,finalState,count,dead; bool mixed=false; int base=10,unit=411,carbon=100; };
     const EarlyFixture earlyFixtures[]={
         {1,4041467588u,1499949720u,4128097079u,761,5},
         {12345,192774748u,2121961969u,2558323739u,771,11},
         {1,1568528174u,881650898u,545854133u,493,4,true},
         {12345,3390887566u,3430050172u,3745431014u,504,6,true},
+        {1u,1688848238u,881650898u,545854133u,493,4,true,13,351,100},
+        {12345u,2905426007u,3430050172u,3745431014u,504,6,true,13,351,100},
+        {1u,409595726u,881650898u,545854133u,493,4,true,17,414,100},
+        {12345u,3798877571u,3430050172u,3745431014u,504,6,true,17,414,100},
+        {1u,1849134750u,881650898u,545854133u,493,4,true,18,348,100},
+        {12345u,4069994742u,3430050172u,3745431014u,504,6,true,18,348,100},
+        {1u,1120881198u,881650898u,545854133u,493,4,true,19,350,100},
+        {12345u,3245852437u,3430050172u,3745431014u,504,6,true,19,350,100},
+        {1u,3490097222u,255780516u,545854133u,493,4,true,20,349,100},
+        {12345u,1643066096u,963873440u,3745431014u,504,6,true,20,349,100},
+        {1u,3709599054u,881650898u,545854133u,493,4,true,21,413,125},
+        {12345u,1123064143u,3430050172u,3745431014u,504,6,true,21,413,125},
     };
     check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes) {
         if (id!=0) return false;
@@ -265,6 +277,12 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
     },{},&error),error.c_str());
     for (const auto &fixture:earlyFixtures) {
         auto source=earlySource;
+        const std::string baseToken="base_terrain 10";
+        size_t offset=0;
+        while ((offset=source.find(baseToken,offset))!=std::string::npos) {
+            const std::string replacement="base_terrain "+std::to_string(fixture.base);
+            source.replace(offset,baseToken.size(),replacement);offset+=replacement.size();
+        }
         if (fixture.mixed) {
             const std::string old="number_of_tiles 37 number_of_clumps 4 spacing_to_other_terrain_types 1";
             source.replace(source.find(old),old.size(),"number_of_tiles 300 number_of_clumps 12 spacing_to_other_terrain_types 0");
@@ -288,12 +306,12 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
               "Original early-forest pipeline terrain, creation order, removals and RNG");
         state=fixture.seed;
         check(game.initRms(script,{},32,state,&error) && state==fixture.finalState,error.c_str());
-        check(game.objectCountForTesting(0,411)==fixture.count-fixture.dead,"Removed early trees must not be resurrected");
+        check(game.objectCountForTesting(0,fixture.unit)==fixture.count-fixture.dead,"Removed early trees must not be resurrected");
         for (size_t i=0;i<map.scenery.size();++i) {
             const auto &p=map.scenery[i];
             check(game.objectHitPoints(i+1)==(p.alive?50:0),"Original creation ordinal gaps preserved in native IDs");
             if (p.alive) check(game.objectPosition(i+1)==std::array<float,2>{p.x,p.y} &&
-                              game.objectResourceAmount(i+1)==100,"Early forest survivors preserve position and resources");
+                              game.objectResourceAmount(i+1)==fixture.carbon,"Early forest survivors preserve position and resources");
         }
     }
     for (int water:{1,4,22,23}) {
@@ -306,7 +324,7 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         check(!swgb::generateRmsMap(script,{},32,32,assets.dat(),state,rejected,&error) && state==1 && rejected.scenery.empty(),
               "Forest-base water callbacks remain explicitly unsupported");
     }
-    const std::string unsafeBase="<LAND_GENERATION> base_terrain 13 create_player_lands { terrain_type 9 base_size 3 number_of_tiles 60 }";
+    const std::string unsafeBase="<LAND_GENERATION> base_terrain 49 create_player_lands { terrain_type 9 base_size 3 number_of_tiles 60 }";
     check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes) {
         if (id!=0) return false;
         bytes.assign(unsafeBase.begin(),unsafeBase.end());return true;
