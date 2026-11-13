@@ -47,7 +47,8 @@ bool generateRmsObjectCandidates(uint32_t width,uint32_t height,uint32_t &random
 bool generateRmsTimberPlacements(uint32_t width, uint32_t height,
     const std::vector<uint8_t> &terrain, const dat::DatFile &data,
     uint32_t requested, uint32_t &randomState,
-    std::vector<RmsTimberPlacement> &out, std::string *err) {
+    std::vector<RmsTimberPlacement> &out, std::string *err,
+    const std::vector<uint32_t> &occupiedTiles) {
     out.clear();
     if (err) err->clear();
     auto fail = [&](const char *reason) {
@@ -57,6 +58,11 @@ bool generateRmsTimberPlacements(uint32_t width, uint32_t height,
     if (!width || !height || width > 1024 || height > 1024 ||
         terrain.size() != static_cast<size_t>(width)*height || requested > terrain.size())
         return fail("invalid dimensions, terrain size or object count");
+    std::vector<uint8_t> occupied(terrain.size(),0);
+    for (uint32_t tile:occupiedTiles) {
+        if (tile>=terrain.size()) return fail("occupied tile outside map");
+        occupied[tile]=1;
+    }
     if (data.civs.empty() || data.civs[0].units.size() <= 348)
         return fail("missing Gaia timber prototype");
     const auto &u = data.civs[0].units[348];
@@ -92,6 +98,7 @@ bool generateRmsTimberPlacements(uint32_t width, uint32_t height,
     out.reserve(requested);
     for (uint32_t tile : candidates) {
         if (out.size() == requested) break;
+        if (occupied[tile]) continue;
         if (restriction[terrain[tile]] <= .05f) continue;
         // Distinct tile centers cannot strictly overlap these half-tile radii.
         const auto facet = static_cast<uint8_t>(std::min(11u,genieRandomDraw(rng)*12u/32767u));

@@ -84,6 +84,21 @@ int main() {
     rng=1;
     check(generateRmsTimberPlacements(5,6,std::vector<uint8_t>(30,0),data,30,rng,placements,&err)
           && placements.size()==30,"adjacent trees must all fit");
+    rng=1;
+    check(generateRmsTimberPlacements(5,6,std::vector<uint8_t>(30,0),data,3,rng,placements,&err,{6,15}) &&
+          rng==1766988168u && placements.size()==3 &&
+          placements[0].x==.5f && placements[0].y==2.5f && placements[0].facet==4 &&
+          placements[1].x==.5f && placements[1].y==.5f && placements[1].facet==10 &&
+          placements[2].x==1.5f && placements[2].y==.5f && placements[2].facet==9,
+          "occupied scenery centers reject without consuming facet RNG");
+    std::vector<uint32_t> occupied(30);
+    std::iota(occupied.begin(),occupied.end(),0);
+    rng=1;
+    check(generateRmsTimberPlacements(5,6,std::vector<uint8_t>(30,0),data,30,rng,placements,&err,occupied) &&
+          placements.empty() && rng==1030492215u,"fully occupied map still consumes candidate shuffle only");
+    rng=1;
+    check(!generateRmsTimberPlacements(5,6,std::vector<uint8_t>(30,0),data,3,rng,placements,&err,{30}) &&
+          placements.empty() && rng==1,"invalid occupancy must fail transactionally");
     u.clearanceSize[0]=1;
     const auto before=rng;
     check(!generateRmsTimberPlacements(1,1,{0},data,1,rng,placements,&err) && placements.empty() && rng==before,

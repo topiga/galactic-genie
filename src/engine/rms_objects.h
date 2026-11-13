@@ -13,11 +13,13 @@ bool generateRmsObjectCandidates(uint32_t width,uint32_t height,uint32_t &random
                                  std::vector<uint32_t> &out,std::string *err=nullptr);
 
 struct RmsTimberPlacement { float x, y; uint8_t facet; };
-// One original ungrouped unit348 row, default modifiers, on an empty flat map.
+// One original ungrouped unit348 row, default modifiers, on a flat map.
+// Occupied tiles represent verified centered, half-tile scenery footprints.
 // Validates the supported original prototype. Output may contain fewer than
 // requested objects when terrain rejects candidates. Only success advances RNG.
 bool generateRmsTimberPlacements(uint32_t width, uint32_t height,
     const std::vector<uint8_t> &terrain, const dat::DatFile &data,
     uint32_t requested, uint32_t &randomState,
-    std::vector<RmsTimberPlacement> &out, std::string *err=nullptr);
+    std::vector<RmsTimberPlacement> &out, std::string *err=nullptr,
+    const std::vector<uint32_t> &occupiedTiles={});
 } // namespace swgb
