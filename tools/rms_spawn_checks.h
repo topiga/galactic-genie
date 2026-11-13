@@ -252,11 +252,13 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         <TERRAIN_GENERATION>
         create_terrain 6 { base_terrain 10 number_of_tiles 37 number_of_clumps 4 spacing_to_other_terrain_types 1 }
         create_terrain 44 { base_terrain 9 number_of_tiles 9 number_of_clumps 2 clumping_factor 6 })";
-    struct EarlyFixture { uint32_t seed,terrainHash,objectHash,finalState,count,dead; bool mixed=false; int base=10,unit=411,carbon=100; };
+    struct EarlyFixture { uint32_t seed,terrainHash,objectHash,finalState,count,dead; bool mixed=false; int base=10,unit=411,carbon=100; bool manual=false; };
     const EarlyFixture earlyFixtures[]={
         {1,4041467588u,1499949720u,4128097079u,761,5},
         {12345,192774748u,2121961969u,2558323739u,771,11},
         {1,1568528174u,881650898u,545854133u,493,4,true},
+        {1,1568528174u,881650898u,1486042728u,493,4,true,10,411,100,true},
+        {12345,3390887566u,3430050172u,3859810789u,504,6,true,10,411,100,true},
         {12345,3390887566u,3430050172u,3745431014u,504,6,true},
         {1u,1688848238u,881650898u,545854133u,493,4,true,13,351,100},
         {12345u,2905426007u,3430050172u,3745431014u,504,6,true,13,351,100},
@@ -277,6 +279,7 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
     },{},&error),error.c_str());
     for (const auto &fixture:earlyFixtures) {
         auto source=earlySource;
+        if (fixture.manual) source+=" <OBJECTS_GENERATION> create_object 348 { number_of_objects 3 }";
         const std::string baseToken="base_terrain 10";
         size_t offset=0;
         while ((offset=source.find(baseToken,offset))!=std::string::npos) {
@@ -307,6 +310,20 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         state=fixture.seed;
         check(game.initRms(script,{},32,state,&error) && state==fixture.finalState,error.c_str());
         check(game.objectCountForTesting(0,fixture.unit)==fixture.count-fixture.dead,"Removed early trees must not be resurrected");
+        check(map.timber.size()==(fixture.manual?3u:0u),"Explicit timber count after early scenery");
+        if (fixture.manual) {
+            const swgb::RmsTimberPlacement first[]={{2.5f,11.5f,9},{5.5f,12.5f,9},{4.5f,19.5f,9}};
+            const swgb::RmsTimberPlacement second[]={{3.5f,5.5f,6},{1.5f,17.5f,4},{2.5f,20.5f,11}};
+            const auto *expected=fixture.seed==1?first:second;
+            check(game.objectCountForTesting(0,348)==3,"Manual timber remains after deleted ID gaps");
+            for (size_t i=0;i<3;++i) {
+                const auto &p=map.timber[i];
+                check(p.x==expected[i].x && p.y==expected[i].y && p.facet==expected[i].facet,
+                      "Original manual timber candidates/gates after retained and deleted early trees");
+                check(game.objectPosition(map.scenery.size()+i+1)==std::array<float,2>{p.x,p.y},
+                      "Manual native IDs follow every prior creation including deleted ones");
+            }
+        }
         for (size_t i=0;i<map.scenery.size();++i) {
             const auto &p=map.scenery[i];
             check(game.objectHitPoints(i+1)==(p.alive?50:0),"Original creation ordinal gaps preserved in native IDs");
