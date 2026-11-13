@@ -11205,6 +11205,12 @@ void Game::issueGroupMove(std::vector<Object *> targets, float targetX, float ta
         object->moveSpreadRetries = 0;
         const float dx = targetX - object->x;
         const float dy = targetY - object->y;
+        // Ordinary point action 0x4084b0 completes inside the footprint before pathfinding.
+        if (std::abs(dx) <= object->unit->collisionSize[0] &&
+            std::abs(dy) <= object->unit->collisionSize[1]) {
+            stopUnit(*object);
+            continue;
+        }
         object->moveBestDistance = std::sqrt(dx * dx + dy * dy);
         if (!issueMove(*object, targetX, targetY))
             object->moveGoalActive = false;
