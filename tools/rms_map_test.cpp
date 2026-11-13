@@ -49,7 +49,10 @@ int main() {
     auto missing=land;
     missing.erase(missing.find("border_fuzziness 0"),std::string("border_fuzziness 0").size());
     load(missing);
-    check(!generateRmsMap(script,{},7,7,data,state,map,&error),"original nonzero fuzziness default must not be ignored");
+    state=1;
+    check(generateRmsMap(script,{},7,7,data,state,map,&error) && state==1578431114u,
+          "default fuzziness20 must be accepted with original full-map bounds");
+    state=1;
     load(land);
     data.terrainBlock.terrains[3].numTerrainUnitsUsed=1;
     check(!generateRmsMap(script,{},7,7,data,state,map,&error) && state==1,
@@ -61,5 +64,34 @@ int main() {
     load(land+" <OBJECTS_GENERATION> create_object 348 { number_of_objects 1 }");
     check(!generateRmsMap(script,{},7,7,data,state,map,&error) && state==1 && map.terrain.empty(),
           "late prototype failure must not commit generated terrain or RNG");
+    const std::string players="<LAND_GENERATION> base_terrain 0 create_player_lands { terrain_type 3 base_size 3 number_of_tiles 60 }";
+    load(players);
+    state=1;
+    check(!generateRmsMap(script,{"FIXED_POSITIONS"},32,32,data,state,map,&error) && state==1,
+          "fixed-position context must not silently use randomized starts");
+    check(generateRmsMap(script,{},32,32,data,state,map,&error),error);
+    check(map.playerStarts.size()==2 && map.playerStarts[0].x==18 && map.playerStarts[0].y==5 &&
+          map.playerStarts[1].x==13 && map.playerStarts[1].y==20,"original owner-ordered player starts");
+    const auto playerTerrain=map.terrain;
+    const auto playerState=state;
+    load("<PLAYER_SETUP> random_placement "+players); state=1;
+    check(generateRmsMap(script,{},32,32,data,state,map,&error) && state==playerState && map.terrain==playerTerrain,
+          "RMS random_placement directive is a no-op, not a game-setting setter");
+    auto percent=players;
+    percent.replace(percent.find("number_of_tiles 60"),18,"land_percent 12");
+    auto count=players;
+    count.replace(count.find("number_of_tiles 60"),18,"number_of_tiles 61");
+    load(percent); state=1;
+    check(generateRmsMap(script,{},32,32,data,state,expected,&error),error);
+    const auto percentState=state;
+    load(count); state=1;
+    check(generateRmsMap(script,{},32,32,data,state,map,&error) && state==percentState && map.terrain==expected.terrain,
+          "land percent divides total area across both player lands");
+    load(players+" create_land { terrain_type 3 land_position 50 50 }");
+    state=1;
+    check(!generateRmsMap(script,{},32,32,data,state,map,&error) && state==1 && map.playerStarts.empty(),
+          "mixed player and nonplayer placement remains unsupported");
+    load("<LAND_GENERATION> base_terrain 0 create_player_lands { terrain_type 3 land_position 50 50 }");
+    check(!generateRmsMap(script,{},32,32,data,state,map,&error),"player lands must not accept explicit positions");
     std::cout<<"RMS integrated map tests passed\n";
 }

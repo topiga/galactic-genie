@@ -124,6 +124,7 @@ public:
     bool initScenario(const Scenario &scenario, std::string *err);
     // Original default ungrouped timber row; requires an empty, flat initialized map.
     bool populateRmsTimber(uint32_t count, uint32_t &randomState, std::string *err = nullptr);
+    // Diagnostic RMS world; player lands use randomized positions, without starting units.
     bool initRms(const RmsScript &script, const std::unordered_set<std::string> &defines,
                  int mapSize, uint32_t &randomState, std::string *err = nullptr);
     bool loadAiScript(

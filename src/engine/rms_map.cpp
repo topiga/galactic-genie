@@ -23,6 +23,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         return false;
     };
     if (!width || !height || width > 1024 || height > 1024) return fail("dimensions must be 1..1024");
+    if (defines.count("FIXED_POSITIONS")) return fail("FIXED_POSITIONS requires the unsupported nonrandomized game mode");
     if (!script.preprocess(defines,tokens,err,&rng)) return false;
     auto number = [&](int32_t &value) {
         if (i == tokens.size()) return false;
@@ -32,46 +33,60 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     };
     int stage = 0, base = -1;
     bool hasObjects = false;
+    bool playerLands = false;
+    bool playerSetup = false;
     uint32_t objectCount = 1;
     std::vector<RmsLandGrowth> lands;
     while (i < tokens.size()) {
         const std::string command = tokens[i++].text;
+        if (command == "<PLAYER_SETUP>" && stage == 0 && !playerSetup) { playerSetup=true; continue; }
+        // Original handler0x4e2c10 accepts this without changing the game setting.
+        if (command == "random_placement" && stage == 0 && playerSetup) continue;
         if (command == "<LAND_GENERATION>" && stage == 0) { stage = 1; continue; }
         if (command == "<OBJECTS_GENERATION>" && stage == 1) { stage = 2; continue; }
         int32_t value = 0;
         if (stage == 1 && command == "base_terrain") {
             if (!number(value)) return fail("base_terrain requires an integer");
             base = static_cast<uint8_t>(value);
-        } else if (stage == 1 && command == "create_land") {
+        } else if (stage == 1 && (command == "create_land" || command == "create_player_lands")) {
+            const bool players=command=="create_player_lands";
+            if (playerLands || (players && !lands.empty())) return fail("player lands cannot yet be mixed with other land blocks");
             if (lands.size() == 64 || i == tokens.size() || tokens[i++].text != "{")
                 return fail("expected land block, at most64 lands");
             RmsLandGrowth land;
             land.zone=0; // Original nonplayer create_land default.
-            bool terrain=false,position=false,radius=false,target=false,fuzziness=false;
+            land.radius=3;
+            land.targetTiles=width*height;
+            land.borderFuzziness=20;
+            bool terrain=false,position=false;
             while (i < tokens.size() && tokens[i].text != "}") {
                 const auto name = tokens[i++].text;
                 if (!number(value)) return fail(name + " requires an integer");
                 if (name == "terrain_type") { land.terrain=static_cast<uint8_t>(value); terrain=true; }
-                else if (name == "land_position") {
+                else if (name == "land_position" && !players) {
                     int32_t y=0;
                     if (!number(y) || value<0 || value>99 || y<0 || y>99) return fail("positions must be 0..99");
                     land.centerX=width*static_cast<uint32_t>(value)/100;
                     land.centerY=height*static_cast<uint32_t>(y)/100;
                     position=true;
-                } else if (name == "base_size" && value>=0 && value<=1024) { land.radius=value; radius=true; }
+                } else if (name == "base_size" && value>=0 && value<=1024) land.radius=value;
                 else if (name == "number_of_tiles" && value>=0 && uint32_t(value)<=width*height) {
-                    land.targetTiles=value; target=true;
+                    land.targetTiles=value;
+                } else if (name == "land_percent" && value>=0 && value<=100) {
+                    land.targetTiles=width*height*static_cast<uint32_t>(value)/(100u*(players?2u:1u));
                 } else if (name == "clumping_factor" && value>=0 && value<=100) land.clumpingFactor=value;
-                else if (name == "border_fuzziness" && value==0) fuzziness=true;
+                else if (name == "border_fuzziness" && value>=0 && value<=255) land.borderFuzziness=value;
                 else if (name == "other_zone_avoidance_distance" && value==0) {}
-                else if (name == "zone" && value>=-10 && value<=53) land.zone=value+10;
+                else if (name == "zone" && !players && value>=-10 && value<=53) land.zone=value+10;
                 else return fail("unsupported land parameter/value " + name);
             }
             if (i == tokens.size()) return fail("unterminated land block");
             ++i;
-            if (!terrain || !position || !radius || !target || !fuzziness)
-                return fail("land requires explicit terrain, position, radius, tile count, zero fuzziness");
-            lands.push_back(land);
+            if (!terrain || (!players && !position)) return fail("land requires explicit terrain and nonplayer position");
+            if (players) {
+                playerLands=true;
+                for (int owner=1;owner<=2;++owner) { land.zone=owner; lands.push_back(land); }
+            } else lands.push_back(land);
         } else if (stage == 2 && command == "create_object" && !hasObjects) {
             if (!number(value) || value!=348 || i==tokens.size() || tokens[i++].text!="{")
                 return fail("only one default timber348 object block is supported");
@@ -94,17 +109,27 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     };
     if (!safeTerrain(static_cast<uint8_t>(base))) return fail("unsupported base terrain metadata; require plain terrain0/3");
     for (const auto &land:lands) if (!safeTerrain(land.terrain)) return fail("unsupported land terrain metadata");
-    // Original finalizer rejects duplicate random player slots, even without player lands.
-    bool slots[8]={};
-    size_t draws=0, unique=0;
-    while (unique<8) {
-        if (++draws>65536) return fail("player-order randomization work limit exceeded");
-        const uint32_t slot=std::min(7u,genieRandomDraw(rng)*8u/32767u);
-        if (!slots[slot]) { slots[slot]=true; ++unique; }
-    }
-    genieRandomDraw(rng); // Original position-offset draw, unused for explicit nonplayer lands.
     RmsMap generated;
     generated.width=width; generated.height=height;
+    if (playerLands) {
+        std::array<RmsPlayerStart,2> starts;
+        if (!generateRmsPlayerStarts(width,height,static_cast<int32_t>(lands[0].radius),rng,starts,err)) return false;
+        for (size_t owner=0;owner<starts.size();++owner) {
+            lands[owner].centerX=static_cast<uint32_t>(starts[owner].x);
+            lands[owner].centerY=static_cast<uint32_t>(starts[owner].y);
+            generated.playerStarts.push_back(starts[owner]);
+        }
+    } else {
+        // Original setup still consumes permutation/offset draws without player lands.
+        bool slots[8]={};
+        size_t draws=0, unique=0;
+        while (unique<8) {
+            if (++draws>65536) return fail("player-order randomization work limit exceeded");
+            const uint32_t slot=std::min(7u,genieRandomDraw(rng)*8u/32767u);
+            if (!slots[slot]) { slots[slot]=true; ++unique; }
+        }
+        genieRandomDraw(rng);
+    }
     genieRandomDraw(rng); // Scheduler logging before its first stage.
     if (!growRmsLands(width,height,static_cast<uint8_t>(base),lands,data.terrainBlock,rng,generated.terrain,err) ||
         !smoothRmsTerrain(width,height,static_cast<uint8_t>(base),generated.terrain,generated.terrain,err)) return false;

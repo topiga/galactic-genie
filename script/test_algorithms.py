@@ -9,7 +9,8 @@ build = Path(os.environ.get('SWGB_DESKTOP_BUILD', Path.home()/'.local/share/swgb
 build.mkdir(parents=True, exist_ok=True)
 cases = {
     'rms': ['src/engine/rms_script.cpp', 'src/core/drs.cpp'],
-    'rms_map': ['src/engine/rms_map.cpp', 'src/engine/rms_script.cpp', 'src/engine/rms_objects.cpp', 'src/core/drs.cpp'],
+    'rms_map': ['src/engine/rms_map.cpp', 'src/engine/rms_script.cpp', 'src/engine/rms_objects.cpp', 'src/engine/rms_player_starts.cpp', 'src/core/drs.cpp'],
+    'rms_player_starts': ['src/engine/rms_player_starts.cpp'],
     'rms_object': ['src/engine/rms_objects.cpp'],
     'ai_military': ['src/engine/ai_military.cpp'],
     'ai_targets': ['src/engine/ai_targets.cpp'],

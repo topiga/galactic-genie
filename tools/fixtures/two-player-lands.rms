@@ -1,0 +1,14 @@
+/* Original two-player land placement diagnostic; no starting units yet. */
+<LAND_GENERATION>
+base_terrain 0
+create_player_lands {
+  terrain_type 3
+  base_size 3
+  number_of_tiles 60
+  clumping_factor 8
+  border_fuzziness 20
+}
+<OBJECTS_GENERATION>
+create_object 348 {
+  number_of_objects 80
+}

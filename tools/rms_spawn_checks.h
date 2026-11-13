@@ -79,5 +79,32 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
             check(facet==fixture.objects[i].facet,"RMS scenario bridge preserves facets");
         }
     }
-    std::puts("PASS: original RMS timber spawning, facets, resources and validation");
+    const std::string playerSource=R"(<LAND_GENERATION> base_terrain 0
+        create_player_lands { terrain_type 3 base_size 3 number_of_tiles 60 clumping_factor 8 border_fuzziness 20 }
+        <OBJECTS_GENERATION> create_object 348 { number_of_objects 3 })";
+    check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes) {
+        if (id!=0) return false;
+        bytes.assign(playerSource.begin(),playerSource.end()); return true;
+    },{},&error),error.c_str());
+    const Fixture playerFixtures[]={
+        {1,3728055951u,1403560318u,{{1.5f,5.5f,7},{3.5f,18.5f,3},{1.5f,29.5f,3}}},
+        {12345,1771775183u,3972322661u,{{18.5f,15.5f,1},{26.5f,22.5f,10},{4.5f,15.5f,2}}}
+    };
+    for (const auto &fixture:playerFixtures) {
+        swgb::RmsMap map;
+        state=fixture.seed;
+        check(swgb::generateRmsMap(script,{},32,32,assets.dat(),state,map,&error),error.c_str());
+        uint32_t hash=2166136261u;
+        for (auto tile:map.terrain) hash=(hash^tile)*16777619u;
+        check(hash==fixture.hash && state==fixture.finalState && map.timber.size()==3 && map.playerStarts.size()==2,
+              "Original composed player-land pipeline terrain/RNG mismatch");
+        state=fixture.seed;
+        check(game.initRms(script,{},32,state,&error) && state==fixture.finalState,error.c_str());
+        for (uint32_t i=0;i<3;++i) {
+            const auto p=game.objectPosition(i+1);
+            check(p[0]==fixture.objects[i].x && p[1]==fixture.objects[i].y &&
+                  map.timber[i].facet==fixture.objects[i].facet,"Original player-land timber fixture");
+        }
+    }
+    std::puts("PASS: original RMS player lands, timber spawning, facets, resources and validation");
 }
