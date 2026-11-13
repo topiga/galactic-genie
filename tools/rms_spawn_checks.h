@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "../src/engine/rms_objects.h"
+#include "../src/engine/rms_map.h"
 #include <cmath>
 
 static void rmsSpawnChecks(swgb::Assets &assets) {
@@ -40,5 +41,43 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
     check(game.initScenario(scenario,&error),error.c_str());
     check(game.populateRmsTimber(36,state,&error) && game.activeObjectCount()==0,
           "Rejected terrain must create no native objects");
+    const std::string source=R"(<LAND_GENERATION> base_terrain 0
+        create_land { terrain_type 3 land_position 30 30 base_size 0 number_of_tiles 10 border_fuzziness 0 zone 0 }
+        create_land { terrain_type 3 land_position 60 60 base_size 0 number_of_tiles 10 border_fuzziness 0 zone 1 }
+        <OBJECTS_GENERATION> create_object 348 { number_of_objects 3 })";
+    swgb::RmsScript script;
+    check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes) {
+        if (id!=0) return false;
+        bytes.assign(source.begin(),source.end()); return true;
+    },{},&error),error.c_str());
+    struct Fixture { uint32_t seed, hash, finalState; swgb::RmsTimberPlacement objects[3]; };
+    const Fixture fixtures[]={
+        {1,1509571036u,2283988067u,{{3.5f,1.5f,2},{2.5f,4.5f,7},{.5f,1.5f,5}}},
+        {12345,2339149697u,4028089366u,{{.5f,3.5f,5},{4.5f,1.5f,9},{3.5f,.5f,9}}}
+    };
+    for (const auto &fixture:fixtures) {
+        swgb::RmsMap map;
+        state=fixture.seed;
+        check(swgb::generateRmsMap(script,{},7,7,assets.dat(),state,map,&error),error.c_str());
+        uint32_t hash=2166136261u;
+        for (auto tile:map.terrain) hash=(hash^tile)*16777619u;
+        check(hash==fixture.hash && state==fixture.finalState && map.timber.size()==3,
+              "Original composed RMS stages terrain/RNG mismatch");
+        state=fixture.seed;
+        check(game.initRms(script,{},7,state,&error),error.c_str());
+        check(state==fixture.finalState && game.activeObjectCount()==3,"Native RMS pipeline object count/RNG");
+        for (int y=0;y<7;++y) for (int x=0;x<7;++x)
+            check(game.terrainAtForTesting(x,y)==map.terrain[y*7+x],"RMS terrain orientation preserved");
+        for (uint32_t i=0;i<3;++i) {
+            const auto p=game.objectPosition(i+1);
+            check(p[0]==fixture.objects[i].x && p[1]==fixture.objects[i].y &&
+                  map.timber[i].facet==fixture.objects[i].facet,"Original RMS object fixture");
+            const float facing=game.objectFacing(i+1);
+            const float theta=std::atan2(std::cos(facing)+std::sin(facing),
+                                        2*(std::cos(facing)-std::sin(facing)));
+            const int facet=(static_cast<int>(std::lround((theta-pi*.5f)/(2*pi/12)))%12+12)%12;
+            check(facet==fixture.objects[i].facet,"RMS scenario bridge preserves facets");
+        }
+    }
     std::puts("PASS: original RMS timber spawning, facets, resources and validation");
 }

@@ -20,6 +20,7 @@
 #include <vector>
 
 namespace swgb {
+class RmsScript;
 
 struct InputState {
     float scrollX = 0, scrollY = 0; // -1..1, from stick / d-pad
@@ -123,6 +124,8 @@ public:
     bool initScenario(const Scenario &scenario, std::string *err);
     // Original default ungrouped timber row; requires an empty, flat initialized map.
     bool populateRmsTimber(uint32_t count, uint32_t &randomState, std::string *err = nullptr);
+    bool initRms(const RmsScript &script, const std::unordered_set<std::string> &defines,
+                 int mapSize, uint32_t &randomState, std::string *err = nullptr);
     bool loadAiScript(
         int player, const std::string &path,
         const std::unordered_set<std::string> &defines,

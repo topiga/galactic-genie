@@ -49,7 +49,7 @@ The second command builds with AddressSanitizer and UndefinedBehaviorSanitizer. 
 
 The built `skirmish-test` also accepts `/path/to/Game/Data --civilizations` for eight complete Command Center matches, `--conquest` for eight complete Conquest matches, and `--player-conquest` for the scripted player's Conquest path. These longer checks run separately from the default suite. Run them from the external build directory so their captures stay outside the checkout.
 
-Run `python3 script/test_algorithms.py` for asset-independent RMS and military-group checks with strict warnings and sanitizers. It writes binaries outside the checkout using the same build-directory override. These tests validate recovered algorithms; they do not imply the complete original map generator or AI is active in the playable app. CMake users can enable `-DSWGB_BUILD_ALGORITHM_TESTS=ON`, build the four algorithm test targets and run `ctest --test-dir <build-dir>`.
+Run `python3 script/test_algorithms.py` for asset-independent RMS and military-group checks with strict warnings and sanitizers. It writes binaries outside the checkout using the same build-directory override. These tests validate recovered algorithms; they do not imply the complete original map generator or AI is active in the playable app. CMake users can enable `-DSWGB_BUILD_ALGORITHM_TESTS=ON`, build the five algorithm test targets and run `ctest --test-dir <build-dir>`.
 
 With CMake, configure `-DSWGB_BUILD_DESKTOP=ON -DSWGB_BUILD_SKIRMISH_TEST=ON` and build `swgb-desktop`, `swgb-skirmish-test` and `swgbtool`. Run `swgb-skirmish-test /path/to/Game/Data` and `swgbtool test-combat /path/to/Game/Data`. Desktop options are off by default; Vita and headless tool entry points remain available.
 
@@ -130,3 +130,12 @@ Alarm sounds now emit per audible shelter with recovered pan/attenuation and the
 Limits: camera center, window width and zoom are native adaptations of the original listener/configuration fields. The fractional-position offset is reproduced for the flat skirmish; exact slope flags and original fog-driven audio visibility are not implemented. Overall hardware/output loudness and original-versus-native listening comparison remain unverified. The garrison layout uses the800px profile scaled to the desktop window; other original resolution profiles and exact fonts are not yet matched.
 
 Garrison buttons also use the original btngame normal/pressed frames with clipped corners and the original pressed icon offset. Releasing outside the pressed portrait cancels ejection; an isolated release cannot eject. The pointer keeps the occupant ID so a changed roster cannot silently retarget the press. Hidden garrison controls do not accept clicks during multi-selection.
+
+
+### RMS diagnostic renderer
+
+`swgbtool render-rms <DataDir> tools/fixtures/explicit-lands.rms 32 1 <out.png>` executes a self-contained RMS script and renders the generated native map with installed game assets. The last numeric argument is shared CRT state at script entry, not a claim of original lobby seed parity.
+
+The current integration supports explicit nonplayer land positions, base/land terrain 0 or 3 without automatic scenery, zero border fuzziness and separation, clumping 0..100, zone commands -10..53 (stored bytes 0..63), and at most one default ungrouped timber-348 row. Missing zones use the original shared zone0; explicit zones preserve the original seed-budget accounting. Other stages, players, elevations, terrain rows, object types, grouping and spacing modifiers return an error. The renderer accepts a local self-contained file; archive includes remain available through the existing RMS loader API, not this CLI command.
+
+This is a diagnostic engine path, not a new playable random-map mode. The desktop launcher still starts the existing skirmish layout and fallback AI. `script/test_algorithms.py` covers the strict pipeline; the installed-data skirmish suite also checks original-stage terrain/object/RNG fixtures through native map initialization.

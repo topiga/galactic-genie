@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <map>
+#include <fstream>
 
 using namespace swgb;
 
@@ -62,6 +63,7 @@ static int usage() {
             "  swgbtool ai-script <entry.per>\n"
             "  swgbtool test-ai <DataDir> <AiDir>\n"
             "  swgbtool rms-script <archive.drs> <resourceId> [--rng-state N] [--define SYMBOL] [--dump]\n"
+            "  swgbtool render-rms <DataDir> <self-contained.rms> <size> <rng-state> <out.png>\n"
             "  swgbtool mp3 <file.mp3>\n");
     return 2;
 }
@@ -5847,6 +5849,50 @@ static int cmdRmsScript(const char *path,const char *number,int argc,char **argv
     return 0;
 }
 
+static int cmdRenderRms(const char *dataDir, const char *path, const char *sizeText,
+                        const char *stateText, const char *output) {
+    uint32_t size=0,state=0;
+    auto parse=[](const char *text,uint32_t &value) {
+        const char *end=text+std::strlen(text);
+        const auto result=std::from_chars(text,end,value);
+        return result.ec==std::errc{} && result.ptr==end;
+    };
+    if (!parse(sizeText,size) || !size || size>1024 || !parse(stateText,state)) {
+        std::fprintf(stderr,"error: size must be 1..1024 and RNG state unsigned32\n"); return 2;
+    }
+    std::ifstream input(path,std::ios::binary|std::ios::ate);
+    const auto length=input.tellg();
+    if (!input || length<0 || length>4*1024*1024) {
+        std::fprintf(stderr,"error: RMS file unreadable or exceeds 4MiB\n"); return 1;
+    }
+    std::vector<uint8_t> source(static_cast<size_t>(length));
+    input.seekg(0);
+    if (!input.read(reinterpret_cast<char *>(source.data()),length)) {
+        std::fprintf(stderr,"error: incomplete RMS file read\n"); return 1;
+    }
+    RmsScript script;
+    std::string error;
+    const auto resolver=[&](int32_t id,std::vector<uint8_t> &bytes) {
+        if (id!=0) return false;
+        bytes=source; return true;
+    };
+    SoftRenderer renderer;
+    Assets assets(&renderer);
+    if (!script.load(0,resolver,{},&error) || !assets.init(dataDir,&error)) {
+        std::fprintf(stderr,"error: %s\n",error.c_str()); return 1;
+    }
+    Game game(assets);
+    if (!game.initRms(script,{},static_cast<int>(size),state,&error)) {
+        std::fprintf(stderr,"error: %s\n",error.c_str()); return 1;
+    }
+    game.setZoom(std::min(1.f,800.f/(2.f*Game::kTileHalfW*size)));
+    game.render(renderer,960,544);
+    if (!renderer.savePng(output)) { std::fprintf(stderr,"error: cannot save image\n"); return 1; }
+    std::printf("RMS diagnostic: %ux%u, %zu native objects, final RNG %u -> %s\n",
+                size,size,game.activeObjectCount(),state,output);
+    return 0;
+}
+
 static int cmdAiScript(const char *path) {
     AiProgram program;
     std::string err;
@@ -6119,6 +6165,7 @@ int main(int argc, char **argv) {
         return cmdOptions(argv[2], atoi(argv[3]), atoi(argv[4]));
     if (!strcmp(cmd, "sound") && argc >= 4) return cmdSound(argv[2], atoi(argv[3]));
     if (!strcmp(cmd, "rms-script") && argc >= 4) return cmdRmsScript(argv[2],argv[3],argc-4,argv+4);
+    if (!strcmp(cmd, "render-rms") && argc == 7) return cmdRenderRms(argv[2],argv[3],argv[4],argv[5],argv[6]);
     if (!strcmp(cmd, "drs")) return cmdDrs(argv[2]);
     if (!strcmp(cmd, "drs-slps")) return cmdDrsSlps(argv[2]);
     if (!strcmp(cmd, "campaign")) return cmdCampaign(argv[2]);

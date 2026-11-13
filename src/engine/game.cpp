@@ -2,6 +2,7 @@
 #include "../core/genie_random.h"
 #include "game.h"
 #include "rms_objects.h"
+#include "rms_map.h"
 #include "font_atlas.h"
 #include "sight_stencils.h"
 
@@ -1137,6 +1138,40 @@ bool Game::initScenario(const Scenario &scenario, std::string *err) {
     return true;
 }
 
+static float rmsTimberFacing(uint8_t facet) {
+    // Invert the renderer's isometric facing projection at the facet center.
+    const float theta = kPi*.5f + facet*(2*kPi/12);
+    const float sx = std::cos(theta)*.5f, sy = std::sin(theta);
+    return std::atan2(sy-sx,sy+sx);
+}
+
+bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string> &defines,
+                   int mapSize, uint32_t &randomState, std::string *err) {
+    uint32_t rng = randomState;
+    RmsMap generated;
+    if (!generateRmsMap(script,defines,mapSize,mapSize,assets_.dat(),rng,generated,err)) return false;
+    Scenario scenario;
+    scenario.map.width=scenario.map.height=generated.width;
+    scenario.map.tiles.resize(generated.terrain.size());
+    // Scenario loading rotates coordinates; preserve the RMS raster's orientation.
+    for (int y=0;y<mapSize;++y) for (int x=0;x<mapSize;++x)
+        scenario.map.tiles[static_cast<size_t>(x)*mapSize+mapSize-1-y].terrain =
+            generated.terrain[static_cast<size_t>(y)*mapSize+x];
+    for (const auto &placement:generated.timber) {
+        ScenarioUnit unit;
+        unit.unitId=348;
+        unit.spawnId=static_cast<uint32_t>(scenario.units.size())+1;
+        unit.state=2;
+        unit.x=mapSize-placement.y; unit.y=placement.x;
+        unit.rotation=rmsTimberFacing(placement.facet)+kPi*.5f;
+        scenario.units.push_back(unit);
+    }
+    scenario.nextUnitId=static_cast<uint32_t>(scenario.units.size())+1;
+    if (!initScenario(scenario,err)) return false;
+    randomState=rng;
+    return true;
+}
+
 bool Game::populateRmsTimber(uint32_t count, uint32_t &randomState, std::string *err) {
     if (err) err->clear();
     if (!objects_.empty() || mapSize_ <= 0 || cornerElevation_.empty() ||
@@ -1152,11 +1187,7 @@ bool Game::populateRmsTimber(uint32_t count, uint32_t &randomState, std::string 
     const auto *unit = findUnit(0, 348);
     objects_.reserve(placements.size());
     for (const auto &placement : placements) {
-        // Invert the renderer's isometric facing projection at the facet center.
-        const float theta = kPi*.5f + placement.facet*(2*kPi/12);
-        const float sx = std::cos(theta)*.5f, sy = std::sin(theta);
-        const float facing = std::atan2(sy-sx,sy+sx);
-        addObject(unit,0,placement.x,placement.y,facing,nextSpawnId_++);
+        addObject(unit,0,placement.x,placement.y,rmsTimberFacing(placement.facet),nextSpawnId_++);
     }
     rebuildAdjacency();
     randomState = rng;
