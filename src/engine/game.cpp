@@ -1146,10 +1146,10 @@ static float rmsTimberFacing(uint8_t facet) {
 }
 
 bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string> &defines,
-                   int mapSize, uint32_t &randomState, std::string *err) {
+                   int mapSize, uint32_t &randomState, std::string *err, uint32_t playerCount) {
     uint32_t rng = randomState;
     RmsMap generated;
-    if (!generateRmsMap(script,defines,mapSize,mapSize,assets_.dat(),rng,generated,err)) return false;
+    if (!generateRmsMap(script,defines,mapSize,mapSize,assets_.dat(),rng,generated,err,playerCount)) return false;
     Scenario scenario;
     scenario.map.width=scenario.map.height=generated.width;
     scenario.map.tiles.resize(generated.terrain.size());

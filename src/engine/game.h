@@ -126,7 +126,7 @@ public:
     bool populateRmsTimber(uint32_t count, uint32_t &randomState, std::string *err = nullptr);
     // Diagnostic RMS world; player lands use randomized positions, without starting units.
     bool initRms(const RmsScript &script, const std::unordered_set<std::string> &defines,
-                 int mapSize, uint32_t &randomState, std::string *err = nullptr);
+                 int mapSize, uint32_t &randomState, std::string *err = nullptr, uint32_t playerCount = 2);
     bool loadAiScript(
         int player, const std::string &path,
         const std::unordered_set<std::string> &defines,

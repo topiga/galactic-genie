@@ -48,11 +48,11 @@ int main() {
         {120, 120, 10, 1967u, 2610467196u, 39, 80, 81, 20},
         {120, 120, 10, 31490u, 2147458677u, 90, 80, 20, 30},
     };
-    std::array<RmsPlayerStart, 2> out;
+    std::vector<RmsPlayerStart> out;
     std::string error;
     for (const auto &c : cases) {
         uint32_t state = c.seed;
-        check(generateRmsPlayerStarts(c.w,c.h,c.r,state,out,&error),error);
+        check(generateRmsPlayerStarts(c.w,c.h,c.r,2,state,out,&error),error);
         check(state == c.finalState && out[0].x == c.x1 && out[0].y == c.y1 &&
               out[1].x == c.x2 && out[1].y == c.y2, "original player-start fixture mismatch");
     }
@@ -61,10 +61,31 @@ int main() {
         {7,7,2147483647,0,0,0,0,0,0}, {32,2,0,0,0,0,0,0,0}};
     for (const auto &c : invalid) {
         uint32_t state = 123;
-        out = {{{9,9},{9,9}}};
-        check(!generateRmsPlayerStarts(c.w,c.h,c.r,state,out,&error),"unsupported input accepted");
-        check(state == 123 && out[0].x == 0 && out[0].y == 0 &&
-              out[1].x == 0 && out[1].y == 0 && !error.empty(),"failure was not atomic");
+        out = {{9,9},{9,9}};
+        check(!generateRmsPlayerStarts(c.w,c.h,c.r,2,state,out,&error),"unsupported input accepted");
+        check(state == 123 && out.empty() && !error.empty(),"failure was not atomic");
     }
-    std::cout << "36 original player-start fixtures and invalid-input checks passed\n";
+    // Original full-handler fixtures for all counts, in the same dimension/seed order above.
+    const uint32_t fingerprints[]={1649044140u,1270203993u,2592644030u,3482872803u,
+                                   2598939072u,1662183351u,1395131406u,3659279705u};
+    for (uint32_t players=1;players<=8;++players) {
+        uint32_t hash=2166136261u;
+        for (const auto &c:cases) {
+            uint32_t state=c.seed;
+            check(generateRmsPlayerStarts(c.w,c.h,c.r,players,state,out,&error),error);
+            check(out.size()==players,"wrong number of player starts");
+            for (const auto &point:out) {
+                hash=(hash^static_cast<uint32_t>(point.x))*16777619u;
+                hash=(hash^static_cast<uint32_t>(point.y))*16777619u;
+            }
+            hash=(hash^state)*16777619u;
+        }
+        check(hash==fingerprints[players-1],"original player-count fixture mismatch: "+std::to_string(players));
+    }
+    for (uint32_t players:{0u,9u,UINT32_MAX}) {
+        uint32_t state=123; out={{9,9}};
+        check(!generateRmsPlayerStarts(32,32,3,players,state,out,&error) &&
+              state==123 && out.empty() && !error.empty(),"invalid player count must fail atomically");
+    }
+    std::cout << "288 original player-start fixtures and invalid-input checks passed\n";
 }

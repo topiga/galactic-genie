@@ -95,6 +95,21 @@ int main() {
           map.playerStarts[1].x==13 && map.playerStarts[1].y==20,"original owner-ordered player starts");
     const auto playerTerrain=map.terrain;
     const auto playerState=state;
+    const uint32_t counts[]={1,3,8}, countHashes[]={2429689585u,1986512803u,2929584340u},
+                   countStates[]={940038285u,2511621164u,1668072822u};
+    for (size_t fixture=0;fixture<3;++fixture) {
+        state=1;
+        check(generateRmsMap(script,{},32,32,data,state,map,&error,counts[fixture]),error);
+        hash=2166136261u;
+        for (uint8_t tile:map.terrain) hash=(hash^tile)*16777619u;
+        check(map.playerStarts.size()==counts[fixture] && hash==countHashes[fixture] && state==countStates[fixture],
+              "original multiplayer land pipeline mismatch");
+    }
+    for (uint32_t invalid:{0u,9u,UINT32_MAX}) {
+        state=1;
+        check(!generateRmsMap(script,{},32,32,data,state,map,&error,invalid) && state==1 && map.terrain.empty(),
+              "invalid player count must fail transactionally");
+    }
     load("<PLAYER_SETUP> random_placement "+players); state=1;
     check(generateRmsMap(script,{},32,32,data,state,map,&error) && state==playerState && map.terrain==playerTerrain,
           "RMS random_placement directive is a no-op, not a game-setting setter");
@@ -108,6 +123,13 @@ int main() {
     load(count); state=1;
     check(generateRmsMap(script,{},32,32,data,state,map,&error) && state==percentState && map.terrain==expected.terrain,
           "land percent divides total area across both player lands");
+    count.replace(count.find("number_of_tiles 61"),18,"number_of_tiles 15");
+    load(percent); state=1;
+    check(generateRmsMap(script,{},32,32,data,state,expected,&error,8),error);
+    const auto eightPlayerState=state;
+    load(count); state=1;
+    check(generateRmsMap(script,{},32,32,data,state,map,&error,8) && state==eightPlayerState && map.terrain==expected.terrain,
+          "land percent divides total area across configured player count");
     load(players+" create_land { terrain_type 3 land_position 50 50 }");
     state=1;
     check(!generateRmsMap(script,{},32,32,data,state,map,&error) && state==1 && map.playerStarts.empty(),

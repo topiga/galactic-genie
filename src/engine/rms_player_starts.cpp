@@ -2,16 +2,18 @@
 #include "rms_player_starts.h"
 #include "../core/genie_random.h"
 #include <algorithm>
+#include <array>
 
 namespace swgb {
-bool generateRmsPlayerStarts(uint32_t width, uint32_t height, int32_t radius,
-    uint32_t &randomState, std::array<RmsPlayerStart, 2> &out, std::string *err) {
+bool generateRmsPlayerStarts(uint32_t width, uint32_t height, int32_t radius, uint32_t playerCount,
+    uint32_t &randomState, std::vector<RmsPlayerStart> &out, std::string *err) {
     out = {};
     if (err) err->clear();
     auto fail = [&](const char *message) {
         if (err) *err = std::string("RMS player starts: ") + message;
         return false;
     };
+    if (!playerCount || playerCount>8) return fail("player count must be 1..8");
     if (!width || !height || width > 1024 || height > 1024 || radius < 0 ||
         radius > 1024 || 2 * radius >= static_cast<int32_t>(std::min(width, height)))
         return fail("unsupported dimensions or base radius");
@@ -31,14 +33,15 @@ bool generateRmsPlayerStarts(uint32_t width, uint32_t height, int32_t radius,
     }
     int32_t position = static_cast<int32_t>(genieRandomDraw(rng) *
         static_cast<uint32_t>(2 * halfPerimeter) / 32767u);
-    std::array<int32_t, 2> positions{};
+    std::array<int32_t, 8> positions{};
+    const int32_t step=2*halfPerimeter/static_cast<int32_t>(playerCount);
     for (uint32_t owner : order) {
-        if (owner > 2) continue;
+        if (owner > playerCount) continue;
         positions[owner - 1] = position;
-        position += halfPerimeter;
+        position += step;
         if (position >= 2 * halfPerimeter) position -= 2 * halfPerimeter;
     }
-    std::array<RmsPlayerStart, 2> result{};
+    std::vector<RmsPlayerStart> result(playerCount);
     for (size_t i = 0; i < result.size(); ++i) {
         const int32_t p = positions[i];
         auto &v = result[i];

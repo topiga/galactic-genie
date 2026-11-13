@@ -8,7 +8,7 @@
 namespace swgb {
 bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::string> &defines,
                     uint32_t width, uint32_t height, const dat::DatFile &data,
-                    uint32_t &randomState, RmsMap &out, std::string *err) {
+                    uint32_t &randomState, RmsMap &out, std::string *err, uint32_t playerCount) {
     out = {};
     if (err) err->clear();
     std::vector<RmsToken> tokens;
@@ -23,6 +23,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         return false;
     };
     if (!width || !height || width > 1024 || height > 1024) return fail("dimensions must be 1..1024");
+    if (!playerCount || playerCount>8) return fail("player count must be 1..8");
     if (defines.count("FIXED_POSITIONS")) return fail("FIXED_POSITIONS requires the unsupported nonrandomized game mode");
     if (!script.preprocess(defines,tokens,err,&rng)) return false;
     auto number = [&](int32_t &value) {
@@ -82,7 +83,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 else if (name == "number_of_tiles" && value>=0 && uint32_t(value)<=width*height) {
                     land.targetTiles=value;
                 } else if (name == "land_percent" && value>=0 && value<=100) {
-                    land.targetTiles=width*height*static_cast<uint32_t>(value)/(100u*(players?2u:1u));
+                    land.targetTiles=width*height*static_cast<uint32_t>(value)/(100u*(players?playerCount:1u));
                 } else if (name == "clumping_factor" && value>=0 && value<=100) land.clumpingFactor=value;
                 else if (name == "border_fuzziness" && value>=0 && value<=255) land.borderFuzziness=value;
                 else if (name == "other_zone_avoidance_distance" && value==0) {}
@@ -94,7 +95,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if (!terrain || (!players && !position)) return fail("land requires explicit terrain and nonplayer position");
             if (players) {
                 playerLands=true;
-                for (int owner=1;owner<=2;++owner) { land.zone=owner; lands.push_back(land); }
+                for (uint32_t owner=1;owner<=playerCount;++owner) { land.zone=owner; lands.push_back(land); }
             } else lands.push_back(land);
         } else if (stage == 2 && command == "create_object" && !hasObjects) {
             if (!number(value) || value!=348 || i==tokens.size() || tokens[i++].text!="{")
@@ -121,8 +122,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     RmsMap generated;
     generated.width=width; generated.height=height;
     if (playerLands) {
-        std::array<RmsPlayerStart,2> starts;
-        if (!generateRmsPlayerStarts(width,height,static_cast<int32_t>(lands[0].radius),rng,starts,err)) return false;
+        std::vector<RmsPlayerStart> starts;
+        if (!generateRmsPlayerStarts(width,height,static_cast<int32_t>(lands[0].radius),playerCount,rng,starts,err)) return false;
         for (size_t owner=0;owner<starts.size();++owner) {
             lands[owner].centerX=static_cast<uint32_t>(starts[owner].x);
             lands[owner].centerY=static_cast<uint32_t>(starts[owner].y);

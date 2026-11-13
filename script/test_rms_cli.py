@@ -39,10 +39,18 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     base = ['render-rms-resource',data,work/'test.drs',60000,32,1,work/'archive.png']
     run([*base,'--define','TEST_MAP'],0)
     assert (work/'file.png').read_bytes() == (work/'archive.png').read_bytes(), 'DRS and file rendering differ'
+    two_player_image = (work/'file.png').read_bytes()
+    run(['render-rms',data,work/'map.rms',32,1,work/'file.png','--players',8],0)
+    run([*base,'--define','TEST_MAP','--players',8],0)
+    assert (work/'file.png').read_bytes() == (work/'archive.png').read_bytes(), 'Eight-player DRS and file rendering differ'
+    assert (work/'file.png').read_bytes() != two_player_image, 'Configured player count was ignored'
     (work/'archive.png').unlink()
     assert 'unsupported' in run(base,1)
     assert 'FIXED_POSITIONS' in run([*base,'--define','FIXED_POSITIONS'],1)
     run([*base,'--define'],2)
+    for invalid in [0,9,-1,'bad']:
+        run([*base,'--players',invalid],2)
+    run([*base,'--players'],2)
     run(['render-rms-resource',data,work/'test.drs',-1,32,1,work/'archive.png'],2)
     run(['render-rms-resource',data,work/'test.drs',60002,32,1,work/'archive.png'],1)
     assert not (work/'archive.png').exists(), 'Rejected input created output'
