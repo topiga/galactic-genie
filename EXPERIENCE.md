@@ -736,3 +736,12 @@ Validation: all five strict-warning ASan/UBSan algorithm suites pass (`rms-pipel
 Actual-byte fixtures confirm that tactical updates require world state byte+29 equal0 and selected computer-player cursor equal the player ID; information updates occur earlier. Constructor evidence identifies player type3 as computer-controlled. Rotation cycles among type3 players; inactive/missing-controller repair happens upstream rather than inside rotation. The world simulation-time multiplier also scales the shared host-time budget (initial multiplier1.5 and base budget2).
 
 These findings are saved in `ai-controller-facts/scheduler-upstream-*`. No military scheduler was enabled: manager predicate meanings, group maintenance/reconciliation, readiness destinations, opponent/remembered-target preparation and command completion/replanning remain requirements. The four-state world byte is not mislabeled as a simple pause flag. Existing native pause behavior and fallback AI remain unchanged.
+
+
+## 2026-11-13 — Original border fuzziness and land rejection
+
+Land growth now implements original edge-rejection function0x4da5e0 with resolved rectangular bounds and fuzziness0..255. It preserves the asymmetric corner calculation, a score of101 for values at least100, one comparison RNG draw for every popped candidate, and rejection to permanent zone255 before checking prior occupancy. Default bounds are0,0,width,height, not the last tile indices. Native work/input limits and transactional RNG/output behavior remain intact.
+
+The formula was checked against2,268 original calls;13 full-growth fixtures include inset/degenerate bounds, several fuzziness values and maximum random roll100 rejecting score101. All six sanitizer algorithm suites pass, including previous zero-fuzziness results. Local findings/probes are `rms-edge-*2026-11-13` under Research/windows-reference.
+
+The packaged-map audit found no map unlockable by this field alone: all46 inspected scripts use player lands and terrain rows,34 specify separation and37 explicitly specify nonzero fuzziness. Flats54220 is the smallest starting candidate, but also needs resource/object rows. The audit remains local in `rms-packaged-*`; no unsupported map is silently flattened.

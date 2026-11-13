@@ -479,6 +479,14 @@ bool growRmsLands(uint32_t width, uint32_t height, uint8_t baseTerrain,
     for (const auto &land : lands) if (land.centerX >= width || land.centerY >= height || land.radius > 1024 ||
         land.targetTiles > static_cast<size_t>(width) * height || land.clumpingFactor > 100 || land.zone < -1 || land.zone > 63)
         return fail("invalid center, radius, target count, clumpingFactor (0..100) or zone (-1..63)");
+    for (const auto &land : lands) {
+        const int right = land.rightBorder == -1 ? static_cast<int>(width) : land.rightBorder;
+        const int bottom = land.bottomBorder == -1 ? static_cast<int>(height) : land.bottomBorder;
+        if (land.borderFuzziness > 255 || land.leftBorder < 0 || land.topBorder < 0 ||
+            right < land.leftBorder || bottom < land.topBorder ||
+            right > static_cast<int>(width) || bottom > static_cast<int>(height))
+            return fail("invalid edge bounds or borderFuzziness (0..255)");
+    }
     auto paint = [&](uint8_t id, uint32_t w, uint32_t h, std::vector<uint8_t> &raster) {
         return generateRmsBaseTerrain({{"<LAND_GENERATION>", 0, 0}, {"base_terrain", 0, 0},
                                       {std::to_string(id), 0, 0}}, w, h, terrainData, raster, err);
@@ -492,6 +500,21 @@ bool growRmsLands(uint32_t width, uint32_t height, uint8_t baseTerrain,
     std::vector<int> heads(lands.size(), -1);
     std::vector<uint32_t> areas(64, 0);
     auto zoneFor = [&](int owner) { return lands[owner].zone < 0 ? owner : lands[owner].zone; };
+    // Original 0x4da5e0; bounds describe the allowed land region, not a radius.
+    auto edgeRejection = [&](const RmsLandGrowth &land, int x, int y) {
+        if (!land.borderFuzziness) return 0;
+        const int left = land.leftBorder, top = land.topBorder;
+        const int right = land.rightBorder == -1 ? static_cast<int>(width) : land.rightBorder;
+        const int bottom = land.bottomBorder == -1 ? static_cast<int>(height) : land.bottomBorder;
+        const int horizontal = std::max({left - x, x - right, 0});
+        const int quarter = (right - left) / 4;
+        int corner = std::max(left - x + std::min(left, quarter),
+                              x - right + std::min(static_cast<int>(width) - right, quarter));
+        corner = corner > 0 ? std::min(corner, (bottom - top) / 3) : 0;
+        const int vertical = std::max({top - y + corner, y - bottom + corner, 0});
+        const int score = (horizontal + vertical) * static_cast<int>(land.borderFuzziness);
+        return score >= 100 ? 101 : score;
+    };
     // Original 0x4d69a0 uses one intrusive node per tile across ALL lands.
     // Reinsertion transfers the existing node out of any prior land queue; ascending priorities insert BEFORE equal priorities.
     auto remove = [&](int id) {
@@ -561,8 +584,9 @@ bool growRmsLands(uint32_t width, uint32_t height, uint8_t baseTerrain,
             maxWork -= 26;
             const int id = heads[owner], x = id % w, y = id / w;
             remove(id);
-            // Even a zero edge-rejection gate consumes its comparison draw.
-            roll();
+            // Even a zero gate consumes a draw. Original rejection precedes
+            // occupancy checking and permanently marks this cell unavailable.
+            if (edgeRejection(land, x, y) > roll()) { zones[id] = 255; continue; }
             if (zones[id] != 254) continue;
             int adjacency = 0;
             // 0x4da400 with separation zero: count owned cells in clipped 5x5.

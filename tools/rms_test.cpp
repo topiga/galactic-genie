@@ -451,6 +451,58 @@ int main(int argc, char **argv) {
                 && terrain.empty() && multiState == 12345, "out-of-bound zone must fail transactionally");
     badZone[0].zone = -2;
     require(!growRmsLands(9, 7, 0, badZone, terrainData, multiState, terrain, &err), "negative explicit zone rejected");
+    // Exact original two-land growth with inset bounds: rejected candidates
+    // become zone255, affecting other lands' future queue expansion and RNG.
+    struct EdgeCase { uint32_t seed, fuzziness, finalRng, hash; };
+    const EdgeCase edgeCases[] = {
+        {1u, 0, 3957879258u, 2819919929u},
+        {1u, 1, 108516897u, 3090479649u},
+        {1u, 15, 3950160536u, 4180151673u},
+        {1u, 20, 3365727239u, 2258020281u},
+        {1u, 100, 1883859121u, 105295285u},
+        {1u, 255, 1883859121u, 105295285u},
+        {12345u, 0, 1280788466u, 1618060882u},
+        {12345u, 1, 3748080539u, 264007472u},
+        {12345u, 15, 1628176098u, 1916756001u},
+        {12345u, 20, 3530115491u, 1622472266u},
+        {12345u, 100, 2803282665u, 3558578369u},
+        {12345u, 255, 2803282665u, 3558578369u},
+    };
+    std::vector<RmsLandGrowth> edgeLands = {{1,2,3,0,63,10}, {2,6,3,0,63,10}};
+    for (auto &l : edgeLands) { l.leftBorder=1; l.topBorder=1; l.rightBorder=7; l.bottomBorder=5; }
+    for (const auto &c : edgeCases) {
+        for (auto &l : edgeLands) l.borderFuzziness=c.fuzziness;
+        uint32_t state=c.seed;
+        require(growRmsLands(9,7,0,edgeLands,terrainData,state,terrain,&err),err);
+        uint32_t hash=2166136261u;
+        for (uint8_t tile:terrain) hash=(hash^tile)*16777619u;
+        require(hash==c.hash && state==c.finalRng,"original edge-rejection growth/RNG mismatch");
+    }
+    auto defaultEdges = multiCases[0].lands;
+    // Seed30091 first draws32767 (roll100). Original score>=100 becomes101,
+    // so even that maximum roll rejects rather than accepting an edge tile.
+    RmsLandGrowth hardEdge{1,0,0,0,63,10,-1,100,3,3,5,5};
+    multiState=30091;
+    require(growRmsSingleLand(9,7,0,hardEdge,terrainData,multiState,terrain,&err),err);
+    require(multiState==3317704797u && terrain[0]==1 && std::count(terrain.begin(),terrain.end(),1)==1,
+            "original101 rejection threshold must reject maximum random roll100");
+    for (auto &l : defaultEdges) l.borderFuzziness=20;
+    multiState=multiCases[0].seed;
+    require(growRmsLands(9,7,0,defaultEdges,terrainData,multiState,terrain,&err),err);
+    uint32_t defaultEdgeHash=2166136261u;
+    for (uint8_t tile:terrain) defaultEdgeHash=(defaultEdgeHash^tile)*16777619u;
+    require(defaultEdgeHash==multiCases[0].hash && multiState==multiCases[0].finalRng,
+            "full-map default bounds have zero edge score even with original fuzziness20");
+    multiState=12345;
+    require(!growRmsLands(9,7,0,edgeLands,terrainData,multiState,terrain,&err,100)
+                && terrain.empty() && multiState==12345,"edge work exhaustion must preserve state");
+    edgeLands[0].borderFuzziness=256;
+    require(!growRmsLands(9,7,0,edgeLands,terrainData,multiState,terrain,&err),"invalid edge byte rejected");
+    edgeLands[0].borderFuzziness=20;
+    edgeLands[0].rightBorder=0;
+    require(!growRmsLands(9,7,0,edgeLands,terrainData,multiState,terrain,&err),"inverted edge bounds rejected");
+    edgeLands[0].rightBorder=10;
+    require(!growRmsLands(9,7,0,edgeLands,terrainData,multiState,terrain,&err),"off-map edge bounds rejected");
     if (argc == 2) {
         ResourceSet resources;
         require(resources.add(argv[1], &err), err);

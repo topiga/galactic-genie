@@ -65,7 +65,7 @@ bool smoothRmsTerrain(uint32_t width, uint32_t height, uint8_t baseTerrain,
                       const std::vector<uint8_t> &input, std::vector<uint8_t> &out,
                       std::string *err = nullptr, size_t maxTileVisits = 64 * 1024 * 1024);
 // Explicit single-land execution boundary, before the separate final smoother.
-// Only zero land separation and zero edge rejection are implemented. Parameters
+// Only zero land separation is implemented. Parameters
 // are resolved engine values; this does not execute a full RMS script.
 struct RmsLandGrowth {
     uint8_t terrain = 0;
@@ -75,6 +75,10 @@ struct RmsLandGrowth {
     // Resolved original zone byte; -1 retains ordinal zones for native callers.
     // Explicit 0..63 values preserve shared zones and original budget accounting.
     int zone = -1;
+    uint32_t borderFuzziness = 0; // Original byte, supported 0..255.
+    // Resolved tile bounds, inclusive comparisons; -1 right/bottom means map
+    // width/height (the original defaults, not the last tile coordinate).
+    int leftBorder = 0, topBorder = 0, rightBorder = -1, bottomBorder = -1;
 };
 bool growRmsSingleLand(uint32_t width, uint32_t height, uint8_t baseTerrain,
                        const RmsLandGrowth &land, const dat::TerrainBlock &terrainData,
