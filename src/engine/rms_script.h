@@ -61,9 +61,11 @@ bool generateRmsLandSeedTerrain(const std::vector<RmsToken> &directives,
 // Does not grow lands or perform the engine's tile-update side effects. Input and
 // output may alias. Rejects invalid dimensions or exhausted tile-visit budget;
 // failure leaves output empty rather than returning a partially smoothed map.
+// Optional paintedTiles records changed tile indices in original setter order.
 bool smoothRmsTerrain(uint32_t width, uint32_t height, uint8_t baseTerrain,
                       const std::vector<uint8_t> &input, std::vector<uint8_t> &out,
-                      std::string *err = nullptr, size_t maxTileVisits = 64 * 1024 * 1024);
+                      std::string *err = nullptr, size_t maxTileVisits = 64 * 1024 * 1024,
+                      std::vector<uint32_t> *paintedTiles = nullptr);
 // Explicit single-land execution boundary, before the separate final smoother.
 // Parameters
 // are resolved engine values; this does not execute a full RMS script.

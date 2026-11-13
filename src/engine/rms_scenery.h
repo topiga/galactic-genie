@@ -11,6 +11,7 @@ struct RmsSceneryPlacement {
     float x = 0, y = 0;
     uint8_t facet = 0;
     float headingRadians = 0; // Original type30 heading; static tree heading remains zero.
+    bool alive = true; // Dead early scenery retains its original creation ordinal.
 };
 
 // Original automatic scenery pass on empty flat terrain, before object rows.

@@ -403,7 +403,8 @@ bool generateRmsLandSeedTerrain(const std::vector<RmsToken> &directives,
 }
 bool smoothRmsTerrain(uint32_t width, uint32_t height, uint8_t baseTerrain,
                       const std::vector<uint8_t> &input, std::vector<uint8_t> &out,
-                      std::string *err, size_t maxTileVisits) {
+                      std::string *err, size_t maxTileVisits, std::vector<uint32_t> *paintedTiles) {
+    if (paintedTiles) paintedTiles->clear();
     if (err) err->clear();
     auto fail = [&](const char *reason) {
         out.clear();
@@ -415,6 +416,7 @@ bool smoothRmsTerrain(uint32_t width, uint32_t height, uint8_t baseTerrain,
     if (input.size() != static_cast<size_t>(width) * height)
         return fail("terrain raster size does not match dimensions");
     auto raster = input;
+    std::vector<uint32_t> paints;
     // Original 0x492ab0: two row-major, in-place passes, repeated until neither
     // changes a tile. Outside-map neighbors never match the base terrain.
     constexpr int dx[] = {0, 1, 1, 1, 0, -1, -1, -1};
@@ -447,12 +449,16 @@ bool smoothRmsTerrain(uint32_t width, uint32_t height, uint8_t baseTerrain,
                                 (n(6) && !n(7)) || (n(5) && !n(6)) || (n(4) && !n(5) && !n(3)));
                         }
                     }
-                    if (replace) { tile = baseTerrain; changed = true; }
+                    if (replace) {
+                        tile = baseTerrain; changed = true;
+                        if (paintedTiles) paints.push_back(static_cast<uint32_t>(y)*width+x);
+                    }
                 }
             }
         }
     } while (changed);
     out = std::move(raster);
+    if (paintedTiles) *paintedTiles = std::move(paints);
     return true;
 }
 bool growRmsSingleLand(uint32_t width, uint32_t height, uint8_t baseTerrain,

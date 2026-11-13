@@ -239,6 +239,19 @@ int main(int argc, char **argv) {
     require(!smoothRmsTerrain(3, 3, 0, {1,0,1,1,1,1,1,0,1}, smoothing, &err, 18)
                 && smoothing.empty() && err.find("limit") != std::string::npos,
             "work limit must reject partial smoothing rather than publish it");
+    std::vector<uint32_t> paints={99};
+    require(smoothRmsTerrain(3,3,10,{10,10,10,10,9,10,10,10,10},smoothing,&err,
+                             64*1024*1024,&paints) && paints==std::vector<uint32_t>{4},
+            "original active-base setter event order");
+    require(smoothRmsTerrain(3,3,10,smoothing,smoothing,&err,64*1024*1024,&paints) && paints.empty(),
+            "unchanged terrain must not emit scenery callbacks");
+    paints={99};
+    require(!smoothRmsTerrain(3,3,10,{10,10,10,10,9,10,10,10,10},smoothing,&err,9,&paints)
+                && paints.empty() && smoothing.empty(),
+            "failed smoothing must discard early setter events");
+    require(smoothRmsTerrain(8,9,10,{44,44,41,41,44,10,9,6,9,10,9,6,10,41,6,44,10,41,9,9,41,10,6,10,41,10,10,10,10,9,10,6,10,10,41,9,10,6,41,44,44,41,44,44,41,41,6,9,10,9,9,6,9,10,10,10,6,6,41,41,10,10,10,44,6,6,44,6,10,6,10,9},smoothing,&err,64*1024*1024,&paints)
+                && paints==std::vector<uint32_t>{13,17,20,22,24,29,40,69,44,45,51,52,37,42,43,49,50,34,35,41},
+            "original multi-pass setter order must not be sorted into raster order");
     // Complete original 0x4da6f0, with only the rectangle painter intercepted.
     // Golden terrain hashes and final RNG include frontier gap fill, before smoothing.
     struct GrowthCase { uint32_t w, h, x, y, radius, target, coefficient, seed, finalRng, hash; };

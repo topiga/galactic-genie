@@ -247,13 +247,72 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         check(game.initRms(script,{},32,state,&error) && state==landStates[fixture] &&
               game.objectCountForTesting(0,411)==landTrees[fixture],"Native active-land scenery import");
     }
-    const std::string unsafeBase="<LAND_GENERATION> base_terrain 10 create_player_lands { terrain_type 9 base_size 3 number_of_tiles 60 }";
+    const std::string earlySource=R"(<LAND_GENERATION> base_terrain 10
+        create_player_lands { terrain_type 9 base_size 3 number_of_tiles 60 }
+        <TERRAIN_GENERATION>
+        create_terrain 6 { base_terrain 10 number_of_tiles 37 number_of_clumps 4 spacing_to_other_terrain_types 1 }
+        create_terrain 44 { base_terrain 9 number_of_tiles 9 number_of_clumps 2 clumping_factor 6 })";
+    struct EarlyFixture { uint32_t seed,terrainHash,objectHash,finalState,count,dead; bool mixed=false; };
+    const EarlyFixture earlyFixtures[]={
+        {1,4041467588u,1499949720u,4128097079u,761,5},
+        {12345,192774748u,2121961969u,2558323739u,771,11},
+        {1,1568528174u,881650898u,545854133u,493,4,true},
+        {12345,3390887566u,3430050172u,3745431014u,504,6,true},
+    };
+    check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes) {
+        if (id!=0) return false;
+        bytes.assign(earlySource.begin(),earlySource.end());return true;
+    },{},&error),error.c_str());
+    for (const auto &fixture:earlyFixtures) {
+        auto source=earlySource;
+        if (fixture.mixed) {
+            const std::string old="number_of_tiles 37 number_of_clumps 4 spacing_to_other_terrain_types 1";
+            source.replace(source.find(old),old.size(),"number_of_tiles 300 number_of_clumps 12 spacing_to_other_terrain_types 0");
+        }
+        check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes) {
+            if (id!=0) return false;
+            bytes.assign(source.begin(),source.end());return true;
+        },{},&error),error.c_str());
+        swgb::RmsMap map;state=fixture.seed;
+        check(swgb::generateRmsMap(script,{},32,32,assets.dat(),state,map,&error),error.c_str());
+        uint32_t terrainHash=2166136261u,objectHash=2166136261u,dead=0;
+        for (auto tile:map.terrain) terrainHash=(terrainHash^tile)*16777619u;
+        for (const auto &p:map.scenery) {
+            objectHash=(objectHash^(uint32_t(p.y)*32+uint32_t(p.x)))*16777619u;
+            objectHash=(objectHash^p.facet)*16777619u;
+            objectHash=(objectHash^uint32_t(p.alive))*16777619u;
+            dead+=!p.alive;
+        }
+        check(terrainHash==fixture.terrainHash && objectHash==fixture.objectHash &&
+              state==fixture.finalState && map.scenery.size()==fixture.count && dead==fixture.dead,
+              "Original early-forest pipeline terrain, creation order, removals and RNG");
+        state=fixture.seed;
+        check(game.initRms(script,{},32,state,&error) && state==fixture.finalState,error.c_str());
+        check(game.objectCountForTesting(0,411)==fixture.count-fixture.dead,"Removed early trees must not be resurrected");
+        for (size_t i=0;i<map.scenery.size();++i) {
+            const auto &p=map.scenery[i];
+            check(game.objectHitPoints(i+1)==(p.alive?50:0),"Original creation ordinal gaps preserved in native IDs");
+            if (p.alive) check(game.objectPosition(i+1)==std::array<float,2>{p.x,p.y} &&
+                              game.objectResourceAmount(i+1)==100,"Early forest survivors preserve position and resources");
+        }
+    }
+    for (int water:{1,4,22,23}) {
+        const std::string source="<LAND_GENERATION> base_terrain 10 create_player_lands { terrain_type "+std::to_string(water)+" }";
+        check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes) {
+            if (id!=0) return false;
+            bytes.assign(source.begin(),source.end());return true;
+        },{},&error),error.c_str());
+        swgb::RmsMap rejected;state=1;
+        check(!swgb::generateRmsMap(script,{},32,32,assets.dat(),state,rejected,&error) && state==1 && rejected.scenery.empty(),
+              "Forest-base water callbacks remain explicitly unsupported");
+    }
+    const std::string unsafeBase="<LAND_GENERATION> base_terrain 13 create_player_lands { terrain_type 9 base_size 3 number_of_tiles 60 }";
     check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes) {
         if (id!=0) return false;
         bytes.assign(unsafeBase.begin(),unsafeBase.end());return true;
     },{},&error),error.c_str());
     swgb::RmsMap rejected;state=1;
     check(!swgb::generateRmsMap(script,{},32,32,assets.dat(),state,rejected,&error) && state==1 && rejected.terrain.empty(),
-          "Active base requires unimplemented early scenery callbacks and must reject");
+          "Other active bases require their own early scenery validation and must reject");
     std::puts("PASS: original RMS player lands, timber spawning, facets, resources and validation");
 }

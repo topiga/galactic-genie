@@ -2,6 +2,7 @@
 #include "rms_map.h"
 #include "rms_terrain.h"
 #include "rms_terrain_cleanup.h"
+#include "rms_early_forest.h"
 #include "../core/genie_dat.h"
 #include "../core/genie_random.h"
 #include <algorithm>
@@ -160,17 +161,25 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             data.terrainBlock.terrains[alias].enabled==1 && data.terrainBlock.terrains[alias].terrainToDraw==-1;
         if (t.enabled!=1 || (alias!=-1 && !validAlias) || t.numTerrainUnitsUsed<0 || t.numTerrainUnitsUsed>30)
             return false;
-        // Land/terrain rows write raw bytes; only the inactive base may be painted by smoothing.
+        // Land/terrain rows write raw bytes; active bases need separate smoothing callbacks.
         if (allowScenery && (terrain==10 || terrain==13 || (terrain>=17 && terrain<=21) || terrain==49 || terrain==50)) return true;
         // Original 0x495020 skips the exact -1 sentinel before consulting other slot fields.
         for (int slot=0;slot<t.numTerrainUnitsUsed;++slot)
             if (t.terrainUnitId[slot]!=-1) return false;
         return true;
     };
-    if (!safeTerrain(static_cast<uint8_t>(base))) return fail("unsupported base terrain metadata");
+    const bool earlyForest=base==10;
+    if (!safeTerrain(static_cast<uint8_t>(base),earlyForest)) return fail("unsupported base terrain metadata");
     for (const auto &land:lands) if (!safeTerrain(land.terrain,true)) return fail("unsupported land terrain metadata");
     for (const auto &row:terrainRows)
         if (!safeTerrain(row.terrain,true) || !safeTerrain(row.baseTerrain,true)) return fail("unsupported terrain row metadata");
+    if (earlyForest) {
+        auto water=[](uint8_t id) { return id==1 || id==4 || id==22 || id==23; };
+        for (const auto &land:lands) if (water(land.terrain))
+            return fail("forest base with water requires later scenery setter callbacks");
+        for (const auto &row:terrainRows) if (water(row.terrain) || water(row.baseTerrain))
+            return fail("forest base with water requires later scenery setter callbacks");
+    }
     RmsMap generated;
     std::vector<RmsTerrainProtection> protection;
     generated.width=width; generated.height=height;
@@ -195,16 +204,22 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         genieRandomDraw(rng);
     }
     genieRandomDraw(rng); // Scheduler logging before its first stage.
+    std::vector<uint32_t> earlyPaints;
+    std::vector<RmsSceneryPlacement> early;
     if (!growRmsLands(width,height,static_cast<uint8_t>(base),lands,data.terrainBlock,rng,generated.terrain,err) ||
-        !smoothRmsTerrain(width,height,static_cast<uint8_t>(base),generated.terrain,generated.terrain,err)) return false;
+        !smoothRmsTerrain(width,height,static_cast<uint8_t>(base),generated.terrain,generated.terrain,err,
+                          64*1024*1024,earlyForest?&earlyPaints:nullptr)) return false;
+    if (earlyForest && !generateRmsEarlyForest(width,height,earlyPaints,data,rng,early,err)) return false;
     genieRandomDraw(rng);
     if (!generateRmsTerrain(width,height,terrainRows,rng,generated.terrain,err,protection)) return false;
     if (!smoothRmsTerrain(width,height,1,generated.terrain,generated.terrain,err) ||
         !cleanupRmsTerrain(width,height,generated.terrain,err)) return false;
     genieRandomDraw(rng);
-    if (!generateRmsScenery(width,height,generated.terrain,data,rng,generated.scenery,err)) return false;
+    if (earlyForest) {
+        if (!finishRmsEarlyForest(width,height,generated.terrain,data,early,rng,generated.scenery,err)) return false;
+    } else if (!generateRmsScenery(width,height,generated.terrain,data,rng,generated.scenery,err)) return false;
     std::vector<uint32_t> occupied;
-    for (const auto &tree:generated.scenery)
+    for (const auto &tree:generated.scenery) if (tree.alive)
         occupied.push_back(static_cast<uint32_t>(tree.y)*width+static_cast<uint32_t>(tree.x));
     if (hasObjects && !generateRmsTimberPlacements(width,height,generated.terrain,data,objectCount,rng,generated.timber,err,occupied))
         return false;

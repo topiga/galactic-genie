@@ -1157,10 +1157,10 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     for (int y=0;y<mapSize;++y) for (int x=0;x<mapSize;++x)
         scenario.map.tiles[static_cast<size_t>(x)*mapSize+mapSize-1-y].terrain =
             generated.terrain[static_cast<size_t>(y)*mapSize+x];
-    auto placeTree = [&](int unitId,float x,float y,uint8_t facet) {
+    auto placeTree = [&](int unitId,float x,float y,uint8_t facet,uint32_t spawnId) {
         ScenarioUnit unit;
         unit.unitId=unitId;
-        unit.spawnId=static_cast<uint32_t>(scenario.units.size())+1;
+        unit.spawnId=spawnId;
         unit.state=2;
         unit.x=mapSize-y; unit.y=x;
         const auto &prototype=assets_.dat().civs[0].units[unitId];
@@ -1168,11 +1168,15 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         unit.rotation=rmsTimberFacing(facet,graphic->angleCount)+kPi*.5f;
         scenario.units.push_back(unit);
     };
-    for (const auto &placement:generated.scenery)
-        placeTree(placement.unitId,placement.x,placement.y,placement.facet);
+    // Native ID0 is reserved; retain original creation order and deleted gaps at offset1.
+    uint32_t nextId=1;
+    for (const auto &placement:generated.scenery) {
+        if (placement.alive) placeTree(placement.unitId,placement.x,placement.y,placement.facet,nextId);
+        ++nextId;
+    }
     for (const auto &placement:generated.timber)
-        placeTree(348,placement.x,placement.y,placement.facet);
-    scenario.nextUnitId=static_cast<uint32_t>(scenario.units.size())+1;
+        placeTree(348,placement.x,placement.y,placement.facet,nextId++);
+    scenario.nextUnitId=nextId;
     if (!initScenario(scenario,err)) return false;
     randomState=rng;
     return true;

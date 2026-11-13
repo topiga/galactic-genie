@@ -10,7 +10,7 @@ struct RmsMap {
     uint32_t width = 0, height = 0;
     std::vector<uint8_t> terrain;
     std::vector<RmsTimberPlacement> timber;
-    std::vector<RmsSceneryPlacement> scenery;
+    std::vector<RmsSceneryPlacement> scenery; // Creation order, including removed early scenery.
     std::vector<RmsPlayerStart> playerStarts; // Owner order1..playerCount; no starting units implied.
 };
 
