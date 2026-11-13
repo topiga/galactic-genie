@@ -13,7 +13,7 @@ tool = build/'swgbtool'
 
 with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     work = Path(directory)
-    source = (root/'tools/fixtures/two-player-lands.rms').read_text()
+    source = (root/'tools/fixtures/player-terrain.rms').read_text()
     (work/'map.rms').write_text(source)
     # Authored resources only: exercise archive includes and startup defines.
     files = [(60000, ('#include_drs test.def 60001\n'+source.replace('terrain_type 3', 'terrain_type GROUND')).encode()),

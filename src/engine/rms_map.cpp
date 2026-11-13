@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "rms_map.h"
+#include "rms_terrain.h"
 #include "../core/genie_dat.h"
 #include "../core/genie_random.h"
 #include <algorithm>
@@ -38,13 +39,15 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     bool playerSetup = false;
     uint32_t objectCount = 1;
     std::vector<RmsLandGrowth> lands;
+    std::vector<RmsTerrainRow> terrainRows;
     while (i < tokens.size()) {
         const std::string command = tokens[i++].text;
         if (command == "<PLAYER_SETUP>" && stage == 0 && !playerSetup) { playerSetup=true; continue; }
         // Original handler0x4e2c10 accepts this without changing the game setting.
         if (command == "random_placement" && stage == 0 && playerSetup) continue;
         if (command == "<LAND_GENERATION>" && stage == 0) { stage = 1; continue; }
-        if (command == "<OBJECTS_GENERATION>" && stage == 1) { stage = 2; continue; }
+        if (command == "<TERRAIN_GENERATION>" && stage == 1) { stage = 2; continue; }
+        if (command == "<OBJECTS_GENERATION>" && (stage == 1 || stage == 2)) { stage = 3; continue; }
         int32_t value = 0;
         if (stage == 1 && command == "base_terrain") {
             if (!number(value)) return fail("base_terrain requires an integer");
@@ -86,7 +89,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     land.targetTiles=width*height*static_cast<uint32_t>(value)/(100u*(players?playerCount:1u));
                 } else if (name == "clumping_factor" && value>=0 && value<=100) land.clumpingFactor=value;
                 else if (name == "border_fuzziness" && value>=0 && value<=255) land.borderFuzziness=value;
-                else if (name == "other_zone_avoidance_distance" && value==0) {}
+                else if (name == "other_zone_avoidance_distance" && value>=0 && value<=1024) land.separation=value;
                 else if (name == "zone" && !players && value>=-10 && value<=53) land.zone=value+10;
                 else return fail("unsupported land parameter/value " + name);
             }
@@ -97,7 +100,40 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 playerLands=true;
                 for (uint32_t owner=1;owner<=playerCount;++owner) { land.zone=owner; lands.push_back(land); }
             } else lands.push_back(land);
-        } else if (stage == 2 && command == "create_object" && !hasObjects) {
+        } else if (stage == 2 && command == "create_terrain") {
+            if (terrainRows.size()==99 || !number(value) || i==tokens.size() || tokens[i++].text!="{")
+                return fail("expected terrain block, at most99 rows");
+            RmsTerrainRow row;
+            row.terrain=static_cast<uint8_t>(value);
+            row.targetTiles=width;
+            int32_t tileAmount=static_cast<int32_t>(width);
+            int scaling=0;
+            bool hasBase=false;
+            while (i<tokens.size() && tokens[i].text!="}") {
+                const auto name=tokens[i++].text;
+                if (name=="set_scale_by_size") { scaling=1; continue; }
+                if (name=="set_scale_by_groups") { scaling=2; continue; }
+                if (name=="set_avoid_player_start_areas") { row.avoidPlayerStarts=true; continue; }
+                if (!number(value)) return fail(name+" requires an integer");
+                if (name=="base_terrain") { row.baseTerrain=static_cast<uint8_t>(value); hasBase=true; }
+                else if (name=="number_of_tiles" && value>=0 && uint32_t(value)<=width*height) tileAmount=value;
+                else if (name=="land_percent" && value>=0 && value<=100) tileAmount=-value;
+                else if (name=="number_of_clumps" && value>=0 && value<=999) row.clumps=value;
+                else if (name=="spacing_to_other_terrain_types" && value>=0 && value<=1024) row.spacing=value;
+                else if (name=="clumping_factor" && value>=0 && value<=100) row.clumping=value;
+                else return fail("unsupported terrain parameter/value "+name);
+            }
+            if (i==tokens.size()) return fail("unterminated terrain block");
+            ++i;
+            if (!hasBase) return fail("terrain row requires explicit base_terrain");
+            if (tileAmount<0 || scaling) {
+                const uint64_t product=uint64_t(tileAmount<0?-tileAmount:tileAmount)*width*height;
+                if (product>INT32_MAX) return fail("terrain scaling exceeds supported signed arithmetic");
+                row.targetTiles=product/(tileAmount<0?100:10000);
+            } else row.targetTiles=tileAmount;
+            if (scaling==2) row.clumps=uint64_t(row.clumps)*width*height/10000;
+            terrainRows.push_back(row);
+        } else if (stage == 3 && command == "create_object" && !hasObjects) {
             if (!number(value) || value!=348 || i==tokens.size() || tokens[i++].text!="{")
                 return fail("only one default timber348 object block is supported");
             hasObjects=true;
@@ -119,7 +155,10 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     };
     if (!safeTerrain(static_cast<uint8_t>(base))) return fail("unsupported base terrain metadata; require plain terrain0/3");
     for (const auto &land:lands) if (!safeTerrain(land.terrain)) return fail("unsupported land terrain metadata");
+    for (const auto &row:terrainRows)
+        if (!safeTerrain(row.terrain) || !safeTerrain(row.baseTerrain)) return fail("unsupported terrain row metadata");
     RmsMap generated;
+    std::vector<RmsTerrainProtection> protection;
     generated.width=width; generated.height=height;
     if (playerLands) {
         std::vector<RmsPlayerStart> starts;
@@ -128,6 +167,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             lands[owner].centerX=static_cast<uint32_t>(starts[owner].x);
             lands[owner].centerY=static_cast<uint32_t>(starts[owner].y);
             generated.playerStarts.push_back(starts[owner]);
+            protection.push_back({starts[owner].x,starts[owner].y,13,20});
         }
     } else {
         // Original setup still consumes permutation/offset draws without player lands.
@@ -144,7 +184,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if (!growRmsLands(width,height,static_cast<uint8_t>(base),lands,data.terrainBlock,rng,generated.terrain,err) ||
         !smoothRmsTerrain(width,height,static_cast<uint8_t>(base),generated.terrain,generated.terrain,err)) return false;
     genieRandomDraw(rng);
-    // The auto-enabled empty terrain stage is a proven no-op on terrain0/3.
+    if (!generateRmsTerrain(width,height,terrainRows,rng,generated.terrain,err,protection)) return false;
+    // Post-terrain smoothing and cleanup are proven no-ops on terrain0/3.
     genieRandomDraw(rng);
     if (hasObjects && !generateRmsTimberPlacements(width,height,generated.terrain,data,objectCount,rng,generated.timber,err))
         return false;

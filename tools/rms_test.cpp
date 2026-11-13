@@ -503,6 +503,75 @@ int main(int argc, char **argv) {
     require(!growRmsLands(9,7,0,edgeLands,terrainData,multiState,terrain,&err),"inverted edge bounds rejected");
     edgeLands[0].rightBorder=10;
     require(!growRmsLands(9,7,0,edgeLands,terrainData,multiState,terrain,&err),"off-map edge bounds rejected");
+    // Full original 0x4da6f0 fixtures, including its 0x4da400 separation predicate.
+    struct SeparationCase { uint32_t seed, a, b, zoneA, zoneB, overlapping, finalRng, hash; };
+    const SeparationCase separationCases[] = {
+        {1u, 0u, 0u, 0u, 1u, 0u, 3957879258u, 2819919929u},
+        {1u, 0u, 0u, 1u, 1u, 0u, 3957879258u, 1292919084u},
+        {1u, 1u, 1u, 0u, 1u, 0u, 1229611062u, 3312653651u},
+        {1u, 1u, 1u, 1u, 1u, 0u, 3957879258u, 1292919084u},
+        {1u, 2u, 2u, 0u, 1u, 0u, 3327618242u, 1521259424u},
+        {1u, 2u, 2u, 1u, 1u, 0u, 3957879258u, 1292919084u},
+        {1u, 3u, 3u, 0u, 1u, 0u, 1221339053u, 3212817590u},
+        {1u, 3u, 3u, 1u, 1u, 0u, 3957879258u, 1292919084u},
+        {1u, 4u, 4u, 0u, 1u, 0u, 1084083701u, 3270113133u},
+        {1u, 4u, 4u, 1u, 1u, 0u, 3957879258u, 1292919084u},
+        {1u, 5u, 5u, 0u, 1u, 0u, 1924036713u, 3447318956u},
+        {1u, 5u, 5u, 1u, 1u, 0u, 3957879258u, 1292919084u},
+        {1u, 6u, 6u, 0u, 1u, 0u, 1924036713u, 3447318956u},
+        {1u, 6u, 6u, 1u, 1u, 0u, 3957879258u, 1292919084u},
+        {1u, 9u, 9u, 0u, 1u, 0u, 1924036713u, 3447318956u},
+        {1u, 9u, 9u, 1u, 1u, 0u, 3957879258u, 1292919084u},
+        {1u, 20u, 20u, 0u, 1u, 0u, 1924036713u, 3447318956u},
+        {1u, 20u, 20u, 1u, 1u, 0u, 3957879258u, 1292919084u},
+        {1u, 0u, 1u, 10u, 11u, 1u, 583889235u, 1902008752u},
+        {1u, 3u, 0u, 10u, 11u, 1u, 1587391380u, 3095973256u},
+        {1u, 1u, 5u, 10u, 11u, 1u, 1978610859u, 226037942u},
+        {1u, 6u, 2u, 10u, 11u, 1u, 3250303071u, 1068506822u},
+        {12345u, 0u, 0u, 0u, 1u, 0u, 1280788466u, 1618060882u},
+        {12345u, 0u, 0u, 1u, 1u, 0u, 1280788466u, 3450314790u},
+        {12345u, 1u, 1u, 0u, 1u, 0u, 2896408581u, 2119129294u},
+        {12345u, 1u, 1u, 1u, 1u, 0u, 1280788466u, 3450314790u},
+        {12345u, 2u, 2u, 0u, 1u, 0u, 1631149365u, 3273639964u},
+        {12345u, 2u, 2u, 1u, 1u, 0u, 1280788466u, 3450314790u},
+        {12345u, 3u, 3u, 0u, 1u, 0u, 1944022629u, 3212817590u},
+        {12345u, 3u, 3u, 1u, 1u, 0u, 1280788466u, 3450314790u},
+        {12345u, 4u, 4u, 0u, 1u, 0u, 1367366578u, 214379920u},
+        {12345u, 4u, 4u, 1u, 1u, 0u, 1280788466u, 3450314790u},
+        {12345u, 5u, 5u, 0u, 1u, 0u, 354763681u, 3447318956u},
+        {12345u, 5u, 5u, 1u, 1u, 0u, 1280788466u, 3450314790u},
+        {12345u, 6u, 6u, 0u, 1u, 0u, 354763681u, 3447318956u},
+        {12345u, 6u, 6u, 1u, 1u, 0u, 1280788466u, 3450314790u},
+        {12345u, 9u, 9u, 0u, 1u, 0u, 354763681u, 3447318956u},
+        {12345u, 9u, 9u, 1u, 1u, 0u, 1280788466u, 3450314790u},
+        {12345u, 20u, 20u, 0u, 1u, 0u, 354763681u, 3447318956u},
+        {12345u, 20u, 20u, 1u, 1u, 0u, 1280788466u, 3450314790u},
+        {12345u, 0u, 1u, 10u, 11u, 1u, 3159914280u, 2906783701u},
+        {12345u, 3u, 0u, 10u, 11u, 1u, 157067805u, 632918946u},
+        {12345u, 1u, 5u, 10u, 11u, 1u, 3530115491u, 226037942u},
+        {12345u, 6u, 2u, 10u, 11u, 1u, 1424270039u, 1068506822u},
+    };
+    for (const auto &c:separationCases) {
+        std::vector<RmsLandGrowth> lands = c.overlapping
+            ? std::vector<RmsLandGrowth>{{1,3,3,1,63,10}, {2,5,3,0,63,10}}
+            : std::vector<RmsLandGrowth>{{1,2,3,0,63,10}, {2,6,3,0,63,10}};
+        lands[0].separation=c.a; lands[1].separation=c.b;
+        lands[0].zone=c.zoneA; lands[1].zone=c.zoneB;
+        uint32_t state=c.seed;
+        require(growRmsLands(9,7,0,lands,terrainData,state,terrain,&err),err);
+        uint32_t hash=2166136261u;
+        for (uint8_t tile:terrain) hash=(hash^tile)*16777619u;
+        require(hash==c.hash && state==c.finalRng,"original separated-land terrain/RNG mismatch");
+    }
+    RmsLandGrowth distantLand{1,3,3,0,63,10};
+    distantLand.separation=1024;
+    multiState=12345;
+    require(!growRmsSingleLand(9,7,0,distantLand,terrainData,multiState,terrain,&err,100)
+                && terrain.empty() && multiState==12345 && err.find("limit")!=std::string::npos,
+            "separation scans must respect work limits and roll back");
+    distantLand.separation=1025;
+    require(!growRmsSingleLand(9,7,0,distantLand,terrainData,multiState,terrain,&err)
+                && terrain.empty() && multiState==12345,"oversized separation must fail atomically");
     if (argc == 2) {
         ResourceSet resources;
         require(resources.add(argv[1], &err), err);

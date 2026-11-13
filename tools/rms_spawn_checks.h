@@ -50,7 +50,7 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         if (id!=0) return false;
         bytes.assign(source.begin(),source.end()); return true;
     },{},&error),error.c_str());
-    struct Fixture { uint32_t seed, hash, finalState; swgb::RmsTimberPlacement objects[3]; };
+    struct Fixture { uint32_t seed, hash, finalState; swgb::RmsTimberPlacement objects[3]; bool terrainRows=false, protection=false; };
     const Fixture fixtures[]={
         {1,1509571036u,2283988067u,{{3.5f,1.5f,2},{2.5f,4.5f,7},{.5f,1.5f,5}}},
         {12345,2339149697u,4028089366u,{{.5f,3.5f,5},{4.5f,1.5f,9},{3.5f,.5f,9}}}
@@ -82,15 +82,26 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
     const std::string playerSource=R"(<LAND_GENERATION> base_terrain 0
         create_player_lands { terrain_type 3 base_size 3 number_of_tiles 60 clumping_factor 8 border_fuzziness 20 }
         <OBJECTS_GENERATION> create_object 348 { number_of_objects 3 })";
-    check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes) {
-        if (id!=0) return false;
-        bytes.assign(playerSource.begin(),playerSource.end()); return true;
-    },{},&error),error.c_str());
     const Fixture playerFixtures[]={
         {1,3728055951u,1403560318u,{{1.5f,5.5f,7},{3.5f,18.5f,3},{1.5f,29.5f,3}}},
-        {12345,1771775183u,3972322661u,{{18.5f,15.5f,1},{26.5f,22.5f,10},{4.5f,15.5f,2}}}
+        {12345,1771775183u,3972322661u,{{18.5f,15.5f,1},{26.5f,22.5f,10},{4.5f,15.5f,2}}},
+        {1,1549600828u,3883528439u,{{18.5f,6.5f,4},{12.5f,28.5f,4},{1.5f,19.5f,7}},true},
+        {12345,693012607u,2130667826u,{{6.5f,10.5f,7},{25.5f,28.5f,4},{3.5f,22.5f,8}},true},
+        {1,3452956004u,942928812u,{{2.5f,18.5f,1},{18.5f,9.5f,3},{9.5f,14.5f,9}},true,true},
+        {12345,353970588u,3736035543u,{{.5f,19.5f,5},{11.5f,18.5f,9},{7.5f,24.5f,5}},true,true}
     };
     for (const auto &fixture:playerFixtures) {
+        auto source=playerSource;
+        if (fixture.terrainRows) source.insert(source.find("<OBJECTS_GENERATION>"),R"(
+            <TERRAIN_GENERATION>
+            create_terrain 3 { base_terrain 0 number_of_tiles 37 number_of_clumps 4 spacing_to_other_terrain_types 1 }
+            create_terrain 0 { base_terrain 3 number_of_tiles 9 number_of_clumps 2 clumping_factor 6 }
+        )");
+        if (fixture.protection) source.insert(source.find("spacing_to_other_terrain_types"),"set_avoid_player_start_areas ");
+        check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes) {
+            if (id!=0) return false;
+            bytes.assign(source.begin(),source.end()); return true;
+        },{},&error),error.c_str());
         swgb::RmsMap map;
         state=fixture.seed;
         check(swgb::generateRmsMap(script,{},32,32,assets.dat(),state,map,&error),error.c_str());

@@ -53,6 +53,20 @@ int main() {
         check(!generateRmsMap(script,{},7,7,data,state,map,&error) && state==1 && map.terrain.empty(),
               "invalid borders must fail transactionally");
     }
+    auto separated=land;
+    for (size_t pos=0;(pos=separated.find("}",pos))!=std::string::npos;) {
+        const std::string distance="other_zone_avoidance_distance 2 ";
+        separated.insert(pos,distance); pos+=distance.size()+1;
+    }
+    load(separated);
+    const uint32_t separationHashes[]={2659705154u,2623728704u}, separationStates[]={483449721u,1874836596u};
+    for (size_t fixture=0;fixture<2;++fixture) {
+        state=seeds[fixture];
+        check(generateRmsMap(script,{},7,7,data,state,map,&error),error);
+        hash=2166136261u;
+        for (uint8_t tile:map.terrain) hash=(hash^tile)*16777619u;
+        check(hash==separationHashes[fixture] && state==separationStates[fixture],"original separated-land pipeline mismatch");
+    }
     load(land);
     state=2745024u; // State after the first original CRT draw from seed1.
     RmsMap expected;
@@ -136,5 +150,36 @@ int main() {
           "mixed player and nonplayer placement remains unsupported");
     load("<LAND_GENERATION> base_terrain 0 create_player_lands { terrain_type 3 land_position 50 50 }");
     check(!generateRmsMap(script,{},32,32,data,state,map,&error),"player lands must not accept explicit positions");
+    const std::string terrainRow=" <TERRAIN_GENERATION> create_terrain 3 { base_terrain 0 number_of_tiles 37 number_of_clumps 4 spacing_to_other_terrain_types 1 } create_terrain 0 { base_terrain 3 number_of_tiles 9 number_of_clumps 2 clumping_factor 6 }";
+    load(players+terrainRow); state=1;
+    check(generateRmsMap(script,{},32,32,data,state,map,&error),error);
+    hash=2166136261u;
+    for (uint8_t tile:map.terrain) hash=(hash^tile)*16777619u;
+    check(hash==1549600828u && state==uint32_t(1957819393u*214013u+2531011u),
+          "original land and terrain row pipeline mismatch");
+    load(players+" <TERRAIN_GENERATION> create_terrain 3 { base_terrain 0 number_of_tiles 97 number_of_clumps 20 set_scale_by_groups }");
+    state=1;
+    check(generateRmsMap(script,{},32,32,data,state,expected,&error),error);
+    const auto scaledState=state;
+    load(players+" <TERRAIN_GENERATION> create_terrain 3 { base_terrain 0 number_of_tiles 9 number_of_clumps 2 }");
+    state=1;
+    check(generateRmsMap(script,{},32,32,data,state,map,&error) && state==scaledState && map.terrain==expected.terrain,
+          "terrain scaling uses map area over10000 for tile and group counts");
+    auto protectedTerrain=terrainRow;
+    protectedTerrain.insert(protectedTerrain.find("spacing_to_other_terrain_types"),"set_avoid_player_start_areas ");
+    load(players+protectedTerrain); state=1;
+    check(generateRmsMap(script,{},32,32,data,state,map,&error),error);
+    hash=2166136261u;
+    for (uint8_t tile:map.terrain) hash=(hash^tile)*16777619u;
+    check(hash==3452956004u && state==uint32_t(1656093246u*214013u+2531011u),
+          "original fixed-radius player protection and terrain pipeline mismatch");
+    for (const auto &invalid:{"create_terrain 3 { number_of_tiles 2 }",
+                            "create_terrain 3 { base_terrain 3 }",
+                            "create_terrain 3 { base_terrain 0 unsupported_flag }",
+                            "create_terrain 3 { base_terrain 0 number_of_clumps -1 }"}) {
+        load(players+" <TERRAIN_GENERATION> "+invalid); state=1;
+        check(!generateRmsMap(script,{},32,32,data,state,map,&error) && state==1 && map.terrain.empty(),
+              "unsupported terrain row must fail without partial terrain or RNG");
+    }
     std::cout<<"RMS integrated map tests passed\n";
 }

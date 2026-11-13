@@ -482,6 +482,7 @@ bool growRmsLands(uint32_t width, uint32_t height, uint8_t baseTerrain,
     for (const auto &land : lands) {
         const int right = land.rightBorder == -1 ? static_cast<int>(width) : land.rightBorder;
         const int bottom = land.bottomBorder == -1 ? static_cast<int>(height) : land.bottomBorder;
+        if (land.separation > 1024) return fail("separation must be 0..1024");
         if (land.borderFuzziness > 255 || land.leftBorder < 0 || land.topBorder < 0 ||
             right < land.leftBorder || bottom < land.topBorder ||
             right > static_cast<int>(width) || bottom > static_cast<int>(height))
@@ -580,8 +581,8 @@ bool growRmsLands(uint32_t width, uint32_t height, uint8_t baseTerrain,
             const auto &land = lands[owner];
             if (areas[owner] >= land.targetTiles || heads[owner] < 0) continue;
             active = true;
-            if (maxWork < 26) return fail("work limit exceeded");
-            maxWork -= 26;
+            if (!maxWork) return fail("work limit exceeded");
+            --maxWork;
             const int id = heads[owner], x = id % w, y = id / w;
             remove(id);
             // Even a zero gate consumes a draw. Original rejection precedes
@@ -589,11 +590,28 @@ bool growRmsLands(uint32_t width, uint32_t height, uint8_t baseTerrain,
             if (edgeRejection(land, x, y) > roll()) { zones[id] = 255; continue; }
             if (zones[id] != 254) continue;
             int adjacency = 0;
-            // 0x4da400 with separation zero: count owned cells in clipped 5x5.
-            // Out-of-map neighbors contribute nothing for this supported subset.
-            for (int ny = std::max(0, y - 2); ny <= std::min(h - 1, y + 2); ++ny)
-                for (int nx = std::max(0, x - 2); nx <= std::min(w - 1, x + 2); ++nx)
-                    adjacency += zones[ny * w + nx] == zoneFor(owner);
+            const int separation = static_cast<int>(land.separation);
+            // Original 0x4da400 expands this span after outer rows; do not symmetrize it.
+            const int radius = std::max(static_cast<int>(separation * 0.666666), 2);
+            const int extent = std::max(separation, 2);
+            int left = x-radius, right = x+radius;
+            bool foreignZone = false;
+            for (int ny=y-extent; ny<=y+extent && !foreignZone; ++ny) {
+                if (!maxWork) return fail("work limit exceeded");
+                --maxWork;
+                if (ny>=0 && ny<h) for (int nx=std::max(0,left); nx<=std::min(w-1,right); ++nx) {
+                    if (!maxWork) return fail("work limit exceeded");
+                    --maxWork;
+                    const auto zone = zones[ny*w+nx];
+                    if (zone==zoneFor(owner)) adjacency += std::abs(nx-x)<=2 && std::abs(ny-y)<=2;
+                    else if (zone<254 && std::abs(nx-x)<=separation && std::abs(ny-y)<=separation) {
+                        foreignZone = true;
+                        break;
+                    }
+                }
+                if (ny<y-radius || ny>y+radius) { --left; ++right; }
+            }
+            if (foreignZone) continue;
             if (!adjacency) continue;
             zones[id] = static_cast<uint8_t>(zoneFor(owner));
             raster[id] = land.terrain;

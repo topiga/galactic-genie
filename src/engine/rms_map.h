@@ -13,9 +13,10 @@ struct RmsMap {
 };
 
 // Strict script pipeline: explicit nonplayer lands OR one player-land block (1..8 players)
-// on terrain0/3, zero separation, and optionally one default timber348 row.
+// on terrain0/3, bounded land separation, terrain clumps and optional timber348 row.
 // Player lands use the game's randomized-position mode, with default borders.
 // The RMS random_placement directive itself does not select this game setting.
+// Terrain rows support spacing, scaling and player-start protection on flat maps.
 // Rejects other stages/commands; not a complete packaged random-map generator.
 // RNG is the shared CRT state at script entry. Failure clears output and leaves RNG unchanged.
 bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::string> &defines,
