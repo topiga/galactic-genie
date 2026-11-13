@@ -33,6 +33,27 @@ int main() {
     // Original composed-stage oracle: object entry827320339, no object rows;
     // only the final scheduler log draw follows. TerrainFNV from original stages.
     check(hash==1509571036u && state==1578431114u && map.timber.empty(),"original empty-object pipeline mismatch");
+    auto bordered=land;
+    for (size_t pos=0;(pos=bordered.find("border_fuzziness 0",pos))!=std::string::npos;) {
+        const std::string bounds="border_fuzziness 100 left_border 25 right_border 25 top_border 25 bottom_border 25";
+        bordered.replace(pos,std::string("border_fuzziness 0").size(),bounds); pos+=bounds.size();
+    }
+    load(bordered);
+    const uint32_t seeds[]={1,12345}, hashes[]={2387610166u,204622211u}, states[]={483449721u,3426167425u};
+    for (size_t fixture=0;fixture<2;++fixture) {
+        state=seeds[fixture];
+        check(generateRmsMap(script,{},7,7,data,state,map,&error),error);
+        hash=2166136261u;
+        for (uint8_t tile:map.terrain) hash=(hash^tile)*16777619u;
+        check(hash==hashes[fixture] && state==states[fixture],"original bordered-land pipeline mismatch");
+    }
+    for (const auto &invalid:{"left_border -1","right_border 101","left_border 100 right_border 100"}) {
+        auto source=land; source.insert(source.find("}"),invalid);
+        load(source); state=1;
+        check(!generateRmsMap(script,{},7,7,data,state,map,&error) && state==1 && map.terrain.empty(),
+              "invalid borders must fail transactionally");
+    }
+    load(land);
     state=2745024u; // State after the first original CRT draw from seed1.
     RmsMap expected;
     check(generateRmsMap(script,{},7,7,data,state,expected,&error),error);

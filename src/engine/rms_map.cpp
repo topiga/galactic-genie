@@ -70,6 +70,15 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     land.centerY=height*static_cast<uint32_t>(y)/100;
                     position=true;
                 } else if (name == "base_size" && value>=0 && value<=1024) land.radius=value;
+                else if (!players && value>=0 && value<=100 &&
+                         (name=="left_border" || name=="right_border" ||
+                          name=="top_border" || name=="bottom_border")) {
+                    // Right/bottom subtract a truncated margin, not round the remaining percentage.
+                    if (name=="left_border") land.leftBorder=width*value/100;
+                    else if (name=="right_border") land.rightBorder=width-width*value/100;
+                    else if (name=="top_border") land.topBorder=height*value/100;
+                    else land.bottomBorder=height-height*value/100;
+                }
                 else if (name == "number_of_tiles" && value>=0 && uint32_t(value)<=width*height) {
                     land.targetTiles=value;
                 } else if (name == "land_percent" && value>=0 && value<=100) {
