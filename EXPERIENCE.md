@@ -708,3 +708,10 @@ Five isolated original-instruction fixtures corroborate the normal scorer and co
 This is not target discovery or a running military controller. Candidate eligibility, damage/vulnerability calculation, priority-condition resolution and group commands remain upstream/downstream requirements. Further original-byte tracing shows tactical 0x59f030 is a resumable 24-phase machine. Readiness/planning use separate phases; shared work budgets come from WINMM host milliseconds and incomplete passes keep their phase and group cursor. A guessed fixed attack interval would not match this mechanism. World invocation/pause gates, gathering, group maintenance, opponent/target-memory preparation and command completion/replanning remain to integrate.
 
 Local evidence: `ai-controller-facts/target-score-*` and `scheduler-cadence-*`, including exact bytes, executable digest and the original-code oracle. No live Windows comparison, system configuration changes or remote publishing occurred in this pass.
+
+
+## 2026-11-13 — Preserve original land-zone budget accounting
+
+Explicit zone bytes are now supported by `RmsLandGrowth.zone` in the native range 0..63; -1 preserves the previous ordinal-zone API behavior. Original seed setup resets the area counter by land ordinal, then writes seed area by zone byte, while growth reads the ordinal counter again. Shared or shifted zones therefore change growth budgets. Normalizing `zone 0` (stored as byte10) into native zone0 was experimentally incorrect and is no longer assumed.
+
+Thirty-one additional cases executed the original growth instructions for shifted zones10/11, shared0/63, reversed zones and three-way cycles. Native terrain and RNG results match. Existing ordinal/single-land fixtures still pass. Seed/work-budget failures remain transactional. Local evidence is in `rms-pipeline-findings-2026-11-13.txt` and the expanded original-stage probes/corpus; all algorithm sanitizer suites pass.

@@ -72,13 +72,16 @@ struct RmsLandGrowth {
     uint32_t centerX = 0, centerY = 0, radius = 0, targetTiles = 0;
     // Original land-row +0x1c, clumping_factor; native subset accepts 0..100.
     uint32_t clumpingFactor = 8;
+    // Resolved original zone byte; -1 retains ordinal zones for native callers.
+    // Explicit 0..63 values preserve shared zones and original budget accounting.
+    int zone = -1;
 };
 bool growRmsSingleLand(uint32_t width, uint32_t height, uint8_t baseTerrain,
                        const RmsLandGrowth &land, const dat::TerrainBlock &terrainData,
                        uint32_t &randomState, std::vector<uint8_t> &out,
                        std::string *err = nullptr, size_t maxWork = 64 * 1024 * 1024);
 // Same resolved-value boundary for 1..64 competing lands. Source order defines
-// zone IDs, seed overwrites and round-robin growth; frontier nodes are shared.
+// default zone IDs, seed overwrites and round-robin growth; frontier nodes are shared.
 bool growRmsLands(uint32_t width, uint32_t height, uint8_t baseTerrain,
                   const std::vector<RmsLandGrowth> &lands, const dat::TerrainBlock &terrainData,
                   uint32_t &randomState, std::vector<uint8_t> &out,

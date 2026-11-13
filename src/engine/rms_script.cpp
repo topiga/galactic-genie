@@ -477,8 +477,8 @@ bool growRmsLands(uint32_t width, uint32_t height, uint8_t baseTerrain,
     // This coefficient bound keeps every computed priority exactly representable
     // in the original single-precision node field (adjacency is at most 25).
     for (const auto &land : lands) if (land.centerX >= width || land.centerY >= height || land.radius > 1024 ||
-        land.targetTiles > static_cast<size_t>(width) * height || land.clumpingFactor > 100)
-        return fail("invalid center, radius, target count or clumpingFactor (0..100)");
+        land.targetTiles > static_cast<size_t>(width) * height || land.clumpingFactor > 100 || land.zone < -1 || land.zone > 63)
+        return fail("invalid center, radius, target count, clumpingFactor (0..100) or zone (-1..63)");
     auto paint = [&](uint8_t id, uint32_t w, uint32_t h, std::vector<uint8_t> &raster) {
         return generateRmsBaseTerrain({{"<LAND_GENERATION>", 0, 0}, {"base_terrain", 0, 0},
                                       {std::to_string(id), 0, 0}}, w, h, terrainData, raster, err);
@@ -490,7 +490,8 @@ bool growRmsLands(uint32_t width, uint32_t height, uint8_t baseTerrain,
     struct Node { int next = -1, previous = -1, priority = 0; int owner = -1; };
     std::vector<Node> nodes(raster.size());
     std::vector<int> heads(lands.size(), -1);
-    std::vector<uint32_t> areas(lands.size(), 0);
+    std::vector<uint32_t> areas(64, 0);
+    auto zoneFor = [&](int owner) { return lands[owner].zone < 0 ? owner : lands[owner].zone; };
     // Original 0x4d69a0 uses one intrusive node per tile across ALL lands.
     // Reinsertion transfers the existing node out of any prior land queue; ascending priorities insert BEFORE equal priorities.
     auto remove = [&](int id) {
@@ -526,12 +527,17 @@ bool growRmsLands(uint32_t width, uint32_t height, uint8_t baseTerrain,
         const int right = std::min(w - 1, static_cast<int>(land.centerX) + radius);
         const int top = std::max(0, static_cast<int>(land.centerY) - radius);
         const int bottom = std::min(h - 1, static_cast<int>(land.centerY) + radius);
-        areas[owner] = static_cast<uint32_t>((right - left + 1) * (bottom - top + 1));
-        if (maxWork < areas[owner]) return fail("work limit exceeded");
-        maxWork -= areas[owner];
+        const auto seedArea = static_cast<uint32_t>((right - left + 1) * (bottom - top + 1));
+        if (maxWork < seedArea) return fail("work limit exceeded");
+        maxWork -= seedArea;
+        // Original 0x4da75a resets by land ordinal, but 0x4da7e2 stores the
+        // seed area by zone byte. Growth reads by ordinal again. Do not normalize
+        // zones: shared/nonordinal IDs change budgets, including later overwrites.
+        areas[owner] = 0;
+        areas[zoneFor(owner)] = seedArea;
         for (int y = top; y <= bottom; ++y) for (int x = left; x <= right; ++x) {
             raster[y * w + x] = land.terrain;
-            zones[y * w + x] = static_cast<uint8_t>(owner);
+            zones[y * w + x] = static_cast<uint8_t>(zoneFor(owner));
         }
         if (left > 0) for (int y = top; y <= bottom; ++y)
             if (!enqueue(owner, left - 1, y, 0)) return fail("work limit exceeded");
@@ -563,9 +569,9 @@ bool growRmsLands(uint32_t width, uint32_t height, uint8_t baseTerrain,
             // Out-of-map neighbors contribute nothing for this supported subset.
             for (int ny = std::max(0, y - 2); ny <= std::min(h - 1, y + 2); ++ny)
                 for (int nx = std::max(0, x - 2); nx <= std::min(w - 1, x + 2); ++nx)
-                    adjacency += zones[ny * w + nx] == owner;
+                    adjacency += zones[ny * w + nx] == zoneFor(owner);
             if (!adjacency) continue;
-            zones[id] = static_cast<uint8_t>(owner);
+            zones[id] = static_cast<uint8_t>(zoneFor(owner));
             raster[id] = land.terrain;
             ++areas[owner];
             constexpr int dx[] = {-1, 1, 0, 0}, dy[] = {0, 0, -1, 1};
@@ -585,8 +591,9 @@ bool growRmsLands(uint32_t width, uint32_t height, uint8_t baseTerrain,
             --maxWork;
             const int id = heads[owner], x = id % w, y = id / w;
             remove(id);
-            if ((x > 0 && x + 1 < w && zones[id - 1] == owner && zones[id + 1] == owner) ||
-                (y > 0 && y + 1 < h && zones[id - w] == owner && zones[id + w] == owner)) raster[id] = lands[owner].terrain;
+            if ((x > 0 && x + 1 < w && zones[id - 1] == zoneFor(owner) && zones[id + 1] == zoneFor(owner)) ||
+                (y > 0 && y + 1 < h && zones[id - w] == zoneFor(owner) && zones[id + w] == zoneFor(owner)))
+                raster[id] = lands[owner].terrain;
         }
     }
     randomState = rng;
