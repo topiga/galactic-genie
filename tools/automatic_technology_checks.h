@@ -34,6 +34,14 @@ static void automaticTechnologyChecks(swgb::Assets &assets) {
     data.techs[size_t(positiveTime)].researchTime=10;
     data.techs[size_t(positiveTime)].name2="AVAIL-POSITIVE-TIME-FIXTURE";
     data.techs[size_t(unconditional)].requiredTechCount=0;
+    data.techs[size_t(unconditional)].name2="MADE-NAME-DOES-NOT-CONTROL-ELIGIBILITY";
+    const int buildingMarker=data.civs[1].units[109].techId;
+    check(buildingMarker>=0,"Command Center has a DAT completion technology");
+    data.techs[size_t(buildingMarker)].name2="RENAMED-COMMAND-CENTER-MARKER";
+    const int impostor=int(data.techs.size());
+    auto namedLikeBuilding=data.techs[size_t(trigger)];
+    namedLikeBuilding.name2="MADE-"+data.civs[1].units[109].name2;
+    data.techs.push_back(namedLikeBuilding);
     swgb::dat::Effect changes;
     changes.name="Automatic completion ordering fixture";
     changes.commands={
@@ -47,6 +55,10 @@ static void automaticTechnologyChecks(swgb::Assets &assets) {
     {
         swgb::Game game(assets);
         check(game.init(0x5A17,64,&error,1,1),error.c_str());
+        check(game.technologyResearched(1,buildingMarker),
+              "Building initiates its DAT technology even when the marker is renamed");
+        check(!game.technologyResearched(1,impostor),
+              "Matching a building name does not grant an unrelated technology");
         check(game.technologyResearched(1,unconditional),
               "Zero-time requiredCount0 technology completes without a name whitelist");
         check(!game.technologyResearched(1,delayed) &&

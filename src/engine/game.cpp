@@ -3802,9 +3802,13 @@ void Game::refreshAutomaticTechnologies(int player) {
         const int effect=assets_.dat().techs[size_t(id)].effectId;
         if (effect>=0 && size_t(effect)<assets_.dat().effects.size()) effects.push_back(effect);
     }
-    std::set<int> queued;
-    for (const auto &object:objects_) if (object.active && object.player==player)
+    std::set<int> queued, buildingTechnologies;
+    for (const auto &object:objects_) if (object.active && object.player==player) {
         for (const auto &item:object.productionQueue) if (item.technologyId>=0) queued.insert(item.technologyId);
+        // shortcut: Scan completed buildings until original initiation callbacks are integrated.
+        if (object.unit->type==dat::UT_Building && !object.underConstruction && object.unit->techId>=0)
+            buildingTechnologies.insert(object.unit->techId);
+    }
     bool changed = true;
     while (changed) {
         changed = false;
@@ -3818,32 +3822,13 @@ void Game::refreshAutomaticTechnologies(int player) {
             if (technology.civ >= 0 &&
                 technology.civ != civilization)
                 continue;
-            const bool made=technology.name2.rfind("MADE-",0)==0;
             if (queued.count(int(id))) continue;
-            // Original automatic refresh compares unscaled time plus its signed modifier.
-            if (!made && int(technology.researchTime)+researchTimeDelta(player,technology)>0) continue;
-            if (made) {
-                // shortcut: Scan completed buildings until original initiation callbacks are integrated.
-                const std::string unitName =
-                    technology.name2.substr(5);
-                bool exists = false;
-                for (const Object &object : objects_)
-                    // A finished building "initiates" its MADE technology
-                    // (the unit's tech id); the name match covers the rest
-                    // (MADE-BLDG-AIRBASE belongs to BLDG-TRAINAIR, 105).
-                    if (object.active &&
-                        object.player == player &&
-                        object.unit->type == dat::UT_Building &&
-                        !object.underConstruction &&
-                        (object.unit->techId == (int)id ||
-                         object.unit->name2 == unitName)) {
-                        exists = true;
-                        break;
-                    }
-                if (!exists) continue;
-            } else if (!technologyRequirementsMet(
-                        player, technology))
-                    continue;
+            // Building completion grants its DAT technology ID directly, independently of names.
+            if (!buildingTechnologies.count(int(id))) {
+                // Original automatic refresh compares unscaled time plus its signed modifier.
+                if (int(technology.researchTime)+researchTimeDelta(player,technology)>0 ||
+                    !technologyRequirementsMet(player,technology)) continue;
+            }
             researchedTechs_[(size_t)player].insert((int)id);
             researchedTechOrder_[(size_t)player].push_back((int)id);
             techGeneration_++;
