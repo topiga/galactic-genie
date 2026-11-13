@@ -32,7 +32,7 @@ int main() {
     for (uint8_t tile:map.terrain) hash=(hash^tile)*16777619u;
     // Original composed-stage oracle: object entry827320339, no object rows;
     // only the final scheduler log draw follows. TerrainFNV from original stages.
-    check(hash==1509571036u && state==1578431114u && map.timber.empty(),"original empty-object pipeline mismatch");
+    check(hash==1509571036u && state==1578431114u && map.objects.empty(),"original empty-object pipeline mismatch");
     auto bordered=land;
     for (size_t pos=0;(pos=bordered.find("border_fuzziness 0",pos))!=std::string::npos;) {
         const std::string bounds="border_fuzziness 100 left_border 25 right_border 25 top_border 25 bottom_border 25";

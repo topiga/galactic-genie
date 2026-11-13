@@ -334,5 +334,39 @@ int main() {
     u.clearanceSize[0]=.5f;
     check(!generateRmsTimberPlacements(1,1,{255},data,1,rng,placements,&err) && rng==before,
           "missing terrain restriction rejected");
+    // Original queue followed by full HP0 type30 wrapper: three draws per deposit.
+    for (int16_t id:{int16_t(66),int16_t(102)}) {
+        auto d=data;
+        auto &deposit=d.civs[0].units[id]; deposit=d.civs[0].units[348];
+        deposit.id=id; deposit.type=30; deposit.cls=id==66?29:30; deposit.hitPoints=0;
+        deposit.collisionSize[2]=1; deposit.terrainRestriction=8; deposit.createDoppelgangerOnDeath=1;
+        deposit.standingGraphic[0]=id==66?5134:5232;
+        deposit.resourceStorages[0]={int16_t(id==66?3:2),float(id==66?800:350),0};
+        auto &graphic=d.graphics[deposit.standingGraphic[0]];
+        graphic.exists=true; graphic.sequenceType=6; graphic.angleCount=10; graphic.frameCount=1;
+        d.terrainRestrictions[8].passableBuildableDmgMultiplier={1,0};
+        rng=1;
+        check(generateRmsResourcePlacements(5,6,std::vector<uint8_t>(30,0),d,id,3,rng,placements,&err),"resource placement failed");
+        check(rng==2800339366u && placements.size()==3,"deposit three-draw RNG mismatch");
+        check(placements[0].x==1.5f && placements[0].y==1.5f && placements[0].facet==7 &&
+              placements[1].x==.5f && placements[1].y==3.5f && placements[1].facet==7 &&
+              placements[2].x==.5f && placements[2].y==2.5f && placements[2].facet==2,"deposit original centers/facets mismatch");
+        check(placements[0].headingRadians==5.026548385620117f &&
+              placements[1].headingRadians==5.026548385620117f && placements[2].headingRadians==1.884955644607544f,
+              "deposit original headings mismatch");
+        for(const auto &p:placements) check(p.unitId==id,"deposit identity lost");
+        rng=1;
+        check(generateRmsResourcePlacements(5,6,std::vector<uint8_t>(30,0),d,id,3,rng,placements,&err,{6,15}) &&
+              placements[0].x==.5f && placements[0].y==2.5f && rng==2800339366u,"occupied deposit candidates consumed RNG");
+        rng=1;
+        check(generateRmsResourcePlacements(5,6,std::vector<uint8_t>(30,1),d,id,3,rng,placements,&err) &&
+              placements.empty() && rng==1030492215u,"rejected deposit candidates consumed RNG");
+        rng=1;
+        check(generateRmsResourcePlacements(5,6,std::vector<uint8_t>(30,0),d,id,0,rng,placements,&err) &&
+              placements.empty() && rng==1030492215u,"zero deposits must still shuffle candidates");
+        deposit.hitPoints=1; rng=1;
+        check(!generateRmsResourcePlacements(1,1,{0},d,id,1,rng,placements,&err) && placements.empty() && rng==1,
+              "unverified deposit HP accepted");
+    }
     std::cout << "RMS object candidate tests passed\n";
 }

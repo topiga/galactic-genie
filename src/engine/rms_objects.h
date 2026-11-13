@@ -20,13 +20,25 @@ bool generateRmsObjectCandidatesInArea(uint32_t width,uint32_t height,
     int32_t centerX,int32_t centerY,int32_t outerRadius,uint32_t &randomState,
     std::vector<uint32_t> &out,std::string *err=nullptr);
 
-struct RmsTimberPlacement { float x, y; uint8_t facet; };
+// Historical name; also carries verified ungrouped Gaia deposit placements.
+struct RmsTimberPlacement {
+    float x, y;
+    uint8_t facet;
+    float headingRadians=0;
+    int16_t unitId=348;
+};
 // One original ungrouped unit348 row, default modifiers, on a flat map.
 // Occupied tiles represent verified centered, half-tile scenery footprints.
 // Validates the supported original prototype. Output may contain fewer than
 // requested objects when terrain rejects candidates. Only success advances RNG.
 bool generateRmsTimberPlacements(uint32_t width, uint32_t height,
     const std::vector<uint8_t> &terrain, const dat::DatFile &data,
+    uint32_t requested, uint32_t &randomState,
+    std::vector<RmsTimberPlacement> &out, std::string *err=nullptr,
+    const std::vector<uint32_t> &occupiedTiles={});
+// Same original queue/gate path for348 carbon,66 nova and102 ore; no grouping.
+bool generateRmsResourcePlacements(uint32_t width, uint32_t height,
+    const std::vector<uint8_t> &terrain, const dat::DatFile &data, int16_t unitId,
     uint32_t requested, uint32_t &randomState,
     std::vector<RmsTimberPlacement> &out, std::string *err=nullptr,
     const std::vector<uint32_t> &occupiedTiles={});

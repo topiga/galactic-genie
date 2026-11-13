@@ -9,13 +9,13 @@ namespace swgb {
 struct RmsMap {
     uint32_t width = 0, height = 0;
     std::vector<uint8_t> terrain;
-    std::vector<RmsTimberPlacement> timber;
+    std::vector<RmsTimberPlacement> objects;
     std::vector<RmsSceneryPlacement> scenery; // Creation order, including removed early scenery.
     std::vector<RmsPlayerStart> playerStarts; // Owner order1..playerCount; no starting units implied.
 };
 
 // Strict script pipeline: explicit nonplayer lands OR one player-land block (1..8 players)
-// on verified flat terrain, bounded land separation, terrain clumps, automatic trees and optional timber348 row.
+// on verified flat terrain, bounded land separation, terrain clumps, automatic scenery and one optional Gaia348/66/102 row.
 // Player lands use the game's randomized-position mode, with default borders.
 // The RMS random_placement directive itself does not select this game setting.
 // Terrain rows support spacing, scaling and player-start protection on flat maps.

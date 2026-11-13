@@ -1,0 +1,8 @@
+<LAND_GENERATION>
+base_terrain 10
+create_player_lands { terrain_type 9 base_size 3 number_of_tiles 60 }
+<TERRAIN_GENERATION>
+create_terrain 6 { base_terrain 10 number_of_tiles 300 number_of_clumps 12 spacing_to_other_terrain_types 0 }
+create_terrain 44 { base_terrain 9 number_of_tiles 9 number_of_clumps 2 clumping_factor 6 }
+<OBJECTS_GENERATION>
+create_object 66 { number_of_objects 3 }

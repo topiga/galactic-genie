@@ -30,6 +30,27 @@ int main() {
         uint32_t bits;std::memcpy(&bits,&appearance.headingRadians,sizeof(bits));
         assert(rng==expectedState && bits==fixture.headingBits && appearance.facet==fixture.facet);
     }
+    const Fixture tenAngles[]={
+        {0u,3276u,0u,9},
+        {3277u,6553u,1059117436u,0},
+        {6554u,9830u,1067506044u,1},
+        {9831u,13106u,1072776762u,2},
+        {13107u,16383u,1075894652u,3},
+        {16384u,19660u,1078530011u,4},
+        {19661u,22936u,1081165370u,5},
+        {22937u,26213u,1082965580u,6},
+        {26214u,29490u,1084283260u,7},
+        {29491u,32766u,1085600939u,8},
+        {32767u,32767u,1086918619u,9},
+    };
+    for (const auto &fixture:tenAngles) for(uint32_t draw=fixture.first;draw<=fixture.last;++draw) {
+        const uint32_t expectedState=draw<<16;
+        uint32_t rng=expectedState;
+        for(int i=0;i<3;++i) rng=(rng-2531011u)*inverse;
+        const auto appearance=swgb::drawRmsCarbonAppearance(rng,10);
+        uint32_t bits;std::memcpy(&bits,&appearance.headingRadians,sizeof(bits));
+        assert(rng==expectedState && bits==fixture.headingBits && appearance.facet==fixture.facet);
+    }
     { uint32_t rng=1u;const auto a=swgb::drawRmsCarbonAppearance(rng);assert(rng==415139642u && a.facet==0); }
     { uint32_t rng=12345u;const auto a=swgb::drawRmsCarbonAppearance(rng);assert(rng==3837989202u && a.facet==7); }
     { uint32_t rng=4294967295u;const auto a=swgb::drawRmsCarbonAppearance(rng);assert(rng==2368614256u && a.facet==0); }

@@ -40,6 +40,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     bool playerLands = false;
     bool playerSetup = false;
     uint32_t objectCount = 1;
+    int32_t objectUnitId=348;
     std::vector<RmsLandGrowth> lands;
     std::vector<RmsTerrainRow> terrainRows;
     while (i < tokens.size()) {
@@ -139,8 +140,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if (scaling==2) row.clumps=uint64_t(row.clumps)*width*height/10000;
             terrainRows.push_back(row);
         } else if (stage == 3 && command == "create_object" && !hasObjects) {
-            if (!number(value) || value!=348 || i==tokens.size() || tokens[i++].text!="{")
-                return fail("only one default timber348 object block is supported");
+            if (!number(value) || (value!=348 && value!=66 && value!=102) || i==tokens.size() || tokens[i++].text!="{")
+                return fail("only one ungrouped Gaia348/66/102 object block is supported");
+            objectUnitId=value;
             hasObjects=true;
             while (i<tokens.size() && tokens[i].text!="}") {
                 const auto name=tokens[i++].text;
@@ -221,7 +223,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     std::vector<uint32_t> occupied;
     for (const auto &tree:generated.scenery) if (tree.alive)
         occupied.push_back(static_cast<uint32_t>(tree.y)*width+static_cast<uint32_t>(tree.x));
-    if (hasObjects && !generateRmsTimberPlacements(width,height,generated.terrain,data,objectCount,rng,generated.timber,err,occupied))
+    if (hasObjects && !generateRmsResourcePlacements(width,height,generated.terrain,data,objectUnitId,objectCount,rng,generated.objects,err,occupied))
         return false;
     genieRandomDraw(rng);
     randomState=rng;

@@ -61,7 +61,7 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         check(swgb::generateRmsMap(script,{},7,7,assets.dat(),state,map,&error),error.c_str());
         uint32_t hash=2166136261u;
         for (auto tile:map.terrain) hash=(hash^tile)*16777619u;
-        check(hash==fixture.hash && state==fixture.finalState && map.timber.size()==3,
+        check(hash==fixture.hash && state==fixture.finalState && map.objects.size()==3,
               "Original composed RMS stages terrain/RNG mismatch");
         state=fixture.seed;
         check(game.initRms(script,{},7,state,&error),error.c_str());
@@ -71,7 +71,7 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         for (uint32_t i=0;i<3;++i) {
             const auto p=game.objectPosition(i+1);
             check(p[0]==fixture.objects[i].x && p[1]==fixture.objects[i].y &&
-                  map.timber[i].facet==fixture.objects[i].facet,"Original RMS object fixture");
+                  map.objects[i].facet==fixture.objects[i].facet,"Original RMS object fixture");
             const float facing=game.objectFacing(i+1);
             const float theta=std::atan2(std::cos(facing)+std::sin(facing),
                                         2*(std::cos(facing)-std::sin(facing)));
@@ -107,14 +107,14 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         check(swgb::generateRmsMap(script,{},32,32,assets.dat(),state,map,&error),error.c_str());
         uint32_t hash=2166136261u;
         for (auto tile:map.terrain) hash=(hash^tile)*16777619u;
-        check(hash==fixture.hash && state==fixture.finalState && map.timber.size()==3 && map.playerStarts.size()==2,
+        check(hash==fixture.hash && state==fixture.finalState && map.objects.size()==3 && map.playerStarts.size()==2,
               "Original composed player-land pipeline terrain/RNG mismatch");
         state=fixture.seed;
         check(game.initRms(script,{},32,state,&error) && state==fixture.finalState,error.c_str());
         for (uint32_t i=0;i<3;++i) {
             const auto p=game.objectPosition(i+1);
             check(p[0]==fixture.objects[i].x && p[1]==fixture.objects[i].y &&
-                  map.timber[i].facet==fixture.objects[i].facet,"Original player-land timber fixture");
+                  map.objects[i].facet==fixture.objects[i].facet,"Original player-land timber fixture");
         }
     }
     const std::string drySource=R"(<LAND_GENERATION> base_terrain 41
@@ -132,7 +132,7 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         check(swgb::generateRmsMap(script,{},32,32,assets.dat(),state,map,&error),error.c_str());
         uint32_t hash=2166136261u;
         for (auto tile:map.terrain) hash=(hash^tile)*16777619u;
-        check(hash==dryHashes[fixture] && state==dryStates[fixture] && map.timber.empty(),
+        check(hash==dryHashes[fixture] && state==dryStates[fixture] && map.objects.empty(),
               "Original multiterrain pipeline raster/RNG");
         state=drySeeds[fixture];
         check(game.initRms(script,{},32,state,&error) && state==dryStates[fixture] && game.activeObjectCount()==0,
@@ -201,7 +201,7 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         check(swgb::generateRmsMap(script,{},32,32,assets.dat(),state,map,&error),error.c_str());
         uint32_t hash=2166136261u;
         for (auto tile:map.terrain) hash=(hash^tile)*16777619u;
-        check(hash==fixture.hash && state==fixture.finalState && map.scenery.size()==fixture.trees.size() && map.timber.size()==3,
+        check(hash==fixture.hash && state==fixture.finalState && map.scenery.size()==fixture.trees.size() && map.objects.size()==3,
               "Original forest pipeline raster/scenery/RNG mismatch");
         state=fixture.seed;
         check(game.initRms(script,{},32,state,&error) && state==fixture.finalState,error.c_str());
@@ -216,7 +216,7 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
                   "Native scenery position/HP/carbon preserved");
         }
         for (size_t i=0;i<3;++i) {
-            const auto &tree=map.timber[i];const auto &expectedTree=fixture.timber[i];
+            const auto &tree=map.objects[i];const auto &expectedTree=fixture.timber[i];
             check(tree.x==expectedTree.x && tree.y==expectedTree.y && tree.facet==expectedTree.facet &&
                   game.objectPosition(map.scenery.size()+i+1)==std::array<float,2>{tree.x,tree.y},
                   "Original explicit timber after forest occupancy");
@@ -226,7 +226,7 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
             const float theta=std::atan2(std::cos(facing)+std::sin(facing),2*(std::cos(facing)-std::sin(facing)));
             const int angles=i<map.scenery.size()?fixture.angles:12;
             const int facet=(static_cast<int>(std::lround((theta-pi*.5f)/(2*pi/angles)))%angles+angles)%angles;
-            const int expectedFacet=i<map.scenery.size()?map.scenery[i].facet:map.timber[i-map.scenery.size()].facet;
+            const int expectedFacet=i<map.scenery.size()?map.scenery[i].facet:map.objects[i-map.scenery.size()].facet;
             check(facet==expectedFacet,"Native forest and timber sprite facets preserved");
         }
     }
@@ -252,11 +252,15 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         <TERRAIN_GENERATION>
         create_terrain 6 { base_terrain 10 number_of_tiles 37 number_of_clumps 4 spacing_to_other_terrain_types 1 }
         create_terrain 44 { base_terrain 9 number_of_tiles 9 number_of_clumps 2 clumping_factor 6 })";
-    struct EarlyFixture { uint32_t seed,terrainHash,objectHash,finalState,count,dead; bool mixed=false; int base=10,unit=411,carbon=100; bool manual=false; };
+    struct EarlyFixture { uint32_t seed,terrainHash,objectHash,finalState,count,dead; bool mixed=false; int base=10,unit=411,carbon=100; bool manual=false; int manualUnit=348; };
     const EarlyFixture earlyFixtures[]={
         {1,4041467588u,1499949720u,4128097079u,761,5},
         {12345,192774748u,2121961969u,2558323739u,771,11},
         {1,1568528174u,881650898u,545854133u,493,4,true},
+        {1,1568528174u,881650898u,2538996614u,493,4,true,10,411,100,true,66},
+        {12345,3390887566u,3430050172u,2529958523u,504,6,true,10,411,100,true,66},
+        {1,1568528174u,881650898u,2538996614u,493,4,true,10,411,100,true,102},
+        {12345,3390887566u,3430050172u,2529958523u,504,6,true,10,411,100,true,102},
         {1,1568528174u,881650898u,1486042728u,493,4,true,10,411,100,true},
         {12345,3390887566u,3430050172u,3859810789u,504,6,true,10,411,100,true},
         {12345,3390887566u,3430050172u,3745431014u,504,6,true},
@@ -279,7 +283,7 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
     },{},&error),error.c_str());
     for (const auto &fixture:earlyFixtures) {
         auto source=earlySource;
-        if (fixture.manual) source+=" <OBJECTS_GENERATION> create_object 348 { number_of_objects 3 }";
+        if (fixture.manual) source+=" <OBJECTS_GENERATION> create_object "+std::to_string(fixture.manualUnit)+" { number_of_objects 3 }";
         const std::string baseToken="base_terrain 10";
         size_t offset=0;
         while ((offset=source.find(baseToken,offset))!=std::string::npos) {
@@ -310,18 +314,31 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         state=fixture.seed;
         check(game.initRms(script,{},32,state,&error) && state==fixture.finalState,error.c_str());
         check(game.objectCountForTesting(0,fixture.unit)==fixture.count-fixture.dead,"Removed early trees must not be resurrected");
-        check(map.timber.size()==(fixture.manual?3u:0u),"Explicit timber count after early scenery");
+        check(map.objects.size()==(fixture.manual?3u:0u),"Explicit timber count after early scenery");
         if (fixture.manual) {
             const swgb::RmsTimberPlacement first[]={{2.5f,11.5f,9},{5.5f,12.5f,9},{4.5f,19.5f,9}};
             const swgb::RmsTimberPlacement second[]={{3.5f,5.5f,6},{1.5f,17.5f,4},{2.5f,20.5f,11}};
-            const auto *expected=fixture.seed==1?first:second;
-            check(game.objectCountForTesting(0,348)==3,"Manual timber remains after deleted ID gaps");
+            const swgb::RmsTimberPlacement depositsFirst[]={{2.5f,11.5f,7,5.026548385620117f},{5.5f,12.5f,3,2.5132741928100586f},{4.5f,19.5f,1,1.2566370964050293f}};
+            const swgb::RmsTimberPlacement depositsSecond[]={{3.5f,5.5f,8,5.654866695404053f},{1.5f,17.5f,1,1.2566370964050293f},{2.5f,20.5f,2,1.884955644607544f}};
+            const auto *expected=fixture.manualUnit==348?(fixture.seed==1?first:second):
+                                                       (fixture.seed==1?depositsFirst:depositsSecond);
+            check(game.objectCountForTesting(0,fixture.manualUnit)==3,"Manual resources remain after deleted ID gaps");
             for (size_t i=0;i<3;++i) {
-                const auto &p=map.timber[i];
-                check(p.x==expected[i].x && p.y==expected[i].y && p.facet==expected[i].facet,
+                const auto &p=map.objects[i];
+                check(p.unitId==fixture.manualUnit && p.x==expected[i].x && p.y==expected[i].y &&
+                      p.facet==expected[i].facet && p.headingRadians==expected[i].headingRadians,
                       "Original manual timber candidates/gates after retained and deleted early trees");
                 check(game.objectPosition(map.scenery.size()+i+1)==std::array<float,2>{p.x,p.y},
                       "Manual native IDs follow every prior creation including deleted ones");
+                const auto id=static_cast<uint32_t>(map.scenery.size()+i+1);
+                check(game.objectHitPoints(id)==(fixture.manualUnit==348?50:0) &&
+                      game.objectResourceAmount(id)==(fixture.manualUnit==348?100:(fixture.manualUnit==66?800:350)),
+                      "Original resource HP and storage survive native import");
+                const float facing=game.objectFacing(id);
+                const float theta=std::atan2(std::cos(facing)+std::sin(facing),2*(std::cos(facing)-std::sin(facing)));
+                const int angles=fixture.manualUnit==348?12:10;
+                const int facet=(static_cast<int>(std::lround((theta-pi*.5f)/(2*pi/angles)))%angles+angles)%angles;
+                check(facet==p.facet,"Original resource facet survives native facing conversion");
             }
         }
         for (size_t i=0;i<map.scenery.size();++i) {
@@ -349,5 +366,21 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
     swgb::RmsMap rejected;state=1;
     check(!swgb::generateRmsMap(script,{},32,32,assets.dat(),state,rejected,&error) && state==1 && rejected.terrain.empty(),
           "Other active bases require their own early scenery validation and must reject");
+    for (int resourceId:{59,66,102}) {
+        swgb::Scenario resourceScenario;
+        resourceScenario.map.width=resourceScenario.map.height=16;
+        resourceScenario.map.tiles.resize(256);
+        resourceScenario.nextUnitId=1;
+        check(game.initScenario(resourceScenario,&error),error.c_str());
+        const auto resource=game.spawnObjectForTesting(0,resourceId,0,6.5f,5.5f);
+        const auto worker=game.spawnObjectForTesting(1,83,1,5.5f,5.5f);
+        check(resource && worker && game.objectHitPoints(resource)==0 &&
+              game.selectObjectForTesting(resource),"Zero-HP resources remain inspectable");
+        const float amount=game.objectResourceAmount(resource);
+        check(amount>0 && game.issueGatherForTesting(worker,resource),"Zero-HP resource accepts gather orders");
+        for (int i=0;i<200;++i) game.update(.1f,{});
+        check(game.objectResourceAmount(resource)<amount && game.objectHitPoints(resource)==0,
+              "Zero-HP resources remain gatherable without acquiring artificial health");
+    }
     std::puts("PASS: original RMS player lands, timber spawning, facets, resources and validation");
 }

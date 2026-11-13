@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "rms_scenery_appearance.h"
 #include "../core/genie_random.h"
+#include <cassert>
 
 namespace swgb {
-RmsCarbonAppearance drawRmsCarbonAppearance(uint32_t &randomState) {
+RmsCarbonAppearance drawRmsCarbonAppearance(uint32_t &randomState, uint8_t angleCount) {
+    assert(angleCount==10 || angleCount==12);
     genieRandomDraw(randomState); //54c44f: temporary base facet.
     genieRandomDraw(randomState); //423742: frame draw, even with exactly one frame.
-    const uint32_t index=genieRandomDraw(randomState)*12u/32767u;
+    const uint32_t index=genieRandomDraw(randomState)*angleCount/32767u;
     // Original4a099a x87 heading and4a13c0 facet mapping, verified for all32768 draws.
     // Preserve the max-draw endpoint and float-rounding boundary at index2.
     static constexpr RmsCarbonAppearance appearances[]={
@@ -15,6 +17,11 @@ RmsCarbonAppearance drawRmsCarbonAppearance(uint32_t &randomState) {
         {4,3.1415927410125732f}, {5,3.665191411972046f}, {6,4.188790321350098f},
         {7,4.71238899230957f}, {8,5.235987663269043f}, {9,5.759586334228516f},
         {10,6.2831854820251465f}};
-    return appearances[index];
+    static constexpr RmsCarbonAppearance tenAngles[]={
+        {9,0.f}, {0,0.6283185482025146f}, {1,1.2566370964050293f},
+        {2,1.884955644607544f}, {3,2.5132741928100586f}, {4,3.1415927410125732f},
+        {5,3.769911289215088f}, {6,4.398229598999023f}, {7,5.026548385620117f},
+        {8,5.654866695404053f}, {9,6.2831854820251465f}};
+    return angleCount==10 ? tenAngles[index] : appearances[index];
 }
 }

@@ -58,7 +58,7 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     assert 'unsupported terrain parameter/value base_terrain' in run(
         ['render-rms',data,work/'invalid.rms',32,1,work/'rejected.png'],1)
     assert not (work/'rejected.png').exists(), 'Wrapped terrain ID created output'
-    for fixture, count in [('dry-terrain',0),('water-terrain',0),('forest-terrain',40),('carbon-terrain',40),('early-forest',756)]:
+    for fixture, count in [('dry-terrain',0),('water-terrain',0),('forest-terrain',40),('carbon-terrain',40),('early-forest',756),('nova-resource',492)]:
         output=run(['render-rms',data,root/'tools/fixtures'/(fixture+'.rms'),32,1,work/(fixture+'.png')],0)
         assert f'{count} native objects' in output, output
         assert (work/(fixture+'.png')).stat().st_size>100, 'Missing terrain rendering'

@@ -1157,7 +1157,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     for (int y=0;y<mapSize;++y) for (int x=0;x<mapSize;++x)
         scenario.map.tiles[static_cast<size_t>(x)*mapSize+mapSize-1-y].terrain =
             generated.terrain[static_cast<size_t>(y)*mapSize+x];
-    auto placeTree = [&](int unitId,float x,float y,uint8_t facet,uint32_t spawnId) {
+    auto placeResource = [&](int unitId,float x,float y,uint8_t facet,uint32_t spawnId) {
         ScenarioUnit unit;
         unit.unitId=unitId;
         unit.spawnId=spawnId;
@@ -1171,11 +1171,11 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     // Native ID0 is reserved; retain original creation order and deleted gaps at offset1.
     uint32_t nextId=1;
     for (const auto &placement:generated.scenery) {
-        if (placement.alive) placeTree(placement.unitId,placement.x,placement.y,placement.facet,nextId);
+        if (placement.alive) placeResource(placement.unitId,placement.x,placement.y,placement.facet,nextId);
         ++nextId;
     }
-    for (const auto &placement:generated.timber)
-        placeTree(348,placement.x,placement.y,placement.facet,nextId++);
+    for (const auto &placement:generated.objects)
+        placeResource(placement.unitId,placement.x,placement.y,placement.facet,nextId++);
     scenario.nextUnitId=nextId;
     if (!initScenario(scenario,err)) return false;
     randomState=rng;
@@ -1460,6 +1460,10 @@ Game::Object *Game::addObject(const dat::Unit *unit, int player, float x, float 
             object.resourceAmount = storage.amount;
             break;
         }
+    // Original static resource constructors retain zero HP; resources are alive by state/amount.
+    if (player==0 && unit->type<dat::UT_Combatant && unit->speed==0 &&
+        unit->hitPoints==0 && object.resourceAmount>0)
+        object.hitPoints=object.maxHitPoints=0;
     object.facing = facing;
     object.spawnId = spawnId;
     object.autoAcquireTime = 0.1f + (spawnId % 8) * 0.05f;
