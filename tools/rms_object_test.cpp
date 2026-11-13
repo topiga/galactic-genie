@@ -42,6 +42,234 @@ int main() {
     std::sort(out.begin(),out.end());
     check(out.size()==1024*1024, "maximum map size");
     for (uint32_t i=0;i<out.size();++i) check(out[i]==i,"candidate list is not a permutation");
+    // Full sequences from original4dded0; clipped rectangles and negative fallback.
+    { uint32_t state=1u;
+        check(generateRmsObjectCandidatesInArea(5,6,2,3,0,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={17};
+        check(out==expected && state==1u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1u;
+        check(generateRmsObjectCandidatesInArea(5,6,2,3,1,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={11,12,13,16,17,18,21,22,23};
+        check(out==expected && state==1u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1u;
+        check(generateRmsObjectCandidatesInArea(9,7,4,3,2,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={29,20,11,12,13,14,15,21,22,23,24,30,31,32,33,38,39,40,41,42,47,48,49,50,51};
+        check(out==expected && state==3884216597u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1u;
+        check(generateRmsObjectCandidatesInArea(9,7,0,0,3,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={9,0,1,2,3,10,11,12,18,19,20,21,27,28,29,30};
+        check(out==expected && state==3357800067u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1u;
+        check(generateRmsObjectCandidatesInArea(9,7,8,6,3,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={41,32,33,34,35,42,43,44,50,51,52,53,59,60,61,62};
+        check(out==expected && state==3357800067u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1u;
+        check(generateRmsObjectCandidatesInArea(9,7,4,3,20,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={2,22,37,32,38,18,0,1,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,19,20,21,23,24,25,26,27,28,29,30,31,33,34,35,36,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62};
+        check(out==expected && state==2179684817u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1u;
+        check(generateRmsObjectCandidatesInArea(1,9,0,4,3,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={1,2,3,4,5,6,7};
+        check(out==expected && state==1u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1u;
+        check(generateRmsObjectCandidatesInArea(9,1,4,0,3,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={1,2,3,4,5,6,7};
+        check(out==expected && state==1u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1u;
+        check(generateRmsObjectCandidatesInArea(9,7,-1,3,2,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={2,22,37,32,38,18,0,1,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,19,20,21,23,24,25,26,27,28,29,30,31,33,34,35,36,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62};
+        check(out==expected && state==2179684817u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1u;
+        check(generateRmsObjectCandidatesInArea(9,7,4,-1,2,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={2,22,37,32,38,18,0,1,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,19,20,21,23,24,25,26,27,28,29,30,31,33,34,35,36,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62};
+        check(out==expected && state==2179684817u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1u;
+        check(generateRmsObjectCandidatesInArea(9,7,4,3,-1,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={2,22,37,32,38,18,0,1,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,19,20,21,23,24,25,26,27,28,29,30,31,33,34,35,36,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62};
+        check(out==expected && state==2179684817u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=12345u;
+        check(generateRmsObjectCandidatesInArea(5,6,2,3,0,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={17};
+        check(out==expected && state==12345u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=12345u;
+        check(generateRmsObjectCandidatesInArea(5,6,2,3,1,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={11,12,13,16,17,18,21,22,23};
+        check(out==expected && state==12345u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=12345u;
+        check(generateRmsObjectCandidatesInArea(9,7,4,3,2,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={31,20,11,12,13,14,15,21,22,23,24,29,30,32,33,38,39,40,41,42,47,48,49,50,51};
+        check(out==expected && state==1449997005u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=12345u;
+        check(generateRmsObjectCandidatesInArea(9,7,0,0,3,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={9,0,1,2,3,10,11,12,18,19,20,21,27,28,29,30};
+        check(out==expected && state==1255958651u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=12345u;
+        check(generateRmsObjectCandidatesInArea(9,7,8,6,3,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={41,32,33,34,35,42,43,44,50,51,52,53,59,60,61,62};
+        check(out==expected && state==1255958651u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=12345u;
+        check(generateRmsObjectCandidatesInArea(9,7,4,3,20,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={20,31,21,33,5,28,32,19,0,1,2,3,4,6,7,8,9,10,11,12,13,14,15,16,17,18,22,23,24,25,26,27,29,30,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62};
+        check(out==expected && state==922525705u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=12345u;
+        check(generateRmsObjectCandidatesInArea(1,9,0,4,3,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={1,2,3,4,5,6,7};
+        check(out==expected && state==12345u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=12345u;
+        check(generateRmsObjectCandidatesInArea(9,1,4,0,3,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={1,2,3,4,5,6,7};
+        check(out==expected && state==12345u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=12345u;
+        check(generateRmsObjectCandidatesInArea(9,7,-1,3,2,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={20,31,21,33,5,28,32,19,0,1,2,3,4,6,7,8,9,10,11,12,13,14,15,16,17,18,22,23,24,25,26,27,29,30,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62};
+        check(out==expected && state==922525705u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=12345u;
+        check(generateRmsObjectCandidatesInArea(9,7,4,-1,2,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={20,31,21,33,5,28,32,19,0,1,2,3,4,6,7,8,9,10,11,12,13,14,15,16,17,18,22,23,24,25,26,27,29,30,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62};
+        check(out==expected && state==922525705u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=12345u;
+        check(generateRmsObjectCandidatesInArea(9,7,4,3,-1,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={20,31,21,33,5,28,32,19,0,1,2,3,4,6,7,8,9,10,11,12,13,14,15,16,17,18,22,23,24,25,26,27,29,30,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62};
+        check(out==expected && state==922525705u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1967u;
+        check(generateRmsObjectCandidatesInArea(5,6,2,3,0,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={17};
+        check(out==expected && state==1967u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1967u;
+        check(generateRmsObjectCandidatesInArea(5,6,2,3,1,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={11,12,13,16,17,18,21,22,23};
+        check(out==expected && state==1967u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1967u;
+        check(generateRmsObjectCandidatesInArea(9,7,4,3,2,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={23,20,11,12,13,14,15,21,22,24,29,30,31,32,33,38,39,40,41,42,47,48,49,50,51};
+        check(out==expected && state==3326033699u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1967u;
+        check(generateRmsObjectCandidatesInArea(9,7,0,0,3,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={0,1,2,3,9,10,11,12,18,19,20,21,27,28,29,30};
+        check(out==expected && state==948628385u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1967u;
+        check(generateRmsObjectCandidatesInArea(9,7,8,6,3,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={32,33,34,35,41,42,43,44,50,51,52,53,59,60,61,62};
+        check(out==expected && state==948628385u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1967u;
+        check(generateRmsObjectCandidatesInArea(9,7,4,3,20,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={14,15,20,39,9,3,25,19,0,1,2,4,5,6,7,8,10,11,12,13,16,17,18,21,22,23,24,26,27,28,29,30,31,32,33,34,35,36,37,38,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62};
+        check(out==expected && state==2701782783u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1967u;
+        check(generateRmsObjectCandidatesInArea(1,9,0,4,3,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={1,2,3,4,5,6,7};
+        check(out==expected && state==1967u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1967u;
+        check(generateRmsObjectCandidatesInArea(9,1,4,0,3,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={1,2,3,4,5,6,7};
+        check(out==expected && state==1967u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1967u;
+        check(generateRmsObjectCandidatesInArea(9,7,-1,3,2,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={14,15,20,39,9,3,25,19,0,1,2,4,5,6,7,8,10,11,12,13,16,17,18,21,22,23,24,26,27,28,29,30,31,32,33,34,35,36,37,38,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62};
+        check(out==expected && state==2701782783u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1967u;
+        check(generateRmsObjectCandidatesInArea(9,7,4,-1,2,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={14,15,20,39,9,3,25,19,0,1,2,4,5,6,7,8,10,11,12,13,16,17,18,21,22,23,24,26,27,28,29,30,31,32,33,34,35,36,37,38,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62};
+        check(out==expected && state==2701782783u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=1967u;
+        check(generateRmsObjectCandidatesInArea(9,7,4,3,-1,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={14,15,20,39,9,3,25,19,0,1,2,4,5,6,7,8,10,11,12,13,16,17,18,21,22,23,24,26,27,28,29,30,31,32,33,34,35,36,37,38,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62};
+        check(out==expected && state==2701782783u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=4294967295u;
+        check(generateRmsObjectCandidatesInArea(5,6,2,3,0,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={17};
+        check(out==expected && state==4294967295u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=4294967295u;
+        check(generateRmsObjectCandidatesInArea(5,6,2,3,1,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={11,12,13,16,17,18,21,22,23};
+        check(out==expected && state==4294967295u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=4294967295u;
+        check(generateRmsObjectCandidatesInArea(9,7,4,3,2,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={20,29,11,12,13,14,15,21,22,23,24,30,31,32,33,38,39,40,41,42,47,48,49,50,51};
+        check(out==expected && state==730189939u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=4294967295u;
+        check(generateRmsObjectCandidatesInArea(9,7,0,0,3,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={9,0,1,2,3,10,11,12,18,19,20,21,27,28,29,30};
+        check(out==expected && state==1948984945u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=4294967295u;
+        check(generateRmsObjectCandidatesInArea(9,7,8,6,3,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={41,32,33,34,35,42,43,44,50,51,52,53,59,60,61,62};
+        check(out==expected && state==1948984945u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=4294967295u;
+        check(generateRmsObjectCandidatesInArea(9,7,4,3,20,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={42,20,37,5,1,15,9,36,0,2,3,4,6,7,8,10,11,12,13,14,16,17,18,19,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,38,39,40,41,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62};
+        check(out==expected && state==4202113871u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=4294967295u;
+        check(generateRmsObjectCandidatesInArea(1,9,0,4,3,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={1,2,3,4,5,6,7};
+        check(out==expected && state==4294967295u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=4294967295u;
+        check(generateRmsObjectCandidatesInArea(9,1,4,0,3,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={1,2,3,4,5,6,7};
+        check(out==expected && state==4294967295u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=4294967295u;
+        check(generateRmsObjectCandidatesInArea(9,7,-1,3,2,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={42,20,37,5,1,15,9,36,0,2,3,4,6,7,8,10,11,12,13,14,16,17,18,19,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,38,39,40,41,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62};
+        check(out==expected && state==4202113871u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=4294967295u;
+        check(generateRmsObjectCandidatesInArea(9,7,4,-1,2,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={42,20,37,5,1,15,9,36,0,2,3,4,6,7,8,10,11,12,13,14,16,17,18,19,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,38,39,40,41,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62};
+        check(out==expected && state==4202113871u,"original area ordering/RNG mismatch");
+    }
+    { uint32_t state=4294967295u;
+        check(generateRmsObjectCandidatesInArea(9,7,4,3,-1,state,out,&err),"original area fixture failed");
+        const std::vector<uint32_t> expected={42,20,37,5,1,15,9,36,0,2,3,4,6,7,8,10,11,12,13,14,16,17,18,19,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,38,39,40,41,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62};
+        check(out==expected && state==4202113871u,"original area ordering/RNG mismatch");
+    }
+    rng=12345;
+    check(!generateRmsObjectCandidatesInArea(9,7,9,3,2,rng,out,&err) &&
+        out.empty() && rng==12345 && !err.empty(),"area outside center must fail transactionally");
+    check(!generateRmsObjectCandidatesInArea(9,7,4,3,1025,rng,out,&err) &&
+        out.empty() && rng==12345,"area radius limit must preserve RNG");
+    check(!generateRmsObjectCandidatesInArea(0,7,0,3,0,rng,out,&err) &&
+        out.empty() && rng==12345,"invalid area dimensions must preserve RNG");
     dat::DatFile data;
     data.civs.resize(1);
     data.civs[0].units.resize(349);

@@ -12,6 +12,14 @@ namespace dat { struct DatFile; }
 bool generateRmsObjectCandidates(uint32_t width,uint32_t height,uint32_t &randomState,
                                  std::vector<uint32_t> &out,std::string *err=nullptr);
 
+// Original all-eligible rectangular queue around a land center; inclusive clipped bounds.
+// Any negative center/radius selects the full map. Otherwise center must be inside
+// the map and radius<=1024. Inner exclusion, eligibility, ownership and placement
+// checks belong to later stages and are deliberately not performed here.
+bool generateRmsObjectCandidatesInArea(uint32_t width,uint32_t height,
+    int32_t centerX,int32_t centerY,int32_t outerRadius,uint32_t &randomState,
+    std::vector<uint32_t> &out,std::string *err=nullptr);
+
 struct RmsTimberPlacement { float x, y; uint8_t facet; };
 // One original ungrouped unit348 row, default modifiers, on a flat map.
 // Occupied tiles represent verified centered, half-tile scenery footprints.

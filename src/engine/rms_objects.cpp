@@ -8,13 +8,32 @@
 namespace swgb {
 bool generateRmsObjectCandidates(uint32_t width,uint32_t height,uint32_t &randomState,
                                  std::vector<uint32_t> &out,std::string *err) {
+    return generateRmsObjectCandidatesInArea(width,height,-1,-1,-1,randomState,out,err);
+}
+
+bool generateRmsObjectCandidatesInArea(uint32_t width,uint32_t height,
+    int32_t centerX,int32_t centerY,int32_t outerRadius,uint32_t &randomState,
+    std::vector<uint32_t> &out,std::string *err) {
     out.clear();
     if (err) err->clear();
     if (!width || !height || width>1024 || height>1024) {
         if (err) *err="RMS object candidates: dimensions must be 1..1024";
         return false;
     }
-    const uint32_t count=width*height, sentinel=count;
+    uint32_t xmin=0,ymin=0,xmax=width-1,ymax=height-1;
+    if (centerX>=0 && centerY>=0 && outerRadius>=0) {
+        if (static_cast<uint32_t>(centerX)>=width || static_cast<uint32_t>(centerY)>=height ||
+            outerRadius>1024) {
+            if (err) *err="RMS object candidates: unsupported center or radius";
+            return false;
+        }
+        xmin=static_cast<uint32_t>(std::max(0,centerX-outerRadius));
+        ymin=static_cast<uint32_t>(std::max(0,centerY-outerRadius));
+        xmax=static_cast<uint32_t>(std::min(static_cast<int32_t>(width)-1,centerX+outerRadius));
+        ymax=static_cast<uint32_t>(std::min(static_cast<int32_t>(height)-1,centerY+outerRadius));
+    }
+    const uint32_t areaWidth=xmax-xmin+1,areaHeight=ymax-ymin+1;
+    const uint32_t count=areaWidth*areaHeight, sentinel=count;
     std::vector<uint32_t> next(count+1),previous(count+1);
     for (uint32_t i=0;i<count;++i) {
         next[i]=i+1;
@@ -23,12 +42,12 @@ bool generateRmsObjectCandidates(uint32_t width,uint32_t height,uint32_t &random
     next[sentinel]=0;
     previous[sentinel]=count-1;
     uint32_t rng=randomState;
-    if (width>3 && height>3) {
-        const uint32_t dx=width-2,dy=height-2;
+    if (areaWidth>3 && areaHeight>3) {
+        const uint32_t dx=areaWidth-2,dy=areaHeight-2;
         for (uint32_t i=0;i<dx*dy/4;++i) {
             const uint32_t x=genieRandomDraw(rng)*dx/32767u;
             const uint32_t y=genieRandomDraw(rng)*dy/32767u;
-            const uint32_t tile=y*width+x;
+            const uint32_t tile=y*areaWidth+x;
             // Original unlink/insert-after-sentinel moves nodes; repeated draws do not duplicate them.
             next[previous[tile]]=next[tile];
             previous[next[tile]]=previous[tile];
@@ -39,7 +58,8 @@ bool generateRmsObjectCandidates(uint32_t width,uint32_t height,uint32_t &random
         }
     }
     out.reserve(count);
-    for (uint32_t tile=next[sentinel];tile!=sentinel;tile=next[tile]) out.push_back(tile);
+    for (uint32_t tile=next[sentinel];tile!=sentinel;tile=next[tile])
+        out.push_back((ymin+tile/areaWidth)*width+xmin+tile%areaWidth);
     randomState=rng;
     return true;
 }
