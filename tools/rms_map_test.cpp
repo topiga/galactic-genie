@@ -185,5 +185,42 @@ int main() {
         check(!generateRmsMap(script,{},32,32,data,state,map,&error) && state==1 && map.terrain.empty(),
               "unsupported terrain row must fail without partial terrain or RNG");
     }
+    data.terrainBlock.terrains.resize(45);
+    data.terrainBlock.terrainsUsed=45;
+    for (int id:{6,9,41,44}) data.terrainBlock.terrains[id].enabled=1;
+    const std::string dry="<LAND_GENERATION> base_terrain 41 create_player_lands { terrain_type 9 base_size 3 number_of_tiles 60 } <TERRAIN_GENERATION> create_terrain 6 { base_terrain 41 number_of_tiles 37 number_of_clumps 4 spacing_to_other_terrain_types 1 } create_terrain 44 { base_terrain 9 number_of_tiles 9 number_of_clumps 2 clumping_factor 6 }";
+    load(dry); state=1;
+    check(generateRmsMap(script,{},32,32,data,state,expected,&error),error);
+    hash=2166136261u;
+    for (uint8_t tile:expected.terrain) hash=(hash^tile)*16777619u;
+    check(hash==2900154801u && state==3532705190u,"original Flats dry-terrain pipeline fixture");
+    const auto dryState=state;
+    auto &dirt=data.terrainBlock.terrains[6];
+    dirt.numTerrainUnitsUsed=1; dirt.terrainUnitId[0]=-1;
+    dirt.terrainUnitDensity[0]=32767; dirt.terrainUnitCentering[0]=255;
+    state=1;
+    check(generateRmsMap(script,{},32,32,data,state,map,&error) && state==dryState && map.terrain==expected.terrain,
+          "disabled scenery slot must ignore density/centering and consume no RNG");
+    for (int invalid:{-2,0,411}) {
+        dirt.terrainUnitId[0]=invalid; state=1;
+        check(!generateRmsMap(script,{},32,32,data,state,map,&error) && state==1 && map.terrain.empty(),
+              "unverified scenery must not be silently omitted");
+    }
+    dirt.terrainUnitId[0]=-1; dirt.numTerrainUnitsUsed=31;
+    state=1;
+    check(!generateRmsMap(script,{},32,32,data,state,map,&error) && state==1,"invalid scenery slot count");
+    dirt.numTerrainUnitsUsed=1;
+    for (int id:{1,22,32,35,37}) data.terrainBlock.terrains[id].enabled=1;
+    data.terrainBlock.terrains[37].terrainToDraw=35;
+    const std::string water="<LAND_GENERATION> base_terrain 32 create_player_lands { terrain_type 35 base_size 3 number_of_tiles 60 } <TERRAIN_GENERATION> create_terrain 22 { base_terrain 32 number_of_tiles 37 number_of_clumps 4 spacing_to_other_terrain_types 1 } create_terrain 1 { base_terrain 35 number_of_tiles 9 number_of_clumps 2 clumping_factor 6 }";
+    load(water); state=1;
+    check(generateRmsMap(script,{},32,32,data,state,map,&error),error);
+    hash=2166136261u;
+    for (auto tile:map.terrain) hash=(hash^tile)*16777619u;
+    check(hash==4080120994u && state==3532705190u,"original water cleanup pipeline raster/RNG");
+    data.terrainBlock.terrains[37].terrainToDraw=53;
+    state=1;
+    check(!generateRmsMap(script,{},32,32,data,state,map,&error) && state==1 && map.terrain.empty(),
+          "invalid generated shore alias fails transactionally after cleanup");
     std::cout<<"RMS integrated map tests passed\n";
 }

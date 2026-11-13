@@ -2,6 +2,7 @@
 #pragma once
 #include "rms_script.h"
 #include "rms_objects.h"
+#include "rms_scenery.h"
 #include "rms_player_starts.h"
 
 namespace swgb {
@@ -9,11 +10,12 @@ struct RmsMap {
     uint32_t width = 0, height = 0;
     std::vector<uint8_t> terrain;
     std::vector<RmsTimberPlacement> timber;
+    std::vector<RmsSceneryPlacement> scenery;
     std::vector<RmsPlayerStart> playerStarts; // Owner order1..playerCount; no starting units implied.
 };
 
 // Strict script pipeline: explicit nonplayer lands OR one player-land block (1..8 players)
-// on terrain0/3, bounded land separation, terrain clumps and optional timber348 row.
+// on verified flat terrain, bounded land separation, terrain clumps, automatic trees and optional timber348 row.
 // Player lands use the game's randomized-position mode, with default borders.
 // The RMS random_placement directive itself does not select this game setting.
 // Terrain rows support spacing, scaling and player-start protection on flat maps.

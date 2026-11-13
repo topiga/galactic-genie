@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "rms_map.h"
 #include "rms_terrain.h"
+#include "rms_terrain_cleanup.h"
 #include "../core/genie_dat.h"
 #include "../core/genie_random.h"
 #include <algorithm>
@@ -151,15 +152,25 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         } else return fail("unsupported directive " + command);
     }
     if (base<0 || lands.empty()) return fail("explicit base terrain and at least one land required");
-    auto safeTerrain = [&](uint8_t terrain) {
-        if ((terrain!=0 && terrain!=3) || terrain>=data.terrainBlock.terrains.size()) return false;
+    auto safeTerrain = [&](uint8_t terrain, bool allowScenery=false) {
+        if (terrain>52 || terrain>=data.terrainBlock.terrains.size()) return false;
         const auto &t=data.terrainBlock.terrains[terrain];
-        return t.enabled==1 && t.terrainToDraw==-1 && t.numTerrainUnitsUsed==0;
+        const int alias=t.terrainToDraw;
+        const bool validAlias=alias>=0 && size_t(alias)<data.terrainBlock.terrains.size() &&
+            data.terrainBlock.terrains[alias].enabled==1 && data.terrainBlock.terrains[alias].terrainToDraw==-1;
+        if (t.enabled!=1 || (alias!=-1 && !validAlias) || t.numTerrainUnitsUsed<0 || t.numTerrainUnitsUsed>30)
+            return false;
+        // Land/terrain rows write raw bytes; only the inactive base may be painted by smoothing.
+        if (allowScenery && (terrain==10 || terrain==13 || (terrain>=17 && terrain<=21))) return true;
+        // Original 0x495020 skips the exact -1 sentinel before consulting other slot fields.
+        for (int slot=0;slot<t.numTerrainUnitsUsed;++slot)
+            if (t.terrainUnitId[slot]!=-1) return false;
+        return true;
     };
-    if (!safeTerrain(static_cast<uint8_t>(base))) return fail("unsupported base terrain metadata; require plain terrain0/3");
-    for (const auto &land:lands) if (!safeTerrain(land.terrain)) return fail("unsupported land terrain metadata");
+    if (!safeTerrain(static_cast<uint8_t>(base))) return fail("unsupported base terrain metadata");
+    for (const auto &land:lands) if (!safeTerrain(land.terrain,true)) return fail("unsupported land terrain metadata");
     for (const auto &row:terrainRows)
-        if (!safeTerrain(row.terrain) || !safeTerrain(row.baseTerrain)) return fail("unsupported terrain row metadata");
+        if (!safeTerrain(row.terrain,true) || !safeTerrain(row.baseTerrain,true)) return fail("unsupported terrain row metadata");
     RmsMap generated;
     std::vector<RmsTerrainProtection> protection;
     generated.width=width; generated.height=height;
@@ -188,9 +199,14 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         !smoothRmsTerrain(width,height,static_cast<uint8_t>(base),generated.terrain,generated.terrain,err)) return false;
     genieRandomDraw(rng);
     if (!generateRmsTerrain(width,height,terrainRows,rng,generated.terrain,err,protection)) return false;
-    // Post-terrain smoothing and cleanup are proven no-ops on terrain0/3.
+    if (!smoothRmsTerrain(width,height,1,generated.terrain,generated.terrain,err) ||
+        !cleanupRmsTerrain(width,height,generated.terrain,err)) return false;
     genieRandomDraw(rng);
-    if (hasObjects && !generateRmsTimberPlacements(width,height,generated.terrain,data,objectCount,rng,generated.timber,err))
+    if (!generateRmsScenery(width,height,generated.terrain,data,rng,generated.scenery,err)) return false;
+    std::vector<uint32_t> occupied;
+    for (const auto &tree:generated.scenery)
+        occupied.push_back(static_cast<uint32_t>(tree.y)*width+static_cast<uint32_t>(tree.x));
+    if (hasObjects && !generateRmsTimberPlacements(width,height,generated.terrain,data,objectCount,rng,generated.timber,err,occupied))
         return false;
     genieRandomDraw(rng);
     randomState=rng;

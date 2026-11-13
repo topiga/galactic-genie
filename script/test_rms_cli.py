@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     (work/'map.rms').write_text(source)
     # Authored resources only: exercise archive includes and startup defines.
     files = [(60000, ('#include_drs test.def 60001\n'+source.replace('terrain_type 3', 'terrain_type GROUND')).encode()),
-             (60001, b'if TEST_MAP #const GROUND 3 else #const GROUND 1 endif\n')]
+             (60001, b'if TEST_MAP #const GROUND 3 else #const GROUND 53 endif\n')]
     offset = 96+12*len(files)
     archive = bytearray(b'Local RMS test'.ljust(60,b'\0')+b'1.00'+b'tribe'.ljust(12,b'\0')+
                         struct.pack('<iiIII',1,offset,0x62696e61,96,len(files)))
@@ -58,4 +58,8 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     assert 'unsupported terrain parameter/value base_terrain' in run(
         ['render-rms',data,work/'invalid.rms',32,1,work/'rejected.png'],1)
     assert not (work/'rejected.png').exists(), 'Wrapped terrain ID created output'
+    for fixture, count in [('dry-terrain',0),('water-terrain',0),('forest-terrain',40)]:
+        output=run(['render-rms',data,root/'tools/fixtures'/(fixture+'.rms'),32,1,work/(fixture+'.png')],0)
+        assert f'{count} native objects' in output, output
+        assert (work/(fixture+'.png')).stat().st_size>100, 'Missing terrain rendering'
 print('RMS file/DRS parity, includes, defines and rejection checks passed')

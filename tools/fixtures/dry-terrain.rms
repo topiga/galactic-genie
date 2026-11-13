@@ -1,0 +1,21 @@
+/* Authored diagnostic using the dry terrain types in the packaged Flats map. */
+<LAND_GENERATION>
+base_terrain 41
+create_player_lands {
+  terrain_type 9
+  base_size 3
+  number_of_tiles 60
+}
+<TERRAIN_GENERATION>
+create_terrain 6 {
+  base_terrain 41
+  number_of_tiles 37
+  number_of_clumps 4
+  spacing_to_other_terrain_types 1
+}
+create_terrain 44 {
+  base_terrain 9
+  number_of_tiles 9
+  number_of_clumps 2
+  clumping_factor 6
+}

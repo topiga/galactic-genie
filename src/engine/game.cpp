@@ -1138,9 +1138,9 @@ bool Game::initScenario(const Scenario &scenario, std::string *err) {
     return true;
 }
 
-static float rmsTimberFacing(uint8_t facet) {
+static float rmsTimberFacing(uint8_t facet,int angleCount=12) {
     // Invert the renderer's isometric facing projection at the facet center.
-    const float theta = kPi*.5f + facet*(2*kPi/12);
+    const float theta = kPi*.5f + facet*(2*kPi/angleCount);
     const float sx = std::cos(theta)*.5f, sy = std::sin(theta);
     return std::atan2(sy-sx,sy+sx);
 }
@@ -1157,15 +1157,21 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     for (int y=0;y<mapSize;++y) for (int x=0;x<mapSize;++x)
         scenario.map.tiles[static_cast<size_t>(x)*mapSize+mapSize-1-y].terrain =
             generated.terrain[static_cast<size_t>(y)*mapSize+x];
-    for (const auto &placement:generated.timber) {
+    auto placeTree = [&](int unitId,float x,float y,uint8_t facet) {
         ScenarioUnit unit;
-        unit.unitId=348;
+        unit.unitId=unitId;
         unit.spawnId=static_cast<uint32_t>(scenario.units.size())+1;
         unit.state=2;
-        unit.x=mapSize-placement.y; unit.y=placement.x;
-        unit.rotation=rmsTimberFacing(placement.facet)+kPi*.5f;
+        unit.x=mapSize-y; unit.y=x;
+        const auto &prototype=assets_.dat().civs[0].units[unitId];
+        const auto *graphic=assets_.dat().graphic(prototype.standingGraphic[0]);
+        unit.rotation=rmsTimberFacing(facet,graphic->angleCount)+kPi*.5f;
         scenario.units.push_back(unit);
-    }
+    };
+    for (const auto &placement:generated.scenery)
+        placeTree(placement.unitId,placement.x,placement.y,placement.facet);
+    for (const auto &placement:generated.timber)
+        placeTree(348,placement.x,placement.y,placement.facet);
     scenario.nextUnitId=static_cast<uint32_t>(scenario.units.size())+1;
     if (!initScenario(scenario,err)) return false;
     randomState=rng;
