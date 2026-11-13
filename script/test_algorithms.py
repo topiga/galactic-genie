@@ -11,6 +11,7 @@ cases = {
     'rms': ['src/engine/rms_script.cpp', 'src/core/drs.cpp'],
     'rms_object': ['src/engine/rms_objects.cpp'],
     'ai_military': ['src/engine/ai_military.cpp'],
+    'ai_targets': ['src/engine/ai_targets.cpp'],
 }
 for name, sources in cases.items():
     executable = build/(name+'-test')

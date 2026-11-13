@@ -28,6 +28,7 @@ set(SWGB_CORE_SOURCES
     src/engine/rms_script.cpp
     src/engine/rms_objects.cpp
     src/engine/ai_military.cpp
+    src/engine/ai_targets.cpp
     src/engine/game.cpp
     src/engine/pathfinding.cpp
 )
@@ -121,7 +122,8 @@ if(NOT VITA)
         add_executable(swgb-rms-test tools/rms_test.cpp src/engine/rms_script.cpp src/core/drs.cpp)
         add_executable(swgb-rms-object-test tools/rms_object_test.cpp src/engine/rms_objects.cpp)
         add_executable(swgb-ai-military-test tools/ai_military_test.cpp src/engine/ai_military.cpp)
-        foreach(test rms rms-object ai-military)
+        add_executable(swgb-ai-targets-test tools/ai_targets_test.cpp src/engine/ai_targets.cpp)
+        foreach(test rms rms-object ai-military ai-targets)
             target_include_directories(swgb-${test}-test PRIVATE src)
             add_test(NAME ${test} COMMAND swgb-${test}-test)
         endforeach()
