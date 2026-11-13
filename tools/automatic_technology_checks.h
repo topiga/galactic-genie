@@ -5,6 +5,34 @@
 // Original 5bfec9/5c0d45 and effect102 dispatch fixtures are retained in
 // Research/windows-reference/rms-start109-tech-*-oracle and rms-effect102-oracle.
 static void automaticTechnologyChecks(swgb::Assets &assets) {
+    // Full installed original graph: fresh player, then only Command Center marker22.
+    const std::vector<std::vector<int>> originalCompleted={
+        {0,22,451,486},{0,22,452,486,493},{0,22,454,486},{0,22,453,486},
+        {0,22,486},{0,22,455,486},{0,22,387,486},{0,22,388,486}};
+    for (int civ=1;civ<=8;++civ) {
+        swgb::Scenario scenario;
+        scenario.map.width=scenario.map.height=24;
+        scenario.map.tiles.resize(24*24);
+        scenario.nextUnitId=2;
+        scenario.players[0].active=scenario.players[0].human=true;
+        scenario.players[0].civilization=scenario.civilizations[0]=civ;
+        swgb::Game game(assets); std::string error;
+        for (bool withCenter:{false,true}) {
+            if (withCenter) {
+                swgb::ScenarioUnit center;
+                center.unitId=109; center.player=1; center.spawnId=1;
+                center.x=center.y=8; center.state=2;
+                scenario.units.push_back(center);
+            }
+            check(game.initScenario(scenario,&error),error.c_str());
+            std::vector<int> actual;
+            for (size_t id=0;id<assets.dat().techs.size();++id)
+                if (game.technologyResearched(1,int(id))) actual.push_back(int(id));
+            const std::vector<int> initial=civ==2?std::vector<int>{0,486,493}:std::vector<int>{0,486};
+            check(actual==(withCenter?originalCompleted[size_t(civ-1)]:initial),
+                  "Installed civilization startup and Command Center technology cascade match original graph");
+        }
+    }
     auto &data=const_cast<swgb::dat::DatFile &>(assets.dat());
     const auto savedTechs=data.techs;
     const auto savedEffects=data.effects;
@@ -73,8 +101,8 @@ static void automaticTechnologyChecks(swgb::Assets &assets) {
         check(game.researchTechnologyForTesting(1,completed),"Complete preservation fixture");
         check(game.researchTechnologyForTesting(1,trigger),"Complete automatic research trigger");
         check(game.technologyResearched(1,modifier) &&
-              game.technologyResearched(1,delayed),
-              "New103 effect restarts lower-ID eligibility using base time without resource86");
+              !game.technologyResearched(1,delayed),
+              "Ordinary103 effect does not change automatic eligibility");
         check(!game.technologyResearched(1,disabled),
               "New102 effect truncates fractional target before later zero-time completion");
         check(game.technologyResearched(1,completed),
@@ -89,6 +117,14 @@ static void automaticTechnologyChecks(swgb::Assets &assets) {
     }
     const int tree=data.civs[1].techTreeId;
     check(tree>=0 && size_t(tree)<data.effects.size(),"Civilization tree fixture exists");
+    data.effects[size_t(tree)].commands.push_back({103,int16_t(delayed),-1,1,-10.f});
+    {
+        swgb::Game game(assets);
+        check(game.init(0x5A17,64,&error,1,1),error.c_str());
+        check(game.researchTechnologyForTesting(1,trigger),"Complete startup restriction trigger");
+        check(game.technologyResearched(1,delayed),
+              "Startup103 restriction changes eligibility without resource86 scaling");
+    }
     data.effects[size_t(tree)].commands.push_back({102,-1,-1,-1,65535.f});
     {
         swgb::Game game(assets);

@@ -6,21 +6,30 @@ static void researchCostChecks(swgb::Assets &assets) {
     check(game.initSkirmish(0x5A17,&error,false,1,1),error.c_str());
     check(game.researchTechnologyForTesting(1,501),"Research modifier fixture");
     auto &data=const_cast<swgb::dat::DatFile &>(assets.dat());
-    auto &commands=data.effects[size_t(data.techs[501].effectId)].commands;
+    auto &commands=data.effects[size_t(data.civs[1].techTreeId)].commands;
+    auto &ordinary=data.effects[size_t(data.techs[501].effectId)].commands;
     auto &tech=data.techs[174];
     struct Restore {
         std::vector<swgb::dat::EffectCommand> &commands;
         std::vector<swgb::dat::EffectCommand> saved;
+        std::vector<swgb::dat::EffectCommand> &ordinary;
+        std::vector<swgb::dat::EffectCommand> savedOrdinary;
         swgb::dat::Tech &tech, &age;
         swgb::dat::Tech savedTech,savedAge;
-        ~Restore() { commands=std::move(saved); tech=std::move(savedTech); age=std::move(savedAge); }
-    } restore{commands,commands,tech,data.techs[1],tech,data.techs[1]};
+        ~Restore() { commands=std::move(saved); ordinary=std::move(savedOrdinary); tech=std::move(savedTech); age=std::move(savedAge); }
+    } restore{commands,commands,ordinary,ordinary,tech,data.techs[1],tech,data.techs[1]};
     tech.costs[0]={0,100,1}; tech.costs[1]={0,70,1}; tech.costs[2]={3,60,0};
     tech.researchTime=30;
     auto effect=[](int type,int target,int resource,int mode,float value) {
         swgb::dat::EffectCommand c{};
         c.type=type;c.a=target;c.b=resource;c.c=mode;c.d=value;return c;
     };
+    commands.clear();
+    ordinary={effect(101,174,0,0,1),effect(103,174,0,0,1)};
+    check(game.researchCostsForTesting(1,tech)[0].amount==100 &&
+          game.researchDurationForTesting(1,tech)==30,
+          "Ordinary researched effects ignore research cost/time restrictions");
+    ordinary.clear();
     commands={effect(101,174,0,1,-20.9f),effect(101,174,0,1,-10.9f)};
     auto costs=game.researchCostsForTesting(1,tech);
     check(costs[0].amount==90 && costs[1].amount==70 && costs[2].amount==60,

@@ -2792,7 +2792,11 @@ std::array<Game::ResearchCost,3> Game::researchCosts(int player,const dat::Tech 
         costs[i]={technology.costs[i].type,technology.costs[i].amount,technology.costs[i].flag};
     if (player<0 || size_t(player)>=playerEffects_.size()) return costs;
     const auto &techs=assets_.dat().techs;
-    for (int effect:playerEffects_[size_t(player)])
+    // Only civilization initialization dispatches research cost/time restrictions.
+    const int civilization=civilizationForPlayer(player);
+    const int effect=civilization>=0 && size_t(civilization)<assets_.dat().civs.size()
+        ? assets_.dat().civs[size_t(civilization)].techTreeId : -1;
+    if (effect>=0 && size_t(effect)<assets_.dat().effects.size())
         for (const auto &command:assets_.dat().effects[size_t(effect)].commands) {
             if (command.type!=101 || command.a<0 || size_t(command.a)>=techs.size() ||
                 &techs[size_t(command.a)]!=&technology || !std::isfinite(command.d)) continue;
@@ -2820,7 +2824,11 @@ int16_t Game::researchTimeDelta(int player,const dat::Tech &technology) const {
     int16_t delta=0;
     if (player<0 || size_t(player)>=playerEffects_.size()) return 0;
     const auto &techs=assets_.dat().techs;
-    for (int effect:playerEffects_[size_t(player)])
+    // Only civilization initialization dispatches research cost/time restrictions.
+    const int civilization=civilizationForPlayer(player);
+    const int effect=civilization>=0 && size_t(civilization)<assets_.dat().civs.size()
+        ? assets_.dat().civs[size_t(civilization)].techTreeId : -1;
+    if (effect>=0 && size_t(effect)<assets_.dat().effects.size())
         for (const auto &command:assets_.dat().effects[size_t(effect)].commands)
             if (command.type==103 && command.a>=0 && size_t(command.a)<techs.size() &&
                 &techs[size_t(command.a)]==&technology && std::isfinite(command.d))
