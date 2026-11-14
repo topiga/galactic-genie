@@ -279,6 +279,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         } else if (stage==3 && command=="create_object" && startingScouts) {
             if ((!holocrons && nearNova) || (holocrons && resourceProfile>=19))
                 return fail("unsupported resource row after verified stock prefix");
+            if(holocrons && resourceProfile==0 && i<tokens.size() && tokens[i].text=="66")resourceProfile=1;
             if(holocrons && resourceProfile==6 && i<tokens.size() &&
                (tokens[i].text=="1363" || tokens[i].text=="1365"))resourceProfile=8;
             // shortcut: one optional hunt before predators; verify longer hunt chains before accepting them.

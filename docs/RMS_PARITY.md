@@ -649,3 +649,19 @@ physical row position, allowing one hunt then predators and the stock suffix.
 Additional consecutive hunt rows remain rejected pending sequence evidence.
 These remain controlled sequences on relabeled selected geometry, not complete
 seed1/2/16161 parity or a fresh live Windows comparison.
+
+### Forest branch without forage (2026-11-15)
+
+An original22-row replay omits the forage row on controlled automatic Forest18
+and retains the two Nerf rows and all later resources. It creates213 Gaia
+objects and ends at RNG3794078108. The native regression checks complete object
+poses/order, Nerf animation frames, automatic tree facets, grids and tree import.
+The parser can begin the resource profiles at the near-Nova row when forage is
+absent. This targets the initial rejection seen in packaged seeds3/42; their
+longer hunting sequences and complete terrain generation remain unverified.
+
+The final eight-seed audit still rejects every additional complete map. Seed42
+now reaches the longer hunt-chain guard; seed3 reaches an unverified1365
+count2/variance1 row. The other six stop at additional consecutive hunts.
+Rejected scripts produce no map image. Full packaged parity remains limited to
+the previously verified seed16160 configuration.
