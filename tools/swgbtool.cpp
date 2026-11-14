@@ -5916,12 +5916,15 @@ static int cmdRenderRms(const char *dataDir, const char *path, const char *sizeT
             std::fprintf(stderr,"error: terrain restriction ID out of range\n"); return 2;
         }
         RmsMap map;
-        RmsZones zones;
+        RmsZoneCache zoneCache;
+        uint32_t zoneIndex;
         const auto &passability=assets.dat().terrainRestrictions[zoneRestriction].passableBuildableDmgMultiplier;
         if (!generateRmsMap(script,defines,size,size,assets.dat(),state,map,&error,playerCount) ||
-            !generateRmsZones(size,map.terrain,passability,zones,&error)) {
+            !zoneCache.lookup(size,map.terrain,passability,zoneIndex,&error)) {
             std::fprintf(stderr,"error: %s\n",error.c_str()); return 1;
         }
+        const auto &zoneEntry=*zoneCache.entry(zoneIndex);
+        const auto &zones=zoneEntry.zones;
         const uint32_t scale=std::max(1u,512u/size);
         renderer.beginFrame(size*scale,size*scale,1,0,0,0);
         for (uint32_t y=0;y<size;++y) for (uint32_t x=0;x<size;++x) {
@@ -5934,6 +5937,10 @@ static int cmdRenderRms(const char *dataDir, const char *path, const char *sizeT
         if (!renderer.savePng(output)) { std::fprintf(stderr,"error: cannot save image\n"); return 1; }
         std::printf("RMS terrain zones: restriction %u, count %u (capped255; IDs wrap), final RNG %u -> %s\n",
                     zoneRestriction,zones.count,state,output);
+        std::printf("Zone tables: %zu contact cells, %zu two-hop bridge cells\n",
+            size_t(std::count(zoneEntry.adjacency.contact.begin(),zoneEntry.adjacency.contact.end(),uint8_t(1))),
+            size_t(std::count_if(zoneEntry.adjacency.commonNeighbor.begin(),zoneEntry.adjacency.commonNeighbor.end(),
+                [](uint8_t value) { return value!=255; })));
         return 0;
     }
     Game game(assets);

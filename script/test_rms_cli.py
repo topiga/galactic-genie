@@ -46,6 +46,7 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
          '--define','TEST_MAP','--zones',4],0)
     assert (work/'zones.png').read_bytes()==(work/'archive-zones.png').read_bytes(), 'File/DRS zones differ'
     assert 'RMS terrain zones: restriction 4' in zone_file
+    assert re.search(r'Zone tables: \d+ contact cells, \d+ two-hop bridge cells',zone_file)
     assert re.search(r'final RNG (\d+)',rendered).group(1)==re.search(r'final RNG (\d+)',zone_file).group(1), 'Zone rendering changed map RNG'
     for bad in ['-1','bad','999999']:
         run(['render-rms',data,work/'map.rms',32,1,work/'bad-zones.png','--zones',bad],2)

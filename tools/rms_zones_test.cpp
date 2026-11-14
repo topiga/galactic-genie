@@ -3,8 +3,10 @@
 #include <cassert>
 #include <limits>
 #include <cstdio>
+#include "rms_zone_adjacency_checks.h"
 using namespace swgb;
 int main() {
+    checkOriginalZoneAdjacency();
     // Original624ee0/625560 byte fixtures; local rms-passability-zone-oracle-2026-11-14.
     struct Case { unsigned size; const char *terrain,*labels; std::vector<float> mask; unsigned count; };
     const Case cases[]={
@@ -54,5 +56,52 @@ int main() {
     assert(!generateRmsZones(1,{0},{std::numeric_limits<float>::infinity()},zones));
     assert(generateRmsZones(2,{0,1,2,0},{1,2,-1},zones,&error));
     assert((zones.tiles==std::vector<uint8_t>{0,0,1,0}));
+    // Five original vertical strips: contacts include self; only two-hop pairs get a bridge.
+    assert(generateRmsZones(5,{0,1,0,1,0,0,1,0,1,0,0,1,0,1,0,0,1,0,1,0,0,1,0,1,0},
+        {1,0},zones));
+    RmsZoneAdjacency adjacency;
+    assert(generateRmsZoneAdjacency(5,zones,adjacency,&error));
+    assert(error.empty());
+    assert((adjacency.contact==std::vector<uint8_t>{
+        1,1,0,0,0, 1,1,1,0,0, 0,1,1,1,0, 0,0,1,1,1, 0,0,0,1,1}));
+    assert((adjacency.commonNeighbor==std::vector<uint8_t>{
+        255,255,1,255,255, 255,255,255,2,255, 1,255,255,255,3,
+        255,2,255,255,255, 255,255,3,255,255}));
+    // Diagonal contact does not merge components, but does enter the adjacency table.
+    assert(generateRmsZones(2,{0,1,1,0},{1,0},zones));
+    assert(generateRmsZoneAdjacency(2,zones,adjacency));
+    assert(adjacency.contact==std::vector<uint8_t>(16,1));
+    assert(adjacency.commonNeighbor==std::vector<uint8_t>(16,255));
+    assert(!generateRmsZoneAdjacency(3,zones,adjacency,&error));
+    assert(adjacency.contact.empty() && adjacency.commonNeighbor.empty() && !error.empty());
+    zones.count=256;
+    assert(!generateRmsZoneAdjacency(2,zones,adjacency));
+    zones.count=3;
+    assert(!generateRmsZoneAdjacency(2,zones,adjacency));
+    zones.count=0;
+    assert(!generateRmsZoneAdjacency(2,zones,adjacency));
+    // Original625e80: magnitudes ignored; unused mask entries and length still key the cache.
+    RmsZoneCache cache; uint32_t index=99;
+    const std::vector<uint8_t> stripes={0,1,0,0,1,0,0,1,0};
+    assert(cache.lookup(3,stripes,{1,0,0},index,&error) && index==0);
+    const auto original=cache.entry(index)->zones.tiles;
+    assert(cache.lookup(3,stripes,{2,-10,-0.0f},index) && index==0);
+    assert(cache.lookup(3,stripes,{1,0,1},index) && index==1);
+    assert(cache.lookup(3,stripes,{1,0},index) && index==2);
+    assert(!cache.entry(3));
+    // Terrain edits alone retain both raster and adjacency; clear625c10 forces regeneration.
+    assert(cache.lookup(3,std::vector<uint8_t>(9,0),{1,0,0},index) && index==0);
+    assert(cache.entry(index)->zones.tiles==original && cache.entry(index)->adjacency.contact.size()==9);
+    assert(!cache.lookup(2,{0,0,0,0},{1,0,0},index,&error) && index==UINT32_MAX && !error.empty());
+    assert(!cache.lookup(3,stripes,{1},index));
+    assert(!cache.lookup(3,stripes,{1,std::numeric_limits<float>::infinity()},index));
+    assert(cache.entry(0)->zones.tiles==original && !cache.entry(3));
+    cache.clear(); cache.clear();
+    assert(!cache.entry(0));
+    assert(cache.lookup(3,std::vector<uint8_t>(9,0),{1,0,0},index) && index==0);
+    assert(cache.entry(index)->zones.count==1);
+    assert(cache.entry(index)->adjacency.contact==std::vector<uint8_t>{1});
+    cache.clear();
+    assert(cache.lookup(1,{0},{1},index,&error) && error.empty());
     std::puts("PASS: original zone bytes, positive-mask connectivity, ID wrapping and validation");
 }
