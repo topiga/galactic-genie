@@ -162,7 +162,7 @@ Terrain49/50 additionally creates the original stationary carbon deposits (units
 
 `tools/fixtures/owned-command-center.rms` creates one Command Center per owner. Use `--players 1 --civilization 1`, or `--players 2 --civilization 1 --civilization 2` with either RMS renderer command. Repeat the civilization option in owner order; IDs1..8 are accepted. Up to eight owners are supported. Each enemy start must be separated from the local start by at least11 tiles on either axis; close starts remain rejected pending complete startup visibility timing. This path requires square, scenery-free grass0 player lands, one109 per owner, `set_place_for_every_player`, and explicit zero minimum/maximum player distance. It validates the original building/graphic metadata and rejects unsupported setups before replacing the running diagnostic world or advancing its RNG.
 
-The native import retains owner/civilization, completed building state, research chronology, population and recorded building cost. Gungans paint foundation terrain4, Wookiees6, others27. This is a **map diagnostic**, not a full skirmish: it has no workers, resources or enemy AI, uses zero starting stockpiles and a200 population limit. The unseen second owner retains a pending foundation until current sight and the original padded terrain draw scan reach its center; explored memories and simulation updates do not consume it. Rendering while paused can consume it. Standard map integration still needs nearby-scenery cleanup, nonlocal workers and additional startup contexts. Seed/state and initial-frame/rendering parity beyond the recorded checks are not claimed.
+The native import retains owner/civilization, completed building state, research chronology, population and recorded building cost. Gungans paint foundation terrain4, Wookiees6, others27. This is a **map diagnostic**, not a full skirmish: it has no workers, resources or enemy AI, uses zero starting stockpiles and a200 population limit. The unseen second owner retains a pending foundation until current sight and the original padded terrain draw scan reach its center; explored memories and simulation updates do not consume it. Rendering while paused can consume it. Standard map integration still needs destructive scenery cleanup, additional worker owners and startup contexts. Seed/state and initial-frame/rendering parity beyond the recorded checks are not claimed.
 
 Example, from the repository root with `SWGB_GAME_DIR` set:
 
@@ -174,7 +174,7 @@ Example, from the repository root with `SWGB_GAME_DIR` set:
 ```
 
 
-`tools/fixtures/owned-workers.rms` adds the original three starting workers after the Command Center. Use `--players 1 --civilization 1` (IDs1..8). It accepts an83 row with `number_of_objects 1`, `set_place_for_every_player`, and explicit player distances1..3; original resource84 supplies the count3. The area must be unclipped, with no scenery or other owners. Native import preserves IDs, worker variants, facing, randomized initial idle animation, population and recorded unit costs. Civilization bonuses run afterward, including Confederacy worker HP40→55. This is still a map diagnostic with zero food/carbon/ore/nova, not a complete RMS skirmish.
+`tools/fixtures/owned-workers.rms` adds the original three starting workers per owner after the Command Centers. Use `--players 1 --civilization 1`, or `--players 2 --civilization 1 --civilization 2` (IDs1..8). It accepts an83 row with `number_of_objects 1`, `set_place_for_every_player`, and explicit player distances1..3; original resource84 supplies the count3. The area must be unclipped and scenery-free, with at most two separated owners. Native import preserves IDs, worker variants, facing, randomized initial idle animation, population and recorded unit costs. Civilization bonuses run afterward, including Confederacy worker HP40→55. This is still a map diagnostic with zero food/carbon/ore/nova, not a complete RMS skirmish.
 
 ```sh
 "$HOME/.local/share/swgb/galactic-genie-build/swgbtool" render-rms \
@@ -182,3 +182,6 @@ Example, from the repository root with `SWGB_GAME_DIR` set:
   "$HOME/.local/share/swgb/galactic-genie-build/rms-workers.png" \
   --players 1 --civilization 1
 ```
+
+
+`tools/fixtures/owned-forest.rms` combines original final forest scattering with two Command Centers (`--players 2 --civilization 1 --civilization 1`). Supported terrain IDs are41/9/6/10, with live411 trees and clear dry CC footprints. It preserves the trees through the original cleanup call. Destructible scenery, other forest owner/civilization contexts, early forest bases and workers mixed into this forest profile remain rejected.
