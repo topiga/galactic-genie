@@ -28,6 +28,8 @@ struct RmsTimberPlacement {
     uint8_t facet;
     float headingRadians=0;
     int16_t unitId=348;
+    uint8_t animationFrame=0;
+    float initialIdleDelay=0;
 };
 // One original ungrouped unit348 row, default modifiers, on a flat map.
 // Occupied tiles represent verified centered, half-tile scenery footprints.
@@ -57,6 +59,10 @@ struct RmsResourceGroups {
 // prior resources and owned footprints. Other forage rows remain unsupported.
 // Explicit Medium/Far selects stock Nova4 distances18..26/25..35 on120 maps.
 // Ore102 uses radius2: Near tight5/distances14..18, Far tight4/distances20..26.
+// Nerf594 uses loose groups: Near4 once/player at10..12, Far2 twice/player
+// at14..30, radius3 and no spacing; includes original animated startup state.
+// Herd occupancy includes blocking deposits/trees/buildings only: original Nerfs
+// ignore workers/scouts/holocrons/other Nerfs, and do not block later herd groups.
 // Optional rowEligibility preserves original spacing exclusions across rows; an
 // empty vector starts all-eligible. Failure preserves it and RNG and clears output.
 bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
