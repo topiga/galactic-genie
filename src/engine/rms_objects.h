@@ -56,7 +56,7 @@ struct RmsResourceGroups {
 // distances10..12, spacing6, zone7; occupiedTiles must include retained scenery,
 // prior resources and owned footprints. Other forage rows remain unsupported.
 // Explicit Medium/Far selects stock Nova4 distances18..26/25..35 on120 maps.
-// Near ore102 uses tight5/radius2/distances14..18 on the same bounded profile.
+// Ore102 uses radius2: Near tight5/distances14..18, Far tight4/distances20..26.
 // Optional rowEligibility preserves original spacing exclusions across rows; an
 // empty vector starts all-eligible. Failure preserves it and RNG and clears output.
 bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
