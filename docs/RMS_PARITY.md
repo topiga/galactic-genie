@@ -665,3 +665,12 @@ now reaches the longer hunt-chain guard; seed3 reaches an unverified1365
 count2/variance1 row. The other six stop at additional consecutive hunts.
 Rejected scripts produce no map image. Full packaged parity remains limited to
 the previously verified seed16160 configuration.
+
+### Two-Eopie hunting groups (2026-11-15)
+
+Original terminal1365 count2/variance1 comparisons cover the selected geometry
+with and without the preceding Nerf rows. With Nerfs they create four Eopies
+(79 Gaia total, RNG891822066); without Nerfs they create three (62 Gaia,
+RNG3061237336). Regression coverage includes all resource poses/order, original
+animation frames, delays and heading, unchanged grids and native import.
+This verifies the quantity that blocked seed3, not that seed's complete layout.
