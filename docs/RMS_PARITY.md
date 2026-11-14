@@ -169,3 +169,28 @@ land/elevation/terrain/object pipeline parity is claimed. Private evidence:
 `rms-elevation-stage-oracle-2026-11-14.json`,
 `rms-elevation-forest-groups-oracle-2026-11-14.json` and
 `rms-elevation-forest-parser-oracle-2026-11-14.json`.
+
+### Integrated elevation and native hill import
+
+The RMS parser now executes elevation between land and terrain, accepts late,
+repeated and empty elevation sections, and preserves the original separate
+scaling rules. Nine script-seed comparisons match original land/elevation/terrain
+rasters and RNG; the empty object stage adds its independently verified final
+scheduler draw. Reordered sections produce the same result. The integrated map
+exports original tile heights and slope bytes; nonflat object/scenery startup
+is still rejected while its callbacks are being composed.
+
+`Game::initRms` imports those tile heights directly and rotates slope IDs to the
+native renderer's coordinate convention. It does not reconstruct the slope from
+four corners: original shapes can share those corners but differ internally.
+All 17 triangulations match original `54f820` samples on the generated test map,
+and scenario restart clears the RMS height mode. Original asset template
+outlines confirm the rotation. `tools/fixtures/elevated-land.rms`, size16,
+seed4294967295 renders with final RNG2180953274; the image was visually inspected.
+This is a controlled hills fixture, not a playable stock Forest map or a claim
+of complete lighting/filter-pixel equivalence.
+
+Private evidence: `rms-land-elevation-terrain-scriptseeds-oracle-2026-11-14.json`,
+`rms-original-height-sampling-oracle-2026-11-14.json`,
+`rms-slope-rotation-model-2026-11-14.json` and
+`rms-slope-asset-orientation-2026-11-14.json`.

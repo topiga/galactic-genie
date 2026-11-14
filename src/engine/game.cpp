@@ -1208,6 +1208,16 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         placeResource(placement.unitId,placement.x,placement.y,placement.facet,nextId++);
     scenario.nextUnitId=nextId;
     if (!initScenario(scenario,err)) return false;
+    if(!generated.elevation.empty()) {
+        // RMS retains its x/y raster; rotate slope geometry into the renderer's corner convention.
+        static constexpr uint8_t rotated[]={0,3,4,2,1,6,8,5,7,11,12,10,9,16,15,13,14};
+        tileElevation_=generated.elevation;
+        for(size_t index=0;index<tileSlope_.size();++index) tileSlope_[index]=rotated[generated.slopes[index]];
+        rmsTileElevation_=true;
+        for(int y=0;y<=mapSize_;++y) for(int x=0;x<=mapSize_;++x)
+            cornerElevation_[size_t(y)*(mapSize_+1)+x]=static_cast<uint8_t>(elevationAt(float(x),float(y)));
+        lookAt(mapSize_*.5f,mapSize_*.5f);
+    }
     for (size_t index=0;index<generated.ownedObjects.size();++index) {
         const auto &placement=generated.ownedObjects[index];
         const auto &unit=assets_.dat().civs[placement.civilization].units[placement.unitId];
@@ -1431,6 +1441,7 @@ void Game::generateTerrain(int size) {
 }
 
 void Game::buildTileElevation() {
+    rmsTileElevation_=false;
     tileElevation_.assign((size_t)mapSize_ * mapSize_, 0);
     tileSlope_.assign((size_t)mapSize_ * mapSize_, 0);
     for (int y = 0; y < mapSize_; y++) {
@@ -1452,6 +1463,8 @@ float Game::elevationAt(float x, float y) const {
     int ty = std::max(0, std::min(mapSize_ - 1, (int)std::floor(y)));
     float fx = std::max(0.0f, std::min(1.0f, x - tx));
     float fy = std::max(0.0f, std::min(1.0f, y - ty));
+    if(rmsTileElevation_)
+        return tileElevation_[size_t(ty)*mapSize_+tx]+sampleSlope(tileSlope_[size_t(ty)*mapSize_+tx],1-fy,fx).first;
     const size_t stride = (size_t)mapSize_ + 1;
     float north = cornerElevation_[(size_t)ty * stride + tx];
     float east = cornerElevation_[(size_t)ty * stride + tx + 1];

@@ -1335,6 +1335,7 @@ private:
     std::vector<uint8_t> cornerElevation_;
     std::vector<uint8_t> tileElevation_;
     std::vector<uint8_t> tileSlope_;
+    bool rmsTileElevation_=false;
     std::vector<Object> objects_;
     std::unordered_map<uint32_t, size_t> objectIndices_;
     std::vector<Projectile> projectiles_;

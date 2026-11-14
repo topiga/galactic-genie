@@ -1,0 +1,7 @@
+<LAND_GENERATION>
+base_terrain 0
+create_land { terrain_type 6 land_position 50 50 base_size 3 number_of_tiles 160 clumping_factor 8 border_fuzziness 20 }
+<TERRAIN_GENERATION>
+create_terrain 3 { base_terrain 6 number_of_tiles 30 number_of_clumps 3 spacing_to_other_terrain_types 1 clumping_factor 10 set_flat_terrain_only }
+<ELEVATION_GENERATION>
+create_elevation 2 { base_terrain 6 number_of_tiles 40 number_of_clumps 2 }
