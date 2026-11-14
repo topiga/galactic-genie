@@ -256,6 +256,9 @@ public:
     float populationCapacityForTesting(int player) const {
         return populationCapacity(player);
     }
+    bool unitAvailableForTesting(int player,int unitId) const {
+        return unitAvailable(player,unitId);
+    }
     size_t activeObjectCount() const;
     size_t underConstructionObjectCount() const;
     size_t selectedObjectCount() const;
@@ -556,6 +559,10 @@ public:
     }
     float playerAttributeForTesting(int player,int attribute) const {
         return playerAttribute(player,attribute);
+    }
+    std::vector<int> technologyOrderForTesting(int player) const {
+        return player>0 && size_t(player)<researchedTechOrder_.size()
+            ?researchedTechOrder_[size_t(player)]:std::vector<int>{};
     }
     float unitAttributeForTesting(uint32_t id,int attribute,float base) const {
         const auto *object=findObject(id);
@@ -1286,6 +1293,7 @@ private:
         const std::string &text, int fallbackPlayer) const;
     float populationUse(const dat::Unit &unit) const;
     float populationUsed(int player) const;
+    float buildingPopulationCapacity(int player) const;
     float populationCapacity(int player) const;
     void log(const std::string &message) const;
     int playerColorBase(int player) const;
@@ -1334,6 +1342,8 @@ private:
     std::array<std::map<int, float>, 17> resources_{};
     std::array<std::set<int>, 17> researchedTechs_{};
     std::array<std::vector<int>, 17> researchedTechOrder_{};
+    std::array<size_t, 17> civilizationEffectStart_{};
+    std::array<float, 17> startupPopulationAdjustment_{};
     std::array<std::vector<int>, 17> civilizationEffects_{}, playerEffects_{};
     std::array<AiPlayerState, 17> aiPlayers_{};
     std::array<std::array<float,4>,17> aiEscrow_{},aiEscrowPercent_{};

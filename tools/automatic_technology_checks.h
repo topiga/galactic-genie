@@ -16,6 +16,7 @@ static void automaticTechnologyChecks(swgb::Assets &assets) {
         scenario.nextUnitId=2;
         scenario.players[0].active=scenario.players[0].human=true;
         scenario.players[0].civilization=scenario.civilizations[0]=civ;
+        scenario.players[0].populationLimit=500;
         swgb::Game game(assets); std::string error;
         for (bool withCenter:{false,true}) {
             if (withCenter) {
@@ -31,6 +32,26 @@ static void automaticTechnologyChecks(swgb::Assets &assets) {
             const std::vector<int> initial=civ==2?std::vector<int>{0,486,493}:std::vector<int>{0,486};
             check(actual==(withCenter?originalCompleted[size_t(civ-1)]:initial),
                   "Installed civilization startup and Command Center technology cascade match original graph");
+            auto expectedOrder=initial;
+            if (withCenter) {
+                expectedOrder.push_back(22);
+                const int unlock[]={451,452,454,453,-1,455,387,388};
+                if (unlock[civ-1]>=0) expectedOrder.push_back(unlock[civ-1]);
+            }
+            check(game.technologyOrderForTesting(1)==expectedOrder,
+                  "Original player startup research precedes Command Center completion cascade");
+            // Trade Federation tree effect8 sets250 AFTER buildings; do not add the starting5 again.
+            check(game.populationCapacityForTesting(1)==(civ==5?250.f:withCenter?5.f:0.f) &&
+                  game.populationUsedForTesting(1)==0,
+                  "Civilization capacity and Command Center storage are counted exactly once");
+            check(game.unitAvailableForTesting(1,70)==(civ!=5),
+                  "Ordinary TF tree disables housing after initial technology0 enables it");
+            if (withCenter) {
+                const float capacity=game.populationCapacityForTesting(1);
+                check(game.spawnObjectForTesting(civ,109,1,16,16)!=0 &&
+                      game.populationCapacityForTesting(1)==capacity+5,
+                      "A later Command Center grants capacity after the startup bonus");
+            }
         }
     }
     auto &data=const_cast<swgb::dat::DatFile &>(assets.dat());
@@ -42,6 +63,37 @@ static void automaticTechnologyChecks(swgb::Assets &assets) {
         const std::vector<swgb::dat::Effect> &effects;
         ~Restore() { data.techs=techs; data.effects=effects; }
     } restore{data,savedTechs,savedEffects};
+    {
+        const int dependent=int(data.techs.size());
+        swgb::dat::Tech afterBuilding,initial;
+        for(auto &required:afterBuilding.requiredTechs) required=-1;
+        afterBuilding.requiredTechCount=1;
+        afterBuilding.requiredTechs[0]=data.civs[1].units[109].techId;
+        initial=afterBuilding;
+        initial.requiredTechCount=0;
+        initial.effectId=int16_t(data.effects.size());
+        swgb::dat::Effect restriction;
+        restriction.commands={{102,-1,-1,-1,float(dependent)}};
+        data.effects.push_back(restriction);
+        data.techs.push_back(afterBuilding);
+        data.techs.push_back(initial);
+        swgb::Game game(assets); std::string error;
+        swgb::Scenario scenario;
+        scenario.map.width=scenario.map.height=24;
+        scenario.map.tiles.resize(24*24);
+        scenario.players[0].active=scenario.players[0].human=true;
+        scenario.players[0].civilization=scenario.civilizations[0]=1;
+        swgb::ScenarioUnit center;
+        center.unitId=109;center.player=1;center.spawnId=1;center.x=center.y=8;center.state=2;
+        scenario.units.push_back(center);scenario.nextUnitId=2;
+        check(game.initScenario(scenario,&error),error.c_str());
+        check(game.technologyResearched(1,dependent+1) && !game.technologyResearched(1,dependent),
+              "Initial research restriction must precede imported building completion");
+        check(game.init(1,64,&error,1,1),error.c_str());
+        check(game.technologyResearched(1,dependent+1) && !game.technologyResearched(1,dependent),
+              "Initial research restriction must precede fresh starting buildings");
+        data.techs=savedTechs;data.effects=savedEffects;
+    }
     const int first=int(data.techs.size());
     const int trigger=first, delayed=first+1, modifier=first+2;
     const int disabled=first+3, positiveTime=first+4, completed=first+5;

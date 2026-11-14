@@ -396,6 +396,8 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     resources_ = {};
     researchedTechs_ = {};
     researchedTechOrder_ = {};
+    civilizationEffectStart_ = {};
+    startupPopulationAdjustment_ = {};
     civilizationEffects_ = {};
     playerEffects_ = {};
     aiPlayers_ = {};
@@ -473,6 +475,9 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     mapSize_ = mapSize;
     generateTerrain(mapSize);
 
+    initializeCivilizationRestrictions();
+    refreshAllAutomaticTechnologies();
+
     spawnBase(1, humanCiv, suffix[0], mapSize * 0.30f, mapSize * 0.35f);
     spawnBase(2, aiCiv, suffix[1], mapSize * 0.62f, mapSize * 0.60f);
     // Keep the generated sandbox quiet until its opposing bases are engaged.
@@ -493,8 +498,8 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
         return false;
     }
     rebuildAdjacency();
+    refreshAllAutomaticTechnologies();
     initializeCivilizationBonuses();
-    initializeCivilizationRestrictions();
     refreshAllAutomaticTechnologies();
     lookAt(mapSize * 0.30f + 2, mapSize * 0.35f + 2);
     return true;
@@ -930,6 +935,8 @@ bool Game::initScenario(const Scenario &scenario, std::string *err) {
     resources_ = {};
     researchedTechs_ = {};
     researchedTechOrder_ = {};
+    civilizationEffectStart_ = {};
+    startupPopulationAdjustment_ = {};
     civilizationEffects_ = {};
     playerEffects_ = {};
     aiPlayers_ = {};
@@ -1069,6 +1076,9 @@ bool Game::initScenario(const Scenario &scenario, std::string *err) {
     statusMessage_.clear();
     statusTime_ = 0;
     objects_.reserve(scenario.units.size() * 2);
+    // Player startup research precedes building-completion technologies.
+    initializeCivilizationRestrictions();
+    refreshAllAutomaticTechnologies();
     for (const ScenarioUnit &source : scenario.units) {
         const int civilization = civilizationFor(source.player);
         const dat::Unit *unit = findUnit(civilization, source.unitId);
@@ -1115,8 +1125,8 @@ bool Game::initScenario(const Scenario &scenario, std::string *err) {
                     if (Object *object = findObject(spawnId))
                         configureGate(*object);
     rebuildAdjacency();
+    refreshAllAutomaticTechnologies();
     initializeCivilizationBonuses();
-    initializeCivilizationRestrictions();
     refreshAllAutomaticTechnologies();
     const Object *hero = nullptr;
     size_t heroCount = 0;
@@ -3804,8 +3814,14 @@ void Game::refreshAutomaticTechnologies(int player) {
         return;
     const int civilization = civilizationForPlayer(player);
     auto &effects=playerEffects_[(size_t)player];
-    effects=civilizationEffects_[(size_t)player];
-    for (int id:researchedTechOrder_[(size_t)player]) {
+    effects.clear();
+    const auto &order=researchedTechOrder_[size_t(player)];
+    const auto &civilizationEffects=civilizationEffects_[size_t(player)];
+    for (size_t i=0;i<=order.size();++i) {
+        if (i==civilizationEffectStart_[size_t(player)])
+            effects.insert(effects.end(),civilizationEffects.begin(),civilizationEffects.end());
+        if (i==order.size()) break;
+        const int id=order[i];
         if (id<0 || size_t(id)>=assets_.dat().techs.size()) continue;
         const int effect=assets_.dat().techs[size_t(id)].effectId;
         if (effect>=0 && size_t(effect)<assets_.dat().effects.size()) effects.push_back(effect);
@@ -3852,6 +3868,8 @@ void Game::refreshAutomaticTechnologies(int player) {
 
 void Game::initializeCivilizationBonuses() {
     civilizationEffects_ = {};
+    for (size_t player=0;player<researchedTechOrder_.size();++player)
+        civilizationEffectStart_[player]=researchedTechOrder_[player].size();
     for (size_t i=0;i<players_.size();++i) {
         if (!players_[i].active) continue;
         auto &effects=civilizationEffects_[i+1];
@@ -3869,6 +3887,21 @@ void Game::initializeCivilizationBonuses() {
         for (int ally:allies)
             if (ally>0 && size_t(ally)<assets_.dat().civs.size())
                 add(assets_.dat().civs[size_t(ally)].teamBonusId);
+        const float grants=buildingPopulationCapacity(int(i)+1)-populationUsed(int(i)+1);
+        float base=playerAttribute(int(i)+1,4), total=base+grants;
+        for (int effect:effects) {
+            applyTechnologyDisables(int(i)+1,effect);
+            for (const auto &command:assets_.dat().effects[size_t(effect)].commands) {
+                if (command.a!=4) continue;
+                if (command.type==1) {
+                    base=command.b?base+command.d:command.d;
+                    total=command.b?total+command.d:command.d;
+                } else if (command.type==6) { base*=command.d; total*=command.d; }
+            }
+        }
+        // Resource4 is available space; bonuses can overwrite starting objects' signed grants.
+        // shortcut: Later resource4 set/multiply research needs the same event accounting.
+        startupPopulationAdjustment_[i+1]=total-base-grants;
     }
     techGeneration_++;
 }
@@ -4892,11 +4925,8 @@ float Game::populationUsed(int player) const {
     return used;
 }
 
-float Game::populationCapacity(int player) const {
-    if (player <= 0 ||
-        (size_t)player > players_.size())
-        return 0.0f;
-    float capacity = std::max(0.0f,playerAttribute(player,4));
+float Game::buildingPopulationCapacity(int player) const {
+    float capacity=0;
     for (const Object &object : objects_) {
         if (!object.active ||
             object.player != player ||
@@ -4909,6 +4939,13 @@ float Game::populationCapacity(int player) const {
                 storage.amount > 0.0f)
                 capacity += storage.amount;
     }
+    return capacity;
+}
+
+float Game::populationCapacity(int player) const {
+    if (player <= 0 || (size_t)player > players_.size()) return 0.0f;
+    const float capacity=std::max(0.f,playerAttribute(player,4)+
+        buildingPopulationCapacity(player)+startupPopulationAdjustment_[size_t(player)]);
     const float scenarioLimit = std::max(
         0.0f,
         players_[(size_t)player - 1]
