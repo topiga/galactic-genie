@@ -4,9 +4,11 @@
 #include <limits>
 #include <cstdio>
 #include "rms_zone_adjacency_checks.h"
+#include "rms_owned_connectivity_checks.h"
 using namespace swgb;
 int main() {
     checkOriginalZoneAdjacency();
+    checkOriginalOwnedConnectivity();
     // Original624ee0/625560 byte fixtures; local rms-passability-zone-oracle-2026-11-14.
     struct Case { unsigned size; const char *terrain,*labels; std::vector<float> mask; unsigned count; };
     const Case cases[]={
