@@ -11,10 +11,12 @@ static void check(bool ok,const std::string &message) {
 #include "rms_many_owned_checks.h"
 #include "rms_elevation_pipeline_checks.h"
 #include "rms_elevation_map_checks.h"
+#include "rms_connections_map_checks.h"
 
 int main() {
     checkRmsElevationPipeline();
     checkRmsElevationMap();
+    checkRmsConnectionsMap();
     using namespace swgb;
     dat::DatFile data;
     data.terrainBlock.terrains.resize(4);

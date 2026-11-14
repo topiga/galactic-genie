@@ -30,6 +30,7 @@ static void check(bool value, const char *message) {
 #include "rms_scout_checks.h"
 #include "rms_near_nova_checks.h"
 #include "rms_holocron_checks.h"
+#include "rms_holocron_map_checks.h"
 #include "rms_forage_checks.h"
 #include "rms_resource_prefix_checks.h"
 #include "rms_elevation_import_checks.h"
@@ -276,8 +277,9 @@ int main(int argc, char **argv) {
         rmsScoutChecks(assets);
         rmsNearNovaChecks(assets);
         rmsHolocronChecks(assets.dat());
+        rmsHolocronMapChecks(assets.dat());
         rmsForageChecks(assets.dat());
-        rmsResourcePrefixChecks(assets.dat());
+        rmsResourcePrefixChecks(assets);
         manyOwnedRmsMapChecks(assets.dat());
         ownedForestSpawnChecks(assets);
         overlappingRmsFoundationChecks(assets,renderer);

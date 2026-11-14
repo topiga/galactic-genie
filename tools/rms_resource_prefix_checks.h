@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 // Original contiguous object rows after retained holocrons and forage.
-static void rmsResourcePrefixChecks(const swgb::dat::DatFile &data) {
+static void rmsResourcePrefixChecks(swgb::Assets &assets) {
+ const auto &data=assets.dat();
  struct Run {unsigned count;uint8_t terrain;};
  struct Point {float x,y,heading;unsigned facet;};
  const struct {uint32_t states[7];uint32_t eligibilityHash;swgb::RmsPlayerStart starts[2];std::vector<Run> terrain;std::vector<uint32_t> occupied;Point points[60];} cases[]={
@@ -10,6 +11,7 @@ static void rmsResourcePrefixChecks(const swgb::dat::DatFile &data) {
 {{3390642250u,923146951u,390800235u,3754702277u,2600183773u,3452670155u,2746381968u},3089426972u,{{72,14},{46,82}},{{1510,0},{4,27},{116,0},{4,27},{116,0},{4,27},{116,0},{4,27},{12526,0}},{1031,1506,1510,1511,1512,1513,1625,1630,1631,1632,1633,1750,1751,1752,1753,1870,1871,1872,1873,1986,6041,8168,9053,9160,9168,9280,9644,9645,9646,9647,9764,9765,9766,9767,9884,9885,9886,9887,10004,10005,10006,10007,11043,11476,14140},{{75.5f,2.5f,0.0f,4},{75.5f,1.5f,0.0f,0},{75.5f,3.5f,0.0f,3},{76.5f,1.5f,0.0f,3},{74.5f,3.5f,0.0f,1},{74.5f,4.5f,0.0f,5},{46.5f,92.5f,0.0f,1},{47.5f,92.5f,0.0f,4},{47.5f,91.5f,0.0f,2},{46.5f,93.5f,0.0f,4},{47.5f,93.5f,0.0f,0},{45.5f,93.5f,0.0f,3},{63.5f,26.5f,2.5132741928100586f,3},{63.5f,25.5f,2.5132741928100586f,3},{64.5f,25.5f,1.2566370964050293f,1},{64.5f,24.5f,2.5132741928100586f,3},{65.5f,24.5f,5.654866695404053f,8},{64.5f,23.5f,4.398229598999023f,6},{63.5f,23.5f,5.654866695404053f,8},{53.5f,96.5f,1.2566370964050293f,1},{53.5f,95.5f,3.769911289215088f,5},{54.5f,95.5f,5.026548385620117f,7},{54.5f,96.5f,3.769911289215088f,5},{55.5f,96.5f,3.769911289215088f,5},{55.5f,97.5f,1.2566370964050293f,1},{54.5f,97.5f,1.884955644607544f,2},{81.5f,35.5f,0.0f,9},{81.5f,34.5f,3.769911289215088f,5},{80.5f,34.5f,5.026548385620117f,7},{81.5f,36.5f,4.398229598999023f,6},{39.5f,100.5f,2.5132741928100586f,3},{38.5f,100.5f,5.026548385620117f,7},{40.5f,100.5f,5.026548385620117f,7},{38.5f,99.5f,0.6283185482025146f,0},{42.5f,29.5f,3.1415927410125732f,4},{43.5f,29.5f,3.769911289215088f,5},{43.5f,30.5f,2.5132741928100586f,3},{43.5f,31.5f,4.398229598999023f,6},{76.5f,57.5f,1.2566370964050293f,1},{76.5f,58.5f,1.884955644607544f,2},{77.5f,58.5f,5.026548385620117f,7},{77.5f,59.5f,4.398229598999023f,6},{88.5f,13.5f,5.654866695404053f,8},{88.5f,12.5f,2.5132741928100586f,3},{88.5f,11.5f,5.654866695404053f,8},{87.5f,12.5f,5.026548385620117f,7},{87.5f,11.5f,3.769911289215088f,5},{28.5f,67.5f,2.5132741928100586f,3},{28.5f,68.5f,2.5132741928100586f,3},{29.5f,67.5f,3.769911289215088f,5},{29.5f,66.5f,3.1415927410125732f,4},{29.5f,65.5f,1.884955644607544f,2},{89.5f,37.5f,3.1415927410125732f,4},{88.5f,37.5f,5.026548385620117f,7},{87.5f,37.5f,0.6283185482025146f,0},{87.5f,38.5f,3.1415927410125732f,4},{26.5f,84.5f,5.654866695404053f,8},{26.5f,85.5f,0.0f,9},{25.5f,85.5f,0.6283185482025146f,0},{24.5f,85.5f,1.884955644607544f,2}}},
 {{2392117237u,44354340u,229882520u,3943350083u,93237432u,4168426360u,698240864u},438637175u,{{14,77},{82,41}},{{9012,0},{4,27},{116,0},{4,27},{116,0},{4,27},{116,0},{4,27},{5024,0}},{698,2085,4167,4276,4278,4279,4760,4761,4762,4763,4880,4881,4882,4883,5000,5001,5002,5003,5120,5121,5122,5123,8110,8410,8535,9012,9013,9014,9015,9132,9133,9134,9135,9252,9253,9254,9255,9372,9373,9374,9375,9608,9728,13137,13167},{{9.5f,67.5f,0.0f,5},{10.5f,67.5f,0.0f,5},{10.5f,66.5f,0.0f,1},{11.5f,66.5f,0.0f,1},{10.5f,65.5f,0.0f,5},{12.5f,66.5f,0.0f,3},{71.5f,49.5f,0.0f,4},{71.5f,48.5f,0.0f,4},{72.5f,48.5f,0.0f,5},{72.5f,49.5f,0.0f,1},{72.5f,50.5f,0.0f,4},{71.5f,50.5f,0.0f,4},{27.5f,86.5f,1.884955644607544f,2},{27.5f,85.5f,1.884955644607544f,2},{28.5f,86.5f,0.0f,9},{29.5f,86.5f,5.654866695404053f,8},{30.5f,86.5f,1.2566370964050293f,1},{30.5f,87.5f,4.398229598999023f,6},{27.5f,87.5f,5.654866695404053f,8},{80.5f,27.5f,1.2566370964050293f,1},{80.5f,26.5f,2.5132741928100586f,3},{79.5f,26.5f,5.654866695404053f,8},{81.5f,27.5f,3.1415927410125732f,4},{81.5f,26.5f,0.6283185482025146f,0},{81.5f,28.5f,5.654866695404053f,8},{80.5f,28.5f,4.398229598999023f,6},{27.5f,99.5f,0.0f,9},{27.5f,98.5f,1.884955644607544f,2},{27.5f,100.5f,5.026548385620117f,7},{26.5f,100.5f,0.6283185482025146f,0},{100.5f,18.5f,5.026548385620117f,7},{100.5f,19.5f,5.654866695404053f,8},{101.5f,19.5f,5.654866695404053f,8},{101.5f,18.5f,5.026548385620117f,7},{44.5f,84.5f,1.884955644607544f,2},{44.5f,83.5f,5.026548385620117f,7},{43.5f,83.5f,4.398229598999023f,6},{42.5f,83.5f,5.026548385620117f,7},{97.5f,72.5f,2.5132741928100586f,3},{96.5f,72.5f,0.6283185482025146f,0},{95.5f,72.5f,1.884955644607544f,2},{94.5f,72.5f,4.398229598999023f,6},{5.5f,91.5f,1.2566370964050293f,1},{6.5f,91.5f,1.884955644607544f,2},{6.5f,92.5f,2.5132741928100586f,3},{7.5f,91.5f,0.6283185482025146f,0},{4.5f,91.5f,4.398229598999023f,6},{64.5f,57.5f,1.2566370964050293f,1},{63.5f,57.5f,5.026548385620117f,7},{64.5f,56.5f,1.884955644607544f,2},{65.5f,56.5f,0.6283185482025146f,0},{65.5f,55.5f,5.654866695404053f,8},{35.5f,73.5f,1.2566370964050293f,1},{34.5f,73.5f,2.5132741928100586f,3},{34.5f,74.5f,1.2566370964050293f,1},{35.5f,74.5f,4.398229598999023f,6},{103.5f,57.5f,1.884955644607544f,2},{104.5f,57.5f,0.0f,9},{104.5f,56.5f,3.1415927410125732f,4},{105.5f,57.5f,4.398229598999023f,6}}},
 };
+ size_t caseIndex=0;
  for(const auto &c:cases) {
   std::vector<uint8_t> terrain;for(auto run:c.terrain)terrain.insert(terrain.end(),run.count,run.terrain);
   std::vector<swgb::RmsPlayerStart> starts(c.starts,c.starts+2);auto occupied=c.occupied;
@@ -30,6 +32,56 @@ static void rmsResourcePrefixChecks(const swgb::dat::DatFile &data) {
   }
   uint32_t hash=2166136261u;for(auto v:eligibility)hash=(hash^v)*16777619u;
   check(hash==c.eligibilityHash,"original complete persistent eligibility raster");
+  const bool forest=caseIndex<2;
+  const uint32_t seed=(caseIndex++%2)?12345u:1u;
+  std::string source=std::string("<LAND_GENERATION> base_terrain ")+(forest?"41":"0")+
+    " create_player_lands { terrain_type "+(forest?"9":"0")+" base_size 3 number_of_tiles 60 } ";
+  if(forest) source+="<TERRAIN_GENERATION> create_terrain 10 { base_terrain 41 number_of_tiles 37 number_of_clumps 4 spacing_to_other_terrain_types 1 set_avoid_player_start_areas } create_terrain 6 { base_terrain 9 number_of_tiles 9 number_of_clumps 2 clumping_factor 6 } ";
+  source+=R"(<OBJECTS_GENERATION>
+    create_object 109 { number_of_objects 1 set_place_for_every_player min_distance_to_players 0 max_distance_to_players 0 }
+    create_object 83 { number_of_objects 1 set_place_for_every_player min_distance_to_players 6 max_distance_to_players 6 }
+    create_object 550 { set_place_for_every_player min_distance_to_players 7 max_distance_to_players 9 match_player_civ }
+    create_object 285 { number_of_objects 5 min_distance_to_players 25 temp_min_distance_group_placement 20 })";
+  const int counts[]={6,7,4,4,5,4},inner[]={10,12,18,25,14,20},outer[]={12,16,26,35,18,26};
+  for(int row=0;row<6;++row) {
+    const std::string object="create_object "+std::to_string(row>=4?102:row?66:59)+
+      " { set_place_for_every_player set_gaia_object_only set_tight_grouping number_of_objects "+std::to_string(counts[row])+
+      " group_placement_radius "+std::to_string(row>=4?2:3)+" min_distance_to_players "+std::to_string(inner[row])+
+      " max_distance_to_players "+std::to_string(outer[row])+" min_distance_group_placement "+std::to_string(row?7:6)+
+      " max_distance_to_other_zones 7 } ";
+    source+=object;
+    swgb::RmsScript script;std::string error;
+    check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes){if(id)return false;bytes.assign(source.begin(),source.end());return true;},{},&error),error.c_str());
+    uint32_t state=seed;swgb::RmsMap map;
+    check(swgb::generateRmsMap(script,{},120,120,data,state,map,&error,2,{1,1}),error.c_str());
+    uint32_t final=c.states[row+1]*214013u+2531011u;
+    size_t count=0;for(int j=0;j<=row;++j)count+=counts[j]*2;
+    check(state==final && map.terrain==terrain && map.resourcesAfterOwned.size()==count+5 && map.ownedObjects.size()==10,
+          "original full RMS resource-prefix terrain/count/RNG");
+    if(row==5) {
+      swgb::Game game(assets);state=seed;
+      check(game.initRms(script,{},120,state,&error,2,{1,1}),error.c_str());
+      check(state==final && game.activeObjectCount()==map.scenery.size()+75,"complete resource prefix native import count/RNG");
+      for(size_t j=0;j<map.resourcesAfterOwned.size();++j) {
+        const auto id=uint32_t(map.scenery.size()+11+j);const auto position=game.objectPosition(id);
+        const auto &expected=map.resourcesAfterOwned[j];
+        check(game.objectUnitId(id)==expected.unitId && game.objectPlayer(id)==0 && position[0]==expected.x && position[1]==expected.y,
+              "resource prefix preserves native IDs, ownership and coordinates");
+      }
+      auto invalid=source;invalid.erase(invalid.rfind("group_placement_radius 2"),23);
+      swgb::RmsScript bad;
+      check(bad.load(0,[&](int32_t id,std::vector<uint8_t> &bytes){if(id)return false;bytes.assign(invalid.begin(),invalid.end());return true;},{},&error),error.c_str());
+      state=seed;
+      check(!swgb::generateRmsMap(bad,{},120,120,data,state,map,&error,2,{1,1}) && state==seed && map.terrain.empty(),
+            "ore default radius3 is not silently treated as radius2");
+      check(swgb::generateRmsMap(script,{},120,120,data,state,map,&error,2,{1,1}),error.c_str());
+    }
+    for(size_t j=0;j<count;++j) {
+      const auto &actual=map.resourcesAfterOwned[j+5];const auto &expected=c.points[j];
+      check(actual.x==expected.x && actual.y==expected.y && actual.facet==expected.facet && actual.headingRadians==expected.heading,
+            "original full RMS resource-prefix position/appearance");
+    }
+  }
   auto retained=eligibility;auto before=rng;std::vector<swgb::RmsTimberPlacement> out;std::string error;
   swgb::RmsResourceGroups group{2,1,4,0,3};
   check(!swgb::generateRmsGroupedResourcePlacements(120,120,terrain,data,66,group,rng,out,&error,occupied,1,starts,swgb::RmsResourceDistance::Medium,&eligibility),"resource work budget rejected");

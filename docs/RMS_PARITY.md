@@ -177,8 +177,9 @@ repeated and empty elevation sections, and preserves the original separate
 scaling rules. Nine script-seed comparisons match original land/elevation/terrain
 rasters and RNG; the empty object stage adds its independently verified final
 scheduler draw. Reordered sections produce the same result. The integrated map
-exports original tile heights and slope bytes; nonflat object/scenery startup
-is still rejected while its callbacks are being composed.
+exports original tile heights and slope bytes. Post-elevation automatic trees
+411/413 are now verified; nonflat owned-object startup remains rejected while
+its callbacks are being composed.
 
 `Game::initRms` imports those tile heights directly and rotates slope IDs to the
 native renderer's coordinate convention. It does not reconstruct the slope from
@@ -194,3 +195,45 @@ Private evidence: `rms-land-elevation-terrain-scriptseeds-oracle-2026-11-14.json
 `rms-original-height-sampling-oracle-2026-11-14.json`,
 `rms-slope-rotation-model-2026-11-14.json` and
 `rms-slope-asset-orientation-2026-11-14.json`.
+
+
+### Connection integration and live Forest geometry (2026-11-14)
+
+The parser now resolves player-land and team-land connection commands and runs
+connections after terrain cleanup, before automatic scenery. Six composed
+original scheduler cases (three seeds, with/without elevation) match terrain,
+height, slope, starts and final RNG. Twelve source-order variants are covered by
+`rms_connections_map_checks.h`. Early forest bases with connection setters remain
+unsupported; team membership in the integrated map is currently all-enemy.
+
+For the saved Windows Tiny Forest match (map seed16160, fixed starts, two Empire
+players), the fully preprocessed stock resource54204 geometry now matches every
+one of the **14,400 elevation bytes**. Terrain differs only on the16 cells of the
+local Command Center foundation: the diagnostic deliberately omitted explicit
+object rows. Both starts, (19,36)/(42,96), and7554 automatic trees also match.
+The diagnostic consumes all original preprocessing choices before filtering
+object rows; its entry RNG is1993207714 and final RNG2078673907. That final state
+includes an empty object-stage scheduler draw, not the full game's object draws.
+
+Private evidence: `live-forest-geometry-comparison-2026-11-14.json`,
+`live-forest-geometry-native-2026-11-14.json` and
+`native-live-forest-grid-2026-11-14/`. The original saved map and extracted grids
+remain local. This establishes geometry equality for one seed/setup, not all
+Forest seeds, all packaged maps, or complete startup equality.
+
+### Ordered stock resource prefix
+
+After Command Centers, workers and scouts, the integrated parser accepts the
+verified holocron row followed by forage, near/medium/far Nova and near/far ore.
+The sequence is deliberately bounded to120-square, two Empire owners, randomized
+starts on the verified flat grass/dry-forest contexts. Earlier64-square holocron
+and32-square near-Nova cases remain supported separately.
+
+One eligibility raster must survive across resource rows. Resetting it can move
+ore while leaving the final RNG unchanged. Native integration retains it and
+adds every prior resource to collision occupancy. Four original ten-row startup
+compositions provide240 resource positions/appearances, per-row RNG states and
+final eligibility masks. The full parser/pipeline tests check all six successive
+resource prefixes in those four setups. Later animal rows and elevated stock
+resource startup remain unsupported. Holocron placement alone does not establish
+pickup or victory gameplay parity.

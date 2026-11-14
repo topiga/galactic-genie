@@ -21,7 +21,7 @@ struct RmsMap {
     std::vector<RmsTimberPlacement> objects;
     std::vector<RmsSceneryPlacement> scenery; // Creation order, including removed scenery.
     std::vector<RmsPlayerStart> playerStarts; // Owner order1..playerCount; no starting units implied.
-    std::vector<RmsTimberPlacement> resourcesAfterOwned; // Verified near-Nova row, after starting units.
+    std::vector<RmsTimberPlacement> resourcesAfterOwned; // Verified stock resource prefix, after starting units.
     std::vector<RmsOwnedPlacement> ownedObjects; // Starting buildings and units, in creation order.
 };
 
@@ -31,8 +31,9 @@ struct RmsMap {
 // mutually-enemy, equal-radius starts. Both modes require default player-land borders.
 // The RMS random_placement directive itself does not select this game setting.
 // Elevation executes before terrain, including late/repeated/empty sections.
-// Terrain rows use original height/slope filters. Nonflat object/scenery startup
-// remains rejected until its callbacks are composed with elevation.
+// Terrain rows use original height/slope filters. Post-elevation411/413 scenery
+// is supported; owned startup on nonflat maps remains unverified.
+// Player/team-land connections execute after terrain; integrated players are enemies.
 // Rejects other stages/commands; not a complete packaged random-map generator.
 // Also supports one to eight owned109 starts on bare grass0 with explicit
 // civilizations and zero placement distances. Enemy foundation remains deferred.
@@ -43,6 +44,9 @@ struct RmsMap {
 // One or two owners may append the civilization-matched550 scout row at distances7..9.
 // Two civilization1 owners on32-square grass/dry forest may append the exact
 // tight near-Nova66 row (7 objects, radius3, distances12..16, spacing/zone7).
+// Two civilization1 randomized starts may instead append the stock holocron285
+// row on64 grass or120 grass/dry forest. The120 profile may continue with stock
+// forage, near/medium/far Nova and near/far ore, in that order.
 // RNG is the shared CRT state at script entry. Failure clears output and leaves RNG unchanged.
 bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::string> &defines,
                     uint32_t width, uint32_t height, const dat::DatFile &data,
