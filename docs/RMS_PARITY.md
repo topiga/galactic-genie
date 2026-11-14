@@ -482,3 +482,20 @@ packaged comparison remains seed 16160 only. The additional data inventory
 identifies hunt units 822/1249, predators 812/1197 and explicit trees 348/349 as
 next comparison targets; their original placement/constructor behavior is not
 established by reading their metadata alone.
+
+### Controlled Nerf quantities (2026-11-14)
+
+Original full-stage replays on the verified Forest geometry, with three forage
+plants per owner, now cover the packaged smaller and larger Nerf variants:
+
+| Near herd per player | Far herd per group (two/player) | Total Gaia objects | Final RNG |
+|---|---|---|---|
+| 2 | 1 | 210 | 4161792159 |
+| 4 | 2 | 220 | 278519141 |
+| 8 | 4 | 235 | 2125502712 |
+
+The packaged-script regression compares every resulting Gaia pose in creation
+order, all Nerf animation frames, zero extra idle delay, terrain/elevation grids
+and final random state. These are controlled object-stage variants, not three
+new seed matches. The shared helper still rejects unverified quantities such as
+three Nerfs, preserving RNG and the eligibility mask on failure.

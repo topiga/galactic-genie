@@ -66,7 +66,7 @@ struct RmsGlobalGroupPlacement {
 // Forest21 rows use original connected-zone and eight-point clearance gates.
 // Explicit Medium/Far selects stock Nova4 distances18..26/25..35 on120 maps.
 // Ore102 uses radius2: Near tight5/distances14..18, Far tight4/distances20..26.
-// Nerf594 uses loose groups: Near4 once/player at10..12, Far2 twice/player
+// Nerf594 uses loose groups: Near2/4/8 once/player at10..12, Far1/2/4 twice/player
 // at14..30, radius3 and no spacing; includes original animated startup state.
 // Kaadu1363/Eopie1365 support Far loose4, variance1, one group/player at14..30;
 // their original constructor adds a military timer draw and species animation.

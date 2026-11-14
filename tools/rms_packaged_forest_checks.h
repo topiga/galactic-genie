@@ -39,25 +39,38 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  check(swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),69,{0,4,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && placed.size()==1 && placed[0].x==60.5f && placed[0].y==60.5f,"fish accept cardinal shore contact");
  ground[0]=22;rng=1;const auto before=eligible;
  check(!swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),1585,{0,7,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && rng==1 && placed.empty() && eligible==before,"unsupported wave quantity rejected atomically");
- // Controlled original replay changes only forage quantity, retaining all later rows.
- std::vector<swgb::RmsToken> tokens;rng=16160;
- check(script.preprocess(defines,tokens,&error,&rng) && rng==1993207714u,"Forest preprocessing RNG");
- std::string source;bool forage=false;unsigned changes=0;
- for(size_t i=0;i<tokens.size();++i) {
-  if(tokens[i].text=="create_object" && i+1<tokens.size())forage=tokens[i+1].text=="59";
-  if(forage && tokens[i].text=="number_of_objects" && i+1<tokens.size()) {
-   check(tokens[i+1].text=="12","original Forest forage quantity");tokens[i+1].text="3";++changes;
+ // Controlled original replays vary forage/Nerf quantities, retaining all later rows.
+ const struct{int nearHerd,farHerd;uint32_t count,poses,rng,frames;} variations[]={
+  {4,2,220,1662422u,278519141u,513271022u},
+  {2,1,210,3750728331u,4161792159u,758251980u},
+  {8,4,235,989150139u,2125502712u,2483236625u}};
+ for(const auto &v:variations) {
+  std::vector<swgb::RmsToken> tokens;rng=16160;
+  check(script.preprocess(defines,tokens,&error,&rng) && rng==1993207714u,"Forest preprocessing RNG");
+  std::string source,unit;unsigned changes=0,herdRow=0;
+  for(size_t i=0;i<tokens.size();++i) {
+   if(tokens[i].text=="create_object" && i+1<tokens.size())unit=tokens[i+1].text;
+   if((unit=="59" || unit=="594") && tokens[i].text=="number_of_objects" && i+1<tokens.size()) {
+    const int expected=unit=="59"?12:herdRow==0?4:2;
+    check(tokens[i+1].text==std::to_string(expected),"original Forest forage/herd quantity");
+    tokens[i+1].text=std::to_string(unit=="59"?3:herdRow++==0?v.nearHerd:v.farHerd);++changes;
+   }
+   source+=tokens[i].text+" ";
   }
-  source+=tokens[i].text+" ";
+  check(changes==3 && herdRow==2,"controlled forage and two herd rows");
+  swgb::RmsScript varied;
+  check(varied.load(0,[&](int32_t resource,std::vector<uint8_t>&bytes){if(resource)return false;bytes.assign(source.begin(),source.end());return true;},{},&error),error.c_str());
+  check(swgb::generateRmsMap(varied,defines,120,120,assets.dat(),rng,map,&error,2,{1,1}),error.c_str());
+  check(rng==v.rng && map.scenery.size()==7554 && map.ownedObjects.size()==10 && map.resourcesAfterOwned.size()==v.count,"controlled resource full-stage count/RNG");
+  check(bytesHash(map.terrain)==3348257725u && bytesHash(map.elevation)==908132044u,"controlled resource original grids");
+  hash=2166136261u;uint32_t frames=2166136261u,herds=0;
+  for(const auto&o:map.resourcesAfterOwned) {
+   pose(o.unitId,0,o.x,o.y,o.facet);
+   if(o.unitId==594){frames=(frames^o.animationFrame)*16777619u;++herds;check(o.initialIdleDelay==0,"original Nerf extra idle delay");}
+  }
+  check(hash==v.poses,"controlled resource all original Gaia poses/order");
+  check(frames==v.frames && herds==uint32_t(v.nearHerd*2+v.farHerd*4),"controlled original Nerf animation frames/count");
  }
- check(changes==1,"one controlled forage row");
- swgb::RmsScript smallForage;
- check(smallForage.load(0,[&](int32_t resource,std::vector<uint8_t>&bytes){if(resource)return false;bytes.assign(source.begin(),source.end());return true;},{},&error),error.c_str());
- check(swgb::generateRmsMap(smallForage,defines,120,120,assets.dat(),rng,map,&error,2,{1,1}),error.c_str());
- check(rng==278519141u && map.scenery.size()==7554 && map.ownedObjects.size()==10 && map.resourcesAfterOwned.size()==220,"controlled forage3 full-stage count/RNG");
- check(bytesHash(map.terrain)==3348257725u && bytesHash(map.elevation)==908132044u,"controlled forage3 original grids");
- hash=2166136261u;for(const auto&o:map.resourcesAfterOwned)pose(o.unitId,0,o.x,o.y,o.facet);
- check(hash==1662422u,"controlled forage3 all220 original Gaia poses/order");
- std::puts("PASS: controlled forage3 and all subsequent Forest rows match original");
+ std::puts("PASS: controlled forage and small/large Nerf herds through all Forest rows");
  std::puts("PASS: full packaged Forest23 rows,7802 objects, original grids/RNG and native import");
 }

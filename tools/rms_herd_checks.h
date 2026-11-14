@@ -56,6 +56,8 @@ static void rmsHerdChecks(swgb::Assets &assets) {
   swgb::RmsResourceGroups invalid{1,1,4,0,3};std::vector<swgb::RmsTimberPlacement> out;std::string error;auto before=rng;
   check(!swgb::generateRmsGroupedResourcePlacements(120,120,terrain,data,594,invalid,rng,out,&error,occupied,16000000,starts,swgb::RmsResourceDistance::Medium,&eligible),"unproven medium herd rejected");
   check(!swgb::generateRmsGroupedResourcePlacements(120,120,terrain,data,594,invalid,rng,out,&error,occupied,1,starts,swgb::RmsResourceDistance::Near,&eligible),"herd work budget rejected");
+  invalid.perGroup=3;
+  check(!swgb::generateRmsGroupedResourcePlacements(120,120,terrain,data,594,invalid,rng,out,&error,occupied,16000000,starts,swgb::RmsResourceDistance::Near,&eligible),"unverified herd count rejected");
   check(before==rng && out.empty() && eligible==retained,"herd failure atomic");
  }
  std::puts("PASS: original two Nerf rows after retained resources");
