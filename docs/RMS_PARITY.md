@@ -16,7 +16,9 @@ stay in the user's game archive and private research directory.
 | Omitted object quantity in shared startup resource 54103 | Fixed in `8a58316`; original default is one |
 | Shared worker placement at distances 6..6 | Original-executable comparison; see `ORIGINAL_SYSTEMS.md` for current coverage |
 | Scout construction and civilization substitution | 54 composed startup cases; bounded one/two-player support in `df02da7` |
-| Per-player resources, spacing and zone filters | Full stock-row composition still required |
+| Near-player Nova resources | Four composed grass/forest cases in `eb40b44`; randomized 32×32/two Empire players only |
+| Remaining per-player resources, spacing and zone filters | Full stock-row composition still required |
+| Fixed-position player starts | 29 original cases, live Windows corroboration and settings integration |
 | Mixed player/nonplayer lands, borders and random land placement | Still blocked in the integrated importer |
 | Team/random zones and flat-terrain flags | Still blocked in the integrated importer |
 | Packaged elevation and one conditional syntax branch | Still blocked in the loader |
@@ -84,10 +86,13 @@ The live size/random-placement/resource/game-mode fields are all zero.
 `RANDOM_MAP` and `2_PLAYERS` are not injected. The script's `random_placement`
 handler does not change the game setting.
 
-The corrected native attempt (120×120, two civilization-1 players, seed 16160)
-rejects the unsupported fixed-position mode before producing a grid. The earlier
-attempt with assumed randomized-position defines instead stopped at
-`set_flat_terrain_only`, resource 54204:154; it was not the live setup mode.
+Fixed-position mode is now connected to the native pipeline for mutually enemy
+players with equal-radius player lands and default borders. The corrected native
+attempt (120×120, two civilization-1 players, seed 16160 and the three confirmed
+defines) reaches `set_flat_terrain_only`, resource 54204:154, and rejects before
+producing a grid. The earlier attempt with assumed randomized-position defines
+was not the live setup mode. Fixed-position near-Nova composition remains
+explicitly rejected until its complete startup behavior is checked.
 There is **no whole-map equality result yet**. The Windows grid also includes
 elevations 0..7 and local foundation painting, which must be accounted for.
 

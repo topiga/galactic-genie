@@ -57,7 +57,9 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     assert (work/'file.png').read_bytes() != two_player_image, 'Configured player count was ignored'
     (work/'archive.png').unlink()
     assert 'unsupported' in run(base,1)
-    assert 'FIXED_POSITIONS' in run([*base,'--define','FIXED_POSITIONS'],1)
+    run([*base,'--define','TEST_MAP','--define','FIXED_POSITIONS'],0)
+    assert (work/'archive.png').read_bytes()!=two_player_image, 'Fixed setting used randomized starts'
+    (work/'archive.png').unlink()
     run([*base,'--define'],2)
     for invalid in [0,9,-1,'bad']:
         run([*base,'--players',invalid],2)
@@ -161,6 +163,26 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     run(['render-rms',data,root/'tools/fixtures/owned-scouts.rms',32,1,work/'invalid-scouts.png',
          '--players',3,'--civilization',1,'--civilization',2,'--civilization',3],1)
     assert not (work/'invalid-scouts.png').exists()
+    nova=work/'near-nova.rms'
+    nova.write_text((root/'tools/fixtures/owned-scouts.rms').read_text()+'''
+create_object 66 {
+    number_of_objects 7
+    set_place_for_every_player
+    set_gaia_object_only
+    set_tight_grouping
+    min_distance_to_players 12
+    max_distance_to_players 16
+    min_distance_group_placement 7
+    max_distance_to_other_zones 7
+}
+''')
+    nova_args=['render-rms',data,nova,32,1,work/'nova.png','--players',2,
+               '--civilization',1,'--civilization',1]
+    output=run(nova_args,0)
+    assert '24 native objects' in output and '517217389' in output
+    (work/'nova.png').unlink()
+    assert 'near-Nova' in run([*nova_args,'--define','FIXED_POSITIONS'],1)
+    assert not (work/'nova.png').exists(), 'Unverified fixed-start Nova created output'
 
 
 print('RMS file/DRS parity, includes, defines and rejection checks passed')

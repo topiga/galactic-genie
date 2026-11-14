@@ -29,7 +29,6 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     };
     if (!width || !height || width > 1024 || height > 1024) return fail("dimensions must be 1..1024");
     if (!playerCount || playerCount>8) return fail("player count must be 1..8");
-    if (defines.count("FIXED_POSITIONS")) return fail("FIXED_POSITIONS requires the unsupported nonrandomized game mode");
     if (!script.preprocess(defines,tokens,err,&rng)) return false;
     auto number = [&](int32_t &value) {
         if (i == tokens.size()) return false;
@@ -324,9 +323,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             foundations.push_back(ownedCiv==2?4:ownedCiv==6?6:27);
         }
     }
-    if (nearNova && (width!=32 || height!=32 || playerCount!=2 ||
+    if (nearNova && (defines.count("FIXED_POSITIONS") || width!=32 || height!=32 || playerCount!=2 ||
         playerCivilizations!=std::vector<uint16_t>{1,1} || startingStalagmites))
-        return fail("near-Nova currently requires two civilization1 owners on32-square grass or dry forest");
+        return fail("near-Nova currently requires randomized starts for two civilization1 owners on32-square grass or dry forest");
     if (startingWorkers) {
         for (const auto ownedCiv:playerCivilizations) {
             const auto &civ=data.civs[ownedCiv];
@@ -422,7 +421,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     generated.width=width; generated.height=height;
     if (playerLands) {
         std::vector<RmsPlayerStart> starts;
-        if (!generateRmsPlayerStarts(width,height,static_cast<int32_t>(lands[0].radius),playerCount,rng,starts,err)) return false;
+        const auto placeStarts=defines.count("FIXED_POSITIONS")?generateRmsFixedPlayerStarts:generateRmsPlayerStarts;
+        if (!placeStarts(width,height,static_cast<int32_t>(lands[0].radius),playerCount,rng,starts,err)) return false;
         for (size_t owner=0;owner<starts.size();++owner) {
             lands[owner].centerX=static_cast<uint32_t>(starts[owner].x);
             lands[owner].centerY=static_cast<uint32_t>(starts[owner].y);

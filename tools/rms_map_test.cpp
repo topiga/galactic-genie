@@ -103,10 +103,14 @@ int main() {
     check(!generateRmsMap(script,{},7,7,data,state,map,&error) && state==1 && map.terrain.empty(),
           "late prototype failure must not commit generated terrain or RNG");
     const std::string players="<LAND_GENERATION> base_terrain 0 create_player_lands { terrain_type 3 base_size 3 number_of_tiles 60 }";
-    load(players);
-    state=1;
-    check(!generateRmsMap(script,{"FIXED_POSITIONS"},32,32,data,state,map,&error) && state==1,
-          "fixed-position context must not silently use randomized starts");
+    load("<PLAYER_SETUP> random_placement <LAND_GENERATION> base_terrain 0 "
+         "create_player_lands { terrain_type 3 base_size 13 number_of_tiles 0 }");
+    state=1993207714u;
+    check(generateRmsMap(script,{"FIXED_POSITIONS"},120,120,data,state,map,&error),error);
+    check(map.playerStarts.size()==2 && map.playerStarts[0].x==19 && map.playerStarts[0].y==36 &&
+          map.playerStarts[1].x==42 && map.playerStarts[1].y==96,
+          "fixed game setting overrides no-op directive and matches both live Windows centers");
+    load(players);state=1;
     check(generateRmsMap(script,{},32,32,data,state,map,&error),error);
     check(map.playerStarts.size()==2 && map.playerStarts[0].x==18 && map.playerStarts[0].y==5 &&
           map.playerStarts[1].x==13 && map.playerStarts[1].y==20,"original owner-ordered player starts");

@@ -87,5 +87,7 @@ create_object 550 { set_place_for_every_player min_distance_to_players 7 max_dis
           "Unproven Nova civilization composition remains rejected");
     check(!swgb::generateRmsMap(scripts[0],{},64,64,assets.dat(),state,map,&error,2,{1,1}) && state==12345,
           "Unproven Nova dimensions remain rejected");
+    check(!swgb::generateRmsMap(scripts[0],{"FIXED_POSITIONS"},32,32,assets.dat(),state,map,&error,2,{1,1}) && state==12345,
+          "Unproven fixed-start Nova composition remains rejected");
     std::puts("PASS: original composed per-player Nova after CC/workers/scouts on grass and forest");
 }

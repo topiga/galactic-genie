@@ -26,7 +26,8 @@ struct RmsMap {
 
 // Strict script pipeline: explicit nonplayer lands OR one player-land block (1..8 players)
 // on verified flat terrain, bounded land separation, terrain clumps, automatic scenery and one optional Gaia348/66/102 row.
-// Player lands use the game's randomized-position mode, with default borders.
+// Player lands default to randomized positions; FIXED_POSITIONS selects original
+// mutually-enemy, equal-radius starts. Both modes require default player-land borders.
 // The RMS random_placement directive itself does not select this game setting.
 // Terrain rows support spacing, scaling and player-start protection on flat maps.
 // Rejects other stages/commands; not a complete packaged random-map generator.
