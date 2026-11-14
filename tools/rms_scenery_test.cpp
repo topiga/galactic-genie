@@ -6,6 +6,8 @@
 #include <cstring>
 #include <iostream>
 
+#include "rms_elevated_scenery_checks.h"
+
 int main() {
     using namespace swgb;
     dat::DatFile data;
@@ -31,6 +33,7 @@ int main() {
     data.terrainRestrictions.resize(5);
     auto &restriction=data.terrainRestrictions[4].passableBuildableDmgMultiplier;
     restriction.assign(55,1);
+    checkElevatedSceneryOriginal(data);
     std::string error;
     std::vector<RmsSceneryPlacement> out;
     {
