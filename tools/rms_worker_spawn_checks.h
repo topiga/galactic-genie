@@ -60,8 +60,8 @@ static void rmsWorkerSpawnChecks(swgb::Assets &assets) {
             check(game.objectAnimationForTesting(4)[1]==0,"New action clears initial idle delay");
         }
         const auto before=state;
-        check(!game.initRms(script,{},32,state,&error,3,{civ,civ,civ}) && state==before && game.activeObjectCount()==4,
-              "Unsupported three-owner workers preserve existing game and RNG");
+        check(!game.initRms(script,{},32,state,&error,3,{civ,civ}) && state==before && game.activeObjectCount()==4,
+              "Missing owner civilization preserves existing game and RNG");
     }
     const struct { uint32_t seed,finalState;Worker workers[6]; } pairs[]={
         {1u,892528603u,{{293,16.5f,2.5f,2,0,0.000000000f},{293,19.5f,2.5f,1,7,0.000000000f},{293,15.5f,2.5f,4,4,0.000000000f},{293,10.5f,20.5f,1,7,0.000000000f},{293,10.5f,17.5f,2,4,0.000000000f},{293,11.5f,17.5f,4,6,0.000000000f}}},

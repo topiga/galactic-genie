@@ -36,6 +36,11 @@ static void check(bool value, const char *message) {
 #include "rms_near_forest_cc_checks.h"
 #include "rms_near_worker_checks.h"
 #include "rms_near_stalagmite_checks.h"
+#include "rms_clipped_worker_checks.h"
+#include "rms_many_owner_worker_checks.h"
+#include "rms_many_forest_cleanup_checks.h"
+#include "rms_many_forest_worker_checks.h"
+#include "rms_many_clipped_worker_checks.h"
 #include "rms_grouped_checks.h"
 #include "point_move_checks.h"
 
@@ -269,6 +274,11 @@ int main(int argc, char **argv) {
         nearForestCommandCenterChecks(assets);
         rmsNearWorkerChecks(assets);
         nearStalagmiteCleanupChecks(assets);
+        rmsClippedWorkerChecks(assets);
+        manyOwnerWorkerChecks(assets);
+        manyForestCleanupChecks(assets);
+        manyForestWorkerChecks(assets);
+        manyClippedWorkerChecks(assets);
         rmsGroupedChecks(assets);
         pointMoveChecks(assets);
     fogRendering(assets,renderer);

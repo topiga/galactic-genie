@@ -482,8 +482,9 @@ bool growRmsLands(uint32_t width, uint32_t height, uint8_t baseTerrain,
     if (lands.empty() || lands.size() > 64) return fail("require 1..64 lands");
     // This coefficient bound keeps every computed priority exactly representable
     // in the original single-precision node field (adjacency is at most 25).
+    // Requested land area may exceed the map; the queue and work budget bound growth.
     for (const auto &land : lands) if (land.centerX >= width || land.centerY >= height || land.radius > 1024 ||
-        land.targetTiles > static_cast<size_t>(width) * height || land.clumpingFactor > 100 || land.zone < -1 || land.zone > 63)
+        land.targetTiles > static_cast<uint32_t>(INT32_MAX) || land.clumpingFactor > 100 || land.zone < -1 || land.zone > 63)
         return fail("invalid center, radius, target count, clumpingFactor (0..100) or zone (-1..63)");
     for (const auto &land : lands) {
         const int right = land.rightBorder == -1 ? static_cast<int>(width) : land.rightBorder;

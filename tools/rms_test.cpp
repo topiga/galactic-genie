@@ -347,8 +347,8 @@ int main(int argc, char **argv) {
     land.centerX = 7;
     require(!growRmsSingleLand(7, 7, 0, land, terrainData, growthState, terrain, &err), "off-map growth center rejected");
     land.centerX = 3;
-    land.targetTiles = 50;
-    require(!growRmsSingleLand(7, 7, 0, land, terrainData, growthState, terrain, &err), "oversized growth target rejected");
+    land.targetTiles = 0x80000000u;
+    require(!growRmsSingleLand(7, 7, 0, land, terrainData, growthState, terrain, &err), "growth target outside original signed range rejected");
     land.targetTiles = 12;
     land.clumpingFactor = 101;
     require(!growRmsSingleLand(7, 7, 0, land, terrainData, growthState, terrain, &err), "unsupported coefficient rejected");

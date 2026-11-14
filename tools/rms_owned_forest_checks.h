@@ -63,8 +63,8 @@ create_object 109 {
         const auto next=game.spawnObjectForTesting(1,83,1,2.5f,2.5f);
         check(next==f.count+3,"Next original allocation follows object IDs, not world registration count");
         const auto before=state;
-        check(!game.initRms(script,{},32,state,&error,3,{1,2,3}) && state==before && game.activeObjectCount()==f.count+3,
-              "Unsupported forest owner context fails atomically");
+        check(!game.initRms(script,{},32,state,&error,3,{1,2}) && state==before && game.activeObjectCount()==f.count+3,
+              "Missing forest owner civilization fails atomically");
     }
     std::string cleanupSource=source;
     cleanupSource.insert(cleanupSource.find("create_object 109"), R"(create_object 573 {
@@ -99,9 +99,9 @@ create_object 109 {
         check(game.spawnObjectForTesting(1,83,1,2.5f,2.5f)==f.count+5,
               "Original deleted573 IDs are not reused");
         const auto before=state;
-        check(!game.initRms(cleanup,{},32,state,&error,3,{1,2,3}) && state==before &&
+        check(!game.initRms(cleanup,{},32,state,&error,3,{1,2}) && state==before &&
               game.activeObjectCount()==f.count+3,
-              "Unverified destructive owner combinations fail without replacing current world");
+              "Missing cleanup owner civilization preserves current world");
     }
     std::puts("PASS: original automatic411 scattering followed by two owned Command Centers");
 }

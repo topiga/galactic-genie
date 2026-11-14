@@ -92,8 +92,22 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     assert '4 native objects' in output and '1943766570' in output
     assert (work/'workers.png').stat().st_size>100
     run(['render-rms',data,root/'tools/fixtures/owned-workers.rms',32,1,work/'invalid-workers.png',
-         '--players',3,'--civilization',1,'--civilization',2,'--civilization',3],1)
+         '--players',3,'--civilization',1,'--civilization',2],1)
     assert not (work/'invalid-workers.png').exists()
+    for players,count in [(3,12),(8,32)]:
+        civs=[value for civ in range(1,players+1) for value in ('--civilization',civ)]
+        output=run(['render-rms',data,root/'tools/fixtures/owned-workers.rms',32,1,work/f'workers-{players}.png',
+                    '--players',players,*civs],0)
+        assert f'{count} native objects' in output
+    output=run(['render-rms',data,root/'tools/fixtures/owned-workers-clipped.rms',8,1,work/'clipped-workers.png',
+                '--players',2,'--civilization',1,'--civilization',1],0)
+    assert '8 native objects' in output and '2608792336' in output
+    civs=[value for civ in range(1,9) for value in ('--civilization',civ)]
+    output=run(['render-rms',data,root/'tools/fixtures/owned-workers-clipped.rms',8,1,work/'dense-workers.png',
+                '--players',8,*civs],0)
+    assert '30 native objects' in output and '772532579' in output
+
+
     output=run(['render-rms',data,root/'tools/fixtures/owned-workers.rms',32,1,work/'two-workers.png',
                 '--players',2,'--civilization',1,'--civilization',2],0)
     assert '8 native objects' in output and '892528603' in output
@@ -105,6 +119,13 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
                     '--players',2,'--civilization',1,'--civilization',1],0)
         assert f'{count} native objects' in output and str(state) in output
         assert (work/(fixture+'.png')).stat().st_size>100
+
+    for players,count,state in [(1,42,4000822828),(3,50,3758076468),(8,46,504322075)]:
+        civs=[value for civ in range(1,players+1) for value in ('--civilization',civ)]
+        for fixture in ['owned-forest-workers','owned-forest-cleanup-workers']:
+            output=run(['render-rms',data,root/'tools/fixtures'/(fixture+'.rms'),32,1,
+                        work/f'{fixture}-{players}.png','--players',players,*civs],0)
+            assert f'{count} native objects' in output and str(state) in output
 
 
 print('RMS file/DRS parity, includes, defines and rejection checks passed')

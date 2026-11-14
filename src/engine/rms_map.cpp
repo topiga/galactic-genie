@@ -92,7 +92,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     else if (name=="top_border") land.topBorder=height*value/100;
                     else land.bottomBorder=height-height*value/100;
                 }
-                else if (name == "number_of_tiles" && value>=0 && uint32_t(value)<=width*height) {
+                else if (name == "number_of_tiles" && value>=0) {
                     land.targetTiles=value;
                 } else if (name == "land_percent" && value>=0 && value<=100) {
                     land.targetTiles=width*height*static_cast<uint32_t>(value)/(100u*(players?playerCount:1u));
@@ -243,8 +243,6 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         if (width!=height || !playerLands || playerCivilizations.size()!=playerCount ||
             (!ownedForest && (base!=0 || !terrainRows.empty() || lands[0].terrain!=0)))
             return fail("owned109 requires explicit civilizations on supported square player lands");
-        if (ownedForest && playerCount!=2)
-            return fail("owned forest starts require two owners");
         for (const auto ownedCiv:playerCivilizations) {
             if (!ownedCiv || ownedCiv>8 || ownedCiv>=data.civs.size() || data.civs[ownedCiv].units.size()<=109)
                 return fail("owned109 requires an original playable civilization1..8");
@@ -278,7 +276,6 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         }
     }
     if (startingWorkers) {
-        if (playerCount>2) return fail("RMS workers support at most two owners");
         for (const auto ownedCiv:playerCivilizations) {
             const auto &civ=data.civs[ownedCiv];
             if (civ.resources.size()<=84 || civ.resources[84]!=3 || civ.units.size()<=293 ||
@@ -422,24 +419,23 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         }
         if (startingWorkers) for (uint16_t owner=1;owner<=playerCount;++owner) {
             const auto &center=generated.playerStarts[owner-1];
-            // shortcut: edge-clipped and additional owner worker callbacks need composed original fixtures.
-            if (center.x<3 || center.y<3 || center.x>int32_t(width)-4 || center.y>int32_t(height)-4)
-                return fail("workers require an unclipped starting area");
             std::vector<uint32_t> candidates;
             if (!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,3,rng,candidates,err)) return false;
             int remaining=3;
             int16_t unitId=83;
             for (const auto tile:candidates) {
                 const int x=tile%width,y=tile/width;
-                if (x==center.x && y==center.y) continue;
-                const float px=x+.5f,py=y+.5f;
-                // Original RMS placement ignores existing workers, but blocks either owner's CC.
-                if (std::any_of(generated.ownedObjects.begin(),generated.ownedObjects.end(),[&](const auto &object) {
-                    return object.unitId==109 && std::abs(px-object.x)<2.2f && std::abs(py-object.y)<2.2f;
+                if (std::any_of(generated.playerStarts.begin(),generated.playerStarts.end(),[&](const auto &start) {
+                    return x==start.x && y==start.y;
                 })) continue;
-                // Final411 scenery is row-major; half-tile worker footprints collide only on the same tile.
-                if (std::binary_search(occupied.begin(),occupied.end(),tile)) continue;
-                if (unitId==83 && genieRandomDraw(rng)>16383) unitId=293;
+                const float px=x+.5f,py=y+.5f;
+                // Original RMS placement ignores existing workers, but blocks every owner's CC.
+                const bool blocked=std::any_of(generated.ownedObjects.begin(),generated.ownedObjects.end(),[&](const auto &object) {
+                    return object.unitId==109 && std::abs(px-object.x)<2.2f && std::abs(py-object.y)<2.2f;
+                }) || std::binary_search(occupied.begin(),occupied.end(),tile);
+                if (blocked && tile!=candidates.back()) continue;
+                // Original forces the last rejected candidate without a gender draw or count decrement.
+                if (!blocked && unitId==83 && genieRandomDraw(rng)>16383) unitId=293;
                 uint8_t facet=0,frame=0;
                 float delay=0;
                 for (int draw=0;draw<7;++draw) {
@@ -452,10 +448,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     if (draw==3) facet=uint8_t((value*8u/32767u+7)%8);
                 }
                 generated.ownedObjects.push_back({px,py,owner,playerCivilizations[owner-1],unitId,255,facet,frame,delay});
-                if (!--remaining) break;
+                if (blocked || !--remaining) break;
             }
-            // The verified unclipped ring always has room; don't invent fallback placement.
-            if (remaining) return fail("worker starting area exhausted");
         }
     } else if (hasObjects) {
         const bool ok=grouping.mode ?
