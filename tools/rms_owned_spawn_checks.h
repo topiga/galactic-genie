@@ -90,11 +90,12 @@ static void ownedRmsSpawnChecks(swgb::Assets &assets,swgb::SoftRenderer &rendere
         game.lookAt(-1000,-1000);
         game.render(renderer,960,544);
         check(game.terrainAtForTesting(13,20)==0,"Off-camera visible enemy retains pending terrain");
-        game.lookAt(13,20);
-        game.render(renderer,960,544);
+        // Center tile is outside this96x48 viewport but inside the original padded scan.
+        game.lookAt(18,20);
+        game.render(renderer,96,48);
         const int foundation=civ==2?4:civ==6?6:27;
         for(int y=18;y<22;++y) for(int x=11;x<15;++x)
-            check(game.terrainAtForTesting(x,y)==foundation,"Visible rendering consumes original deferred16tile foundation");
+            check(game.terrainAtForTesting(x,y)==foundation,"Padded terrain dispatch consumes deferred16tile foundation despite clipped pixels");
         check(game.setTerrainForTesting(13,20,0),"Replace painted terrain");
         game.render(renderer,960,544);
         check(game.terrainAtForTesting(13,20)==0,"Deferred foundation is consumed exactly once");

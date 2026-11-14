@@ -1034,3 +1034,21 @@ Worker research now executes original4de830 placement with actual83/293 construc
 Scenery cleanup26 original callback fixtures distinguish mode0 death(state7, retained registry/tile slot) from mode1 actual destruction/unregistration. Deletion swaps the last tile entry into the removed slot, giving order0,2,1 for three colocated objects, and preserves the world object-ID highwater. Strict rectangular radius sums exclude exact contact; RNG stays unchanged in these fixtures. Actual destructor/registration code executes, but full DAT creation, graphics, visibility and obstruction teardown remain outside the fixture. No new native mixed owned/scenery rows are enabled from this alone. Evidence: rms-owned-scenery-real-death-{2026-11-14.py,oracle-2026-11-14.json} and rms-owned-scenery-cleanup-findings-2026-11-14.txt.
 
 Validation:14 asset-independent ASan/UBSan suites (including original viewport masks), installed-DAT ASan/UBSan gameplay suite, and file/DRS CLI tests pass. Both AI match completion and a scripted player victory remain successful. This evidence covers the bounded contexts above, not1:1 terrain generation as a whole.
+
+
+## Workers after a retained starting Command Center (2026-11-14)
+
+The next24 original cases compose real completed109 creation with worker4de830, actual restriction25 zones, original placement gates, both actual worker masters and constructor callbacks. Each rejected candidate returns6 without advancing RNG. Accepted workers consume seven constructor draws and get original objectIDs1..3,40HP,state2. Resource4 (remaining population room, not total capacity) changes5→2; native import must represent this as capacity5/used3 rather than reduce capacity to2.
+
+| Input state before CC | After CC reseed | Worker variants | Final state after workers | Rejected gates |
+| --- | --- | --- | --- | --- |
+| 1 | 19169 | 83,293,293 | 3137622970 | 3 |
+| 12345 | 5828 | 293,293,293 | 1880328062 | 4 |
+| 4294967295 | 31308 | 83,293,293 | 3479266545 | 3 |
+
+All eight civilizations match these bounded sequences on the24×24 grass fixture centered at8,8, with worker distances1..3. This is not the complete setup/land/two-row4ddd40 pipeline: input states in this table start at CC creation, not RMS script entry. Other owners, scenery, edge clipping, full startup AI/UI and general unit modifiers remain open. Local reproductions: rms-worker-after-cc-probe-2026-11-14.py; full ordered gate/constructor traces in rms-worker-after-cc-oracle-2026-11-14.json; compact summary in rms-worker-after-cc-summary-2026-11-14.json. Native worker rows remain rejected until the map/import contract is covered.
+
+
+The address-linked worker loop is recorded in rms-worker-loop-pseudocode-2026-11-14.txt. It builds its candidate queue once, excludes the strict inner rectangle and every land center, then applies zone and occupancy gates. Candidate pops/rejections do not draw RNG. After switching to293, later gates still use the cached83 master. Radius-zero reservation helpers are no-ops. Forced placement only occurs when the final queued candidate actually reaches and fails the placement gate; exhaustion through an earlier filter does not force a spawn. These distinctions must survive native implementation rather than substituting repeated random placement.
+
+The native renderer regression additionally places a currently visible enemy outside the pixel viewport but inside the original padded scan: the foundation paints there, while a distant camera, unexplored enemy and explored memory retain it. Native menu/audio smoke passed; a two-owner diagnostic image was inspected at the build directory's rms-two-owner.png. This diagnostic still uses the diagnostic HUD and is not a complete playable RMS match.
