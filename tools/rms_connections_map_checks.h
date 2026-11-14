@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+#include "rms_connections_allied_map_checks.h"
 // Original scheduler LAND/(ELEVATION)/TERRAIN/CONNECTIONS composition, two
 // original-verified randomized player starts; empty-object final draw separate.
 // Local rms-land-elevation-terrain-connections-oracle-2026-11-14 documents the
 // non-scenery rectangle painter/unused-connectivity/visual harness boundaries.
 static void checkRmsConnectionsMap() {
+ checkRmsAlliedConnectionsMap();
  using namespace swgb;
  dat::DatFile data;data.terrainBlock.terrains.resize(7);data.terrainBlock.terrainsUsed=7;
  for(int id:{0,3,6})data.terrainBlock.terrains[id].enabled=1;
