@@ -60,7 +60,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     bool startingScouts = false;
     bool nearNova = false;
     bool holocrons = false;
-    struct ResourceRow { int16_t unit; int count,radius,inner,outer,spacing; RmsResourceDistance distance; uint8_t mode=2; uint32_t groups=1,variance=0; };
+    struct ResourceRow { int16_t unit; int count,radius,inner,outer,spacing; RmsResourceDistance distance; uint8_t mode=2; uint32_t groups=1,variance=0; bool global=false; };
     const ResourceRow stockResources[]={
         {59,6,3,10,12,6,RmsResourceDistance::Near},
         {66,7,3,12,16,7,RmsResourceDistance::Near},
@@ -70,7 +70,11 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         {102,4,2,20,26,7,RmsResourceDistance::Far},
         {594,4,3,10,12,0,RmsResourceDistance::Near,1,1},
         {594,2,3,14,30,0,RmsResourceDistance::Far,1,2},
-        {1363,4,3,14,30,0,RmsResourceDistance::Far,1,1,1}
+        {1363,4,3,14,30,0,RmsResourceDistance::Far,1,1,1},
+        {66,3,2,40,-1,9,RmsResourceDistance::Near,2,2,0,true},
+        {102,4,2,30,-1,9,RmsResourceDistance::Near,2,1,1,true},
+        {413,1,3,4,5,2,RmsResourceDistance::Near,0,2},
+        {413,1,3,6,8,2,RmsResourceDistance::Far,0,3}
     };
     std::vector<ResourceRow> resourceRows;
     constexpr int scoutIds[]={550,552,556,554,258,558,927,932};
@@ -262,29 +266,33 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if(i==tokens.size() || !count || !distance || !spacing) return fail("incomplete stock holocron row");
             ++i;holocrons=true;
         } else if (stage==3 && command=="create_object" && startingScouts) {
-            if ((!holocrons && nearNova) || (holocrons && resourceRows.size()>=9))
+            if ((!holocrons && nearNova) || (holocrons && (resourceRows.size()>=13 || (resourceRows.size()>=9 && resourceRows[8].unit!=126))))
                 return fail("unsupported resource row after verified stock prefix");
             auto row=stockResources[holocrons?resourceRows.size():1];
-            if(row.unit==1363 && i<tokens.size() && tokens[i].text=="1365") row.unit=1365;
-            const bool animal=row.unit==594 || row.unit==1363 || row.unit==1365;
+            if(row.unit==1363 && i<tokens.size()) {
+                if(tokens[i].text=="1365") row.unit=1365;
+                else if(tokens[i].text=="126") row={126,1,3,30,40,0,RmsResourceDistance::Far,0,2};
+            }
+            const bool animal=row.unit==594 || row.unit==1363 || row.unit==1365 || row.unit==126;
             if (!number(value) || value!=row.unit || i==tokens.size() || tokens[i++].text!="{")
                 return fail("expected next verified stock resource row");
-            bool each=false,gaia=false,mode=false,count=false,inner=false,outer=false;
-            bool spacing=row.spacing==0,zone=animal,radius=row.radius==3,groups=row.groups==1,variance=row.variance==0;
+            bool each=row.global,gaia=row.global,mode=row.mode==0,count=false,inner=false,outer=row.global;
+            bool spacing=row.spacing==0,zone=animal || row.global || row.unit==413,radius=row.radius==3,groups=row.mode==0 || row.groups==1,variance=row.variance==0;
             while (i<tokens.size() && tokens[i].text!="}") {
                 const auto name=tokens[i++].text;
-                if(name=="set_place_for_every_player") { each=true;continue; }
-                if(name=="set_gaia_object_only") { gaia=true;continue; }
-                if(name==(row.mode==2?"set_tight_grouping":"set_loose_grouping")) { mode=true;continue; }
+                if(!row.global && name=="set_place_for_every_player") { each=true;continue; }
+                if(!row.global && name=="set_gaia_object_only") { gaia=true;continue; }
+                if(row.mode && name==(row.mode==2?"set_tight_grouping":"set_loose_grouping")) { mode=true;continue; }
                 if(!number(value)) return fail("missing resource parameter value");
-                if(name=="number_of_objects" && (value==row.count || (row.unit==59 && value==12))) { row.count=value;count=true; }
+                if(name=="number_of_objects" && row.mode==0 && value==int(row.groups)) count=true;
+                else if(name=="number_of_objects" && row.mode!=0 && (value==row.count || (row.unit==59 && value==12))) { row.count=value;count=true; }
                 else if(name=="number_of_groups" && value==int(row.groups)) groups=true;
                 else if(name=="group_placement_radius" && value==row.radius) radius=true;
                 else if(name=="group_variance" && value==int(row.variance)) variance=true;
                 else if(name=="min_distance_to_players" && value==row.inner) inner=true;
-                else if(name=="max_distance_to_players" && value==row.outer) outer=true;
+                else if(!row.global && name=="max_distance_to_players" && value==row.outer) outer=true;
                 else if(name=="min_distance_group_placement" && value==row.spacing) spacing=true;
-                else if(!animal && name=="max_distance_to_other_zones" && value==7) zone=true;
+                else if(!animal && !row.global && row.unit!=413 && name=="max_distance_to_other_zones" && value==7) zone=true;
                 else return fail("unsupported resource parameter/value "+name);
             }
             if(i==tokens.size() || !each || !gaia || !mode || !count || !inner || !outer || !spacing || !zone || !radius || !groups || !variance)
@@ -392,7 +400,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     const bool ownedForest21=ownedObjects && playerLands && base==6 && lands[0].terrain==6 &&
         width==120 && height==120 && playerCount==2 && playerCivilizations==std::vector<uint16_t>{1,1} &&
         startingWorkers && startingScouts && workerMinDistance==6 && workerMaxDistance==6 &&
-        resourceRows.size()<=8 && !startingStalagmites;
+        (resourceRows.size()<=8 || (resourceRows.size()>=9 && resourceRows[8].unit==126)) && !startingStalagmites;
     if (startingStalagmites) {
         if (!ownedForest)
             return fail("starting573 requires forest Command Centers");
@@ -780,7 +788,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             for(const auto &row:resourceRows) {
                 RmsResourceGroups group{row.mode,row.groups,uint32_t(row.count),row.variance,uint32_t(row.radius)};
                 auto rowBlockers=blockers;
-                if(row.unit==594 || row.unit==1363 || row.unit==1365) {
+                if(row.unit==594 || row.unit==1363 || row.unit==1365 || row.unit==126) {
                     rowBlockers=occupied;
                     for(const auto &object:generated.ownedObjects) if(object.unitId==109)
                         for(int y=int(object.y)-2;y<int(object.y)+2;++y)
@@ -791,8 +799,14 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                             rowBlockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
                 }
                 std::vector<RmsTimberPlacement> placed;
+                RmsGlobalGroupPlacement global;
+                if(row.global) {
+                    for(const auto &land:generated.lands) global.landCenters.push_back(land.center);
+                    global.minDistance=row.inner;global.spacing=row.spacing;
+                }
                 if(!generateRmsGroupedResourcePlacements(width,height,generated.terrain,data,row.unit,group,rng,
-                    placed,err,rowBlockers,16000000,generated.playerStarts,row.distance,&eligibility)) return false;
+                    placed,err,rowBlockers,16000000,row.global?std::vector<RmsPlayerStart>{}:generated.playerStarts,
+                    row.distance,&eligibility,row.global?&global:nullptr)) return false;
                 for(const auto &object:placed)
                     blockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
                 generated.resourcesAfterOwned.insert(generated.resourcesAfterOwned.end(),placed.begin(),placed.end());

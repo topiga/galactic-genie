@@ -55,7 +55,9 @@ struct RmsMap {
 // row on64 grass or120 grass/dry forest. The120 profile may continue with stock
 // forage, near/medium/far Nova, near/far ore and two Nerf rows, in that order.
 // Flat profiles may append the verified FOODC3 hunt variant; Forest21 supports
-// the resource/Nerf prefix with fixed or randomized enemy starts.
+// the resource/Nerf prefix with fixed or randomized enemy starts. The selected
+// Forest sequence may continue with ungrouped Rancors, two global deposit rows
+// and the two near-start tree413 rows.
 // RNG is the shared CRT state at script entry. Failure clears output and leaves RNG unchanged.
 bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::string> &defines,
                     uint32_t width, uint32_t height, const dat::DatFile &data,

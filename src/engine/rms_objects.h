@@ -48,7 +48,7 @@ bool generateRmsResourcePlacements(uint32_t width, uint32_t height,
     const std::vector<uint32_t> &occupiedTiles={});
 enum class RmsResourceDistance { Near, Medium, Far };
 struct RmsResourceGroups {
-    uint8_t mode=1; // Original1 loose or2 tight.
+    uint8_t mode=1; // Original0 individual,1 loose or2 tight.
     uint32_t groups=1, perGroup=1, variance=0, radius=3;
 };
 // Original global selector-2 uses every land record, including neutral lands.
@@ -72,6 +72,10 @@ struct RmsGlobalGroupPlacement {
 // their original constructor adds a military timer draw and species animation.
 // Rancor126 supports Far ungrouped mode0: two single objects/player at30..40,
 // radius3, no variance/spacing; no grouped placement or variance draws.
+// Tree413 supports Near2/player at4..5 or Far3/player at6..8, mode0,
+// spacing2, radius3, no variance; restriction11 and one static facet draw.
+// Tree occupancy must include all retained mobiles as well as scenery/deposits
+// and building footprints; trees block later placements on their tile.
 // Herd occupancy includes blocking deposits/trees/buildings only: original Nerfs
 // ignore workers/scouts/holocrons/other Nerfs, and do not block later herd groups.
 // Optional rowEligibility preserves original spacing exclusions across rows; an

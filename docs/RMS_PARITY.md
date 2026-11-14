@@ -361,3 +361,33 @@ The exact selected Forest prefix now includes both Nerf rows:103 explicit
 objects plus7554 automatic trees,7657 total. Its terminal RNG154380403 matches
 the original replay. This extends startup parity through row12 of23; the
 remaining predator, global resource, tree and decorative rows are not implied.
+
+
+### Selected Forest predators and global deposits
+
+The verified selected-script prefix now reaches row15:107 Gaia resources/animals,
+10 owned starting objects and7554 automatic trees. Every Gaia unit ID, coordinate
+and facet matches the original replay; terminal RNG is2463465860. Four Rancors
+use original ungrouped mode0, including its final-candidate gate fallback. Global
+Nova/ore use a full-map candidate queue and exclude the strict axis-aligned square
+around every land center; they do not use per-player zone7 clearance. Spacing
+preserves the shared queue and persistent passable-tile mask.
+
+A fresh read-only comparison with Windows seed16160 independently matches all ten
+global deposits (IDs7661..7670), bringing directly compared static resources to87.
+Animals are checked against original startup replay because live animals can move.
+Evidence remains local in `native-live-forest-actual-15-rows-2026-11-14/`,
+`live-global-resources-comparison-2026-11-14.json` and the selected full-stage
+oracle. Thirty small original global-placement cases cover spacing, variance,
+partial exhaustion, bounds and rollback. Later explicit trees/decorations and
+other maps/seeds remain separate verification work.
+
+
+The selected prefix now reaches row17:117 Gaia objects,10 owned starting objects
+and7554 automatic trees (7681 total), terminal RNG1616468694. All117 Gaia
+unit IDs/coordinates/facets match original replay. Fresh Windows reads also match
+all ten explicit trees (IDs7671..7680). Tree413 placement uses mode0 with spacing2,
+restriction11, a single facet draw, and collisions against every retained object
+class, including mobiles and holocrons. Four authored-water row cases compare
+positions, facets, row RNG and complete persistent eligibility, including work-limit
+rollback. Rows18..23 remain unsupported; startup parity is not animal-AI parity.

@@ -18,6 +18,7 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
     };
     static constexpr ResourceSpec specs[]={
         {348,5282,10,31,50,11,12,1,100,2,2.f},
+        {413,5301,10,31,50,11,12,1,125,2,2.f},
         {59,5192,10,27,0,8,6,0,125,1,1.f},
         {66,5134,30,29,0,8,10,3,800,1,1.f},
         {102,5232,30,30,0,8,10,2,350,1,1.f}};
@@ -165,7 +166,7 @@ bool generateRmsResourcePlacements(uint32_t width, uint32_t height,
         if (err) *err = std::string("RMS resource: ") + reason;
         return false;
     };
-    if(unitId==59) return fail("forage requires the verified grouped row");
+    if(unitId==59 || unitId==413) return fail("resource requires the verified grouped row");
     if (!width || !height || width > 1024 || height > 1024 ||
         terrain.size() != static_cast<size_t>(width)*height || requested > terrain.size())
         return fail("invalid dimensions, terrain size or object count");
@@ -214,11 +215,12 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     };
     const size_t count=size_t(width)*height;
     if(!width || !height || width>1024 || height>1024 || terrain.size()!=count ||
-       (group.mode!=1 && group.mode!=2 && !(unitId==126 && group.mode==0)) || group.groups>count || group.perGroup>count ||
+       (group.mode!=1 && group.mode!=2 && !((unitId==126 || unitId==413) && group.mode==0)) || group.groups>count || group.perGroup>count ||
        group.variance>1024 || group.radius>1024)
         return fail("unsupported dimensions or grouping parameters");
     const bool hunt=unitId==1363 || unitId==1365;
     const bool predator=unitId==126;
+    const bool tree=unitId==413;
     const bool herd=unitId==594 || hunt || predator;
     const auto *spec=herd?validateHerd(data,unitId,terrain,err):validateResource(data,unitId,terrain,err);
     if(!spec) return false;
@@ -237,22 +239,22 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     const bool forage=unitId==59,ore=unitId==102 && perPlayer;
     const bool medium=distance==RmsResourceDistance::Medium,far=distance==RmsResourceDistance::Far;
     if(distance!=RmsResourceDistance::Near && !medium && !far) return fail("invalid resource distance profile");
-    if((medium || far) && (!perPlayer || (unitId!=66 && !((ore || herd) && far)) || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
+    if((medium || far) && (!perPlayer || (unitId!=66 && !((ore || herd || tree) && far)) || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
         return fail("distance profile requires verified120-square two-player resource row");
     if((hunt || predator) && !far) return fail("hunting animals require the verified far row");
-    const int playerMin=globalPlacement?globalPlacement->minDistance:predator?30:herd?(far?14:10):forage?10:ore?(far?20:14):medium?18:far?25:12;
-    const int playerMax=predator?40:herd?(far?30:12):forage?12:ore?(far?26:18):medium?26:far?35:16,playerSpacing=globalPlacement?globalPlacement->spacing:perPlayer?(herd?0:forage?6:7):0;
+    const int playerMin=globalPlacement?globalPlacement->minDistance:tree?(far?6:4):predator?30:herd?(far?14:10):forage?10:ore?(far?20:14):medium?18:far?25:12;
+    const int playerMax=tree?(far?8:5):predator?40:herd?(far?30:12):forage?12:ore?(far?26:18):medium?26:far?35:16,playerSpacing=globalPlacement?globalPlacement->spacing:perPlayer?(tree?2:herd?0:forage?6:7):0;
     const auto &exclusionCenters=globalPlacement?globalPlacement->landCenters:novaPlayerStarts;
-    if((forage || ore || herd) && (!perPlayer || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
+    if((forage || ore || herd || tree) && (!perPlayer || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
         return fail("resource row requires verified120-square two-player profile");
-    if((forage || ore || herd || medium || far) && std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
+    if((forage || ore || herd || tree || medium || far) && std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
         const bool forest21=width==120 && !hunt && (t==1 || t==2 || t==5 || t==12 || t==21);
         return !forest21 && t!=0 && t!=6 && t!=9 && t!=10 && t!=27 && t!=41;
     })) return fail("resource row requires verified grass/forest terrain");
     if(perPlayer) {
-        const uint32_t expectedGroups=herd && far && !hunt?2u:1u;
-        const uint32_t expectedCount=predator?1u:hunt?4u:herd?(far?2u:4u):forage?6u:ore?(far?4u:5u):(medium || far)?4u:7u;
-        if((unitId!=66 && !forage && !ore && !herd) || group.mode!=(predator?0:herd?1:2) ||
+        const uint32_t expectedGroups=tree?(far?3u:2u):herd && far && !hunt?2u:1u;
+        const uint32_t expectedCount=(tree || predator)?1u:hunt?4u:herd?(far?2u:4u):forage?6u:ore?(far?4u:5u):(medium || far)?4u:7u;
+        if((unitId!=66 && !forage && !ore && !herd && !tree) || group.mode!=((tree || predator)?0:herd?1:2) ||
            group.groups!=expectedGroups || (group.perGroup!=expectedCount && !(forage && group.perGroup==12)) ||
            group.variance!=(hunt?1u:0u) || group.radius!=(ore?2u:3u) || novaPlayerStarts.size()>8)
             return fail("unsupported per-player resource row");
@@ -364,14 +366,25 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             if(perPlayer) {
                 if(!sameZone(x,y)) continue;
                 // Original zone7 clearance samples cardinal7 and diagonal5, clamped to the map.
-                if(!herd && (!sameZone(x,y-7) || !sameZone(x+5,y-5) || !sameZone(x+7,y) || !sameZone(x+5,y+5) ||
+                if(!herd && !tree && (!sameZone(x,y-7) || !sameZone(x+5,y-5) || !sameZone(x+7,y) || !sameZone(x+5,y+5) ||
                     !sameZone(x,y+7) || !sameZone(x-5,y+5) || !sameZone(x-7,y) || !sameZone(x-5,y-5))) continue;
             }
-            if(predator) {
+            if(predator || tree) {
                 // Original mode0 has no inner queue/variance draw. A failed final gate
                 // forces the last candidate (4dec9c), after distance/zone exclusions.
-                if(!pass(center) && next[outer]>=0) continue;
-                create(center);--groupsLeft;continue;
+                const bool forced=!pass(center);
+                if(forced && next[outer]>=0) continue;
+                if(tree) {
+                    const int x0=std::max(0,x-playerSpacing),x1=std::min(int(width)-1,x+playerSpacing);
+                    const int y0=std::max(0,y-playerSpacing),y1=std::min(int(height)-1,y+playerSpacing);
+                    if(!spend(size_t(x1-x0+1)*size_t(y1-y0+1)*2)) return fail("work limit exceeded");
+                    for(int sy=y0;sy<=y1;++sy) for(int sx=x0;sx<=x1;++sx) unlink(sy*width+sx);
+                    create(center);
+                    for(int sy=y0;sy<=y1;++sy) for(int sx=x0;sx<=x1;++sx)
+                        if(restriction[terrain[sy*width+sx]]>0) eligible[sy*width+sx]=false;
+                } else create(center);
+                if(!forced) --groupsLeft;
+                continue;
             }
             if(!pass(center)) continue;
             if(playerSpacing) {
