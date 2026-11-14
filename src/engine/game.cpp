@@ -16161,7 +16161,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
     }
 
     // Original 496e80 dispatches after terrain drawing; fog memories never consume +264.
-    bool foundationPainted=false;
+    std::vector<Object *> pendingFoundations;
     for (auto &object:objects_) {
         if (object.pendingFoundation==255 || !objectVisible(object)) continue;
         const float cameraX=(camX_/kTileHalfW+camY_/kTileHalfH)*.5f;
@@ -16169,16 +16169,24 @@ void Game::render(Renderer &r, int screenW, int screenH) {
         if (!terrainDrawScanContains(int(mapSize_-cameraY),int(cameraX),
                 int(viewW/(2*kTileHalfW)),int(viewH/(2*kTileHalfH)),
                 int(mapSize_-object.y),int(object.x))) continue;
+        pendingFoundations.push_back(&object);
+    }
+    std::stable_sort(pendingFoundations.begin(),pendingFoundations.end(),[&](const Object *a,const Object *b) {
+        return terrainDrawTileBefore(int(mapSize_-a->y),int(a->x),int(mapSize_-b->y),int(b->x));
+    });
+    for (Object *pending:pendingFoundations) {
+        Object &object=*pending;
         const int cx=int(object.x),cy=int(object.y);
         const int civ=civilizationForPlayer(object.player);
         const uint8_t foundation=object.pendingFoundation==27?(civ==2?4:civ==6?6:27):object.pendingFoundation;
         for (int y=cy-2;y<cy+2;++y) for (int x=cx-2;x<cx+2;++x)
-            if (x>=0 && y>=0 && x<mapSize_ && y<mapSize_)
-                terrain_[size_t(y)*mapSize_+x]=foundation;
+            if (x>=0 && y>=0 && x<mapSize_ && y<mapSize_) {
+                auto &tile=terrain_[size_t(y)*mapSize_+x];
+                if (tile!=object.pendingFoundation && tile!=1 && tile!=22 && tile!=23) tile=foundation;
+            }
         object.pendingFoundation=255;
-        foundationPainted=true;
     }
-    if (foundationPainted) pathGridCache_.clear();
+    if (!pendingFoundations.empty()) pathGridCache_.clear();
 
     for(const auto &fog:fogDraws) {
         const auto &f=*fog.frame;

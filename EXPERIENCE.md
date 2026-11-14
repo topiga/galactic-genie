@@ -1084,3 +1084,12 @@ ID interpretation correction: original world+b0 counts registration operations, 
 Additional startup research closes the default mask path substantially: stockDAT resources50/183 startzero, startup/CC research cannot invoke their refresh effects, and inspected normal creation order keeps maskszero through RMS then refreshes after world creation. Eight original research cases and18 zero-sharing fullstage cases corroborate the bounded default context. This is static call ordering plus original-routine execution, not a full live Windows new-game trace. Near-start acceptance remains guarded until combined startup/draw-order regressions cover it. Evidence: rms-startup-mask-closure-findings-2026-11-14.txt.
 
 Validation for c979cc8:14 ASan/UBSan algorithm suites, full installed-DAT gameplay suite, expanded file/DRS CLI checks and menu/audio smoke passed. The owned forest render was inspected at the build directory’s rms-owned-forest.png. No claim of destructive scenery cleanup, unrestricted owner/worker composition or complete terrain1:1 parity follows from these bounded tests.
+
+
+## Near starts and overlapping foundation rendering (2026-11-14)
+
+Bare owned109 starts now accept close/overlapping owners under the verified fresh default startup context. Eighteen32×32 original zero-mask/zero-sharing stages join the18 separated64×64 cases: exact positions, terrain, raw deferred bytes and final RNG match. Worker/forest combinations retain their separation guard because their placement neighborhoods are a different boundary.
+
+The deferred renderer now follows original alternating-diagonal tile order, retaining initial creation order for same-tile CCs. Twenty-four original render cases cover overlapping/coincident CCs, civ2/6 swapping, partial local overlap, same diagonal rows and protected terrain. Original557cf0 skips current raw27 and water1/22/23 before mapping27 to4/6; native code now preserves those tiles instead of repainting them. Full final-raster hashes pass after transforming original scenario coordinates into native coordinates. Four original terrain viewport visit lists additionally pin ordered traversal, not only membership. Source evidence: rms-overlapping-pending-render-{probe,oracle,findings}-2026-11-14 and rms-deferred-viewport-oracle-2026-11-14.
+
+Scope: original default startup and initial CC insertion, not same-tile deletion/reinsertion ordering or a full live Windows new-game trace. Native algorithm and full installed-DAT ASan/UBSan gameplay tests passed, including AI and scripted player victories.

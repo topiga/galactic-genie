@@ -287,9 +287,8 @@ int main() {
         check(hash==twoHash[seed],"original two-owner pre-render terrain raster");
     }
     state=1;
-    check(!generateRmsMap(script,{},16,16,data,state,map,&error,2,{1,2}) && state==1 &&
-          map.terrain.empty() && map.ownedObjects.empty() && error.find("close starts")!=std::string::npos,
-          "Unclosed startup sight contexts fail atomically");
+    check(generateRmsMap(script,{},16,16,data,state,map,&error,2,{1,2}) && map.ownedObjects.size()==2 &&
+          map.ownedObjects[1].pendingFoundation==27,"Near starts retain raw pending terrain until post-startup rendering");
     manyOwnedRmsMapChecks(data);
     auto rejectsOwned=[&](uint32_t count,const std::vector<uint16_t> &civs) {
         state=12345;

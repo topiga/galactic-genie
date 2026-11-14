@@ -360,11 +360,12 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         } else if (!generated.scenery.empty() ||
                    std::any_of(generated.terrain.begin(),generated.terrain.end(),[](uint8_t tile){return tile!=0;}))
             return fail("owned109 requires scenery-free grass");
-        // shortcut: near starts need combined startup/draw-order fixtures; retain separated owners.
-        for (uint32_t other=1;other<playerCount;++other)
+        // Fresh default startup retains zero visibility masks until after RMS.
+        // Worker/scenery combinations still require separated placement neighborhoods.
+        if (startingWorkers || ownedForest) for (uint32_t other=1;other<playerCount;++other)
         if (std::abs(generated.playerStarts[0].x-generated.playerStarts[other].x)<11 &&
             std::abs(generated.playerStarts[0].y-generated.playerStarts[other].y)<11)
-            return fail("owned109 close starts require startup visibility callbacks");
+            return fail("worker/forest starts require separated placement neighborhoods");
         for (uint16_t owner=1;owner<=playerCount;++owner) {
             const auto &center=generated.playerStarts[owner-1];
             if (center.x<2 || center.y<2 || center.x>int32_t(width)-2 || center.y>int32_t(height)-2)

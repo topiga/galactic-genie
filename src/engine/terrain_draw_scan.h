@@ -11,4 +11,8 @@ inline bool terrainDrawScanContains(int cameraX,int cameraY,int columns,int rows
     const int column=x-sx+(row+1)/2;
     return column>=0 && column<columns+13;
 }
+// Ordering of the original alternating diagonal rows, independent of viewport origin.
+inline bool terrainDrawTileBefore(int ax,int ay,int bx,int by) {
+    return ay-ax!=by-bx ? ay-ax<by-bx : ax<bx;
+}
 } // namespace swgb

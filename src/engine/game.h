@@ -198,6 +198,14 @@ public:
         const Object *o=findObject(id);
         return o?std::array<float,2>{o->animTime,o->initialIdleDelay}:std::array<float,2>{};
     }
+    bool setPendingFoundationForTesting(uint32_t id,uint8_t terrain) {
+        Object *o=findObject(id);
+        if (!o || !o->unit || o->unit->id!=109) return false;
+        o->pendingFoundation=terrain;return true;
+    }
+    int pendingFoundationForTesting(uint32_t id) const {
+        const Object *o=findObject(id);return o?o->pendingFoundation:-1;
+    }
     void groupMoveForTesting(const std::vector<uint32_t> &spawnIds, float x,
                              float y, int formation = -1);
     const FrameStats &stats() const { return stats_; }
