@@ -63,23 +63,25 @@ const ResourceSpec *validateHerd(const dat::DatFile &data,int16_t unitId,const s
     static constexpr ResourceSpec nerf{594,61,70,1,7,7,8,0,200,0,2.f};
     static constexpr ResourceSpec kaadu{1363,46,70,4,5,1,8,0,100,0,2.f};
     static constexpr ResourceSpec eopie{1365,22,70,4,5,1,8,0,140,0,2.f};
-    const auto &spec=unitId==1363?kaadu:unitId==1365?eopie:nerf;
-    const bool hunt=unitId!=594;
+    static constexpr ResourceSpec rancor{126,70,70,5,150,26,8,-1,0,0,2.f};
+    const bool predator=unitId==126;
+    const auto &spec=predator?rancor:unitId==1363?kaadu:unitId==1365?eopie:nerf;
+    const bool hunt=unitId==1363 || unitId==1365;
     auto fail=[&]()->const ResourceSpec* {if(err)*err="RMS herd: unsupported original animal metadata";return nullptr;};
-    if(data.civs.empty() || data.civs[0].units.size()<=size_t(unitId) || data.terrainRestrictions.size()<=7) return fail();
+    if(data.civs.empty() || data.civs[0].units.size()<=size_t(unitId) || data.terrainRestrictions.size()<=size_t(spec.restriction)) return fail();
     const auto &u=data.civs[0].units[unitId];const auto *g=data.graphic(spec.graphic);
     if(!u.exists || u.id!=unitId || u.type!=70 || u.cls!=spec.cls || u.hitPoints!=spec.hp || u.standingGraphic[0]!=spec.graphic || u.standingGraphic[1]!=-1 ||
-       u.collisionSize[0]!=.3f || u.collisionSize[1]!=.3f || u.collisionSize[2]!=2.f || u.clearanceSize[0]!=.3f || u.clearanceSize[1]!=.3f ||
-       u.lineOfSight!=2.f || u.speed!=(hunt?.74f:.7f) || u.terrainRestriction!=spec.restriction || u.obstructionType!=5 || u.obstructionClass!=2 ||
+       u.collisionSize[0]!=(predator?.25f:.3f) || u.collisionSize[1]!=(predator?.25f:.3f) || u.collisionSize[2]!=2.f || u.clearanceSize[0]!=(predator?.5f:.3f) || u.clearanceSize[1]!=(predator?.5f:.3f) ||
+       u.lineOfSight!=(predator?7.f:2.f) || u.speed!=(hunt?.74f:.7f) || u.terrainRestriction!=spec.restriction || u.obstructionType!=5 || u.obstructionClass!=2 ||
        u.hillMode || u.flyMode || u.canBeBuiltOn || u.recyclable || u.civilization || u.enableAutoGather || u.createDoppelgangerOnDeath ||
        u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 || u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
-       u.trainSound!=(unitId==1363?421:unitId==1365?609:630) || !g || g->sequenceType!=7 || g->frameCount!=(unitId==1363?11:unitId==1365?12:8) || g->angleCount!=8 || g->frameDuration!=(hunt?.12f:.275f) ||
-       g->replayDelay!=(hunt?.5f:0.f) || g->soundId!=-1 || !g->angleSounds.empty()) return fail();
+       u.trainSound!=(predator?37:unitId==1363?421:unitId==1365?609:630) || !g || g->sequenceType!=7 || g->frameCount!=(unitId==1363?11:unitId==1365?12:8) || g->angleCount!=8 || g->frameDuration!=((hunt || predator)?.12f:.275f) ||
+       g->replayDelay!=((hunt || predator)?.5f:0.f) || g->soundId!=-1 || !g->angleSounds.empty()) return fail();
     int stores=0;for(const auto &storage:u.resourceStorages) {
-        if(storage.flag || (storage.type>=0 && (storage.type!=0 || storage.amount!=spec.amount))) return fail();
+        if(storage.flag || (storage.type>=0 && (predator || storage.type!=0 || storage.amount!=spec.amount))) return fail();
         stores+=storage.type==0;
     }
-    if(stores!=1) return fail();
+    if(stores!=(predator?0:1)) return fail();
     const auto &restriction=data.terrainRestrictions[spec.restriction].passableBuildableDmgMultiplier;
     for(auto t:terrain) if(t>=restriction.size() || !std::isfinite(restriction[t]) || (hunt && restriction[t]!=1.f)) return fail();
     return &spec;
@@ -212,11 +214,12 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     };
     const size_t count=size_t(width)*height;
     if(!width || !height || width>1024 || height>1024 || terrain.size()!=count ||
-       (group.mode!=1 && group.mode!=2) || group.groups>count || group.perGroup>count ||
+       (group.mode!=1 && group.mode!=2 && !(unitId==126 && group.mode==0)) || group.groups>count || group.perGroup>count ||
        group.variance>1024 || group.radius>1024)
         return fail("unsupported dimensions or grouping parameters");
     const bool hunt=unitId==1363 || unitId==1365;
-    const bool herd=unitId==594 || hunt;
+    const bool predator=unitId==126;
+    const bool herd=unitId==594 || hunt || predator;
     const auto *spec=herd?validateHerd(data,unitId,terrain,err):validateResource(data,unitId,terrain,err);
     if(!spec) return false;
     const auto &restriction=data.terrainRestrictions[spec->restriction].passableBuildableDmgMultiplier;
@@ -226,9 +229,9 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     if(distance!=RmsResourceDistance::Near && !medium && !far) return fail("invalid resource distance profile");
     if((medium || far) && (!perPlayer || (unitId!=66 && !((ore || herd) && far)) || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
         return fail("distance profile requires verified120-square two-player resource row");
-    if(hunt && !far) return fail("hunting animals require the verified far row");
-    const int playerMin=herd?(far?14:10):forage?10:ore?(far?20:14):medium?18:far?25:12;
-    const int playerMax=herd?(far?30:12):forage?12:ore?(far?26:18):medium?26:far?35:16,playerSpacing=herd?0:forage?6:7;
+    if((hunt || predator) && !far) return fail("hunting animals require the verified far row");
+    const int playerMin=predator?30:herd?(far?14:10):forage?10:ore?(far?20:14):medium?18:far?25:12;
+    const int playerMax=predator?40:herd?(far?30:12):forage?12:ore?(far?26:18):medium?26:far?35:16,playerSpacing=herd?0:forage?6:7;
     if((forage || ore || herd) && (!perPlayer || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
         return fail("resource row requires verified120-square two-player profile");
     if((forage || ore || herd || medium || far) && std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
@@ -237,8 +240,8 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     })) return fail("resource row requires verified grass/forest terrain");
     if(perPlayer) {
         const uint32_t expectedGroups=herd && far && !hunt?2u:1u;
-        const uint32_t expectedCount=hunt?4u:herd?(far?2u:4u):forage?6u:ore?(far?4u:5u):(medium || far)?4u:7u;
-        if((unitId!=66 && !forage && !ore && !herd) || group.mode!=(herd?1:2) ||
+        const uint32_t expectedCount=predator?1u:hunt?4u:herd?(far?2u:4u):forage?6u:ore?(far?4u:5u):(medium || far)?4u:7u;
+        if((unitId!=66 && !forage && !ore && !herd) || group.mode!=(predator?0:herd?1:2) ||
            group.groups!=expectedGroups || (group.perGroup!=expectedCount && !(forage && group.perGroup==12)) ||
            group.variance!=(hunt?1u:0u) || group.radius!=(ore?2u:3u) || novaPlayerStarts.size()>8)
             return fail("unsupported per-player resource row");
@@ -315,7 +318,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             const uint32_t heading=genieRandomDraw(rng)*8u/32767u;
             placement.headingRadians=float(double(heading)*3.14159265358979323846/4.);
             placement.facet=uint8_t((heading+7)%8);
-            for(int timer=0;timer<(hunt?4:3);++timer)genieRandomDraw(rng);
+            for(int timer=0;timer<((hunt || predator)?4:3);++timer)genieRandomDraw(rng);
         } else if(spec->type==30) {
             const auto appearance=drawRmsCarbonAppearance(rng,static_cast<uint8_t>(spec->angles));
             placement.facet=appearance.facet;placement.headingRadians=appearance.headingRadians;
@@ -352,6 +355,12 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
                 // Original zone7 clearance samples cardinal7 and diagonal5, clamped to the map.
                 if(!herd && (!sameZone(x,y-7) || !sameZone(x+5,y-5) || !sameZone(x+7,y) || !sameZone(x+5,y+5) ||
                     !sameZone(x,y+7) || !sameZone(x-5,y+5) || !sameZone(x-7,y) || !sameZone(x-5,y-5))) continue;
+            }
+            if(predator) {
+                // Original mode0 has no inner queue/variance draw. A failed final gate
+                // forces the last candidate (4dec9c), after distance/zone exclusions.
+                if(!pass(center) && next[outer]>=0) continue;
+                create(center);--groupsLeft;continue;
             }
             if(!pass(center)) continue;
             if(perPlayer && playerSpacing) {

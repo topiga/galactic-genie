@@ -64,6 +64,8 @@ struct RmsResourceGroups {
 // at14..30, radius3 and no spacing; includes original animated startup state.
 // Kaadu1363/Eopie1365 support Far loose4, variance1, one group/player at14..30;
 // their original constructor adds a military timer draw and species animation.
+// Rancor126 supports Far ungrouped mode0: two single objects/player at30..40,
+// radius3, no variance/spacing; no grouped placement or variance draws.
 // Herd occupancy includes blocking deposits/trees/buildings only: original Nerfs
 // ignore workers/scouts/holocrons/other Nerfs, and do not block later herd groups.
 // Optional rowEligibility preserves original spacing exclusions across rows; an
