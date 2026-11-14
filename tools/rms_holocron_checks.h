@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+#include "rms_holocron120_checks.h"
 static void rmsHolocronChecks(const swgb::dat::DatFile &data) {
     const struct { uint32_t entry,final;swgb::RmsPlayerStart starts[2];size_t count;float positions[5][2]; } cases[]={
         {1718704626u,2427565970u,{{37,8},{25,42}},5,{{11.5f,2.5f},{58.5f,49.5f},{0.5f,50.5f},{0.5f,23.5f},{62.5f,0.5f}}},
@@ -28,5 +29,6 @@ static void rmsHolocronChecks(const swgb::dat::DatFile &data) {
         check(!swgb::generateRmsHolocronPlacements(64,64,terrain,data,{f.starts[0]},rng,placements,&error) && rng==f.entry,
               "Unproven holocron owner counts reject");
     }
+    rmsHolocron120Checks(data);
     std::puts("PASS: original bounded holocron placement after retained starting units");
 }

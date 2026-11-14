@@ -325,18 +325,26 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
 bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
     const std::vector<uint8_t> &terrain,const dat::DatFile &data,
     const std::vector<RmsPlayerStart> &playerStarts,uint32_t &randomState,
-    std::vector<RmsTimberPlacement> &out,std::string *err) {
+    std::vector<RmsTimberPlacement> &out,std::string *err,
+    const std::vector<uint32_t> &occupiedTiles) {
     out.clear();if(err) err->clear();
     auto fail=[&](const char *reason) {
         if(err) *err=std::string("RMS holocron: ")+reason;
         return false;
     };
-    if(width!=64 || height!=64 || terrain.size()!=4096 || playerStarts.size()!=2)
-        return fail("requires64-square grass and two player starts");
+    if((width!=64 && width!=120) || height!=width || terrain.size()!=size_t(width)*height || playerStarts.size()!=2)
+        return fail("requires64/120-square terrain and two player starts");
     for(const auto &start:playerStarts)
-        if(start.x<2 || start.y<2 || start.x>62 || start.y>62) return fail("invalid player start");
-    if(std::any_of(terrain.begin(),terrain.end(),[](uint8_t t){return t!=0 && t!=27;}))
-        return fail("requires bare grass and original local foundations");
+        if(start.x<2 || start.y<2 || start.x>int(width)-2 || start.y>int(height)-2) return fail("invalid player start");
+    if(std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
+        return t!=0 && t!=27 && (width!=120 || (t!=6 && t!=9 && t!=10 && t!=41));
+    }) || (width==64 && !occupiedTiles.empty()))
+        return fail("requires verified grass or120-square dry forest");
+    std::vector<bool> occupied(terrain.size());
+    for(auto tile:occupiedTiles) {
+        if(tile>=terrain.size()) return fail("occupied tile outside map");
+        occupied[tile]=true;
+    }
     if(data.civs.empty() || data.civs[0].units.size()<=285 || data.terrainRestrictions.size()<=7)
         return fail("missing original Gaia holocron metadata");
     const auto &u=data.civs[0].units[285];const auto *g=data.graphic(5200);
@@ -361,14 +369,14 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
     if(!generateRmsObjectCandidates(width,height,rng,candidates,err)) return false;
     std::vector<bool> removed(terrain.size());std::vector<RmsTimberPlacement> placements;
     for(auto tile:candidates) {
-        if(removed[tile]) continue;
+        if(removed[tile] || occupied[tile]) continue;
         const int x=tile%width,y=tile/width;
         if(std::any_of(playerStarts.begin(),playerStarts.end(),[&](const auto &start) {
             return std::abs(x-start.x)<25 && std::abs(y-start.y)<25;
         })) continue;
         // Original4de1b0 removes temporary spacing nodes from this row's queue.
-        for(int sy=std::max(0,y-20);sy<=std::min(63,y+20);++sy)
-            for(int sx=std::max(0,x-20);sx<=std::min(63,x+20);++sx) removed[sy*64+sx]=true;
+        for(int sy=std::max(0,y-20);sy<=std::min(int(height)-1,y+20);++sy)
+            for(int sx=std::max(0,x-20);sx<=std::min(int(width)-1,x+20);++sx) removed[sy*width+sx]=true;
         // Static type70: base facet, sprite frame, three action timers, military timer.
         for(int draw=0;draw<6;++draw) genieRandomDraw(rng);
         placements.push_back({x+.5f,y+.5f,7,0,285});
