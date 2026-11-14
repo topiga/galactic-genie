@@ -28,6 +28,7 @@ static void check(bool value, const char *message) {
 #include "rms_owned_spawn_checks.h"
 #include "rms_worker_spawn_checks.h"
 #include "rms_many_owned_checks.h"
+#include "rms_owned_forest_checks.h"
 #include "rms_grouped_checks.h"
 #include "point_move_checks.h"
 
@@ -253,6 +254,7 @@ int main(int argc, char **argv) {
         ownedRmsSpawnChecks(assets,renderer);
         rmsWorkerSpawnChecks(assets);
         manyOwnedRmsMapChecks(assets.dat());
+        ownedForestSpawnChecks(assets);
         rmsGroupedChecks(assets);
         pointMoveChecks(assets);
     fogRendering(assets,renderer);

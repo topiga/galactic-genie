@@ -92,7 +92,14 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     assert '4 native objects' in output and '1943766570' in output
     assert (work/'workers.png').stat().st_size>100
     run(['render-rms',data,root/'tools/fixtures/owned-workers.rms',32,1,work/'invalid-workers.png',
-         '--players',2,'--civilization',1,'--civilization',2],1)
+         '--players',3,'--civilization',1,'--civilization',2,'--civilization',3],1)
     assert not (work/'invalid-workers.png').exists()
+    output=run(['render-rms',data,root/'tools/fixtures/owned-workers.rms',32,1,work/'two-workers.png',
+                '--players',2,'--civilization',1,'--civilization',2],0)
+    assert '8 native objects' in output and '892528603' in output
+    output=run(['render-rms',data,root/'tools/fixtures/owned-forest.rms',32,1,work/'owned-forest.png',
+                '--players',2,'--civilization',1,'--civilization',1],0)
+    assert '39 native objects' in output and '2026451952' in output
+
 
 print('RMS file/DRS parity, includes, defines and rejection checks passed')

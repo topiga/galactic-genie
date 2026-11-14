@@ -31,7 +31,8 @@ struct RmsMap {
 // Rejects other stages/commands; not a complete packaged random-map generator.
 // Also supports one to eight owned109 starts separated from the local owner on bare grass0 with explicit
 // civilizations and zero placement distances. Enemy foundation remains deferred.
-// One local owner may append83 workers with explicit count1 and distances1..3.
+// One or two owners may append83 workers with explicit count1 and distances1..3.
+// A bounded two-civ1 dry forest profile retains live411 trees outside CC footprints.
 // RNG is the shared CRT state at script entry. Failure clears output and leaves RNG unchanged.
 bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::string> &defines,
                     uint32_t width, uint32_t height, const dat::DatFile &data,

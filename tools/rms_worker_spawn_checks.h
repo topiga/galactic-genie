@@ -60,8 +60,36 @@ static void rmsWorkerSpawnChecks(swgb::Assets &assets) {
             check(game.objectAnimationForTesting(4)[1]==0,"New action clears initial idle delay");
         }
         const auto before=state;
-        check(!game.initRms(script,{},32,state,&error,2,{civ,civ}) && state==before && game.activeObjectCount()==4,
-              "Unsupported nonlocal workers preserve existing game and RNG");
+        check(!game.initRms(script,{},32,state,&error,3,{civ,civ,civ}) && state==before && game.activeObjectCount()==4,
+              "Unsupported three-owner workers preserve existing game and RNG");
+    }
+    const struct { uint32_t seed,finalState;Worker workers[6]; } pairs[]={
+        {1u,892528603u,{{293,16.5f,2.5f,2,0,0.000000000f},{293,19.5f,2.5f,1,7,0.000000000f},{293,15.5f,2.5f,4,4,0.000000000f},{293,10.5f,20.5f,1,7,0.000000000f},{293,10.5f,17.5f,2,4,0.000000000f},{293,11.5f,17.5f,4,6,0.000000000f}}},
+        {12345u,3312625743u,{{293,2.5f,17.5f,4,5,0.000000000f},{293,2.5f,18.5f,4,2,0.000000000f},{293,4.5f,17.5f,1,7,2.812677383f},{293,21.5f,8.5f,2,7,1.676320791f},{293,17.5f,12.5f,5,7,0.350291491f},{293,17.5f,11.5f,2,7,1.807580709f}}},
+        {4294967295u,1302958861u,{{293,17.5f,11.5f,1,6,0.000000000f},{293,17.5f,7.5f,6,6,0.000000000f},{293,18.5f,7.5f,3,7,1.271462202f},{293,4.5f,18.5f,3,6,0.000000000f},{293,2.5f,19.5f,2,5,0.000000000f},{293,2.5f,21.5f,0,0,0.000000000f}}},
+    };
+    for(uint16_t civ=1;civ<=8;++civ) for(const auto &f:pairs) {
+        uint32_t state=f.seed;swgb::RmsMap map;
+        check(swgb::generateRmsMap(script,{},32,32,assets.dat(),state,map,&error,2,{1,civ}),error.c_str());
+        check(state==f.finalState && map.ownedObjects.size()==8,"Two-owner full worker stage RNG/order");
+        for(size_t i=0;i<6;++i) {
+            const auto &a=map.ownedObjects[i+2];const auto &e=f.workers[i];
+            check(a.unitId==e.unit && a.x==e.x && a.y==e.y && a.owner==(i<3?1:2) &&
+                  a.facet==e.facet && a.animationFrame==e.frame && std::abs(a.initialIdleDelay-e.delay)<.00001f,
+                  "Original nonlocal worker positions, IDs, pose and animation");
+        }
+        state=f.seed;
+        check(game.initRms(script,{},32,state,&error,2,{1,civ}),error.c_str());
+        check(state==f.finalState && game.activeObjectCount()==8,"Eight native objects from two-owner worker row");
+        for(int owner=1;owner<=2;++owner)
+            check(game.resource(owner,98)==525 && game.resource(owner,164)==150 && game.resource(owner,165)==375 &&
+                  game.resource(owner,11)==3 && game.resource(owner,37)==3 && game.populationUsedForTesting(owner)==3,
+                  "Nonlocal owner resources and population remain independent");
+        for(size_t i=0;i<6;++i)
+            check(game.objectUnitId(uint32_t(i+3))==f.workers[i].unit &&
+                  game.objectPlayer(uint32_t(i+3))==(i<3?1:2) &&
+                  game.objectHitPoints(uint32_t(i+3))==(i>=3 && civ==8?55:40),
+                  "Nonlocal native import retains IDs and applies later civilization HP bonus");
     }
     std::puts("PASS: full original RMS worker placement, variants, facing, population and cost import");
 }
