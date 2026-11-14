@@ -3,11 +3,15 @@
 #include <cassert>
 #include <cstdio>
 #include <limits>
+#include "rms_connections_stage_checks.h"
+#include "rms_connections_stage_checks.h"
+#include "rms_connections_stage_checks.h"
 using namespace swgb;
 // Synthetic maps executed through original 0x4e4b40, including real route and RNG.
 // CC SHA256 c01d78a039514211a845b41338c6f342e0d9c9b3396c8ff558f05d00ae67420d.
 // Selected from local rms-connections-oracle-2026-11-14.json (125 cases).
 int main() {
+    checkOriginalConnectionStages();
     struct Case {
         uint32_t seed, finalSeed; RmsConnectionPoint start,end;
         RmsConnectionTerrain settings[5]; const char *before,*after;
@@ -109,5 +113,5 @@ int main() {
     assert(!connectRmsLandPair(8,8,terrain,{0,0},{1,1},settings,seed,&error)); unchanged();
     settings[4].cost=1; settings[4].variance=2;
     assert(!connectRmsLandPair(8,8,terrain,{0,0},{1,1},settings,seed,&error)); unchanged();
-    std::puts("RMS connections: 25 original fixtures and invalid-input checks passed");
+    std::puts("RMS connections: 25 pair + 22 stage + 16 selection fixtures and invalid-input checks passed");
 }

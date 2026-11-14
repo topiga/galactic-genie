@@ -20,4 +20,28 @@ bool connectRmsLandPair(uint32_t width,uint32_t height,
     std::vector<uint8_t> &terrain,RmsConnectionPoint start,RmsConnectionPoint end,
     const RmsConnectionSettings &settings,uint32_t &randomState,
     std::string *err=nullptr);
+struct RmsConnectionLand { RmsConnectionPoint center; int owner=0; };
+struct RmsConnectionRecord {
+    std::vector<RmsConnectionPoint> points;
+    RmsConnectionSettings settings;
+};
+struct RmsConnectionCommand {
+    int kind=63; // 63 players, 64 teams, 65/66 all lands
+    RmsConnectionSettings settings;
+};
+// Original cross-check selection tail0x4e0505: team ordinals are already resolved
+// by diplomacy, indexed by player (slot0 Gaia), contiguous1..teamCount. Team1
+// retains the command's original position; other team records append at the end.
+// This helper does not resolve diplomacy or choose land locations.
+bool resolveRmsConnectionRecords(const std::vector<RmsConnectionCommand> &commands,
+    const std::vector<RmsConnectionLand> &lands,const std::vector<int> &playerTeamOrdinals,
+    std::vector<RmsConnectionRecord> &out,std::string *err=nullptr);
+// Original generate0x4e42b0: ordered records, unordered point pairs, terrain-1
+// smoothing and final shore pass. Resolved records only; no scheduler draw.
+// Validated on an initially empty world: water-1 setters create no objects or
+// RNG effects. Terrain cache/dirty-render bookkeeping is not represented here.
+// Failure leaves terrain and RNG unchanged.
+bool generateRmsConnections(uint32_t width,uint32_t height,
+    std::vector<uint8_t> &terrain,const std::vector<RmsConnectionRecord> &records,
+    uint32_t &randomState,std::string *err=nullptr);
 } // namespace swgb

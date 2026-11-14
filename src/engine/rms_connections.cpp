@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "rms_connections.h"
+#include "rms_script.h"
+#include "rms_terrain_cleanup.h"
 #include "../core/genie_random.h"
 #include <algorithm>
 #include <cmath>
@@ -64,10 +66,11 @@ bool connectRmsLandPair(uint32_t width,uint32_t height,
         visit(x-1,y,4,true,left,west);if(found)break;
         visit(x-1,y-1,8,north&&west,double(left)+(end.y<y?-double(.41f):double(.41f)),unused);if(found)break;
         visit(x-1,y+1,9,south&&west,double(left)+(end.y>y?-double(.41f):double(.41f)),unused);if(found)break;
+        // Original east diagonals use .40f; west diagonals use .41f.
         const float right=static_cast<float>(double(distance)+(end.x>x?-1:1));
         visit(x+1,y,5,true,right,east);if(found)break;
-        visit(x+1,y-1,10,north&&east,double(right)+(end.y<y?-double(.41f):double(.41f)),unused);if(found)break;
-        visit(x+1,y+1,11,south&&east,double(right)+(end.y>y?-double(.41f):double(.41f)),unused);if(found)break;
+        visit(x+1,y-1,10,north&&east,double(right)+(end.y<y?-double(.40f):double(.40f)),unused);if(found)break;
+        visit(x+1,y+1,11,south&&east,double(right)+(end.y>y?-double(.40f):double(.40f)),unused);if(found)break;
         if(queue.empty())return true;
         auto next=queue.top();queue.pop();x=next.x;y=next.y;cost=next.cost;
     }
@@ -95,6 +98,72 @@ bool connectRmsLandPair(uint32_t width,uint32_t height,
     for(size_t i=0;i<terrain.size();++i)
         if(painted[i]&&settings[terrain[i]].replacement>=0)terrain[i]=uint8_t(settings[terrain[i]].replacement);
     randomState=rng;
+    return true;
+}
+bool resolveRmsConnectionRecords(const std::vector<RmsConnectionCommand> &commands,
+    const std::vector<RmsConnectionLand> &lands,const std::vector<int> &playerTeamOrdinals,
+    std::vector<RmsConnectionRecord> &out,std::string *err) {
+    if(err)err->clear();
+    auto fail=[&](const char *why){if(err)*err=why;return false;};
+    if(commands.size()>99||lands.size()>99)return fail("RMS connections: too many commands or lands");
+    int teamCount=0;
+    const bool needsTeams=std::any_of(commands.begin(),commands.end(),[](const auto &c){return c.kind==64;});
+    if(needsTeams) {
+        if(playerTeamOrdinals.size()<2||playerTeamOrdinals.size()>9)
+            return fail("RMS connections: require resolved player teams");
+        unsigned seen=0;
+        for(size_t p=1;p<playerTeamOrdinals.size();++p) {
+            int team=playerTeamOrdinals[p];
+            if(team<1||team>8)return fail("RMS connections: invalid team ordinal");
+            teamCount=std::max(teamCount,team);seen|=1u<<(team-1);
+        }
+        if(seen!=(1u<<teamCount)-1)return fail("RMS connections: noncontiguous team ordinals");
+        for(const auto &land:lands)
+            if(land.owner>0&&size_t(land.owner)>=playerTeamOrdinals.size())
+                return fail("RMS connections: land owner has no resolved team");
+    }
+    std::vector<RmsConnectionRecord> result(commands.size());
+    for(size_t i=0;i<commands.size();++i) {
+        const auto &command=commands[i];result[i].settings=command.settings;
+        if(command.kind<63||command.kind>66)return fail("RMS connections: unsupported command");
+        if(command.kind==64) {
+            if(result.size()+teamCount-1>99)return fail("RMS connections: expanded record limit");
+            const size_t appended=result.size();
+            for(int team=2;team<=teamCount;++team)result.push_back({{},command.settings});
+            for(const auto &land:lands)if(land.owner>0) {
+                const int team=playerTeamOrdinals[land.owner];
+                result[team==1?i:appended+team-2].points.push_back(land.center);
+            }
+        } else {
+            for(const auto &land:lands)
+                if(command.kind!=63||land.owner>0)result[i].points.push_back(land.center);
+        }
+    }
+    out=std::move(result);return true;
+}
+bool generateRmsConnections(uint32_t width,uint32_t height,
+    std::vector<uint8_t> &terrain,const std::vector<RmsConnectionRecord> &records,
+    uint32_t &randomState,std::string *err) {
+    if(err)err->clear();
+    auto fail=[&](const char *why){if(err)*err=why;return false;};
+    if(records.size()>99)return fail("RMS connections: too many records");
+    auto result=terrain;
+    auto rng=randomState;
+    // Validate even an empty stage; the original still runs its final passes.
+    if(!connectRmsLandPair(width,height,result,{0,0},{0,0},{},rng,err))return false;
+    for(const auto &record:records) {
+        if(record.points.size()>99)return fail("RMS connections: too many points");
+        if(!connectRmsLandPair(width,height,result,{0,0},{0,0},record.settings,rng,err))return false;
+        for(const auto &point:record.points)
+            if(point.x<0||point.y<0||point.x>=int(width)||point.y>=int(height))
+                return fail("RMS connections: point outside map");
+        for(size_t i=0;i<record.points.size();++i)
+            for(size_t j=i+1;j<record.points.size();++j)
+                if(!connectRmsLandPair(width,height,result,record.points[i],record.points[j],record.settings,rng,err))return false;
+    }
+    if(!smoothRmsTerrain(width,height,1,result,result,err)||
+       !cleanupRmsTerrain(width,height,result,err))return false;
+    terrain=std::move(result);randomState=rng;
     return true;
 }
 } // namespace swgb
