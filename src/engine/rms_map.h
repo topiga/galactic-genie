@@ -59,7 +59,7 @@ struct RmsMap {
 // Forest sequence may continue with ungrouped Rancors, two global deposit rows
 // and the two near-start tree413 rows, then birds, global Rancors, Eopie herds,
 // an empty wave row, global trees and shore fish: all23 selected Forest54204 rows.
-// Actual wave spawning on terrain22 remains guarded.
+// Full terrain22 startup remains guarded; the aquatic helper has a positive wave fixture.
 // RNG is the shared CRT state at script entry. Failure clears output and leaves RNG unchanged.
 bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::string> &defines,
                     uint32_t width, uint32_t height, const dat::DatFile &data,

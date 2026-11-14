@@ -38,6 +38,6 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  ground[60*120+59]=2;rng=1;
  check(swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),69,{0,4,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && placed.size()==1 && placed[0].x==60.5f && placed[0].y==60.5f,"fish accept cardinal shore contact");
  ground[0]=22;rng=1;const auto before=eligible;
- check(!swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),1585,{0,8,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && rng==1 && placed.empty() && eligible==before,"unverified actual wave placement rejected atomically");
+ check(!swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),1585,{0,7,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && rng==1 && placed.empty() && eligible==before,"unsupported wave quantity rejected atomically");
  std::puts("PASS: full packaged Forest23 rows,7802 objects, original grids/RNG and native import");
 }

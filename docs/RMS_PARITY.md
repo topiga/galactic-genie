@@ -24,7 +24,7 @@ Starting resources/UI map selection and later simulation remain separate work.
 
 This proves this complete configuration, **not general 1:1 terrain generation**.
 Other seeds, sizes, civilizations, team setups and map families still need complete
-comparisons. Actual wave 1585 spawning on terrain 22 remains rejected; this verified
+comparisons. Full map startup with terrain 22 remains guarded; this verified
 Forest seed contains no 22 tiles and the original wave row creates zero objects.
 The engine executes its candidate shuffle, preserving subsequent RNG exactly.
 Historical checkpoints below describe earlier coverage, not the current result.
@@ -450,3 +450,15 @@ original object controller, constructors, real-loaded masters/headers/graphics,
 retained world objects, zone/occupancy gates and persistent spacing state.
 Terrain/elevation for that replay are independently matched to Windows. The
 original executable and all extracted game records remain local.
+
+### Controlled positive wave placement (2026-11-14)
+
+A separate original-executable probe changes water terrain 1 to 22 immediately
+before the selected Forest wave row. This is a controlled fixture, not an
+unmodified packaged seed. The native aquatic helper matches all eight original
+wave positions, animation frames, facet 7 and zero extra idle delay. Entry RNG
+3803376597 becomes 4166964575, and the persistent eligibility mask is unchanged.
+`tools/rms_wave_checks.h` retains these expected outputs and input rasters.
+The full map terrain whitelist remains unchanged because earlier startup and
+resource rows on terrain 22 have not yet been compared. Unsupported wave
+quantities still fail atomically.

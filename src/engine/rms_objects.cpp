@@ -121,8 +121,7 @@ const ResourceSpec *validateAquatic(const dat::DatFile &data,int16_t unitId,cons
     int stores=0;for(const auto &storage:u.resourceStorages){if(storage.flag || (storage.type>=0 && (storage.type!=spec.resource || storage.amount!=spec.amount)))return fail();stores+=storage.type>=0;}
     if(stores!=(unitId==69?1:0))return fail();
     const auto &restriction=data.terrainRestrictions[spec.restriction].passableBuildableDmgMultiplier;
-    for(auto t:terrain)if(t>=restriction.size() || !std::isfinite(restriction[t]) || (unitId==1585 && t==22))return fail();
-    // shortcut: only empty terrain22 wave rows verified; admit actual waves after an original placement fixture.
+    for(auto t:terrain)if(t>=restriction.size() || !std::isfinite(restriction[t]))return fail();
     return &spec;
 }
 } // namespace

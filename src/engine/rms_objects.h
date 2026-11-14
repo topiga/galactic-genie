@@ -85,7 +85,7 @@ struct RmsGlobalGroupPlacement {
 // Herd occupancy includes blocking deposits/trees/buildings only: original Nerfs
 // ignore workers/scouts/holocrons/other Nerfs, and do not block later herd groups.
 // Aquatic69 supports four scaled single placements with cardinal shore2/35 contact;
-// wave1585 supports only the verified empty terrain22 row (eight requested).
+// wave1585 supports eight single placements on terrain22, including animation frames.
 // Optional rowEligibility preserves original spacing exclusions across rows; an
 // empty vector starts all-eligible. Failure preserves it and RNG and clears output.
 bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
