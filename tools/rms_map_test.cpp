@@ -164,6 +164,14 @@ int main() {
     for (uint8_t tile:map.terrain) hash=(hash^tile)*16777619u;
     check(hash==1549600828u && state==uint32_t(1957819393u*214013u+2531011u),
           "original land and terrain row pipeline mismatch");
+    const auto flatTerrain=map.terrain;
+    const auto flatState=state;
+    auto flatRow=terrainRow;
+    flatRow.insert(flatRow.find("spacing_to_other_terrain_types"),"set_flat_terrain_only ");
+    load(players+flatRow); state=1;
+    check(generateRmsMap(script,{},32,32,data,state,map,&error) &&
+          map.terrain==flatTerrain && state==flatState,
+          "flat-terrain flag takes no argument or RNG on a zero-slope map");
     load(players+" <TERRAIN_GENERATION> create_terrain 3 { base_terrain 0 number_of_tiles 97 number_of_clumps 20 set_scale_by_groups }");
     state=1;
     check(generateRmsMap(script,{},32,32,data,state,expected,&error),error);

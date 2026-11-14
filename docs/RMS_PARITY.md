@@ -89,8 +89,9 @@ handler does not change the game setting.
 Fixed-position mode is now connected to the native pipeline for mutually enemy
 players with equal-radius player lands and default borders. The corrected native
 attempt (120×120, two civilization-1 players, seed 16160 and the three confirmed
-defines) reaches `set_flat_terrain_only`, resource 54204:154, and rejects before
-producing a grid. The earlier attempt with assumed randomized-position defines
+defines) initially stopped at `set_flat_terrain_only`, resource 54204:154.
+The parser now accepts that flag; remaining object, elevation and connection
+stages still prevent producing the complete grid. The earlier attempt with assumed randomized-position defines
 was not the live setup mode. Fixed-position near-Nova composition remains
 explicitly rejected until its complete startup behavior is checked.
 There is **no whole-map equality result yet**. The Windows grid also includes
@@ -106,3 +107,25 @@ starting-position result, not a whole-map result. Private evidence:
 The local audit and executable-oracle JSON files
 are under `Research/windows-reference` in Galactic Genie's application-support
 directory; no original game scripts or saves are committed to this repository.
+
+### Flat-terrain filtering and elevation boundary
+
+The original terrain worker now has 72 additional exact fixtures covering three
+seeds, four supplied height/slope profiles, spacing 0/1/2 and the flat-only flag
+on/off. All final terrain bytes and RNG states match. Candidate height limits
+are inclusive. Flat-only checks the existing slope bytes in the clipped spacing
+square only when spacing is nonzero; horizontal gap cleanup bypasses both
+filters. The helper accepts original height/slope bytes, while the integrated
+map path still supports only zero-height terrain. It rejects elevation stages.
+
+Forest 54204 contains explicit elevation blocks near the end of the script:
+height 4 with 700 tiles/10 clumps, then height 7 with 4300 tiles/7 clumps; both
+scale by groups. Their textual position does not determine execution order.
+Original constructor priorities and scheduler dispatch place land at 1.0,
+elevation at 1.5, cliffs at 1.75, terrain at 2.0 and connections at 2.1.
+Elevation generation and slope construction must precede terrain painting
+before the saved Forest grid can be compared meaningfully.
+
+Private evidence: `rms-flat-terrain-oracle-2026-11-14.json` and
+`rms-flat-terrain-findings-2026-11-14.txt`. These controlled-worker fixtures
+prove filtering, not complete hill generation or whole-map parity.

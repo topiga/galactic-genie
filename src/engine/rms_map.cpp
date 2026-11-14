@@ -127,6 +127,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if (name=="set_scale_by_size") { scaling=1; continue; }
                 if (name=="set_scale_by_groups") { scaling=2; continue; }
                 if (name=="set_avoid_player_start_areas") { row.avoidPlayerStarts=true; continue; }
+                if (name=="set_flat_terrain_only") { row.flatTerrainOnly=true; continue; }
                 if (!number(value)) return fail(name+" requires an integer");
                 if (name=="base_terrain" && value>=0 && value<=255) {
                     row.baseTerrain=static_cast<uint8_t>(value); hasBase=true;
