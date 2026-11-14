@@ -32,7 +32,7 @@ struct RmsMap {
 // Also supports one to eight owned109 starts on bare grass0 with explicit
 // civilizations and zero placement distances. Enemy foundation remains deferred.
 // One or two owners may append83 workers with explicit count1 and distances1..3.
-// A bounded two-owner dry forest profile retains live411 trees outside CC footprints.
+// A bounded two-owner dry forest profile retains live411 trees, including inside forced CC footprints.
 // A leading Gaia573 row supports verified destructive starting-scenery cleanup.
 // RNG is the shared CRT state at script entry. Failure clears output and leaves RNG unchanged.
 bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::string> &defines,

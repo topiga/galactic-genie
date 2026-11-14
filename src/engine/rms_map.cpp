@@ -397,12 +397,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if (ownedForest) {
                 for (int y=center.y-2;y<center.y+2;++y) for (int x=center.x-2;x<center.x+2;++x) {
                     const auto tile=generated.terrain[size_t(y)*width+x];
-                    if (tile!=9 && tile!=6) return fail("owned forest starts require dry clear footprints");
+                    if (tile!=9 && tile!=6 && tile!=10) return fail("owned forest starts require supported dry footprints");
                 }
-                // shortcut: actual death/scattering composition is unverified; only untouched trees are imported.
-                for (const auto &tree:generated.scenery)
-                    if (std::abs(tree.x-center.x)<2.5f && std::abs(tree.y-center.y)<2.5f)
-                        return fail("owned forest starts require scenery outside building footprints");
+                // Forced radius0 CC placement retains non-clearable411 trees inside its footprint.
             }
         }
         for (uint16_t owner=1;owner<=playerCount;++owner) {
