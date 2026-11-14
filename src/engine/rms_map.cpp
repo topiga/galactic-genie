@@ -4,6 +4,7 @@
 #include "rms_elevation.h"
 #include "rms_connections.h"
 #include "rms_zones.h"
+#include "rms_land_placement.h"
 #include "rms_terrain_cleanup.h"
 #include "rms_early_forest.h"
 #include "../core/genie_dat.h"
@@ -59,7 +60,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     bool startingScouts = false;
     bool nearNova = false;
     bool holocrons = false;
-    struct ResourceRow { int16_t unit; int count,radius,inner,outer,spacing; RmsResourceDistance distance; uint8_t mode=2; uint32_t groups=1; };
+    struct ResourceRow { int16_t unit; int count,radius,inner,outer,spacing; RmsResourceDistance distance; uint8_t mode=2; uint32_t groups=1,variance=0; };
     const ResourceRow stockResources[]={
         {59,6,3,10,12,6,RmsResourceDistance::Near},
         {66,7,3,12,16,7,RmsResourceDistance::Near},
@@ -68,7 +69,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         {102,5,2,14,18,7,RmsResourceDistance::Near},
         {102,4,2,20,26,7,RmsResourceDistance::Far},
         {594,4,3,10,12,0,RmsResourceDistance::Near,1,1},
-        {594,2,3,14,30,0,RmsResourceDistance::Far,1,2}
+        {594,2,3,14,30,0,RmsResourceDistance::Far,1,2},
+        {1363,4,3,14,30,0,RmsResourceDistance::Far,1,1,1}
     };
     std::vector<ResourceRow> resourceRows;
     constexpr int scoutIds[]={550,552,556,554,258,558,927,932};
@@ -80,6 +82,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     grouping.mode=0;
     int32_t objectUnitId=348;
     std::vector<RmsLandGrowth> lands;
+    std::vector<RmsLandPlacement> placements;
+    std::vector<RmsMapLand> landMetadata;
+    size_t playerLandBegin=0;
     std::vector<RmsTerrainRow> terrainRows;
     std::vector<RmsElevationRow> elevationRows;
     bool elevationStage=false;
@@ -101,8 +106,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             base = static_cast<uint8_t>(value);
         } else if (stage == 1 && (command == "create_land" || command == "create_player_lands")) {
             const bool players=command=="create_player_lands";
-            if (playerLands || (players && !lands.empty())) return fail("player lands cannot yet be mixed with other land blocks");
-            if (lands.size() == 64 || i == tokens.size() || tokens[i++].text != "{")
+            if (players && playerLands) return fail("multiple player-land blocks remain unsupported");
+            if (lands.size()+(players?playerCount:1)>64 || i == tokens.size() || tokens[i++].text != "{")
                 return fail("expected land block, at most64 lands");
             RmsLandGrowth land;
             land.zone=0; // Original nonplayer create_land default.
@@ -110,6 +115,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             land.targetTiles=width*height;
             land.borderFuzziness=20;
             bool terrain=false,position=false;
+            int landId=players?1:0,minPlacementDistance=-1;
             while (i < tokens.size() && tokens[i].text != "}") {
                 const auto name = tokens[i++].text;
                 if (!number(value)) return fail(name + " requires an integer");
@@ -121,6 +127,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     land.centerY=height*static_cast<uint32_t>(y)/100;
                     position=true;
                 } else if (name == "base_size" && value>=0 && value<=1024) land.radius=value;
+                else if(name=="land_id" && !players && value>=0 && value<=32767) landId=value;
+                else if(name=="min_placement_distance" && !players && value>=0 && value<=4096) minPlacementDistance=value;
                 else if (!players && value>=0 && value<=100 &&
                          (name=="left_border" || name=="right_border" ||
                           name=="top_border" || name=="bottom_border")) {
@@ -142,11 +150,18 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             }
             if (i == tokens.size()) return fail("unterminated land block");
             ++i;
-            if (!terrain || (!players && !position)) return fail("land requires explicit terrain and nonplayer position");
+            if (!terrain) return fail("land requires explicit terrain");
+            const RmsLandPlacement placement{position?int(land.centerX):-1,position?int(land.centerY):-1,
+                int(land.radius),int(land.separation),land.leftBorder,land.topBorder,land.rightBorder,land.bottomBorder,minPlacementDistance};
             if (players) {
-                playerLands=true;
-                for (uint32_t owner=1;owner<=playerCount;++owner) { land.zone=owner; lands.push_back(land); }
-            } else lands.push_back(land);
+                playerLands=true;playerLandBegin=lands.size();
+                for (uint32_t owner=1;owner<=playerCount;++owner) {
+                    land.zone=owner;lands.push_back(land);placements.push_back(placement);
+                    landMetadata.push_back({{},landId,int(owner)});
+                }
+            } else {
+                lands.push_back(land);placements.push_back(placement);landMetadata.push_back({{},landId,0});
+            }
         } else if (stage==4 && command=="create_elevation") {
             if (!number(value) || value<1 || value>7 || elevationRows.size()+value>99 ||
                 i==tokens.size() || tokens[i++].text!="{") return fail("unsupported elevation block");
@@ -247,29 +262,32 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if(i==tokens.size() || !count || !distance || !spacing) return fail("incomplete stock holocron row");
             ++i;holocrons=true;
         } else if (stage==3 && command=="create_object" && startingScouts) {
-            if ((!holocrons && nearNova) || (holocrons && resourceRows.size()>=8))
+            if ((!holocrons && nearNova) || (holocrons && resourceRows.size()>=9))
                 return fail("unsupported resource row after verified stock prefix");
-            const auto row=stockResources[holocrons?resourceRows.size():1];
+            auto row=stockResources[holocrons?resourceRows.size():1];
+            if(row.unit==1363 && i<tokens.size() && tokens[i].text=="1365") row.unit=1365;
+            const bool animal=row.unit==594 || row.unit==1363 || row.unit==1365;
             if (!number(value) || value!=row.unit || i==tokens.size() || tokens[i++].text!="{")
                 return fail("expected next verified stock resource row");
             bool each=false,gaia=false,mode=false,count=false,inner=false,outer=false;
-            bool spacing=row.spacing==0,zone=row.unit==594,radius=row.radius==3,groups=row.groups==1;
+            bool spacing=row.spacing==0,zone=animal,radius=row.radius==3,groups=row.groups==1,variance=row.variance==0;
             while (i<tokens.size() && tokens[i].text!="}") {
                 const auto name=tokens[i++].text;
                 if(name=="set_place_for_every_player") { each=true;continue; }
                 if(name=="set_gaia_object_only") { gaia=true;continue; }
                 if(name==(row.mode==2?"set_tight_grouping":"set_loose_grouping")) { mode=true;continue; }
                 if(!number(value)) return fail("missing resource parameter value");
-                if(name=="number_of_objects" && value==row.count) count=true;
+                if(name=="number_of_objects" && (value==row.count || (row.unit==59 && value==12))) { row.count=value;count=true; }
                 else if(name=="number_of_groups" && value==int(row.groups)) groups=true;
                 else if(name=="group_placement_radius" && value==row.radius) radius=true;
+                else if(name=="group_variance" && value==int(row.variance)) variance=true;
                 else if(name=="min_distance_to_players" && value==row.inner) inner=true;
                 else if(name=="max_distance_to_players" && value==row.outer) outer=true;
                 else if(name=="min_distance_group_placement" && value==row.spacing) spacing=true;
-                else if(row.unit!=594 && name=="max_distance_to_other_zones" && value==7) zone=true;
+                else if(!animal && name=="max_distance_to_other_zones" && value==7) zone=true;
                 else return fail("unsupported resource parameter/value "+name);
             }
-            if(i==tokens.size() || !each || !gaia || !mode || !count || !inner || !outer || !spacing || !zone || !radius || !groups)
+            if(i==tokens.size() || !each || !gaia || !mode || !count || !inner || !outer || !spacing || !zone || !radius || !groups || !variance)
                 return fail("incomplete stock per-player resource row");
             ++i;resourceRows.push_back(row);
             if(!holocrons) nearNova=true;
@@ -369,11 +387,12 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     }
     if (base<0 || lands.empty()) return fail("explicit base terrain and at least one land required");
     if(allies && ownedObjects) return fail("allied owned-object startup remains unverified");
+    if(ownedObjects && lands.size()!=playerCount) return fail("mixed-land owned-object startup remains unverified");
     const bool ownedForest=ownedObjects && playerLands && base==41 && lands[0].terrain==9;
     const bool ownedForest21=ownedObjects && playerLands && base==6 && lands[0].terrain==6 &&
         width==120 && height==120 && playerCount==2 && playerCivilizations==std::vector<uint16_t>{1,1} &&
         startingWorkers && startingScouts && workerMinDistance==6 && workerMaxDistance==6 &&
-        !holocrons && resourceRows.empty() && !startingStalagmites;
+        resourceRows.size()<=8 && !startingStalagmites;
     if (startingStalagmites) {
         if (!ownedForest)
             return fail("starting573 requires forest Command Centers");
@@ -434,7 +453,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if (nearNova && (defines.count("FIXED_POSITIONS") || width!=32 || height!=32 || playerCount!=2 ||
         playerCivilizations!=std::vector<uint16_t>{1,1} || startingStalagmites))
         return fail("near-Nova currently requires randomized starts for two civilization1 owners on32-square grass or dry forest");
-    if(holocrons && (defines.count("FIXED_POSITIONS") || (width!=64 && width!=120) || height!=width ||
+    if(holocrons && ((!ownedForest21 && defines.count("FIXED_POSITIONS")) || (width!=64 && width!=120) || height!=width ||
         playerCount!=2 || playerCivilizations!=std::vector<uint16_t>{1,1} || startingStalagmites ||
         (ownedForest && width!=120)))
         return fail("holocrons require verified two-civilization1 randomized grass/dry-forest starts");
@@ -540,10 +559,10 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if (playerLands) {
         std::vector<RmsPlayerStart> starts;
         const auto placeStarts=defines.count("FIXED_POSITIONS")?generateRmsFixedPlayerStarts:generateRmsPlayerStarts;
-        if (!placeStarts(width,height,static_cast<int32_t>(lands[0].radius),playerCount,rng,starts,err)) return false;
+        if (!placeStarts(width,height,static_cast<int32_t>(lands[playerLandBegin].radius),playerCount,rng,starts,err)) return false;
         for (size_t owner=0;owner<starts.size();++owner) {
-            lands[owner].centerX=static_cast<uint32_t>(starts[owner].x);
-            lands[owner].centerY=static_cast<uint32_t>(starts[owner].y);
+            placements[playerLandBegin+owner].x=starts[owner].x;
+            placements[playerLandBegin+owner].y=starts[owner].y;
             generated.playerStarts.push_back(starts[owner]);
             protection.push_back({starts[owner].x,starts[owner].y,13,20});
         }
@@ -558,6 +577,13 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         }
         genieRandomDraw(rng);
     }
+    if(std::any_of(placements.begin(),placements.end(),[](const auto &p){return p.x<0 || p.y<0;}) &&
+        !resolveRmsLandPositions(width,height,placements,rng,err)) return false;
+    for(size_t index=0;index<lands.size();++index) {
+        lands[index].centerX=uint32_t(placements[index].x);lands[index].centerY=uint32_t(placements[index].y);
+        landMetadata[index].center={placements[index].x,placements[index].y};
+    }
+    generated.lands=landMetadata;
     genieRandomDraw(rng); // Scheduler logging before its first stage.
     std::vector<uint32_t> earlyPaints;
     std::vector<RmsSceneryPlacement> early;
@@ -584,7 +610,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if(connectionStage) {
         std::vector<RmsConnectionLand> connectionLands;
         for(size_t owner=0;owner<lands.size();++owner)
-            connectionLands.push_back({{int(lands[owner].centerX),int(lands[owner].centerY)},playerLands?int(owner+1):0});
+            connectionLands.push_back({{int(lands[owner].centerX),int(lands[owner].centerY)},landMetadata[owner].owner});
         std::vector<RmsConnectionRecord> records;
         if(!resolveRmsConnectionRecords(connectionCommands,connectionLands,connectionTeams,records,err) ||
             !generateRmsConnections(width,height,generated.terrain,records,rng,err)) return false;
@@ -752,9 +778,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             // Original spacing exclusions survive successive resource rows.
             std::vector<uint8_t> eligibility;
             for(const auto &row:resourceRows) {
-                RmsResourceGroups group{row.mode,row.groups,uint32_t(row.count),0,uint32_t(row.radius)};
+                RmsResourceGroups group{row.mode,row.groups,uint32_t(row.count),row.variance,uint32_t(row.radius)};
                 auto rowBlockers=blockers;
-                if(row.unit==594) {
+                if(row.unit==594 || row.unit==1363 || row.unit==1365) {
                     rowBlockers=occupied;
                     for(const auto &object:generated.ownedObjects) if(object.unitId==109)
                         for(int y=int(object.y)-2;y<int(object.y)+2;++y)

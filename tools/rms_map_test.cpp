@@ -12,11 +12,13 @@ static void check(bool ok,const std::string &message) {
 #include "rms_elevation_pipeline_checks.h"
 #include "rms_elevation_map_checks.h"
 #include "rms_connections_map_checks.h"
+#include "rms_mixed_land_map_checks.h"
 
 int main() {
     checkRmsElevationPipeline();
     checkRmsElevationMap();
     checkRmsConnectionsMap();
+    checkRmsMixedLandMap();
     using namespace swgb;
     dat::DatFile data;
     data.terrainBlock.terrains.resize(4);
@@ -159,8 +161,9 @@ int main() {
           "land percent divides total area across configured player count");
     load(players+" create_land { terrain_type 3 land_position 50 50 }");
     state=1;
-    check(!generateRmsMap(script,{},32,32,data,state,map,&error) && state==1 && map.playerStarts.empty(),
-          "mixed player and nonplayer placement remains unsupported");
+    check(generateRmsMap(script,{},32,32,data,state,map,&error) && map.playerStarts.size()==2 && map.lands.size()==3 &&
+          map.lands[2].owner==0 && map.lands[2].id==0 && map.lands[2].center.x==16 && map.lands[2].center.y==16,
+          "mixed player and explicit neutral land metadata");
     load("<LAND_GENERATION> base_terrain 0 create_player_lands { terrain_type 3 land_position 50 50 }");
     check(!generateRmsMap(script,{},32,32,data,state,map,&error),"player lands must not accept explicit positions");
     const std::string terrainRow=" <TERRAIN_GENERATION> create_terrain 3 { base_terrain 0 number_of_tiles 37 number_of_clumps 4 spacing_to_other_terrain_types 1 } create_terrain 0 { base_terrain 3 number_of_tiles 9 number_of_clumps 2 clumping_factor 6 }";

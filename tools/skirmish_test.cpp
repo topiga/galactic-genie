@@ -34,7 +34,11 @@ static void check(bool value, const char *message) {
 #include "rms_forage_checks.h"
 #include "rms_resource_prefix_checks.h"
 #include "rms_herd_checks.h"
+#include "rms_hunt_checks.h"
 #include "rms_forest21_owned_checks.h"
+#include "rms_forest21_holocron_checks.h"
+#include "rms_forest21_water_resource_checks.h"
+#include "rms_forest21_forage12_checks.h"
 #include "rms_elevation_import_checks.h"
 #include "rms_many_owned_checks.h"
 #include "rms_owned_forest_checks.h"
@@ -283,7 +287,12 @@ int main(int argc, char **argv) {
         rmsForageChecks(assets.dat());
         rmsResourcePrefixChecks(assets);
         rmsHerdChecks(assets);
+        rmsHuntChecks(assets);
         checkRmsForest21Owned(assets);
+        checkRmsForest21Holocrons(assets.dat());
+        checkRmsForest21WaterResources(assets.dat());
+        checkRmsForest21Forage12(assets.dat());
+        checkRmsForest21Forage12(assets.dat(),true);
         manyOwnedRmsMapChecks(assets.dat());
         ownedForestSpawnChecks(assets);
         overlappingRmsFoundationChecks(assets,renderer);

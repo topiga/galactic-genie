@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "rms_objects.h"
+#include "rms_zones.h"
 #include "rms_scenery_appearance.h"
 #include "../core/genie_random.h"
 #include "../core/genie_dat.h"
@@ -58,25 +59,29 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
             return fail("invalid terrain restriction value");
     return match;
 }
-const ResourceSpec *validateHerd(const dat::DatFile &data,const std::vector<uint8_t> &terrain,std::string *err) {
-    static constexpr ResourceSpec spec{594,61,70,1,7,7,8,0,200,0,2.f};
-    auto fail=[&]()->const ResourceSpec* {if(err)*err="RMS herd: unsupported original Nerf metadata";return nullptr;};
-    if(data.civs.empty() || data.civs[0].units.size()<=594 || data.terrainRestrictions.size()<=7) return fail();
-    const auto &u=data.civs[0].units[594];const auto *g=data.graphic(61);
-    if(!u.exists || u.id!=594 || u.type!=70 || u.cls!=1 || u.hitPoints!=7 || u.standingGraphic[0]!=61 || u.standingGraphic[1]!=-1 ||
+const ResourceSpec *validateHerd(const dat::DatFile &data,int16_t unitId,const std::vector<uint8_t> &terrain,std::string *err) {
+    static constexpr ResourceSpec nerf{594,61,70,1,7,7,8,0,200,0,2.f};
+    static constexpr ResourceSpec kaadu{1363,46,70,4,5,1,8,0,100,0,2.f};
+    static constexpr ResourceSpec eopie{1365,22,70,4,5,1,8,0,140,0,2.f};
+    const auto &spec=unitId==1363?kaadu:unitId==1365?eopie:nerf;
+    const bool hunt=unitId!=594;
+    auto fail=[&]()->const ResourceSpec* {if(err)*err="RMS herd: unsupported original animal metadata";return nullptr;};
+    if(data.civs.empty() || data.civs[0].units.size()<=size_t(unitId) || data.terrainRestrictions.size()<=7) return fail();
+    const auto &u=data.civs[0].units[unitId];const auto *g=data.graphic(spec.graphic);
+    if(!u.exists || u.id!=unitId || u.type!=70 || u.cls!=spec.cls || u.hitPoints!=spec.hp || u.standingGraphic[0]!=spec.graphic || u.standingGraphic[1]!=-1 ||
        u.collisionSize[0]!=.3f || u.collisionSize[1]!=.3f || u.collisionSize[2]!=2.f || u.clearanceSize[0]!=.3f || u.clearanceSize[1]!=.3f ||
-       u.lineOfSight!=2.f || u.speed!=.7f || u.terrainRestriction!=7 || u.obstructionType!=5 || u.obstructionClass!=2 ||
+       u.lineOfSight!=2.f || u.speed!=(hunt?.74f:.7f) || u.terrainRestriction!=spec.restriction || u.obstructionType!=5 || u.obstructionClass!=2 ||
        u.hillMode || u.flyMode || u.canBeBuiltOn || u.recyclable || u.civilization || u.enableAutoGather || u.createDoppelgangerOnDeath ||
        u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 || u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
-       u.trainSound!=630 || !g || g->sequenceType!=7 || g->frameCount!=8 || g->angleCount!=8 || g->frameDuration!=.275f ||
-       g->replayDelay!=0 || g->soundId!=-1 || !g->angleSounds.empty()) return fail();
+       u.trainSound!=(unitId==1363?421:unitId==1365?609:630) || !g || g->sequenceType!=7 || g->frameCount!=(unitId==1363?11:unitId==1365?12:8) || g->angleCount!=8 || g->frameDuration!=(hunt?.12f:.275f) ||
+       g->replayDelay!=(hunt?.5f:0.f) || g->soundId!=-1 || !g->angleSounds.empty()) return fail();
     int stores=0;for(const auto &storage:u.resourceStorages) {
-        if(storage.flag || (storage.type>=0 && (storage.type!=0 || storage.amount!=200))) return fail();
+        if(storage.flag || (storage.type>=0 && (storage.type!=0 || storage.amount!=spec.amount))) return fail();
         stores+=storage.type==0;
     }
     if(stores!=1) return fail();
-    const auto &restriction=data.terrainRestrictions[7].passableBuildableDmgMultiplier;
-    for(auto t:terrain) if(t>=restriction.size() || restriction[t]!=1.f) return fail();
+    const auto &restriction=data.terrainRestrictions[spec.restriction].passableBuildableDmgMultiplier;
+    for(auto t:terrain) if(t>=restriction.size() || !std::isfinite(restriction[t]) || (hunt && restriction[t]!=1.f)) return fail();
     return &spec;
 }
 } // namespace
@@ -210,8 +215,9 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
        (group.mode!=1 && group.mode!=2) || group.groups>count || group.perGroup>count ||
        group.variance>1024 || group.radius>1024)
         return fail("unsupported dimensions or grouping parameters");
-    const bool herd=unitId==594;
-    const auto *spec=herd?validateHerd(data,terrain,err):validateResource(data,unitId,terrain,err);
+    const bool hunt=unitId==1363 || unitId==1365;
+    const bool herd=unitId==594 || hunt;
+    const auto *spec=herd?validateHerd(data,unitId,terrain,err):validateResource(data,unitId,terrain,err);
     if(!spec) return false;
     const auto &restriction=data.terrainRestrictions[spec->restriction].passableBuildableDmgMultiplier;
     const bool perPlayer=!novaPlayerStarts.empty();
@@ -220,22 +226,24 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     if(distance!=RmsResourceDistance::Near && !medium && !far) return fail("invalid resource distance profile");
     if((medium || far) && (!perPlayer || (unitId!=66 && !((ore || herd) && far)) || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
         return fail("distance profile requires verified120-square two-player resource row");
+    if(hunt && !far) return fail("hunting animals require the verified far row");
     const int playerMin=herd?(far?14:10):forage?10:ore?(far?20:14):medium?18:far?25:12;
     const int playerMax=herd?(far?30:12):forage?12:ore?(far?26:18):medium?26:far?35:16,playerSpacing=herd?0:forage?6:7;
     if((forage || ore || herd) && (!perPlayer || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
         return fail("resource row requires verified120-square two-player profile");
-    if((forage || ore || herd || medium || far) && std::any_of(terrain.begin(),terrain.end(),[](uint8_t t) {
-        return t!=0 && t!=6 && t!=9 && t!=10 && t!=27 && t!=41;
-    })) return fail("resource row requires the verified dry terrain profile");
+    if((forage || ore || herd || medium || far) && std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
+        const bool forest21=width==120 && !hunt && (t==1 || t==2 || t==5 || t==12 || t==21);
+        return !forest21 && t!=0 && t!=6 && t!=9 && t!=10 && t!=27 && t!=41;
+    })) return fail("resource row requires verified grass/forest terrain");
     if(perPlayer) {
-        const uint32_t expectedGroups=herd && far?2u:1u;
-        const uint32_t expectedCount=herd?(far?2u:4u):forage?6u:ore?(far?4u:5u):(medium || far)?4u:7u;
+        const uint32_t expectedGroups=herd && far && !hunt?2u:1u;
+        const uint32_t expectedCount=hunt?4u:herd?(far?2u:4u):forage?6u:ore?(far?4u:5u):(medium || far)?4u:7u;
         if((unitId!=66 && !forage && !ore && !herd) || group.mode!=(herd?1:2) ||
-           group.groups!=expectedGroups || group.perGroup!=expectedCount ||
-           group.variance || group.radius!=(ore?2u:3u) || novaPlayerStarts.size()>8)
+           group.groups!=expectedGroups || (group.perGroup!=expectedCount && !(forage && group.perGroup==12)) ||
+           group.variance!=(hunt?1u:0u) || group.radius!=(ore?2u:3u) || novaPlayerStarts.size()>8)
             return fail("unsupported per-player resource row");
-        // Verified dry deposits share one restriction8 zone; Nerfs use restriction7 with no zone limit.
-        for(auto t:terrain) if(restriction[t]!=1.f) return fail("resource row requires a uniform passable zone");
+        for(auto t:terrain) if(restriction[t]!=1.f && (width!=120 || hunt || (t!=1 && t!=2 && t!=5 && t!=6 && t!=12 && t!=21)))
+            return fail("resource row has unverified nonuniform passability");
         for(const auto &start:novaPlayerStarts)
             if(start.x<0 || start.y<0 || uint32_t(start.x)>=width || uint32_t(start.y)>=height)
                 return fail("resource player start outside map");
@@ -298,7 +306,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         if(herd) {
             // Base facet, animated initial frame/phase, heading, then three action timers.
             genieRandomDraw(rng);genieRandomDraw(rng);
-            const auto &g=*data.graphic(61);
+            const auto &g=*data.graphic(spec->graphic);
             const float cycle=g.frameCount*g.frameDuration+g.replayDelay;
             const double elapsed=double(genieRandomDraw(rng))*cycle*(1.f/32767.f);
             const int frame=int(elapsed/g.frameDuration);
@@ -307,17 +315,30 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             const uint32_t heading=genieRandomDraw(rng)*8u/32767u;
             placement.headingRadians=float(double(heading)*3.14159265358979323846/4.);
             placement.facet=uint8_t((heading+7)%8);
-            for(int timer=0;timer<3;++timer)genieRandomDraw(rng);
+            for(int timer=0;timer<(hunt?4:3);++timer)genieRandomDraw(rng);
         } else if(spec->type==30) {
             const auto appearance=drawRmsCarbonAppearance(rng,static_cast<uint8_t>(spec->angles));
             placement.facet=appearance.facet;placement.headingRadians=appearance.headingRadians;
         } else placement.facet=static_cast<uint8_t>(std::min(unsigned(spec->angles-1),genieRandomDraw(rng)*unsigned(spec->angles)/32767u));
         result.push_back(placement);if(!herd) occupied[tile]=true;
     };
+    RmsZoneCache resourceZones;
     for(size_t player=0;player<(perPlayer?novaPlayerStarts.size():1);++player) {
         const int startX=perPlayer?novaPlayerStarts[player].x:-1;
         const int startY=perPlayer?novaPlayerStarts[player].y:-1;
         if(!build(outer,startX,startY,perPlayer?playerMax:-1)) return fail("work limit exceeded");
+        const RmsZones *zones=nullptr;
+        uint8_t centerZone=0;
+        if(perPlayer) {
+            auto connectivity=restriction;connectivity[terrain[startY*width+startX]]=1;
+            uint32_t index;
+            if(!resourceZones.lookup(width,terrain,connectivity,index,err)) return false;
+            zones=&resourceZones.entry(index)->zones;centerZone=zones->tiles[startY*width+startX];
+        }
+        auto sameZone=[&](int x,int y) {
+            x=std::max(0,std::min(int(width)-1,x));y=std::max(0,std::min(int(height)-1,y));
+            return zones->tiles[y*width+x]==centerZone;
+        };
         uint32_t groupsLeft=group.groups;
         while(next[outer]>=0 && groupsLeft) {
             if(!spend(1)) return fail("work limit exceeded");
@@ -326,6 +347,12 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             if(perPlayer && std::any_of(novaPlayerStarts.begin(),novaPlayerStarts.end(),[&](const auto &start) {
                 return std::abs(x-start.x)<playerMin && std::abs(y-start.y)<playerMin;
             })) continue;
+            if(perPlayer) {
+                if(!sameZone(x,y)) continue;
+                // Original zone7 clearance samples cardinal7 and diagonal5, clamped to the map.
+                if(!herd && (!sameZone(x,y-7) || !sameZone(x+5,y-5) || !sameZone(x+7,y) || !sameZone(x+5,y+5) ||
+                    !sameZone(x,y+7) || !sameZone(x-5,y+5) || !sameZone(x-7,y) || !sameZone(x-5,y-5))) continue;
+            }
             if(!pass(center)) continue;
             if(perPlayer && playerSpacing) {
                 // Original4de1b0 unlinks the spacing square before the group uses shared nodes.
@@ -369,9 +396,10 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
                 pop(inner);
             }
             if(perPlayer && playerSpacing) {
-                // Original4de090 persists this square across player-land queues.
+                // Original4de090 persists spacing only on passable tiles, across later rows.
                 for(int sy=std::max(0,y-playerSpacing);sy<=std::min(int(height)-1,y+playerSpacing);++sy)
-                    for(int sx=std::max(0,x-playerSpacing);sx<=std::min(int(width)-1,x+playerSpacing);++sx) eligible[sy*width+sx]=false;
+                    for(int sx=std::max(0,x-playerSpacing);sx<=std::min(int(width)-1,x+playerSpacing);++sx)
+                        if(restriction[terrain[sy*width+sx]]>0) eligible[sy*width+sx]=false;
             }
             --groupsLeft;
         }
@@ -396,9 +424,9 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
     for(const auto &start:playerStarts)
         if(start.x<2 || start.y<2 || start.x>int(width)-2 || start.y>int(height)-2) return fail("invalid player start");
     if(std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
-        return t!=0 && t!=27 && (width!=120 || (t!=6 && t!=9 && t!=10 && t!=41));
+        return t!=0 && t!=27 && (width!=120 || (t!=1 && t!=2 && t!=5 && t!=6 && t!=9 && t!=10 && t!=12 && t!=21 && t!=41));
     }) || (width==64 && !occupiedTiles.empty()))
-        return fail("requires verified grass or120-square dry forest");
+        return fail("requires verified grass or120-square forest terrain");
     std::vector<bool> occupied(terrain.size());
     for(auto tile:occupiedTiles) {
         if(tile>=terrain.size()) return fail("occupied tile outside map");
@@ -420,15 +448,14 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
        !g || g->sequenceType!=4 || g->frameCount!=1 || g->angleCount!=1 ||
        g->soundId!=-1 || !g->angleSounds.empty() || !g->deltas.empty())
         return fail("unsupported holocron prototype or graphics");
-    for(auto t:terrain) {
-        const auto &pass=data.terrainRestrictions[7].passableBuildableDmgMultiplier;
-        if(t>=pass.size() || pass[t]!=1.f) return fail("requires uniform passable terrain");
-    }
+    const auto &pass=data.terrainRestrictions[7].passableBuildableDmgMultiplier;
+    for(auto t:terrain)
+        if(t>=pass.size() || !std::isfinite(pass[t])) return fail("invalid holocron terrain restriction");
     uint32_t rng=randomState;std::vector<uint32_t> candidates;
     if(!generateRmsObjectCandidates(width,height,rng,candidates,err)) return false;
     std::vector<bool> removed(terrain.size());std::vector<RmsTimberPlacement> placements;
     for(auto tile:candidates) {
-        if(removed[tile] || occupied[tile]) continue;
+        if(removed[tile] || occupied[tile] || pass[terrain[tile]]<=.05f) continue;
         const int x=tile%width,y=tile/width;
         if(std::any_of(playerStarts.begin(),playerStarts.end(),[&](const auto &start) {
             return std::abs(x-start.x)<25 && std::abs(y-start.y)<25;

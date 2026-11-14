@@ -28,9 +28,9 @@ static void rmsHolocron120Checks(const swgb::dat::DatFile &data) {
         rng=f.entry;
         check(!swgb::generateRmsHolocronPlacements(120,120,terrain,data,starts,rng,placements,&error,{14400}) &&
               rng==f.entry && placements.empty(),"Invalid holocron tree occupancy rejects atomically");
-        terrain[0]=1;
+        terrain[0]=53;
         check(!swgb::generateRmsHolocronPlacements(120,120,terrain,data,starts,rng,placements,&error) &&
-              rng==f.entry && placements.empty(),"Unproven holocron wet terrain rejects atomically");
+              rng==f.entry && placements.empty(),"Unproven holocron terrain ID rejects atomically");
     }
     std::puts("PASS: original120 holocron placement on grass and retained forests");
 }

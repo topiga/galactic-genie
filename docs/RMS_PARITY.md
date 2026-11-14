@@ -306,3 +306,58 @@ This establishes task-header independence for the tested startup path, not for
 later AI ticks. Live Windows header reads identify the real task-list vtable as
 667414 and provide counts for workers, CCs, holocrons, scouts and animals. Full
 header loading is being added before extending behavior beyond that boundary.
+
+
+### Mixed lands, wet resources and direct Windows object comparison
+
+The parser now preserves source-order land centers, owners and land IDs, accepts
+mixed player/neutral blocks, and runs the original implicit neutral-land sampler
+before scheduler execution. It retains separate growth zones, protection and
+connection ownership.96 sampler fixtures and20 complete geometry cases match
+original results, including fixed enemy starts and random placement. Mixed owned
+startup and allied fixed starts remain guarded.
+
+Grouped resource placement now checks the start-connected terrain component and
+the original eight-point zone7 clearance (cardinal7/diagonal5, clipped to map
+edges). Persistent spacing excludes only terrain with positive restriction
+values; impassable water cells retain eligibility. Authored hill/water maps
+compare all resource poses, per-row RNG and the full persistent mask. Holocrons
+use their actual passability gate on Forest21 terrain. These expanded profiles
+remain bounded to the validated120-square two-Empire context.
+
+A fresh read-only Windows comparison exposed a source-profile mistake: the
+selected Forest script requests12 forage objects per player, whereas the earlier
+controlled resource profile requested6. That fixture remains a valid diagnostic,
+but is not the live map's resource sequence. The native parser/helper now support
+the verified12-object variant, and the live comparison uses the **exact confirmed
+preprocessed token stream**, removing only object rows beyond the tested prefix.
+
+The resulting10-row prefix matches all77 existing static objects read from
+Windows (original IDs7564..7640):5 holocrons,24 forage,30 Nova and18 ore. Types,
+Gaia ownership and coordinates match. Every terrain/elevation byte also matches
+the saved Windows grid, including the local Command Center foundation:
+
+- Terrain SHA256: `14ea7ec5f7aefd0290f93134bdccbe914776acc6219bbaaba786a3b7b08ab5cf`
+- Elevation SHA256: `f87e22490633baee990897fbdf14f1720b27f6af35f6afc78787f3703e771690`
+
+Native prefix final RNG1692931439 matches the original replay boundary; it is not
+a read of the current live CRT state. Evidence:
+`live-forest-actual-resource-comparison-2026-11-14.json`,
+`live-resource-prefix-read-2026-11-14.json`, `live-resource-tail-read-2026-11-14.json`
+and `native-live-forest-actual-10-rows-2026-11-14/`. All remain local.
+
+The separate FOODC3 hunting variant now supports Kaadu1363/Eopie1365 with original
+quantity variance, eight constructor RNG draws and initial animation hold.
+Eight original cases cover60 animals, and native imports check IDs, position,
+phase and food amounts. This row is **not** the next selected live-Forest row:
+that map instead continues with Nerfs, predators and other object rows.
+
+The task-header audit has since been repeated with actual original-loaded task
+headers and corrected controller bounds on all four flat reference contexts.
+All91 creations, RNG states and eligibility remain identical; the bounded
+startup-context limitation is closed. Later animal AI behavior is separate.
+
+The exact selected Forest prefix now includes both Nerf rows:103 explicit
+objects plus7554 automatic trees,7657 total. Its terminal RNG154380403 matches
+the original replay. This extends startup parity through row12 of23; the
+remaining predator, global resource, tree and decorative rows are not implied.

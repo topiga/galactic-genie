@@ -14,18 +14,23 @@ struct RmsOwnedPlacement {
     uint8_t facet=0, animationFrame=0;
     float initialIdleDelay=0;
 };
+struct RmsMapLand {
+    RmsPlayerStart center;
+    int id=0,owner=0;
+};
 struct RmsMap {
     uint32_t width = 0, height = 0;
     std::vector<uint8_t> terrain;
     std::vector<uint8_t> elevation, slopes; // Original tile+6/+4 bytes; empty without an elevation stage.
     std::vector<RmsTimberPlacement> objects;
     std::vector<RmsSceneryPlacement> scenery; // Creation order, including removed scenery.
+    std::vector<RmsMapLand> lands; // Original source order, land ID and owner preserved.
     std::vector<RmsPlayerStart> playerStarts; // Owner order1..playerCount; no starting units implied.
     std::vector<RmsTimberPlacement> resourcesAfterOwned; // Verified stock resource prefix, after starting units.
     std::vector<RmsOwnedPlacement> ownedObjects; // Starting buildings and units, in creation order.
 };
 
-// Strict script pipeline: explicit nonplayer lands OR one player-land block (1..8 players)
+// Strict script pipeline: explicit/implicit neutral lands and at most one player-land block (1..8 players)
 // with bounded land separation, elevation, terrain clumps, automatic scenery and one optional Gaia348/66/102 row.
 // Player lands default to randomized positions; FIXED_POSITIONS selects original
 // mutually-enemy, equal-radius starts. Both modes require default player-land borders.
@@ -49,6 +54,8 @@ struct RmsMap {
 // Two civilization1 randomized starts may instead append the stock holocron285
 // row on64 grass or120 grass/dry forest. The120 profile may continue with stock
 // forage, near/medium/far Nova, near/far ore and two Nerf rows, in that order.
+// Flat profiles may append the verified FOODC3 hunt variant; Forest21 supports
+// the resource/Nerf prefix with fixed or randomized enemy starts.
 // RNG is the shared CRT state at script entry. Failure clears output and leaves RNG unchanged.
 bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::string> &defines,
                     uint32_t width, uint32_t height, const dat::DatFile &data,

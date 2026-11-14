@@ -22,14 +22,14 @@ create_object 102 { set_place_for_every_player set_gaia_object_only set_tight_gr
     swgb::RmsScript script;std::string error;
     check(script.load(0,[&](int32_t id,std::vector<uint8_t>&out) {
         if(id)return false;out.assign(source.begin(),source.end());return true;
-    },{},&error),error);
+    },{},&error),error.c_str());
     auto hash=[](const std::vector<uint8_t>&bytes) {
         uint32_t value=2166136261u;for(auto b:bytes)value=(value^b)*16777619u;return value;
     };
     struct Point {int unit;float x,y,heading;int facet;};
     {
         uint32_t rng=1u;swgb::RmsMap map;
-        check(swgb::generateRmsMap(script,{},120,120,data,rng,map,&error,2,{1,1}),error);
+        check(swgb::generateRmsMap(script,{},120,120,data,rng,map,&error,2,{1,1}),error.c_str());
         check(rng==3135654677u && map.ownedObjects.size()==10 && map.resourcesAfterOwned.size()==65 && map.scenery.size()==103,"Water/Forest21 resource final RNG/count");
         check(hash(map.terrain)==226656437u,"Water/Forest21 original terrain");
         check(hash(map.elevation)==4089223887u,"Water/Forest21 original elevation");
@@ -45,7 +45,7 @@ create_object 102 { set_place_for_every_player set_gaia_object_only set_tight_gr
         std::vector<uint32_t> occupied;
         for(const auto &tree:map.scenery)if(tree.alive)occupied.push_back(uint32_t(tree.y)*120+uint32_t(tree.x));
         rng=2981612379u;std::vector<swgb::RmsTimberPlacement> out;
-        check(swgb::generateRmsHolocronPlacements(120,120,map.terrain,data,map.playerStarts,rng,out,&error,occupied),error);
+        check(swgb::generateRmsHolocronPlacements(120,120,map.terrain,data,map.playerStarts,rng,out,&error,occupied),error.c_str());
         check(out.size()==5,"original holocron helper count");checkPoints(out,0);
         for(const auto &o:map.ownedObjects) {
             if(o.unitId==109)for(int y=int(o.y)-2;y<int(o.y)+2;++y)for(int x=int(o.x)-2;x<int(o.x)+2;++x)occupied.push_back(y*120+x);
@@ -57,7 +57,7 @@ create_object 102 { set_place_for_every_player set_gaia_object_only set_tight_gr
         const uint32_t states[]={3541210060u,1677541948u,3956775486u,4053341110u,3276564539u,1895164218u};
         for(int row=0;row<6;++row) {
             const auto distance=row==2?swgb::RmsResourceDistance::Medium:(row==3||row==5)?swgb::RmsResourceDistance::Far:swgb::RmsResourceDistance::Near;
-            check(swgb::generateRmsGroupedResourcePlacements(120,120,map.terrain,data,units[row],{2,1,uint32_t(counts[row]),0,row>=4?2u:3u},rng,out,&error,occupied,16000000,map.playerStarts,distance,&eligibility),error);
+            check(swgb::generateRmsGroupedResourcePlacements(120,120,map.terrain,data,units[row],{2,1,uint32_t(counts[row]),0,row>=4?2u:3u},rng,out,&error,occupied,16000000,map.playerStarts,distance,&eligibility),error.c_str());
             check(rng==states[row] && out.size()==size_t(counts[row]*2),"original resource row RNG/count");
             checkPoints(out,offset);offset+=out.size();
             for(const auto &o:out)occupied.push_back(uint32_t(o.y)*120+uint32_t(o.x));
@@ -66,7 +66,7 @@ create_object 102 { set_place_for_every_player set_gaia_object_only set_tight_gr
     }
     {
         uint32_t rng=12345u;swgb::RmsMap map;
-        check(swgb::generateRmsMap(script,{},120,120,data,rng,map,&error,2,{1,1}),error);
+        check(swgb::generateRmsMap(script,{},120,120,data,rng,map,&error,2,{1,1}),error.c_str());
         check(rng==2401144792u && map.ownedObjects.size()==10 && map.resourcesAfterOwned.size()==65 && map.scenery.size()==104,"Water/Forest21 resource final RNG/count");
         check(hash(map.terrain)==3791020342u,"Water/Forest21 original terrain");
         check(hash(map.elevation)==2763925479u,"Water/Forest21 original elevation");
@@ -82,7 +82,7 @@ create_object 102 { set_place_for_every_player set_gaia_object_only set_tight_gr
         std::vector<uint32_t> occupied;
         for(const auto &tree:map.scenery)if(tree.alive)occupied.push_back(uint32_t(tree.y)*120+uint32_t(tree.x));
         rng=1686193382u;std::vector<swgb::RmsTimberPlacement> out;
-        check(swgb::generateRmsHolocronPlacements(120,120,map.terrain,data,map.playerStarts,rng,out,&error,occupied),error);
+        check(swgb::generateRmsHolocronPlacements(120,120,map.terrain,data,map.playerStarts,rng,out,&error,occupied),error.c_str());
         check(out.size()==5,"original holocron helper count");checkPoints(out,0);
         for(const auto &o:map.ownedObjects) {
             if(o.unitId==109)for(int y=int(o.y)-2;y<int(o.y)+2;++y)for(int x=int(o.x)-2;x<int(o.x)+2;++x)occupied.push_back(y*120+x);
@@ -94,7 +94,7 @@ create_object 102 { set_place_for_every_player set_gaia_object_only set_tight_gr
         const uint32_t states[]={582344033u,3953461002u,2605059885u,1067849797u,85973489u,2888241401u};
         for(int row=0;row<6;++row) {
             const auto distance=row==2?swgb::RmsResourceDistance::Medium:(row==3||row==5)?swgb::RmsResourceDistance::Far:swgb::RmsResourceDistance::Near;
-            check(swgb::generateRmsGroupedResourcePlacements(120,120,map.terrain,data,units[row],{2,1,uint32_t(counts[row]),0,row>=4?2u:3u},rng,out,&error,occupied,16000000,map.playerStarts,distance,&eligibility),error);
+            check(swgb::generateRmsGroupedResourcePlacements(120,120,map.terrain,data,units[row],{2,1,uint32_t(counts[row]),0,row>=4?2u:3u},rng,out,&error,occupied,16000000,map.playerStarts,distance,&eligibility),error.c_str());
             check(rng==states[row] && out.size()==size_t(counts[row]*2),"original resource row RNG/count");
             checkPoints(out,offset);offset+=out.size();
             for(const auto &o:out)occupied.push_back(uint32_t(o.y)*120+uint32_t(o.x));

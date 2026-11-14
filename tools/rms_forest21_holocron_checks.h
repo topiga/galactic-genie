@@ -15,14 +15,14 @@ create_object 285 { number_of_objects 5 min_distance_to_players 25 temp_min_dist
     swgb::RmsScript script;std::string error;
     check(script.load(0,[&](int32_t id,std::vector<uint8_t>&out) {
         if(id)return false;out.assign(source.begin(),source.end());return true;
-    },{},&error),error);
+    },{},&error),error.c_str());
     auto hash=[](const std::vector<uint8_t>&bytes) {
         uint32_t value=2166136261u;for(auto b:bytes)value=(value^b)*16777619u;return value;
     };
     struct Point {float x,y;};
     {
         uint32_t rng=1u;swgb::RmsMap map;
-        check(swgb::generateRmsMap(script,{},120,120,data,rng,map,&error,2,{1,1}),error);
+        check(swgb::generateRmsMap(script,{},120,120,data,rng,map,&error,2,{1,1}),error.c_str());
         check(rng==3135314386u && map.ownedObjects.size()==10 && map.resourcesAfterOwned.size()==5 && map.scenery.size()==102,"Forest21 holocron final RNG/count");
         check(hash(map.terrain)==1015550221u,"Forest21 holocron original terrain");
         check(hash(map.elevation)==4089223887u,"Forest21 holocron original elevation");
@@ -35,7 +35,7 @@ create_object 285 { number_of_objects 5 min_distance_to_players 25 temp_min_dist
     }
     {
         uint32_t rng=12345u;swgb::RmsMap map;
-        check(swgb::generateRmsMap(script,{},120,120,data,rng,map,&error,2,{1,1}),error);
+        check(swgb::generateRmsMap(script,{},120,120,data,rng,map,&error,2,{1,1}),error.c_str());
         check(rng==2099619989u && map.ownedObjects.size()==10 && map.resourcesAfterOwned.size()==5 && map.scenery.size()==103,"Forest21 holocron final RNG/count");
         check(hash(map.terrain)==520995590u,"Forest21 holocron original terrain");
         check(hash(map.elevation)==2763925479u,"Forest21 holocron original elevation");

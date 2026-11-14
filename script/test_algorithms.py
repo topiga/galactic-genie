@@ -10,8 +10,9 @@ build.mkdir(parents=True, exist_ok=True)
 cases = {
     'terrain_draw_scan': [],
     'rms': ['src/engine/rms_script.cpp', 'src/core/drs.cpp'],
-    'rms_map': ['src/engine/rms_zones.cpp', 'src/engine/rms_connections.cpp', 'src/engine/rms_elevation.cpp', 'src/engine/rms_slopes.cpp', 'src/engine/rms_early_forest.cpp', 'src/engine/rms_terrain_cleanup.cpp', 'src/engine/rms_scenery.cpp', 'src/engine/rms_scenery_appearance.cpp', 'src/engine/rms_terrain.cpp', 'src/engine/rms_map.cpp', 'src/engine/rms_script.cpp', 'src/engine/rms_objects.cpp', 'src/engine/rms_player_starts.cpp', 'src/core/drs.cpp'],
+    'rms_map': ['src/engine/rms_land_placement.cpp', 'src/engine/rms_zones.cpp', 'src/engine/rms_connections.cpp', 'src/engine/rms_elevation.cpp', 'src/engine/rms_slopes.cpp', 'src/engine/rms_early_forest.cpp', 'src/engine/rms_terrain_cleanup.cpp', 'src/engine/rms_scenery.cpp', 'src/engine/rms_scenery_appearance.cpp', 'src/engine/rms_terrain.cpp', 'src/engine/rms_map.cpp', 'src/engine/rms_script.cpp', 'src/engine/rms_objects.cpp', 'src/engine/rms_player_starts.cpp', 'src/core/drs.cpp'],
     'rms_terrain_cleanup': ['src/engine/rms_terrain_cleanup.cpp'],
+    'rms_land_placement': ['src/engine/rms_land_placement.cpp'],
     'rms_connections': ['src/engine/rms_connections.cpp', 'src/engine/rms_script.cpp', 'src/engine/rms_terrain_cleanup.cpp', 'src/core/drs.cpp'],
     'rms_slopes': ['src/engine/rms_slopes.cpp'],
     'rms_elevation': ['src/engine/rms_elevation.cpp', 'src/engine/rms_slopes.cpp'],
@@ -21,8 +22,8 @@ cases = {
     'rms_scenery_appearance': ['src/engine/rms_scenery_appearance.cpp'],
     'rms_early_forest': ['src/engine/rms_early_forest.cpp', 'src/engine/rms_scenery.cpp', 'src/engine/rms_scenery_appearance.cpp'],
     'rms_zones': ['src/engine/rms_zones.cpp'],
-    'rms_group': ['src/engine/rms_objects.cpp', 'src/engine/rms_scenery_appearance.cpp'],
-    'rms_object': ['src/engine/rms_objects.cpp', 'src/engine/rms_scenery_appearance.cpp'],
+    'rms_group': ['src/engine/rms_zones.cpp', 'src/engine/rms_objects.cpp', 'src/engine/rms_scenery_appearance.cpp'],
+    'rms_object': ['src/engine/rms_zones.cpp', 'src/engine/rms_objects.cpp', 'src/engine/rms_scenery_appearance.cpp'],
     'ai_military': ['src/engine/ai_military.cpp'],
     'ai_targets': ['src/engine/ai_targets.cpp'],
 }

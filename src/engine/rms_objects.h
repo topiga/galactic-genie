@@ -54,13 +54,16 @@ struct RmsResourceGroups {
 // Default Gaia modifiers, one grouped row. Shared original queue nodes are preserved.
 // Optional starts select the verified near-Nova row: tight7, radius3, one group/player,
 // distances12..16, spacing7, zone7 on uniformly passable terrain.
-// Also supports forage59 tight6 on flat120-square dry maps with two starts:
+// Also supports forage59 tight6/12 on120-square dry/Forest21 maps with two starts:
 // distances10..12, spacing6, zone7; occupiedTiles must include retained scenery,
 // prior resources and owned footprints. Other forage rows remain unsupported.
+// Forest21 rows use original connected-zone and eight-point clearance gates.
 // Explicit Medium/Far selects stock Nova4 distances18..26/25..35 on120 maps.
 // Ore102 uses radius2: Near tight5/distances14..18, Far tight4/distances20..26.
 // Nerf594 uses loose groups: Near4 once/player at10..12, Far2 twice/player
 // at14..30, radius3 and no spacing; includes original animated startup state.
+// Kaadu1363/Eopie1365 support Far loose4, variance1, one group/player at14..30;
+// their original constructor adds a military timer draw and species animation.
 // Herd occupancy includes blocking deposits/trees/buildings only: original Nerfs
 // ignore workers/scouts/holocrons/other Nerfs, and do not block later herd groups.
 // Optional rowEligibility preserves original spacing exclusions across rows; an
@@ -74,8 +77,8 @@ bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
     RmsResourceDistance distance=RmsResourceDistance::Near,
     std::vector<uint8_t> *rowEligibility=nullptr);
 // Original stock holocron285 row: five global placements, player exclusion25,
-// temporary spacing20. Bounded to flat64-square grass or120-square dry terrain
-// with two starts;120 may retain centered411 tree occupancy. Owned starting
+// temporary spacing20. Bounded to64-square grass or120-square dry/Forest21 terrain
+// with two starts;120 may retain centered411/413 trees. Slopes do not restrict it. Owned starting
 // objects must remain within9 tiles of starts; other Gaia objects are unsupported.
 // This helper does not import holocrons or implement their pickup/gameplay.
 // Partial placement when the candidate queue exhausts is successful.
