@@ -41,6 +41,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     bool hasObjects = false;
     bool ownedObjects = false;
     bool startingWorkers = false;
+    bool startingStalagmites = false;
     bool playerLands = false;
     bool playerSetup = false;
     RmsResourceGroups grouping;
@@ -162,16 +163,20 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 return fail("workers require count1, every-player placement and distances1..3");
             ++i; startingWorkers=true;
         } else if (stage == 3 && command == "create_object" && !hasObjects) {
-            if (!number(value) || (value!=348 && value!=66 && value!=102 && value!=109) || i==tokens.size() || tokens[i++].text!="{")
-                return fail("only one Gaia348/66/102 or owned109 object block is supported");
+            if (!number(value) || (value!=348 && value!=66 && value!=102 && value!=109 && value!=573) || i==tokens.size() || tokens[i++].text!="{")
+                return fail("expected Gaia348/66/102, owned109, or leading Gaia573 block");
             objectUnitId=value;
             hasObjects=true;
             ownedObjects=objectUnitId==109;
-            if (ownedObjects) {
+            if (ownedObjects || objectUnitId==573) {
+                const bool stalagmite=objectUnitId==573;
+                if (stalagmite && startingStalagmites) return fail("duplicate starting573 row");
+                bool gaia=false;
                 bool eachPlayer=false, count=false, inner=false, outer=false;
                 while (i<tokens.size() && tokens[i].text!="}") {
                     const auto name=tokens[i++].text;
                     if (name=="set_place_for_every_player") { eachPlayer=true; continue; }
+                    if (stalagmite && name=="set_gaia_object_only") { gaia=true; continue; }
                     if (!number(value)) return fail("missing owned109 parameter value");
                     if (name=="number_of_objects" && value==1) count=true;
                     else if (name=="min_distance_to_players" && value==0) inner=true;
@@ -183,6 +188,10 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 ++i;
                 if (!eachPlayer || !count || !inner || !outer)
                     return fail("owned109 requires every-player placement, count1 and explicit zero distances");
+                if (stalagmite) {
+                    if (!gaia) return fail("starting573 requires Gaia ownership");
+                    startingStalagmites=true; hasObjects=false;
+                }
                 continue;
             }
             while (i<tokens.size() && tokens[i].text!="}") {
@@ -209,13 +218,33 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     }
     if (base<0 || lands.empty()) return fail("explicit base terrain and at least one land required");
     const bool ownedForest=ownedObjects && playerLands && base==41 && lands[0].terrain==9;
+    if (startingStalagmites) {
+        if (!ownedForest || startingWorkers || playerCivilizations!=std::vector<uint16_t>{1,1})
+            return fail("starting573 requires two civilization1 forest Command Centers without workers");
+        if (data.civs.empty() || data.civs[0].units.size()<=573) return fail("missing starting573 prototype");
+        const auto &u=data.civs[0].units[573];
+        const auto *g=data.graphic(u.standingGraphic[0]);
+        if (!u.exists || u.id!=573 || u.type!=10 || u.cls!=42 || u.hitPoints!=50 ||
+            u.collisionSize[0]!=1 || u.collisionSize[1]!=1 || u.collisionSize[2]!=2 ||
+            u.clearanceSize[0]!=1 || u.clearanceSize[1]!=1 || u.canBeBuiltOn!=1 ||
+            u.lineOfSight || u.enabled || u.speed!=0 || u.trainSound!=-1 || u.terrainRestriction!=29 ||
+            u.hillMode || u.flyMode || u.obstructionType!=2 || u.obstructionClass!=3 ||
+            u.standingGraphic[0]!=8960 || u.dyingGraphic!=-1 || u.undeadGraphic!=-1 ||
+            u.deadUnitId!=-1 || u.dyingSound!=-1 || u.enableAutoGather || u.createDoppelgangerOnDeath ||
+            !g || g->sequenceType || g->frameCount!=1 || g->angleCount!=1 ||
+            g->soundId!=-1 || !g->angleSounds.empty() || g->frameDuration!=.0465f || g->replayDelay!=0)
+            return fail("unsupported starting573 cleanup metadata");
+        for (const auto &resource:u.resourceStorages)
+            if (resource.type!=-1 || resource.amount!=0 || resource.flag)
+                return fail("starting573 resource callbacks are unsupported");
+    }
     std::vector<uint8_t> foundations;
     if (ownedObjects) {
         if (width!=height || !playerLands || playerCivilizations.size()!=playerCount ||
             (!ownedForest && (base!=0 || !terrainRows.empty() || lands[0].terrain!=0)))
             return fail("owned109 requires explicit civilizations on supported square player lands");
-        if (ownedForest && (startingWorkers || playerCount!=2 || playerCivilizations!=std::vector<uint16_t>{1,1}))
-            return fail("owned forest starts require two civilization1 owners without workers");
+        if (ownedForest && playerCount!=2)
+            return fail("owned forest starts require two owners");
         for (const auto ownedCiv:playerCivilizations) {
             if (!ownedCiv || ownedCiv>8 || ownedCiv>=data.civs.size() || data.civs[ownedCiv].units.size()<=109)
                 return fail("owned109 requires an original playable civilization1..8");
@@ -256,7 +285,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 data.terrainRestrictions.size()<=25)
                 return fail("unsupported worker startup resources");
             const auto &pass=data.terrainRestrictions[25].passableBuildableDmgMultiplier;
-            for (int terrain:{0,4,6,27})
+            for (int terrain:{0,4,6,9,10,27,41})
                 if (size_t(terrain)>=pass.size() || !std::isfinite(pass[terrain]) || pass[terrain]<=0)
                     return fail("workers require connected passable grass and foundations");
             for (int id:{83,293}) {
@@ -392,6 +421,10 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 for (int32_t x=center.x-2;x<center.x+2;++x)
                     generated.terrain[size_t(y)*width+x]=foundation;
         }
+        if (startingStalagmites) for (const auto &center:generated.playerStarts) {
+            // shortcut: import after original owner-list deletion; intermediate state7/8 is not simulated.
+            generated.scenery.push_back({573,float(center.x),float(center.y),0,0,false});
+        }
         if (startingWorkers) for (uint16_t owner=1;owner<=playerCount;++owner) {
             const auto &center=generated.playerStarts[owner-1];
             // shortcut: edge-clipped and additional owner worker callbacks need composed original fixtures.
@@ -406,6 +439,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if (x==center.x && y==center.y) continue;
                 const float px=x+.5f,py=y+.5f;
                 if (std::abs(px-center.x)<2.2f && std::abs(py-center.y)<2.2f) continue;
+                // Final411 scenery is row-major; half-tile worker footprints collide only on the same tile.
+                if (std::binary_search(occupied.begin(),occupied.end(),tile)) continue;
                 if (unitId==83 && genieRandomDraw(rng)>16383) unitId=293;
                 uint8_t facet=0,frame=0;
                 float delay=0;

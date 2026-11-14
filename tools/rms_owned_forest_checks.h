@@ -63,8 +63,45 @@ create_object 109 {
         const auto next=game.spawnObjectForTesting(1,83,1,2.5f,2.5f);
         check(next==f.count+3,"Next original allocation follows object IDs, not world registration count");
         const auto before=state;
-        check(!game.initRms(script,{},32,state,&error,2,{1,2}) && state==before && game.activeObjectCount()==f.count+3,
-              "Unsupported forest civilization context fails atomically");
+        check(!game.initRms(script,{},32,state,&error,3,{1,2,3}) && state==before && game.activeObjectCount()==f.count+3,
+              "Unsupported forest owner context fails atomically");
+    }
+    std::string cleanupSource=source;
+    cleanupSource.insert(cleanupSource.find("create_object 109"), R"(create_object 573 {
+  number_of_objects 1
+  set_gaia_object_only
+  set_place_for_every_player
+  min_distance_to_players 0
+  max_distance_to_players 0
+}
+)");
+    swgb::RmsScript cleanup;
+    check(cleanup.load(0,[&](int32_t id,std::vector<uint8_t> &bytes) {
+        if(id) return false;
+        bytes.assign(cleanupSource.begin(),cleanupSource.end());return true;
+    },{},&error),error.c_str());
+    for(const auto &f:cases) {
+        uint32_t state=f.seed;swgb::RmsMap map;
+        check(swgb::generateRmsMap(cleanup,{},32,32,assets.dat(),state,map,&error,2,{1,1}),error.c_str());
+        check(state==f.finalState && map.scenery.size()==f.count+2,
+              "Original authored573 creation and cleanup consume no RNG");
+        for(size_t i=0;i<2;++i) {
+            const auto &o=map.scenery[f.count+i];
+            check(o.unitId==573 && !o.alive && o.x==map.playerStarts[i].x && o.y==map.playerStarts[i].y,
+                  "Original573 removed at each Command Center while retaining creation ordinal");
+        }
+        state=f.seed;
+        check(game.initRms(cleanup,{},32,state,&error,2,{1,1}),error.c_str());
+        check(game.activeObjectCount()==f.count+2 && game.objectUnitId(f.count+1)==-1 &&
+              game.objectUnitId(f.count+2)==-1 && game.objectPlayer(f.count+3)==1 &&
+              game.objectPlayer(f.count+4)==2,
+              "Native cleared scenery invisible and nonblocking, original CC allocation preserved");
+        check(game.spawnObjectForTesting(1,83,1,2.5f,2.5f)==f.count+5,
+              "Original deleted573 IDs are not reused");
+        const auto before=state;
+        check(!game.initRms(cleanup,{},32,state,&error,2,{1,2}) && state==before &&
+              game.activeObjectCount()==f.count+3,
+              "Unverified destructive owner combinations fail without replacing current world");
     }
     std::puts("PASS: original automatic411 scattering followed by two owned Command Centers");
 }

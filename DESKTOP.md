@@ -174,7 +174,7 @@ Example, from the repository root with `SWGB_GAME_DIR` set:
 ```
 
 
-`tools/fixtures/owned-workers.rms` adds the original three starting workers per owner after the Command Centers. Use `--players 1 --civilization 1`, or `--players 2 --civilization 1 --civilization 2` (IDs1..8). It accepts an83 row with `number_of_objects 1`, `set_place_for_every_player`, and explicit player distances1..3; original resource84 supplies the count3. The area must be unclipped and scenery-free, with at most two separated owners. Native import preserves IDs, worker variants, facing, randomized initial idle animation, population and recorded unit costs. Civilization bonuses run afterward, including Confederacy worker HP40→55. This is still a map diagnostic with zero food/carbon/ore/nova, not a complete RMS skirmish.
+`tools/fixtures/owned-workers.rms` adds the original three starting workers per owner after the Command Centers. Use `--players 1 --civilization 1`, or `--players 2 --civilization 1 --civilization 2` (IDs1..8). It accepts an83 row with `number_of_objects 1`, `set_place_for_every_player`, and explicit player distances1..3; original resource84 supplies the count3. The area must be unclipped, with at most two separated owners; the bounded forest profile also supports workers. Native import preserves IDs, worker variants, facing, randomized initial idle animation, population and recorded unit costs. Civilization bonuses run afterward, including Confederacy worker HP40→55. This is still a map diagnostic with zero food/carbon/ore/nova, not a complete RMS skirmish.
 
 ```sh
 "$HOME/.local/share/swgb/galactic-genie-build/swgbtool" render-rms \
@@ -184,4 +184,4 @@ Example, from the repository root with `SWGB_GAME_DIR` set:
 ```
 
 
-`tools/fixtures/owned-forest.rms` combines original final forest scattering with two Command Centers (`--players 2 --civilization 1 --civilization 1`). Supported terrain IDs are41/9/6/10, with live411 trees and clear dry CC footprints. It preserves the trees through the original cleanup call. Destructible scenery, other forest owner/civilization contexts, early forest bases and workers mixed into this forest profile remain rejected.
+`tools/fixtures/owned-forest.rms` combines original final forest scattering with two Command Centers (`--players 2 --civilization 1 --civilization 1`). Supported terrain IDs are41/9/6/10, with live411 trees and clear dry CC footprints. It preserves the trees through the original cleanup call. `owned-forest-workers.rms` adds workers, including tree collision rejection, and accepts civilization pairs1..8. `owned-forest-cleanup.rms` adds one Gaia573 at each start before the CC row, for two civilization1 owners without workers. Import skips the cleared stalagmites while retaining their ID gaps. Their intermediate original death states and owner-list deletion cadence are not simulated. Early forest bases and other destructive scenery combinations remain rejected.
