@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <string>
 #include <vector>
+#include "rms_player_starts.h"
 
 namespace swgb {
 namespace dat { struct DatFile; }
@@ -48,10 +49,13 @@ struct RmsResourceGroups {
     uint32_t groups=1, perGroup=1, variance=0, radius=3;
 };
 // Default Gaia modifiers, one grouped row. Shared original queue nodes are preserved.
+// Optional starts select the verified near-Nova row: tight7, radius3, one group/player,
+// distances12..16, spacing7, zone7 on uniformly passable terrain.
 // Failure clears output and preserves RNG, including exhaustion of maxWork.
 bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
     const std::vector<uint8_t> &terrain, const dat::DatFile &data, int16_t unitId,
     const RmsResourceGroups &groups, uint32_t &randomState,
     std::vector<RmsTimberPlacement> &out, std::string *err=nullptr,
-    const std::vector<uint32_t> &occupiedTiles={}, size_t maxWork=16000000);
+    const std::vector<uint32_t> &occupiedTiles={}, size_t maxWork=16000000,
+    const std::vector<RmsPlayerStart> &novaPlayerStarts={});
 } // namespace swgb

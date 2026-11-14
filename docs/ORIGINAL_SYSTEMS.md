@@ -445,8 +445,7 @@ native import and per-owner costs. Six additional original cases cover two-owner
 forest with and without decoration cleanup, plus eight-owner 8×8 starts: the
 latter correctly place no workers because every candidate is inside another
 start's exclusion area. Other distance/radius combinations still
-fail; later scout/resource rows and complete packaged-map startup remain
-outside this proof. Local evidence: `rms-worker-packaged54103-stage-oracle-2026-11-14.json`
+fail; this worker proof does not establish complete packaged-map startup. Local evidence: `rms-worker-packaged54103-stage-oracle-2026-11-14.json`
 and the independent `rms-worker-packaged54103-model-2026-11-14.py`.
 
 
@@ -461,3 +460,24 @@ frames use their actual0.2-second duration and initial hold; pause freezes that
 hold and movement clears it. Shared-stage goldens check complete RNG, scenery,
 terrain, positions, variants and initial sprites. This does not establish full
 packaged maps, arbitrary scout modifiers or later original AI timer behavior.
+
+Near-Nova66 now composes after the verified CC/worker/scout rows for two
+civilization1 owners on32×32 grass or dry forest. The supported row creates
+one tight group of7 per player, radius3, distances12..16, group spacing7 and
+zone distance7. The existing grouped-placement queue is shared across owners;
+original temporary queue unlinking and persistent eligibility squares are both
+retained. These profiles require uniformly passable restriction8 terrain, so
+zone sampling cannot cross a different component. Other row parameters, map
+sizes, owner/civilization combinations and preceding573 cleanup reject.
+
+Four original full-stage cases execute real Gaia66 masters, graphics, factory,
+registration, collision gates and cache lifecycle after retained starting units;
+forest cases additionally execute automatic411 scenery. Golden checks compare
+all14 deposits, facets/headings, terrain, final CRT state, native creation IDs
+and player resource/population accounting. Twenty additional original overlap
+queries confirm Nova rejects workers and scouts without consuming RNG. Native
+resources are imported after owned starting units to preserve this order.
+Local evidence: `rms-nova-composed-{two-owner,forest}-fullstage-oracle-2026-11-14.json`
+and `rms-nova-composed-occupied-oracle-2026-11-14.json`. The four-row fixture
+omits packaged54103's intervening holocron/food rows; it is not complete
+packaged-map startup or a claim of arbitrary later resource-row equivalence.

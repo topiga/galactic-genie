@@ -174,7 +174,8 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     const std::vector<uint8_t> &terrain,const dat::DatFile &data,int16_t unitId,
     const RmsResourceGroups &group,uint32_t &randomState,
     std::vector<RmsTimberPlacement> &out,std::string *err,
-    const std::vector<uint32_t> &occupiedTiles,size_t maxWork) {
+    const std::vector<uint32_t> &occupiedTiles,size_t maxWork,
+    const std::vector<RmsPlayerStart> &novaPlayerStarts) {
     out.clear(); if(err) err->clear();
     auto fail=[&](const char *reason) {
         if(err) *err=std::string("RMS grouped resource: ")+reason;
@@ -188,6 +189,17 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     const auto *spec=validateResource(data,unitId,terrain,err);
     if(!spec) return false;
     const auto &restriction=data.terrainRestrictions[spec->restriction].passableBuildableDmgMultiplier;
+    const bool perPlayer=!novaPlayerStarts.empty();
+    if(perPlayer) {
+        if(unitId!=66 || group.mode!=2 || group.groups!=1 || group.perGroup!=7 ||
+           group.variance || group.radius!=3 || novaPlayerStarts.size()>8)
+            return fail("unsupported per-player Nova row");
+        // Verified connected dry profiles give one restriction8 zone; zone7 cannot reject.
+        for(auto t:terrain) if(restriction[t]!=1.f) return fail("Nova requires a uniform passable zone");
+        for(const auto &start:novaPlayerStarts)
+            if(start.x<0 || start.y<0 || uint32_t(start.x)>=width || uint32_t(start.y)>=height)
+                return fail("Nova player start outside map");
+    }
     std::vector<bool> occupied(count),eligible(count,true);
     for(uint32_t tile:occupiedTiles) {
         if(tile>=count) return fail("occupied tile outside map");
@@ -244,50 +256,68 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         } else placement.facet=static_cast<uint8_t>(std::min(11u,genieRandomDraw(rng)*12u/32767u));
         result.push_back(placement);occupied[tile]=true;
     };
-    if(!build(outer,-1,-1,-1)) return fail("work limit exceeded");
-    uint32_t groupsLeft=group.groups;
-    while(next[outer]>=0 && groupsLeft) {
-        if(!spend(1)) return fail("work limit exceeded");
-        const int center=pop(outer);
-        if(!pass(center)) continue;
-        const int x=center%width,y=center/width;
-        const int xmin=std::max(0,x-int(group.radius)),xmax=std::min(int(width)-1,x+int(group.radius));
-        const int ymin=std::max(0,y-int(group.radius)),ymax=std::min(int(height)-1,y+int(group.radius));
-        if(group.mode==1) {
-            if(!build(inner,x,y,static_cast<int>(group.radius))) return fail("work limit exceeded");
-        } else insertAfter(inner,center);
-        // Even zero variance consumes a draw; zero/negative group sizes become one.
-        int remaining=std::max(1,int(group.perGroup)+int(genieRandomDraw(rng)*2u*group.variance/32767u)-int(group.variance));
-        while(next[inner]>=0 && remaining>0) {
+    for(size_t player=0;player<(perPlayer?novaPlayerStarts.size():1);++player) {
+        const int startX=perPlayer?novaPlayerStarts[player].x:-1;
+        const int startY=perPlayer?novaPlayerStarts[player].y:-1;
+        if(!build(outer,startX,startY,perPlayer?16:-1)) return fail("work limit exceeded");
+        uint32_t groupsLeft=group.groups;
+        while(next[outer]>=0 && groupsLeft) {
             if(!spend(1)) return fail("work limit exceeded");
-            const int tile=pop(inner);
-            if(group.mode==1 && !pass(tile)) continue;
-            create(tile);--remaining;
-            if(group.mode==2) {
-                eligible[tile]=false;
-                const int tx=tile%width,ty=tile/width;
-                const int neighbors[]={tx>xmin?tile-1:-1,tx<xmax?tile+1:-1,
-                                       ty>ymin?tile-int(width):-1,ty<ymax?tile+int(width):-1};
-                // Original still tests/enqueues neighbors after the final creation.
-                for(int neighbor:neighbors) if(neighbor>=0) {
-                    if(!spend(1)) return fail("work limit exceeded");
-                    if(!pass(neighbor)) continue;
-                    const uint32_t score=genieRandomDraw(rng);
-                    unlink(neighbor);
-                    int anchor=inner;
-                    while(next[anchor]>=0 && priority[next[anchor]]<score) {
+            const int center=pop(outer);
+            const int x=center%width,y=center/width;
+            if(perPlayer && std::any_of(novaPlayerStarts.begin(),novaPlayerStarts.end(),[&](const auto &start) {
+                return std::abs(x-start.x)<12 && std::abs(y-start.y)<12;
+            })) continue;
+            if(!pass(center)) continue;
+            if(perPlayer) {
+                // Original4de1b0 unlinks the spacing square before the group uses shared nodes.
+                for(int sy=std::max(0,y-7);sy<=std::min(int(height)-1,y+7);++sy)
+                    for(int sx=std::max(0,x-7);sx<=std::min(int(width)-1,x+7);++sx) unlink(sy*width+sx);
+            }
+            const int xmin=std::max(0,x-int(group.radius)),xmax=std::min(int(width)-1,x+int(group.radius));
+            const int ymin=std::max(0,y-int(group.radius)),ymax=std::min(int(height)-1,y+int(group.radius));
+            if(group.mode==1) {
+                if(!build(inner,x,y,static_cast<int>(group.radius))) return fail("work limit exceeded");
+            } else insertAfter(inner,center);
+            // Even zero variance consumes a draw; zero/negative group sizes become one.
+            int remaining=std::max(1,int(group.perGroup)+int(genieRandomDraw(rng)*2u*group.variance/32767u)-int(group.variance));
+            while(next[inner]>=0 && remaining>0) {
+                if(!spend(1)) return fail("work limit exceeded");
+                const int tile=pop(inner);
+                if(group.mode==1 && !pass(tile)) continue;
+                create(tile);--remaining;
+                if(group.mode==2) {
+                    eligible[tile]=false;
+                    const int tx=tile%width,ty=tile/width;
+                    const int neighbors[]={tx>xmin?tile-1:-1,tx<xmax?tile+1:-1,
+                                           ty>ymin?tile-int(width):-1,ty<ymax?tile+int(width):-1};
+                    // Original still tests/enqueues neighbors after the final creation.
+                    for(int neighbor:neighbors) if(neighbor>=0) {
                         if(!spend(1)) return fail("work limit exceeded");
-                        anchor=next[anchor];
+                        if(!pass(neighbor)) continue;
+                        const uint32_t score=genieRandomDraw(rng);
+                        unlink(neighbor);
+                        int anchor=inner;
+                        while(next[anchor]>=0 && priority[next[anchor]]<score) {
+                            if(!spend(1)) return fail("work limit exceeded");
+                            anchor=next[anchor];
+                        }
+                        priority[neighbor]=score;insertAfter(anchor,neighbor);
                     }
-                    priority[neighbor]=score;insertAfter(anchor,neighbor);
                 }
             }
+            while(next[inner]>=0) {
+                if(!spend(1)) return fail("work limit exceeded");
+                pop(inner);
+            }
+            if(perPlayer) {
+                // Original4de090 persists this square across player-land queues.
+                for(int sy=std::max(0,y-7);sy<=std::min(int(height)-1,y+7);++sy)
+                    for(int sx=std::max(0,x-7);sx<=std::min(int(width)-1,x+7);++sx) eligible[sy*width+sx]=false;
+            }
+            --groupsLeft;
         }
-        while(next[inner]>=0) {
-            if(!spend(1)) return fail("work limit exceeded");
-            pop(inner);
-        }
-        --groupsLeft;
+        while(next[outer]>=0) pop(outer);
     }
     out=std::move(result);randomState=rng;
     return true;

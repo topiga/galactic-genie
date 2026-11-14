@@ -42,6 +42,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     bool ownedObjects = false;
     bool startingWorkers = false;
     bool startingScouts = false;
+    bool nearNova = false;
     constexpr int scoutIds[]={550,552,556,554,258,558,927,932};
     int workerMinDistance=1,workerMaxDistance=3;
     bool startingStalagmites = false;
@@ -148,6 +149,28 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             } else row.targetTiles=tileAmount;
             if (scaling==2) row.clumps=uint64_t(row.clumps)*width*height/10000;
             terrainRows.push_back(row);
+        } else if (stage==3 && command=="create_object" && startingScouts && !nearNova) {
+            if (!number(value) || value!=66 || i==tokens.size() || tokens[i++].text!="{")
+                return fail("only the verified near-Nova66 row may follow scouts");
+            bool each=false,gaia=false,tight=false,count=false,inner=false,outer=false,spacing=false,zone=false;
+            while (i<tokens.size() && tokens[i].text!="}") {
+                const auto name=tokens[i++].text;
+                if(name=="set_place_for_every_player") { each=true;continue; }
+                if(name=="set_gaia_object_only") { gaia=true;continue; }
+                if(name=="set_tight_grouping") { tight=true;continue; }
+                if(!number(value)) return fail("missing near-Nova parameter value");
+                if(name=="number_of_objects" && value==7) count=true;
+                else if(name=="number_of_groups" && value==1) continue;
+                else if(name=="group_placement_radius" && value==3) continue;
+                else if(name=="min_distance_to_players" && value==12) inner=true;
+                else if(name=="max_distance_to_players" && value==16) outer=true;
+                else if(name=="min_distance_group_placement" && value==7) spacing=true;
+                else if(name=="max_distance_to_other_zones" && value==7) zone=true;
+                else return fail("unsupported near-Nova parameter/value "+name);
+            }
+            if(i==tokens.size() || !each || !gaia || !tight || !count || !inner || !outer || !spacing || !zone)
+                return fail("near-Nova requires the verified tight7 per-player row");
+            ++i;nearNova=true;
         } else if (stage==3 && command=="create_object" && startingWorkers && !startingScouts) {
             if (!number(value) || value!=550 || i==tokens.size() || tokens[i++].text!="{")
                 return fail("only the starting550 scout row may follow workers");
@@ -301,6 +324,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             foundations.push_back(ownedCiv==2?4:ownedCiv==6?6:27);
         }
     }
+    if (nearNova && (width!=32 || height!=32 || playerCount!=2 ||
+        playerCivilizations!=std::vector<uint16_t>{1,1} || startingStalagmites))
+        return fail("near-Nova currently requires two civilization1 owners on32-square grass or dry forest");
     if (startingWorkers) {
         for (const auto ownedCiv:playerCivilizations) {
             const auto &civ=data.civs[ownedCiv];
@@ -539,6 +565,18 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 generated.ownedObjects.push_back({px,py,owner,civ,int16_t(id),255,facet,frame,delay});
                 break;
             }
+        }
+        if (nearNova) {
+            auto blockers=occupied;
+            for(const auto &object:generated.ownedObjects) {
+                if(object.unitId==109) {
+                    for(int y=int(object.y)-2;y<int(object.y)+2;++y)
+                        for(int x=int(object.x)-2;x<int(object.x)+2;++x) blockers.push_back(uint32_t(y)*width+x);
+                } else blockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
+            }
+            RmsResourceGroups nova; nova.mode=2;nova.perGroup=7;
+            if(!generateRmsGroupedResourcePlacements(width,height,generated.terrain,data,66,nova,rng,
+                generated.resourcesAfterOwned,err,blockers,16000000,generated.playerStarts)) return false;
         }
     } else if (hasObjects) {
         const bool ok=grouping.mode ?

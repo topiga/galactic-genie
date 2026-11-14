@@ -1189,6 +1189,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     }
     for (const auto &placement:generated.objects)
         placeResource(placement.unitId,placement.x,placement.y,placement.facet,nextId++);
+    const uint32_t ownedIdBase=nextId;
     for (const auto &placement:generated.ownedObjects) {
         auto &player=scenario.players[placement.owner-1];
         player.active=true;player.human=placement.owner==1;
@@ -1203,12 +1204,14 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         unit.rotation=(placement.unitId==109?0.f:rmsTimberFacing(placement.facet,8))+kPi*.5f;
         scenario.units.push_back(unit);
     }
+    for (const auto &placement:generated.resourcesAfterOwned)
+        placeResource(placement.unitId,placement.x,placement.y,placement.facet,nextId++);
     scenario.nextUnitId=nextId;
     if (!initScenario(scenario,err)) return false;
     for (size_t index=0;index<generated.ownedObjects.size();++index) {
         const auto &placement=generated.ownedObjects[index];
         const auto &unit=assets_.dat().civs[placement.civilization].units[placement.unitId];
-        if (auto *object=findObject(nextId-uint32_t(generated.ownedObjects.size())+uint32_t(index))) {
+        if (auto *object=findObject(ownedIdBase+uint32_t(index))) {
             object->pendingFoundation=placement.pendingFoundation;
             const auto *graphic=assets_.dat().graphic(unit.standingGraphic[0]);
             object->animTime=placement.animationFrame*(graphic?graphic->frameDuration:0.f);
