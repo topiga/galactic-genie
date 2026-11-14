@@ -2,6 +2,7 @@
 #include "../src/engine/rms_terrain.h"
 #include <cassert>
 #include <iostream>
+#include "rms_terrain_geometry_checks.h"
 
 // Original x86 terrain worker0x4e6bc0; flat tiles, avoidance disabled.
 // Connectivity lookup is stubbed only where its result is unused.
@@ -334,6 +335,7 @@ static uint32_t hash(const std::vector<uint8_t> &tiles) {
     return value;
 }
 int main() {
+    checkTerrainGeometry();
     auto checkFixture = [](const Fixture &f, bool avoid, const std::vector<swgb::RmsTerrainProtection> &protection) {
         std::vector<uint8_t> tiles(f.width*f.height,0);
         if (*f.input) for (size_t i=0;i<tiles.size();++i) tiles[i]=static_cast<uint8_t>(f.input[i]-'0');
@@ -415,5 +417,5 @@ int main() {
     tiles.assign(1024*1024,0); rng=1;
     invalid=valid; invalid.targetTiles=1; invalid.spacing=1024; invalid.clumps=999;
     checkFailure(1024,1024,{invalid});
-    std::cout << "313 original terrain fixtures, exact multi-row bytes and invalid-input checks passed\n";
+    std::cout << "313 original terrain fixtures plus 72 geometry fixtures, exact multi-row bytes and invalid-input checks passed\n";
 }

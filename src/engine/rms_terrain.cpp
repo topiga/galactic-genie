@@ -9,7 +9,8 @@ namespace swgb {
 bool generateRmsTerrain(uint32_t width, uint32_t height,
     const std::vector<RmsTerrainRow> &rows, uint32_t &randomState,
     std::vector<uint8_t> &terrain, std::string *err,
-    const std::vector<RmsTerrainProtection> &protection) {
+    const std::vector<RmsTerrainProtection> &protection,
+    const std::vector<uint8_t> &heights, const std::vector<uint8_t> &slopes) {
     if (err) err->clear();
     auto fail = [&](const char *message) {
         if (err) *err = std::string("RMS terrain: ") + message;
@@ -18,6 +19,9 @@ bool generateRmsTerrain(uint32_t width, uint32_t height,
     if (!width || !height || width > 1024 || height > 1024 ||
         terrain.size() != static_cast<size_t>(width) * height || rows.size() > 99)
         return fail("unsupported dimensions, terrain size or row count");
+    if ((!heights.empty() && heights.size() != terrain.size()) ||
+        (!slopes.empty() && slopes.size() != terrain.size()))
+        return fail("height or slope size does not match terrain");
     for (const auto &row : rows)
         if (row.terrain == row.baseTerrain || row.clumps > 999 ||
             (terrain.size() == 1 && row.clumps) ||
@@ -78,6 +82,9 @@ bool generateRmsTerrain(uint32_t width, uint32_t height,
             return ++work <= workLimit;
         };
         auto gate = [&](int x, int y) {
+            // 0x4e6854: height bounds are inclusive and apply only to the candidate.
+            const uint8_t height = heights.empty() ? 0 : heights[y*w+x];
+            if (height < row.minHeight || height > row.maxHeight) return 0;
             const int spacing = static_cast<int>(row.spacing);
             if (spacing) {
                 for (int yy = std::max(0, y-spacing); yy <= std::min(h-1, y+spacing); ++yy)
@@ -85,6 +92,8 @@ bool generateRmsTerrain(uint32_t width, uint32_t height,
                         if (++work > workLimit) return 0;
                         const auto t = result[yy*w+xx];
                         if (t != row.baseTerrain && t != row.terrain) return 0;
+                        // 0x4e6900: deliberately skipped when spacing is zero.
+                        if (row.flatTerrainOnly && !slopes.empty() && slopes[yy*w+xx]) return 0;
                     }
             }
             int score = 1;
