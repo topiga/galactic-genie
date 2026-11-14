@@ -9,8 +9,10 @@ static void check(bool ok,const std::string &message) {
     if (!ok) { std::cerr<<message<<'\n'; std::exit(1); }
 }
 #include "rms_many_owned_checks.h"
+#include "rms_elevation_pipeline_checks.h"
 
 int main() {
+    checkRmsElevationPipeline();
     using namespace swgb;
     dat::DatFile data;
     data.terrainBlock.terrains.resize(4);
