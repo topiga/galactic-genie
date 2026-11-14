@@ -14,4 +14,11 @@ struct RmsPlayerStart { int32_t x = 0, y = 0; };
 bool generateRmsPlayerStarts(uint32_t width, uint32_t height, int32_t radius, uint32_t playerCount,
     uint32_t &randomState, std::vector<RmsPlayerStart> &out,
     std::string *err = nullptr);
+// Original 0x4e76a0 when randomizePositions is disabled. Bounded to mutually
+// enemy players, one equal-radius land per owner and default borders; allied
+// grouping and mixed/nonplayer land rows require the original general path.
+// Same output order and failure/RNG contract as generateRmsPlayerStarts.
+bool generateRmsFixedPlayerStarts(uint32_t width, uint32_t height, int32_t radius, uint32_t playerCount,
+    uint32_t &randomState, std::vector<RmsPlayerStart> &out,
+    std::string *err = nullptr);
 } // namespace swgb

@@ -5,8 +5,8 @@
 #include <array>
 
 namespace swgb {
-bool generateRmsPlayerStarts(uint32_t width, uint32_t height, int32_t radius, uint32_t playerCount,
-    uint32_t &randomState, std::vector<RmsPlayerStart> &out, std::string *err) {
+static bool generatePlayerStarts(uint32_t width, uint32_t height, int32_t radius, uint32_t playerCount,
+    uint32_t &randomState, std::vector<RmsPlayerStart> &out, std::string *err, bool fixedPositions) {
     out = {};
     if (err) err->clear();
     auto fail = [&](const char *message) {
@@ -37,7 +37,16 @@ bool generateRmsPlayerStarts(uint32_t width, uint32_t height, int32_t radius, ui
     const int32_t step=2*halfPerimeter/static_cast<int32_t>(playerCount);
     for (uint32_t owner : order) {
         if (owner > playerCount) continue;
-        positions[owner - 1] = position;
+        int32_t offset = position;
+        if (fixedPositions) {
+            // 0x4e7993: the second division uses the already divided step.
+            const int32_t span = step / static_cast<int32_t>(playerCount);
+            offset += static_cast<int32_t>(genieRandomDraw(rng) *
+                static_cast<uint32_t>(span) / 32767u) - span / 2;
+            if (offset < 0) offset += 2 * halfPerimeter;
+            if (offset > 2 * halfPerimeter) offset -= 2 * halfPerimeter;
+        }
+        positions[owner - 1] = offset;
         position += step;
         if (position >= 2 * halfPerimeter) position -= 2 * halfPerimeter;
     }
@@ -45,12 +54,15 @@ bool generateRmsPlayerStarts(uint32_t width, uint32_t height, int32_t radius, ui
     for (size_t i = 0; i < result.size(); ++i) {
         const int32_t p = positions[i];
         auto &v = result[i];
+        // Fixed mode consumes this draw even when margin is zero (0x4e7a32..0x4e7b62).
+        const int32_t edge = fixedPositions ? static_cast<int32_t>(genieRandomDraw(rng) *
+            static_cast<uint32_t>(margin) / 32767u) : margin / 2;
         // The original deliberately uses the width-derived margin on both axes.
-        if (p < a) v = {p + margin + radius, margin / 2 + radius};
-        else if (p < halfPerimeter) v = {margin / 2 + a + radius, p - a + margin + radius};
+        if (p < a) v = {p + margin + radius, edge + radius};
+        else if (p < halfPerimeter) v = {edge + (fixedPositions ? margin : 0) + a + radius, p - a + margin + radius};
         else if (p < halfPerimeter + a)
-            v = {halfPerimeter - p + margin + a + radius, margin / 2 + b + radius};
-        else v = {margin / 2 + radius, halfPerimeter + a - p + margin + b + radius};
+            v = {halfPerimeter - p + margin + a + radius, edge + (fixedPositions ? margin : 0) + b + radius};
+        else v = {edge + radius, halfPerimeter + a - p + margin + b + radius};
         if (v.x < 0 || v.y < 0 || v.x >= static_cast<int32_t>(width) ||
             v.y >= static_cast<int32_t>(height))
             return fail("original placement falls outside the supported map");
@@ -58,5 +70,13 @@ bool generateRmsPlayerStarts(uint32_t width, uint32_t height, int32_t radius, ui
     out = result;
     randomState = rng;
     return true;
+}
+bool generateRmsPlayerStarts(uint32_t width, uint32_t height, int32_t radius, uint32_t playerCount,
+    uint32_t &randomState, std::vector<RmsPlayerStart> &out, std::string *err) {
+    return generatePlayerStarts(width, height, radius, playerCount, randomState, out, err, false);
+}
+bool generateRmsFixedPlayerStarts(uint32_t width, uint32_t height, int32_t radius, uint32_t playerCount,
+    uint32_t &randomState, std::vector<RmsPlayerStart> &out, std::string *err) {
+    return generatePlayerStarts(width, height, radius, playerCount, randomState, out, err, true);
 }
 } // namespace swgb
