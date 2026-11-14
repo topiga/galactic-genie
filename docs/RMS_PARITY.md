@@ -516,3 +516,11 @@ fixed the old species whitelist discarding these new predators' animation state.
 This does not establish arbitrary
 predator quantities or alternative terrain profiles. Hunt species 822/1249 have
 loaded runtime records but still need placement/constructor comparisons.
+
+The paired global 1197 row requested by packaged seed 32767 has a separate
+controlled comparison: four scaled groups of two, after the same owned/resource
+prefix. The original produces 224 Gaia objects and final RNG 44224755. The
+regression checks all poses plus twelve predator startup animations (four near
+players and eight global), including native import. Other predator species still
+accept only the verified single-object global groups. This adds an individual
+row profile; seed 32767 still needs its hunt animals and explicit tree variant.

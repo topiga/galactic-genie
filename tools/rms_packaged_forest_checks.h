@@ -40,28 +40,33 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  ground[0]=22;rng=1;const auto before=eligible;
  check(!swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),1585,{0,7,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && rng==1 && placed.empty() && eligible==before,"unsupported wave quantity rejected atomically");
  // Controlled original replays vary forage/Nerf quantities, retaining all later rows.
- const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;} variations[]={
+ const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1;} variations[]={
   {4,2,126,220,1662422u,278519141u,513271022u},
   {2,1,126,210,3750728331u,4161792159u,758251980u},
   {8,4,126,235,989150139u,2125502712u,2483236625u},
   {4,2,812,220,1670957952u,278519141u,513271022u},
-  {4,2,1197,220,3239039312u,278519141u,513271022u}};
+  {4,2,1197,220,3239039312u,278519141u,513271022u},
+  {4,2,1197,224,1665827321u,44224755u,513271022u,2}};
  for(const auto &v:variations) {
   std::vector<swgb::RmsToken> tokens;rng=16160;
   check(script.preprocess(defines,tokens,&error,&rng) && rng==1993207714u,"Forest preprocessing RNG");
-  std::string source,unit;unsigned changes=0,herdRow=0;
+  std::string source,unit;unsigned changes=0,herdRow=0,predatorRow=0,predatorChanges=0;
   for(size_t i=0;i<tokens.size();++i) {
    if(tokens[i].text=="create_object" && i+1<tokens.size()) {
-    unit=tokens[i+1].text;if(unit=="126")tokens[i+1].text=std::to_string(v.predator);
+    unit=tokens[i+1].text;if(unit=="126"){tokens[i+1].text=std::to_string(v.predator);++predatorRow;}
    }
    if((unit=="59" || unit=="594") && tokens[i].text=="number_of_objects" && i+1<tokens.size()) {
     const int expected=unit=="59"?12:herdRow==0?4:2;
     check(tokens[i+1].text==std::to_string(expected),"original Forest forage/herd quantity");
     tokens[i+1].text=std::to_string(unit=="59"?3:herdRow++==0?v.nearHerd:v.farHerd);++changes;
    }
+   if(unit=="126" && predatorRow==2 && tokens[i].text=="number_of_objects" && i+1<tokens.size()) {
+    check(tokens[i+1].text=="1","original global predator quantity");
+    tokens[i+1].text=std::to_string(v.globalPredatorSize);++predatorChanges;
+   }
    source+=tokens[i].text+" ";
   }
-  check(changes==3 && herdRow==2,"controlled forage and two herd rows");
+  check(changes==3 && herdRow==2 && predatorChanges==1,"controlled forage and two herd rows");
   swgb::RmsScript varied;
   check(varied.load(0,[&](int32_t resource,std::vector<uint8_t>&bytes){if(resource)return false;bytes.assign(source.begin(),source.end());return true;},{},&error),error.c_str());
   check(swgb::generateRmsMap(varied,defines,120,120,assets.dat(),rng,map,&error,2,{1,1}),error.c_str());
@@ -77,7 +82,10 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   if(v.predator!=126) {
    rng=1993207714u;
    check(game.initRms(varied,defines,120,rng,&error,2,{1,1}) && rng==v.rng,"controlled predator native import");
-   const struct{size_t index;uint8_t frame;float delay;} expected[]={{75,7,0.0239997208f},{76,7,0.686550438f},{77,7,0.903152466f},{78,7,0.289547384f},{107,2,0.f},{108,7,0.0298775807f},{109,7,0.0541031733f},{110,7,0.0439405218f}};
+   struct PredatorAnimation{size_t index;uint8_t frame;float delay;};
+   const std::vector<PredatorAnimation> singleAnimations={{75,7,0.0239997208f},{76,7,0.686550438f},{77,7,0.903152466f},{78,7,0.289547384f},{107,2,0.f},{108,7,0.0298775807f},{109,7,0.0541031733f},{110,7,0.0439405218f}};
+   const std::vector<PredatorAnimation> pairAnimations={{75,7,0.0239997208f},{76,7,0.686550438f},{77,7,0.903152466f},{78,7,0.289547384f},{107,2,0.f},{108,7,0.522244871f},{109,7,0.551139772f},{110,7,0.f},{111,7,0.282955378f},{112,6,0.f},{113,7,0.569377661f},{114,7,0.471651345f}};
+   const auto &expected=v.globalPredatorSize==2?pairAnimations:singleAnimations;
    for(const auto &e:expected) {
     const auto&o=map.resourcesAfterOwned[e.index];
     check(o.unitId==v.predator && o.animationFrame==e.frame && std::abs(o.initialIdleDelay-e.delay)<.000001f,"original predator startup animation");
