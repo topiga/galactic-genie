@@ -90,6 +90,14 @@ attempt with assumed randomized-position defines instead stopped at
 `set_flat_terrain_only`, resource 54204:154; it was not the live setup mode.
 There is **no whole-map equality result yet**. The Windows grid also includes
 elevations 0..7 and local foundation painting, which must be accounted for.
+
+The fixed-position integer model does reproduce both live Command Center
+coordinates: owner 1 at **(19,36)** and owner 2 at **(42,96)**. Read-only process
+inspection found original object IDs 7554/7555 at those positions, with map seed
+16160 unchanged. Independently, the saved terrain has exactly 16 foundation-27
+cells at x17..20/y34..37, the first center's 4×4 footprint. This is a matched
+starting-position result, not a whole-map result. Private evidence:
+`live-forest-starting-centers-2026-11-14.json` and its read-only PowerShell probe.
 The local audit and executable-oracle JSON files
 are under `Research/windows-reference` in Galactic Genie's application-support
 directory; no original game scripts or saves are committed to this repository.
