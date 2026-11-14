@@ -128,4 +128,25 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
             assert f'{count} native objects' in output and str(state) in output
 
 
+    # Original4e3850 defaults object quantity to1, including the shared CC/worker rows.
+    explicit = (root/'tools/fixtures/owned-forest-cleanup-workers.rms').read_text()
+    implicit = explicit.replace('number_of_objects 1', '')
+    assert implicit != explicit
+    results=[]
+    for name,source in [('explicit-count',explicit),('default-count',implicit)]:
+        path=work/(name+'.rms');path.write_text(source)
+        output=run(['render-rms',data,path,32,1,work/(name+'.png'),
+                    '--players',2,'--civilization',1,'--civilization',1],0)
+        results.append(re.search(r'final RNG (\d+)',output).group(1))
+        assert '45 native objects' in output
+    assert results==['4221457422','4221457422'], 'Default quantity changed original RNG'
+    assert (work/'explicit-count.png').read_bytes()==(work/'default-count.png').read_bytes(), 'Default quantity changed map or objects'
+    for quantity in [0,2]:
+        invalid=work/'invalid-default-count.rms'
+        invalid.write_text(explicit.replace('number_of_objects 1',f'number_of_objects {quantity}',1))
+        run(['render-rms',data,invalid,32,1,work/'invalid-default-count.png',
+             '--players',2,'--civilization',1,'--civilization',1],1)
+    assert not (work/'invalid-default-count.png').exists()
+
+
 print('RMS file/DRS parity, includes, defines and rejection checks passed')

@@ -148,7 +148,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         } else if (stage==3 && command=="create_object" && ownedObjects && !startingWorkers) {
             if (!number(value) || value!=83 || i==tokens.size() || tokens[i++].text!="{")
                 return fail("only an83 worker row may follow owned109");
-            bool count=false,each=false,inner=false,outer=false;
+            // Original4e3850 initializes object quantity to1 before parsing attributes.
+            bool count=true,each=false,inner=false,outer=false;
             while (i<tokens.size() && tokens[i].text!="}") {
                 const auto name=tokens[i++].text;
                 if (name=="set_place_for_every_player") { each=true; continue; }
@@ -172,7 +173,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 const bool stalagmite=objectUnitId==573;
                 if (stalagmite && startingStalagmites) return fail("duplicate starting573 row");
                 bool gaia=false;
-                bool eachPlayer=false, count=false, inner=false, outer=false;
+                // Shared original object initializer also covers leading Gaia573.
+                bool eachPlayer=false, count=true, inner=false, outer=false;
                 while (i<tokens.size() && tokens[i].text!="}") {
                     const auto name=tokens[i++].text;
                     if (name=="set_place_for_every_player") { eachPlayer=true; continue; }

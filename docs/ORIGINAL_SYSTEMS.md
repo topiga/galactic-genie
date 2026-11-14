@@ -427,3 +427,13 @@ Engine contract:
   inside the same radius.
 - Clone Campaigns assault mechs (class 53) and air transports (class 59) are
   also repairable.
+
+
+Original RMS object quantities default to one before attributes are parsed
+(`4e3850`, local `rms-object-parser-oracle-2026-11-13.json`). The bounded
+Command Center, worker and leading decoration rows accept an omitted
+`number_of_objects`; unsupported explicit quantities still fail. CLI regression
+checks the complete foundation/decor-cleanup/worker fixture against explicit
+counts, including final RNG and rendered output. Packaged shared resource54103
+uses this default, but its worker distances6..6 and later scout/resource rows
+still require separate implementation and original-executable comparisons.
