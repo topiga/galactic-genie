@@ -73,8 +73,17 @@ and the current full CRT state. Raw observations and the read-only probe are
 retained privately as `live-forest-startup-seeds-2026-11-14.json` and
 `read-live-startup-seeds-2026-11-14.ps1`.
 
-There is **no seed-matched live/native whole-map comparison yet**: the precise
-map-seed-to-RMS-entry transition and remaining stock rows must be established.
+Original wrapper replay now establishes that Forest selects resource **54204**
+and reaches the RMS generator with **16160 unchanged**. It executes the filename,
+map-type and root-constructor path after the second reseed; no RNG calls occur
+before generator entry. Evidence: `rms-live-mapseed-boundary-oracle-2026-11-14.json`.
+
+The corresponding native attempt (120×120, two civilization-1 players, seed
+16160) rejects `set_flat_terrain_only` at resource 54204:154 before producing
+a grid. `TINY_MAP/RANDOM_MAP/2_PLAYERS` remain explicit test defines; the original
+injected define set still needs confirmation. There is **no whole-map equality
+result yet**. The Windows grid includes elevations 0..7 and local foundation
+painting, which must also be accounted for in comparison.
 The local audit and executable-oracle JSON files
 are under `Research/windows-reference` in Galactic Genie's application-support
 directory; no original game scripts or saves are committed to this repository.
