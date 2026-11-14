@@ -714,3 +714,30 @@ The native source fixture swaps the same terrain IDs in generation/connection
 rules and checks the resulting grid, scenery, resources and import. Startup
 now permits terrain9. Seeds2/12345 advance to their next guard, terrain22;
 they still do not constitute complete generated or verified packaged maps.
+
+### Water22 startup and wave/fish occupancy (2026-11-15)
+
+The first water22 test incorrectly assumed that relabelling a completed water1
+raster commuted with the fixed water1 smoothing pass. Four shoreline tiles
+contradicted that assumption. The corrected oracle executes the original
+object controller on an explicitly native-supplied pre-object grid; its scope
+is object startup/placement, not independent terrain-generation parity.
+It produces228 Gaia objects and RNG3038787869, including eight waves with
+frames1,21,46,47,34,22,1,1. The regression checks all poses/order, frames and
+native animation import on that supplied geometry.
+
+This exposed an actual occupancy bug: native waves blocked a later fish,
+placing it at83.5,86.5 instead of the original86.5,86.5. Original fish can share
+a wave's tile. Waves now stay out of the shared blocker list, while validation
+admits water22 through the mixed Forest startup/resource path.
+
+Packaged seeds2/12345 complete native generation, with7860/7982 objects and
+RNG2364297847/3553717540 in the diagnostic audit. These outputs still require
+independent full original generation comparisons. The other six audited seeds
+remain rejected for the specific quantities/species described above.
+
+A fresh read-only Windows check confirms the expected executable SHA256 and
+map_seed16160. All197 static resource records (unit/owner/position) in the
+original ID range match the retained original reference; mobile animals and
+later-created objects were excluded. This reconfirms the old live baseline,
+not either newly generated seed. The Windows game was not restarted or edited.

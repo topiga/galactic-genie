@@ -40,7 +40,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  ground[0]=22;rng=1;const auto before=eligible;
  check(!swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),1585,{0,7,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && rng==1 && placed.empty() && eligible==before,"unsupported wave quantity rejected atomically");
  // Controlled original replays vary forage/Nerf quantities, retaining all later rows.
- const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413,forestTerrain=21;uint32_t sceneryPoses=2138192714u,terrainHash=3348257725u;bool chainedHunt=false,omitNerfs=false;unsigned explicitTrees=110;bool omitForage=false;unsigned longChain=0,lateHunt=0;bool terrain9=false;} variations[]={
+ const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413,forestTerrain=21;uint32_t sceneryPoses=2138192714u,terrainHash=3348257725u;bool chainedHunt=false,omitNerfs=false;unsigned explicitTrees=110;bool omitForage=false;unsigned longChain=0,lateHunt=0;bool terrain9=false,terrain22=false;} variations[]={
   {4,2,126,220,1662422u,278519141u,513271022u},
   {2,1,126,210,3750728331u,4161792159u,758251980u},
   {8,4,126,235,989150139u,2125502712u,2483236625u},
@@ -59,7 +59,9 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   {4,2,126,242,4120192947u,1364577121u,1289455766u,1,348,18,780123404u,1911528789u,true,false,110,false,1,1},
   {0,0,126,220,3799455950u,734846818u,2166136261u,1,349,20,4094354918u,3646470573u,true,true,110,false,2,2},
   {0,0,126,219,3181366234u,3194867101u,2166136261u,1,349,20,4094354918u,3646470573u,true,true,110,false,2,3},
-  {4,2,126,220,3933298748u,278519141u,513271022u,1,348,18,780123404u,3296036497u,false,false,110,false,0,0,true}};
+  {4,2,126,220,3933298748u,278519141u,513271022u,1,348,18,780123404u,3296036497u,false,false,110,false,0,0,true},
+  // Terrain22 oracle executes original objects on native pre-object input; it does not prove terrain generation.
+  {4,2,126,228,358297336u,3038787869u,513271022u,1,348,18,780123404u,2976665734u,false,false,110,false,0,0,true,true}};
  for(const auto &v:variations) {
   std::vector<swgb::RmsToken> tokens;rng=16160;
   check(script.preprocess(defines,tokens,&error,&rng) && rng==1993207714u,"Forest preprocessing RNG");
@@ -67,7 +69,9 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
    const auto &name=tokens[i].text;
    if(name!="create_terrain" && name!="base_terrain" && name!="replace_terrain" && name!="terrain_cost" && name!="terrain_size")continue;
    for(size_t j=i+1;j<=i+(name=="replace_terrain"?2:1);++j) {
-    if(v.terrain9 && tokens[j].text=="5")tokens[j].text="9";
+    if(v.terrain22 && tokens[j].text=="1")tokens[j].text="22";
+    else if(v.terrain22 && tokens[j].text=="22")tokens[j].text="1";
+    else if(v.terrain9 && tokens[j].text=="5")tokens[j].text="9";
     else if(v.terrain9 && tokens[j].text=="9")tokens[j].text="5";
     else if(tokens[j].text=="21")tokens[j].text=std::to_string(v.forestTerrain);
     else if(tokens[j].text==std::to_string(v.forestTerrain))tokens[j].text="21";
@@ -126,6 +130,16 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
    if(v.forestTerrain!=21)for(size_t i=0;i<map.scenery.size();++i) {
     const auto &o=map.scenery[i];const auto pos=game.objectPosition(uint32_t(i+1));
     check(o.unitId==v.treeUnit && game.objectUnitId(uint32_t(i+1))==v.treeUnit && pos[0]==o.x && pos[1]==o.y && game.objectResourceAmount(uint32_t(i+1))==100,"native automatic forest tree positions/carbon");
+   }
+   if(v.terrain22) {
+    const uint8_t frames[]={1,21,46,47,34,22,1,1};size_t waves=0;
+    for(size_t i=0;i<map.resourcesAfterOwned.size();++i) {
+     const auto &o=map.resourcesAfterOwned[i];if(o.unitId!=1585)continue;
+     check(waves<8 && o.animationFrame==frames[waves] && o.initialIdleDelay==0,"original wave startup frames");
+     const auto a=game.objectAnimationForTesting(uint32_t(map.scenery.size()+map.ownedObjects.size()+i+1));
+     check(a[0]==frames[waves]*.13f && a[1]==0,"native original wave animation import");++waves;
+    }
+    check(waves==8,"original full Forest wave count");
    }
    unsigned trees=0;
    for(size_t i=0;i<map.resourcesAfterOwned.size();++i) {

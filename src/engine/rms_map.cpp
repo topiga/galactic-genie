@@ -699,7 +699,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 return fail("owned forest starts require dry terrain and live411 scenery");
         } else if (ownedMixedForest) {
             for(auto tile:generated.terrain)
-                if(tile!=1 && tile!=2 && tile!=5 && tile!=6 && tile!=9 && tile!=12 && tile!=18 && tile!=20 && tile!=21)
+                if(tile!=1 && tile!=2 && tile!=5 && tile!=6 && tile!=9 && tile!=12 && tile!=18 && tile!=20 && tile!=21 && tile!=22)
                     return fail("unsupported Forest startup terrain "+std::to_string(tile));
             for(const auto &tree:generated.scenery)
                 if(!isTree(tree.unitId) || !tree.alive) return fail("Forest startup requires live348/349/413 scenery");
@@ -863,7 +863,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(!generateRmsGroupedResourcePlacements(width,height,generated.terrain,data,row.unit,group,rng,
                     placed,err,rowBlockers,16000000,row.global?std::vector<RmsPlayerStart>{}:generated.playerStarts,
                     row.distance,&eligibility,(row.global && row.inner>=0)?&global:nullptr)) return false;
-                for(const auto &object:placed) if(object.unitId!=816)
+                // Original waves are nonblocking decorations; fish may share their tile.
+                for(const auto &object:placed) if(object.unitId!=816 && object.unitId!=1585)
                     blockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
                 generated.resourcesAfterOwned.insert(generated.resourcesAfterOwned.end(),placed.begin(),placed.end());
             }
