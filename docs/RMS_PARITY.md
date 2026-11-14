@@ -622,3 +622,16 @@ The rebuilt CLI still rejects all eight additional audited seeds
 prefix, and65535 gets past its count8 hunt; they stop at later, unverified rows.
 Seeds3/42 still fail the earlier expected resource profile. No audit rejection
 was converted into an approximate map.
+
+### Automatic forest18/20 startup (2026-11-15)
+
+Controlled original-executable replays relabel the independently verified
+selected Forest21 grid to18 or20, load the actual348/349 prototypes, and run
+original automatic scenery plus all23 object rows. Each creates7554 automatic
+trees,10 owned starts and220 Gaia objects with forage3, ending at RNG278519141.
+The native fixture swaps terrain IDs in the source and connection rules to
+preserve the controlled geometry, then compares grids, all tree facets/order,
+Gaia poses and imported tree positions/carbon. Forest20 uses11 tree facets;
+Forest18 uses12. Owned startup and resource validation now admit these species.
+This proves controlled startup on those terrains, not the terrain-generation
+stages of another packaged seed or mixed-owner/civilization configurations.

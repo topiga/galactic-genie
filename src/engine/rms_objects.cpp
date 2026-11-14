@@ -307,8 +307,8 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     if((forage || ore || herd || tree) && !globalPlacement && (!perPlayer || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
         return fail("resource row requires verified120-square two-player profile");
     if((forage || ore || herd || tree || medium || far) && std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
-        const bool forest21=width==120 && (t==1 || t==2 || t==5 || t==12 || t==21);
-        return !forest21 && t!=0 && t!=6 && t!=9 && t!=10 && t!=27 && t!=41;
+        const bool forest=width==120 && (t==1 || t==2 || t==5 || t==12 || t==18 || t==20 || t==21);
+        return !forest && t!=0 && t!=6 && t!=9 && t!=10 && t!=27 && t!=41;
     })) return fail("resource row requires verified grass/forest terrain");
     if(perPlayer) {
         const uint32_t expectedGroups=bigHunt?(group.mode==0?group.groups:1u):tree?(far?3u:2u):herd && far && !hunt?2u:1u;
@@ -317,7 +317,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
            group.groups!=expectedGroups || (group.perGroup!=expectedCount && !(forage && (group.perGroup==3 || group.perGroup==12)) && !(unitId==822 && !far && group.mode==1 && group.perGroup==2) && !(hunt && group.perGroup==8) && !(unitId==1365 && group.perGroup==3) && !(unitId==594 && (group.perGroup==expectedCount/2 || group.perGroup==expectedCount*2))) ||
            group.variance!=((hunt || (bigHunt && far))?1u:0u) || group.radius!=(ore?2u:3u) || novaPlayerStarts.size()>8)
             return fail("unsupported per-player resource row");
-        for(auto t:terrain) if(restriction[t]!=1.f && (width!=120 || (t!=1 && t!=2 && t!=5 && t!=6 && t!=12 && t!=21)))
+        for(auto t:terrain) if(restriction[t]!=1.f && (width!=120 || (t!=1 && t!=2 && t!=5 && t!=6 && t!=12 && t!=18 && t!=20 && t!=21)))
             return fail("resource row has unverified nonuniform passability");
         for(const auto &start:novaPlayerStarts)
             if(start.x<0 || start.y<0 || uint32_t(start.x)>=width || uint32_t(start.y)>=height)
@@ -536,7 +536,7 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
     for(const auto &start:playerStarts)
         if(start.x<2 || start.y<2 || start.x>int(width)-2 || start.y>int(height)-2) return fail("invalid player start");
     if(std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
-        return t!=0 && t!=27 && (width!=120 || (t!=1 && t!=2 && t!=5 && t!=6 && t!=9 && t!=10 && t!=12 && t!=21 && t!=41));
+        return t!=0 && t!=27 && (width!=120 || (t!=1 && t!=2 && t!=5 && t!=6 && t!=9 && t!=10 && t!=12 && t!=18 && t!=20 && t!=21 && t!=41));
     }) || (width==64 && !occupiedTiles.empty()))
         return fail("requires verified grass or120-square forest terrain");
     std::vector<bool> occupied(terrain.size());

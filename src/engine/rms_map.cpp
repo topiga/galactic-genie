@@ -432,7 +432,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if(allies && ownedObjects) return fail("allied owned-object startup remains unverified");
     if(ownedObjects && lands.size()!=playerCount) return fail("mixed-land owned-object startup remains unverified");
     const bool ownedForest=ownedObjects && playerLands && base==41 && lands[0].terrain==9;
-    const bool ownedForest21=ownedObjects && playerLands && base==6 && lands[0].terrain==6 &&
+    const bool ownedMixedForest=ownedObjects && playerLands && base==6 && lands[0].terrain==6 &&
         width==120 && height==120 && playerCount==2 && playerCivilizations==std::vector<uint16_t>{1,1} &&
         startingWorkers && startingScouts && workerMinDistance==6 && workerMaxDistance==6 &&
         (resourceRows.size()<=8 || (resourceRows.size()>=9 && (isPredator(resourceRows[8].unit) || isBigHunt(resourceRows[8].unit) || resourceRows[8].unit==1363 || resourceRows[8].unit==1365))) && !startingStalagmites;
@@ -459,7 +459,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     std::vector<uint8_t> foundations;
     if (ownedObjects) {
         if (width!=height || !playerLands || playerCivilizations.size()!=playerCount ||
-            (!ownedForest && !ownedForest21 && (base!=0 || !terrainRows.empty() || lands[0].terrain!=0)))
+            (!ownedForest && !ownedMixedForest && (base!=0 || !terrainRows.empty() || lands[0].terrain!=0)))
             return fail("owned109 requires explicit civilizations on supported square player lands");
         for (const auto ownedCiv:playerCivilizations) {
             if (!ownedCiv || ownedCiv>8 || ownedCiv>=data.civs.size() || data.civs[ownedCiv].units.size()<=109)
@@ -496,7 +496,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if (nearNova && (defines.count("FIXED_POSITIONS") || width!=32 || height!=32 || playerCount!=2 ||
         playerCivilizations!=std::vector<uint16_t>{1,1} || startingStalagmites))
         return fail("near-Nova currently requires randomized starts for two civilization1 owners on32-square grass or dry forest");
-    if(holocrons && ((!ownedForest21 && defines.count("FIXED_POSITIONS")) || (width!=64 && width!=120) || height!=width ||
+    if(holocrons && ((!ownedMixedForest && defines.count("FIXED_POSITIONS")) || (width!=64 && width!=120) || height!=width ||
         playerCount!=2 || playerCivilizations!=std::vector<uint16_t>{1,1} || startingStalagmites ||
         (ownedForest && width!=120)))
         return fail("holocrons require verified two-civilization1 randomized grass/dry-forest starts");
@@ -660,8 +660,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         genieRandomDraw(rng);
     }
     if(std::any_of(generated.elevation.begin(),generated.elevation.end(),[](uint8_t h){return h!=0;})) {
-        if((hasObjects && !ownedObjects) || (ownedObjects && !ownedForest21) || earlyForest) return fail("object startup on elevations is not verified");
-        for(uint8_t terrain:generated.terrain) if(terrain!=10 && terrain!=21 && !safeTerrain(terrain))
+        if((hasObjects && !ownedObjects) || (ownedObjects && !ownedMixedForest) || earlyForest) return fail("object startup on elevations is not verified");
+        for(uint8_t terrain:generated.terrain) if(terrain!=10 && terrain!=18 && terrain!=20 && terrain!=21 && !safeTerrain(terrain))
             return fail("scenery startup on elevations is not verified");
     }
     if (earlyForest) {
@@ -676,12 +676,12 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if (std::any_of(generated.terrain.begin(),generated.terrain.end(),[](uint8_t t){return t!=41 && t!=9 && t!=6 && t!=10;}) ||
                 std::any_of(generated.scenery.begin(),generated.scenery.end(),[](const auto &o){return o.unitId!=411 || !o.alive;}))
                 return fail("owned forest starts require dry terrain and live411 scenery");
-        } else if (ownedForest21) {
+        } else if (ownedMixedForest) {
             for(auto tile:generated.terrain)
-                if(tile!=1 && tile!=2 && tile!=5 && tile!=6 && tile!=12 && tile!=21)
-                    return fail("unsupported Forest21 startup terrain");
+                if(tile!=1 && tile!=2 && tile!=5 && tile!=6 && tile!=12 && tile!=18 && tile!=20 && tile!=21)
+                    return fail("unsupported Forest startup terrain");
             for(const auto &tree:generated.scenery)
-                if(tree.unitId!=413 || !tree.alive) return fail("Forest21 startup requires live413 scenery");
+                if(!isTree(tree.unitId) || !tree.alive) return fail("Forest startup requires live348/349/413 scenery");
         } else if (!generated.scenery.empty() ||
                    std::any_of(generated.terrain.begin(),generated.terrain.end(),[](uint8_t tile){return tile!=0;}))
             return fail("owned109 requires scenery-free grass");

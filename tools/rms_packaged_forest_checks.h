@@ -40,7 +40,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  ground[0]=22;rng=1;const auto before=eligible;
  check(!swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),1585,{0,7,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && rng==1 && placed.empty() && eligible==before,"unsupported wave quantity rejected atomically");
  // Controlled original replays vary forage/Nerf quantities, retaining all later rows.
- const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413;} variations[]={
+ const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413,forestTerrain=21;uint32_t sceneryPoses=2138192714u,terrainHash=3348257725u;} variations[]={
   {4,2,126,220,1662422u,278519141u,513271022u},
   {2,1,126,210,3750728331u,4161792159u,758251980u},
   {8,4,126,235,989150139u,2125502712u,2483236625u},
@@ -48,10 +48,20 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   {4,2,1197,220,3239039312u,278519141u,513271022u},
   {4,2,1197,224,1665827321u,44224755u,513271022u,2},
   {4,2,126,220,3933298748u,278519141u,513271022u,1,348},
-  {4,2,126,220,2518584576u,278519141u,513271022u,1,349}};
+  {4,2,126,220,2518584576u,278519141u,513271022u,1,349},
+  {4,2,126,220,3933298748u,278519141u,513271022u,1,348,18,780123404u,1911528789u},
+  {4,2,126,220,2518584576u,278519141u,513271022u,1,349,20,4094354918u,3646470573u}};
  for(const auto &v:variations) {
   std::vector<swgb::RmsToken> tokens;rng=16160;
   check(script.preprocess(defines,tokens,&error,&rng) && rng==1993207714u,"Forest preprocessing RNG");
+  if(v.forestTerrain!=21)for(size_t i=0;i+1<tokens.size();++i) {
+   const auto &name=tokens[i].text;
+   if(name!="create_terrain" && name!="base_terrain" && name!="replace_terrain" && name!="terrain_cost" && name!="terrain_size")continue;
+   for(size_t j=i+1;j<=i+(name=="replace_terrain"?2:1);++j) {
+    if(tokens[j].text=="21")tokens[j].text=std::to_string(v.forestTerrain);
+    else if(tokens[j].text==std::to_string(v.forestTerrain))tokens[j].text="21";
+   }
+  }
   std::string source,unit;unsigned changes=0,herdRow=0,predatorRow=0,predatorChanges=0,treeRows=0;
   for(size_t i=0;i<tokens.size();++i) {
    if(tokens[i].text=="create_object" && i+1<tokens.size()) {
@@ -74,7 +84,9 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   check(varied.load(0,[&](int32_t resource,std::vector<uint8_t>&bytes){if(resource)return false;bytes.assign(source.begin(),source.end());return true;},{},&error),error.c_str());
   check(swgb::generateRmsMap(varied,defines,120,120,assets.dat(),rng,map,&error,2,{1,1}),error.c_str());
   check(rng==v.rng && map.scenery.size()==7554 && map.ownedObjects.size()==10 && map.resourcesAfterOwned.size()==v.count,"controlled resource full-stage count/RNG");
-  check(bytesHash(map.terrain)==3348257725u && bytesHash(map.elevation)==908132044u,"controlled resource original grids");
+  check(bytesHash(map.terrain)==v.terrainHash && bytesHash(map.elevation)==908132044u,"controlled resource original grids");
+  hash=2166136261u;for(const auto&o:map.scenery)pose(o.unitId,0,o.x,o.y,o.facet);
+  check(hash==v.sceneryPoses,"controlled original automatic tree poses/order");
   hash=2166136261u;uint32_t frames=2166136261u,herds=0;
   for(const auto&o:map.resourcesAfterOwned) {
    pose(o.unitId,0,o.x,o.y,o.facet);
@@ -85,6 +97,10 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   if(v.treeUnit!=413) {
    rng=1993207714u;
    check(game.initRms(varied,defines,120,rng,&error,2,{1,1}) && rng==v.rng,"explicit tree species native import");
+   if(v.forestTerrain!=21)for(size_t i=0;i<map.scenery.size();++i) {
+    const auto &o=map.scenery[i];const auto pos=game.objectPosition(uint32_t(i+1));
+    check(o.unitId==v.treeUnit && game.objectUnitId(uint32_t(i+1))==v.treeUnit && pos[0]==o.x && pos[1]==o.y && game.objectResourceAmount(uint32_t(i+1))==100,"native automatic forest tree positions/carbon");
+   }
    unsigned trees=0;
    for(size_t i=0;i<map.resourcesAfterOwned.size();++i) {
     const auto &o=map.resourcesAfterOwned[i];if(o.unitId!=v.treeUnit)continue;++trees;
