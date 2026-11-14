@@ -11,7 +11,10 @@ static void check(bool value, const char *message) {
     if (!value) { std::cerr << message << '\n'; std::exit(1); }
 }
 
+#include "rms_owned_queue_checks.h"
+
 int main() {
+    checkOwnedStartQueues();
     using namespace swgb;
     std::vector<uint32_t> out;
     std::string err;
