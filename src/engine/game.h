@@ -750,6 +750,7 @@ private:
         uint32_t resourceWorkTargetId = 0;
         float resourceWorkTime = 0.0f;
         float damageSoundTime = 0.0f; // next fire/damage graphic sound
+        uint8_t pendingFoundation = 255; // Deferred original RMS building terrain.
         int farmStage = -1; // farm terrain applied: 0 build, 1 grown, 2 dead
         std::vector<uint8_t> farmUnderlay; // terrain under a farm foundation
         float farmMoveTime = 0.0f;

@@ -65,8 +65,8 @@ static int usage() {
             "  swgbtool ai-script <entry.per>\n"
             "  swgbtool test-ai <DataDir> <AiDir>\n"
             "  swgbtool rms-script <archive.drs> <resourceId> [--rng-state N] [--define SYMBOL] [--dump]\n"
-            "  swgbtool render-rms <DataDir> <self-contained.rms> <size> <rng-state> <out.png> [--players 1..8] [--civilization 1..8] [--zones restriction-ID]\n"
-            "  swgbtool render-rms-resource <DataDir> <archive.drs> <id> <size> <rng-state> <out.png> [--define SYMBOL] [--players 1..8] [--civilization 1..8] [--zones restriction-ID]\n"
+            "  swgbtool render-rms <DataDir> <self-contained.rms> <size> <rng-state> <out.png> [--players 1..8] [--civilization 1..8 (repeat per owner)] [--zones restriction-ID]\n"
+            "  swgbtool render-rms-resource <DataDir> <archive.drs> <id> <size> <rng-state> <out.png> [--define SYMBOL] [--players 1..8] [--civilization 1..8 (repeat per owner)] [--zones restriction-ID]\n"
             "  swgbtool mp3 <file.mp3>\n");
     return 2;
 }
@@ -5877,8 +5877,8 @@ static int cmdRenderRms(const char *dataDir, const char *path, const char *sizeT
         else if (!std::strcmp(options[i],"--zones") && parse(options[i+1],zoneRestriction)) showZones=true;
         else if (!std::strcmp(options[i],"--civilization")) {
             uint32_t civilization=0;
-            if (!playerCivilizations.empty() || !parse(options[i+1],civilization) || civilization<1 || civilization>8) {
-                std::fprintf(stderr,"error: specify one civilization ID1..8\n"); return 2;
+            if (playerCivilizations.size()>=8 || !parse(options[i+1],civilization) || civilization<1 || civilization>8) {
+                std::fprintf(stderr,"error: specify civilization IDs1..8 in player order\n"); return 2;
             }
             playerCivilizations.push_back(uint16_t(civilization));
         }

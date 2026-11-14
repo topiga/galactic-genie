@@ -10,6 +10,7 @@ struct RmsOwnedPlacement {
     float x=0, y=0;
     uint16_t owner=1, civilization=1;
     int16_t unitId=109;
+    uint8_t pendingFoundation=255; // Original building+264; consumed by visible rendering.
 };
 struct RmsMap {
     uint32_t width = 0, height = 0;
@@ -26,9 +27,8 @@ struct RmsMap {
 // The RMS random_placement directive itself does not select this game setting.
 // Terrain rows support spacing, scaling and player-start protection on flat maps.
 // Rejects other stages/commands; not a complete packaged random-map generator.
-// Also supports one local-player109 on bare grass0 with explicit civilization and
-// zero placement distances. Includes its civilization-specific foundation terrain.
-// Multiplayer owned starts require visibility-dependent foundation callbacks.
+// Also supports one or two separated owned109 starts on bare grass0 with explicit
+// civilizations and zero placement distances. Enemy foundation remains deferred.
 // RNG is the shared CRT state at script entry. Failure clears output and leaves RNG unchanged.
 bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::string> &defines,
                     uint32_t width, uint32_t height, const dat::DatFile &data,

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "../core/genie_random.h"
 #include "game.h"
+#include "terrain_draw_scan.h"
 #include "rms_objects.h"
 #include "rms_map.h"
 #include "font_atlas.h"
@@ -1193,6 +1194,8 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         player.active=true;player.human=placement.owner==1;
         player.civilization=scenario.civilizations[placement.owner-1]=placement.civilization;
         player.color=placement.owner-1;player.populationLimit=200;
+        for (const auto &other:generated.ownedObjects)
+            player.diplomacy[other.owner]=other.owner==placement.owner?0:3;
         ScenarioUnit unit;
         unit.unitId=placement.unitId;unit.player=uint8_t(placement.owner);
         unit.spawnId=nextId++;unit.state=2;
@@ -1202,7 +1205,10 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     }
     scenario.nextUnitId=nextId;
     if (!initScenario(scenario,err)) return false;
-    for (const auto &placement:generated.ownedObjects) {
+    for (size_t index=0;index<generated.ownedObjects.size();++index) {
+        const auto &placement=generated.ownedObjects[index];
+        if (auto *object=findObject(nextId-uint32_t(generated.ownedObjects.size())+uint32_t(index)))
+            object->pendingFoundation=placement.pendingFoundation;
         const auto &unit=assets_.dat().civs[placement.civilization].units[placement.unitId];
         float cost=0;
         for (const auto &entry:unit.costs)
@@ -16139,6 +16145,24 @@ void Game::render(Renderer &r, int screenW, int screenH) {
             }
         }
     }
+
+    // Original 496e80 dispatches after terrain drawing; fog memories never consume +264.
+    bool foundationPainted=false;
+    for (auto &object:objects_) {
+        if (object.pendingFoundation==255 || !objectVisible(object)) continue;
+        const float cameraX=(camX_/kTileHalfW+camY_/kTileHalfH)*.5f;
+        const float cameraY=(camY_/kTileHalfH-camX_/kTileHalfW)*.5f;
+        if (!terrainDrawScanContains(int(mapSize_-cameraY),int(cameraX),
+                int(viewW/(2*kTileHalfW)),int(viewH/(2*kTileHalfH)),
+                int(mapSize_-object.y),int(object.x))) continue;
+        const int cx=int(object.x),cy=int(object.y);
+        for (int y=cy-2;y<cy+2;++y) for (int x=cx-2;x<cx+2;++x)
+            if (x>=0 && y>=0 && x<mapSize_ && y<mapSize_)
+                terrain_[size_t(y)*mapSize_+x]=object.pendingFoundation;
+        object.pendingFoundation=255;
+        foundationPainted=true;
+    }
+    if (foundationPainted) pathGridCache_.clear();
 
     for(const auto &fog:fogDraws) {
         const auto &f=*fog.frame;

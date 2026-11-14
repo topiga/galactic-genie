@@ -248,7 +248,7 @@ int main(int argc, char **argv) {
         if(playerConquest) {swgb::Game game(assets);playerMatch(game,assets,renderer,true);return 0;}
         fogEdgeChecks(argv[1]);
         rmsSpawnChecks(assets);
-        ownedRmsSpawnChecks(assets);
+        ownedRmsSpawnChecks(assets,renderer);
         rmsGroupedChecks(assets);
         pointMoveChecks(assets);
     fogRendering(assets,renderer);

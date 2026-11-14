@@ -83,6 +83,8 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     run([*owned_args,'--civilization',2,'--players',2],1)
     for bad in ['0','9','-1','bad']:
         run([*owned_args,'--civilization',bad],2)
-    run([*owned_args,'--civilization',2,'--civilization',2],2)
+    run([*owned_args,'--civilization',2,'--civilization',2],1)
     assert not image.exists(), 'Rejected owned setup created an image'
+    output=run([*owned_args,'--players',2,'--civilization',1,'--civilization',2],0)
+    assert '2 native objects' in output and '1410736551' in output and image.stat().st_size>100
 print('RMS file/DRS parity, includes, defines and rejection checks passed')

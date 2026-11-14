@@ -8,6 +8,7 @@ root = Path(__file__).resolve().parents[1]
 build = Path(os.environ.get('SWGB_DESKTOP_BUILD', Path.home()/'.local/share/swgb/galactic-genie-build')).resolve()
 build.mkdir(parents=True, exist_ok=True)
 cases = {
+    'terrain_draw_scan': [],
     'rms': ['src/engine/rms_script.cpp', 'src/core/drs.cpp'],
     'rms_map': ['src/engine/rms_early_forest.cpp', 'src/engine/rms_terrain_cleanup.cpp', 'src/engine/rms_scenery.cpp', 'src/engine/rms_scenery_appearance.cpp', 'src/engine/rms_terrain.cpp', 'src/engine/rms_map.cpp', 'src/engine/rms_script.cpp', 'src/engine/rms_objects.cpp', 'src/engine/rms_player_starts.cpp', 'src/core/drs.cpp'],
     'rms_terrain_cleanup': ['src/engine/rms_terrain_cleanup.cpp'],

@@ -145,7 +145,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             terrainRows.push_back(row);
         } else if (stage == 3 && command == "create_object" && !hasObjects) {
             if (!number(value) || (value!=348 && value!=66 && value!=102 && value!=109) || i==tokens.size() || tokens[i++].text!="{")
-                return fail("only one Gaia348/66/102 or local109 object block is supported");
+                return fail("only one Gaia348/66/102 or owned109 object block is supported");
             objectUnitId=value;
             hasObjects=true;
             ownedObjects=objectUnitId==109;
@@ -190,42 +190,42 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         } else return fail("unsupported directive " + command);
     }
     if (base<0 || lands.empty()) return fail("explicit base terrain and at least one land required");
-    uint16_t ownedCiv=0;
-    uint8_t foundation=27;
+    std::vector<uint8_t> foundations;
     if (ownedObjects) {
-        if (width!=height || !playerLands || playerCount!=1 || playerCivilizations.size()!=1 ||
+        if (width!=height || !playerLands || playerCount>2 || playerCivilizations.size()!=playerCount ||
             base!=0 || !terrainRows.empty() || lands[0].terrain!=0)
-            return fail("owned109 requires one explicit local civilization on square bare-grass player lands");
-        ownedCiv=playerCivilizations[0];
-        if (!ownedCiv || ownedCiv>8 || ownedCiv>=data.civs.size() || data.civs[ownedCiv].units.size()<=109)
-            return fail("owned109 requires an original playable civilization1..8");
-        const auto &u=data.civs[ownedCiv].units[109];
-        const int standing=ownedCiv<=6?2271+ownedCiv:7824+ownedCiv;
-        const int construction=ownedCiv<=6?366+ownedCiv:7390+ownedCiv;
-        const auto *graphic=data.graphic(standing), *buildingGraphic=data.graphic(construction);
-        if (!u.exists || u.id!=109 || u.type!=dat::UT_Building || u.cls!=18 || u.hitPoints!=2500 ||
-            u.lineOfSight!=8 || u.collisionSize[0]!=2 || u.collisionSize[1]!=2 || u.collisionSize[2]!=4 ||
-            u.clearanceSize[0]!=2 || u.clearanceSize[1]!=2 || u.terrainRestriction!=4 || u.hillMode!=2 ||
-            u.flyMode || u.canBeBuiltOn || u.trait || u.convertTerrain || u.obstructionType!=2 || u.obstructionClass!=3 ||
-            u.speed!=0 || u.trackingUnit!=-1 || u.trackingUnitMode || u.trackingUnitDensity!=0 ||
-            u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
-            u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 ||
-            u.standingGraphic[0]!=standing || u.standingGraphic[1]!=-1 || u.constructionGraphic!=construction ||
-            u.adjacentMode || u.graphicsAngle || u.disappearsWhenBuilt || u.stackUnitId!=-1 ||
-            u.foundationTerrainId!=27 || u.oldOverlayId!=-1 || u.techId!=22 || u.transformUnit!=-1 ||
-            u.headUnit!=621 || u.secondaryProjectileUnit!=54 || u.trainTime!=100 || u.trainSound!=-1 ||
-            u.constructionSound!=597 || !graphic || graphic->sequenceType!=1 || graphic->frameCount!=8 ||
-            graphic->angleCount!=1 || graphic->soundId!=-1 || !graphic->angleSounds.empty() ||
-            !buildingGraphic || buildingGraphic->sequenceType!=11 || buildingGraphic->frameCount!=1 ||
-            buildingGraphic->angleCount!=3 || buildingGraphic->soundId!=-1 || !buildingGraphic->angleSounds.empty())
-            return fail("unsupported owned109 prototype or graphics");
-        for (const auto &annex:u.annexes) if (annex.unitId!=-1)
-            return fail("owned109 annexes are unsupported");
-        if (data.terrainRestrictions.size()<=4 || data.terrainRestrictions[4].passableBuildableDmgMultiplier.empty() ||
-            !(data.terrainRestrictions[4].passableBuildableDmgMultiplier[0]>0) ||
-            !std::isfinite(data.terrainRestrictions[4].passableBuildableDmgMultiplier[0]))
-            return fail("owned109 requires buildable grass");
-        foundation=ownedCiv==2?4:ownedCiv==6?6:27;
+            return fail("owned109 requires one or two explicit civilizations on square bare-grass player lands");
+        for (const auto ownedCiv:playerCivilizations) {
+            if (!ownedCiv || ownedCiv>8 || ownedCiv>=data.civs.size() || data.civs[ownedCiv].units.size()<=109)
+                return fail("owned109 requires an original playable civilization1..8");
+            const auto &u=data.civs[ownedCiv].units[109];
+            const int standing=ownedCiv<=6?2271+ownedCiv:7824+ownedCiv;
+            const int construction=ownedCiv<=6?366+ownedCiv:7390+ownedCiv;
+            const auto *graphic=data.graphic(standing), *buildingGraphic=data.graphic(construction);
+            if (!u.exists || u.id!=109 || u.type!=dat::UT_Building || u.cls!=18 || u.hitPoints!=2500 ||
+                u.lineOfSight!=8 || u.collisionSize[0]!=2 || u.collisionSize[1]!=2 || u.collisionSize[2]!=4 ||
+                u.clearanceSize[0]!=2 || u.clearanceSize[1]!=2 || u.terrainRestriction!=4 || u.hillMode!=2 ||
+                u.flyMode || u.canBeBuiltOn || u.trait || u.convertTerrain || u.obstructionType!=2 || u.obstructionClass!=3 ||
+                u.speed!=0 || u.trackingUnit!=-1 || u.trackingUnitMode || u.trackingUnitDensity!=0 ||
+                u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
+                u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 ||
+                u.standingGraphic[0]!=standing || u.standingGraphic[1]!=-1 || u.constructionGraphic!=construction ||
+                u.adjacentMode || u.graphicsAngle || u.disappearsWhenBuilt || u.stackUnitId!=-1 ||
+                u.foundationTerrainId!=27 || u.oldOverlayId!=-1 || u.techId!=22 || u.transformUnit!=-1 ||
+                u.headUnit!=621 || u.secondaryProjectileUnit!=54 || u.trainTime!=100 || u.trainSound!=-1 ||
+                u.constructionSound!=597 || !graphic || graphic->sequenceType!=1 || graphic->frameCount!=8 ||
+                graphic->angleCount!=1 || graphic->soundId!=-1 || !graphic->angleSounds.empty() ||
+                !buildingGraphic || buildingGraphic->sequenceType!=11 || buildingGraphic->frameCount!=1 ||
+                buildingGraphic->angleCount!=3 || buildingGraphic->soundId!=-1 || !buildingGraphic->angleSounds.empty())
+                return fail("unsupported owned109 prototype or graphics");
+            for (const auto &annex:u.annexes) if (annex.unitId!=-1)
+                return fail("owned109 annexes are unsupported");
+            if (data.terrainRestrictions.size()<=4 || data.terrainRestrictions[4].passableBuildableDmgMultiplier.empty() ||
+                !(data.terrainRestrictions[4].passableBuildableDmgMultiplier[0]>0) ||
+                !std::isfinite(data.terrainRestrictions[4].passableBuildableDmgMultiplier[0]))
+                return fail("owned109 requires buildable grass");
+            foundations.push_back(ownedCiv==2?4:ownedCiv==6?6:27);
+        }
     }
     auto safeTerrain = [&](uint8_t terrain, bool allowScenery=false) {
         if (terrain>52 || terrain>=data.terrainBlock.terrains.size()) return false;
@@ -244,7 +244,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     };
     const bool earlyForest=base==10 || base==13 || (base>=17 && base<=21);
     if (!safeTerrain(static_cast<uint8_t>(base),earlyForest)) return fail("unsupported base terrain metadata");
-    if (ownedObjects && !safeTerrain(foundation)) return fail("unsupported owned109 foundation metadata");
+    for (const auto foundation:foundations)
+        if (!safeTerrain(foundation)) return fail("unsupported owned109 foundation metadata");
     for (const auto &land:lands) if (!safeTerrain(land.terrain,true)) return fail("unsupported land terrain metadata");
     for (const auto &row:terrainRows)
         if (!safeTerrain(row.terrain,true) || !safeTerrain(row.baseTerrain,true)) return fail("unsupported terrain row metadata");
@@ -297,20 +298,30 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     for (const auto &tree:generated.scenery) if (tree.alive)
         occupied.push_back(static_cast<uint32_t>(tree.y)*width+static_cast<uint32_t>(tree.x));
     if (ownedObjects) {
-        if (!generated.scenery.empty() || generated.playerStarts.size()!=1 ||
+        if (!generated.scenery.empty() || generated.playerStarts.size()!=playerCount ||
             std::any_of(generated.terrain.begin(),generated.terrain.end(),[](uint8_t tile){return tile!=0;}))
             return fail("owned109 requires scenery-free grass");
-        const auto &center=generated.playerStarts[0];
-        if (center.x<2 || center.y<2 || center.x>int32_t(width)-2 || center.y>int32_t(height)-2)
-            return fail("owned109 footprint extends outside the map");
-        // Radius0 has one candidate; original controller forces its final rejected gate too.
-        for (int draw=0;draw<4;++draw) genieRandomDraw(rng);
-        rng=genieRandomDraw(rng); // Completion reseeds the CRT with its fifth15-bit draw.
-        generated.ownedObjects.push_back({float(center.x),float(center.y),1,ownedCiv,109});
-        // Local completed109 paints its clearance footprint (557c10/557cf0).
-        for (int32_t y=center.y-2;y<center.y+2;++y)
-            for (int32_t x=center.x-2;x<center.x+2;++x)
-                generated.terrain[size_t(y)*width+x]=foundation;
+        // shortcut: close starts need startup sight-mask timing; accept only separated owners until traced.
+        if (playerCount==2 &&
+            std::abs(generated.playerStarts[0].x-generated.playerStarts[1].x)<11 &&
+            std::abs(generated.playerStarts[0].y-generated.playerStarts[1].y)<11)
+            return fail("owned109 close starts require startup visibility callbacks");
+        for (uint16_t owner=1;owner<=playerCount;++owner) {
+            const auto &center=generated.playerStarts[owner-1];
+            if (center.x<2 || center.y<2 || center.x>int32_t(width)-2 || center.y>int32_t(height)-2)
+                return fail("owned109 footprint extends outside the map");
+            // Radius0 has one candidate; original controller forces its final rejected gate too.
+            for (int draw=0;draw<4;++draw) genieRandomDraw(rng);
+            rng=genieRandomDraw(rng); // Completion reseeds the CRT with its fifth15-bit draw.
+            const uint8_t foundation=foundations[owner-1];
+            generated.ownedObjects.push_back({float(center.x),float(center.y),owner,
+                                             playerCivilizations[owner-1],109,
+                                             uint8_t(owner==1?255:foundation)});
+            // Local completed109 paints its clearance footprint (557c10/557cf0).
+            if (owner==1) for (int32_t y=center.y-2;y<center.y+2;++y)
+                for (int32_t x=center.x-2;x<center.x+2;++x)
+                    generated.terrain[size_t(y)*width+x]=foundation;
+        }
     } else if (hasObjects) {
         const bool ok=grouping.mode ?
             generateRmsGroupedResourcePlacements(width,height,generated.terrain,data,objectUnitId,grouping,rng,generated.objects,err,occupied) :
