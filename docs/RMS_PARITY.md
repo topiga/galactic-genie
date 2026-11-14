@@ -43,6 +43,10 @@ The previous editor scenario was saved separately. The new match was saved as
 the AI could already have acted. Its 227375-byte file was confirmed in the
 Windows user's VirtualStore SaveGame directory. Settings and worker screenshots
 and `live-forest-startup-2026-11-14.json` are retained in local research.
+The save was copied locally through OpenSSH, preserving the Windows file.
+Bounded raw-DEFLATE decompression yielded 2280369 bytes beginning `VER 9.4`;
+the stream ended cleanly without trailing bytes. This establishes the container
+format only; startup seed and terrain fields have not been decoded.
 
 The initial seed was not recovered. There is **no seed-matched live/native
 whole-map comparison yet**. The local audit and executable-oracle JSON files
