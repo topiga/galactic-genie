@@ -149,4 +149,12 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     assert not (work/'invalid-default-count.png').exists()
 
 
+    output=run(['render-rms',data,root/'tools/fixtures/owned-scouts.rms',32,1,work/'scouts.png',
+                '--players',2,'--civilization',1,'--civilization',1],0)
+    assert '10 native objects' in output and '512005877' in output
+    run(['render-rms',data,root/'tools/fixtures/owned-scouts.rms',32,1,work/'invalid-scouts.png',
+         '--players',3,'--civilization',1,'--civilization',2,'--civilization',3],1)
+    assert not (work/'invalid-scouts.png').exists()
+
+
 print('RMS file/DRS parity, includes, defines and rejection checks passed')

@@ -41,6 +41,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     bool hasObjects = false;
     bool ownedObjects = false;
     bool startingWorkers = false;
+    bool startingScouts = false;
+    constexpr int scoutIds[]={550,552,556,554,258,558,927,932};
     int workerMinDistance=1,workerMaxDistance=3;
     bool startingStalagmites = false;
     bool playerLands = false;
@@ -146,6 +148,24 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             } else row.targetTiles=tileAmount;
             if (scaling==2) row.clumps=uint64_t(row.clumps)*width*height/10000;
             terrainRows.push_back(row);
+        } else if (stage==3 && command=="create_object" && startingWorkers && !startingScouts) {
+            if (!number(value) || value!=550 || i==tokens.size() || tokens[i++].text!="{")
+                return fail("only the starting550 scout row may follow workers");
+            bool each=false,match=false,inner=false,outer=false;
+            while (i<tokens.size() && tokens[i].text!="}") {
+                const auto name=tokens[i++].text;
+                if (name=="set_place_for_every_player") { each=true;continue; }
+                if (name=="match_player_civ") { match=true;continue; }
+                if (!number(value)) return fail("missing scout parameter value");
+                if (name=="number_of_objects" && value==1) continue;
+                if (name=="group_placement_radius" && value==3) continue;
+                if (name=="min_distance_to_players" && value==7) inner=true;
+                else if (name=="max_distance_to_players" && value==9) outer=true;
+                else return fail("unsupported scout parameter/value "+name);
+            }
+            if (i==tokens.size() || !each || !match || !inner || !outer)
+                return fail("scouts require every-player civilization matching and distances7..9");
+            ++i;startingScouts=true;
         } else if (stage==3 && command=="create_object" && ownedObjects && !startingWorkers) {
             if (!number(value) || value!=83 || i==tokens.size() || tokens[i++].text!="{")
                 return fail("only an83 worker row may follow owned109");
@@ -313,6 +333,35 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             }
         }
     }
+    if (startingScouts) {
+        if (playerCount>2 || workerMinDistance!=6 || workerMaxDistance!=6)
+            return fail("starting scouts require one or two owners and packaged worker distances6..6");
+        constexpr int standing[]={6500,6510,6520,6515,6505,6525,9505,9510};
+        constexpr int sounds[]={14,525,440,499,740,743,1133,1137};
+        for (const auto civ:playerCivilizations) {
+            const int id=scoutIds[civ-1],restriction=civ==2?7:25;
+            if (data.civs[civ].units.size()<=size_t(id) || data.terrainRestrictions.size()<=size_t(restriction))
+                return fail("missing scout prototype or terrain restriction");
+            const auto &u=data.civs[civ].units[id];const auto *g=data.graphic(standing[civ-1]);
+            if (!u.exists || u.id!=id || u.type!=dat::UT_Creatable || u.cls!=47 || u.hitPoints!=60 ||
+                u.collisionSize[0]!=.25f || u.collisionSize[1]!=.25f || u.collisionSize[2]!=2 ||
+                u.clearanceSize[0]!=.25f || u.clearanceSize[1]!=.25f || u.lineOfSight!=4 ||
+                u.terrainRestriction!=restriction || u.headUnit!=-1 || u.trainSound!=sounds[civ-1] || u.speed!=2.2f ||
+                u.trackingUnit!=-1 || u.trackingUnitMode || u.trackingUnitDensity!=0 ||
+                u.flyMode || u.hillMode || u.trait!=(civ==2?40:(civ==5 || civ==8)?24:8) || u.convertTerrain ||
+                u.standingGraphic[0]!=standing[civ-1] || !g || g->sequenceType!=(civ==4?6:7) ||
+                g->frameCount!=(civ==2?8:1) || g->angleCount!=8 || g->frameDuration!=.2f ||
+                g->replayDelay!=((civ==1 || civ==4 || civ==7)?0:3) || g->soundId!=-1 || !g->angleSounds.empty() ||
+                u.costs[0].type!=1 || u.costs[0].amount!=50 || (u.costs[0].flag&255)!=1 ||
+                u.resourceStorages[0].type!=4 || u.resourceStorages[0].amount!=-1 || u.resourceStorages[0].flag!=2 ||
+                u.resourceStorages[1].type!=11 || u.resourceStorages[1].amount!=1 || u.resourceStorages[1].flag!=2)
+                return fail("unsupported starting scout prototype or graphics");
+            const auto &pass=data.terrainRestrictions[restriction].passableBuildableDmgMultiplier;
+            for (int terrain:{0,4,6,9,10,27,41})
+                if (size_t(terrain)>=pass.size() || !std::isfinite(pass[terrain]) || pass[terrain]<=0)
+                    return fail("scouts require connected passable grass and foundations");
+        }
+    }
     auto safeTerrain = [&](uint8_t terrain, bool allowScenery=false) {
         if (terrain>52 || terrain>=data.terrainBlock.terrains.size()) return false;
         const auto &t=data.terrainBlock.terrains[terrain];
@@ -455,6 +504,40 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 }
                 generated.ownedObjects.push_back({px,py,owner,playerCivilizations[owner-1],unitId,255,facet,frame,delay});
                 if (blocked || !--remaining) break;
+            }
+        }
+        if (startingScouts) for (uint16_t owner=1;owner<=playerCount;++owner) {
+            const auto civ=playerCivilizations[owner-1];const int id=scoutIds[civ-1];
+            const auto &u=data.civs[civ].units[id];const auto &g=*data.graphic(u.standingGraphic[0]);
+            const auto &center=generated.playerStarts[owner-1];std::vector<uint32_t> candidates;
+            if (!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,9,rng,candidates,err)) return false;
+            for (const auto tile:candidates) {
+                const int x=tile%width,y=tile/width;
+                if (std::any_of(generated.playerStarts.begin(),generated.playerStarts.end(),[&](const auto &start) {
+                    return std::abs(x-start.x)<7 && std::abs(y-start.y)<7;
+                })) continue;
+                const float px=x+.5f,py=y+.5f;
+                const bool blocked=std::any_of(generated.ownedObjects.begin(),generated.ownedObjects.end(),[&](const auto &o) {
+                    return o.unitId==109 && std::abs(px-o.x)<2.25f && std::abs(py-o.y)<2.25f;
+                }) || std::binary_search(occupied.begin(),occupied.end(),tile);
+                if (blocked && tile!=candidates.back()) continue;
+                // Original type70 construction: sprite/facing, action timers, then military timer41e410.
+                genieRandomDraw(rng);genieRandomDraw(rng);
+                uint8_t frame=0;float delay=0;
+                if (g.sequenceType&1) {
+                    const float cycle=g.frameCount*g.frameDuration+g.replayDelay;
+                    const double elapsed=double(genieRandomDraw(rng))*cycle*(1.f/32767.f);
+                    const int initial=int(elapsed/g.frameDuration);
+                    frame=uint8_t(std::min(int(g.frameCount)-1,initial));
+                    if (initial>=g.frameCount) {
+                        const float hold=float(elapsed-double(g.frameCount-1)*g.frameDuration);
+                        delay=std::max(0.f,hold-g.frameDuration);
+                    }
+                }
+                const uint8_t facet=uint8_t((genieRandomDraw(rng)*8u/32767u+7)%8);
+                for (int draw=0;draw<4;++draw) genieRandomDraw(rng);
+                generated.ownedObjects.push_back({px,py,owner,civ,int16_t(id),255,facet,frame,delay});
+                break;
             }
         }
     } else if (hasObjects) {

@@ -448,3 +448,16 @@ start's exclusion area. Other distance/radius combinations still
 fail; later scout/resource rows and complete packaged-map startup remain
 outside this proof. Local evidence: `rms-worker-packaged54103-stage-oracle-2026-11-14.json`
 and the independent `rms-worker-packaged54103-model-2026-11-14.py`.
+
+
+The bounded RMS startup also accepts the civilization-matched scout550 row
+at distances7..9 after packaged workers6..6, for one or two owners. Original
+execution covers24 single-owner and24 two-owner grass cases across all eight
+civilizations, plus6 two-owner dry-forest cases. Scout type70 construction
+uses8 CRT draws; civilization4 uses7 because its sequence6 sprite is static.
+The extra military timer draw at41e425 is retained. Population/resource11 and
+military count40 are imported separately from worker count37. Animated scout
+frames use their actual0.2-second duration and initial hold; pause freezes that
+hold and movement clears it. Shared-stage goldens check complete RNG, scenery,
+terrain, positions, variants and initial sprites. This does not establish full
+packaged maps, arbitrary scout modifiers or later original AI timer behavior.

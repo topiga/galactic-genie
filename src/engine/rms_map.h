@@ -20,7 +20,7 @@ struct RmsMap {
     std::vector<RmsTimberPlacement> objects;
     std::vector<RmsSceneryPlacement> scenery; // Creation order, including removed scenery.
     std::vector<RmsPlayerStart> playerStarts; // Owner order1..playerCount; no starting units implied.
-    std::vector<RmsOwnedPlacement> ownedObjects; // Starting buildings and workers, in creation order.
+    std::vector<RmsOwnedPlacement> ownedObjects; // Starting buildings and units, in creation order.
 };
 
 // Strict script pipeline: explicit nonplayer lands OR one player-land block (1..8 players)
@@ -35,6 +35,7 @@ struct RmsMap {
 // diagnostic distances1..3 or packaged54103 distances6..6; areas may clip.
 // A bounded dry forest profile retains live411 trees, including inside forced CC footprints.
 // A leading Gaia573 row supports verified destructive starting-scenery cleanup.
+// One or two owners may append the civilization-matched550 scout row at distances7..9.
 // RNG is the shared CRT state at script entry. Failure clears output and leaves RNG unchanged.
 bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::string> &defines,
                     uint32_t width, uint32_t height, const dat::DatFile &data,

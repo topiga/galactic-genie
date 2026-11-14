@@ -1207,21 +1207,22 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     if (!initScenario(scenario,err)) return false;
     for (size_t index=0;index<generated.ownedObjects.size();++index) {
         const auto &placement=generated.ownedObjects[index];
+        const auto &unit=assets_.dat().civs[placement.civilization].units[placement.unitId];
         if (auto *object=findObject(nextId-uint32_t(generated.ownedObjects.size())+uint32_t(index))) {
             object->pendingFoundation=placement.pendingFoundation;
-            object->animTime=placement.animationFrame;
+            const auto *graphic=assets_.dat().graphic(unit.standingGraphic[0]);
+            object->animTime=placement.animationFrame*(graphic?graphic->frameDuration:0.f);
             object->initialIdleDelay=placement.initialIdleDelay;
         }
-        const auto &unit=assets_.dat().civs[placement.civilization].units[placement.unitId];
         float cost=0;
         for (const auto &entry:unit.costs)
             if ((entry.flag&0xff) && entry.type>=0 && entry.type<=3) cost+=entry.amount;
         // Original starting objects record their cost without charging the owner.
         resources_[placement.owner][98]+=cost;
         resources_[placement.owner][unit.type==dat::UT_Building?165:164]+=cost;
-        if (unit.cls==58) {
+        if (unit.cls==58 || unit.cls==47) {
             resources_[placement.owner][11]+=1;
-            resources_[placement.owner][37]+=1;
+            resources_[placement.owner][unit.cls==58?37:40]+=1;
         }
     }
     randomState=rng;
@@ -14925,7 +14926,9 @@ void Game::update(float dt, const InputState &incoming) {
         else if (o.unit->trait & 0x20) recover(playerAttribute(o.player,96));
         float animationDt=dt;
         if (o.initialIdleDelay>0) {
-            if (o.state==State::Idle && o.animTime==7.f) {
+            const auto *idleGraphic=assets_.dat().graphic(o.unit->standingGraphic[0]);
+            const float lastFrameTime=idleGraphic?(idleGraphic->frameCount-1)*idleGraphic->frameDuration:0.f;
+            if (o.state==State::Idle && o.animTime==lastFrameTime) {
                 const float held=std::min(animationDt,o.initialIdleDelay);
                 o.initialIdleDelay-=held;animationDt-=held;
             } else o.initialIdleDelay=0;
