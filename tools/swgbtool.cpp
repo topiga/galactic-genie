@@ -14,6 +14,8 @@
 #include "../src/engine/assets.h"
 #include "../src/engine/ai_script.h"
 #include "../src/engine/rms_script.h"
+#include "../src/engine/rms_map.h"
+#include "../src/engine/rms_zones.h"
 #include "../src/engine/game.h"
 #include "../src/render/soft_renderer.h"
 
@@ -63,8 +65,8 @@ static int usage() {
             "  swgbtool ai-script <entry.per>\n"
             "  swgbtool test-ai <DataDir> <AiDir>\n"
             "  swgbtool rms-script <archive.drs> <resourceId> [--rng-state N] [--define SYMBOL] [--dump]\n"
-            "  swgbtool render-rms <DataDir> <self-contained.rms> <size> <rng-state> <out.png> [--players 1..8]\n"
-            "  swgbtool render-rms-resource <DataDir> <archive.drs> <id> <size> <rng-state> <out.png> [--define SYMBOL] [--players 1..8]\n"
+            "  swgbtool render-rms <DataDir> <self-contained.rms> <size> <rng-state> <out.png> [--players 1..8] [--zones restriction-ID]\n"
+            "  swgbtool render-rms-resource <DataDir> <archive.drs> <id> <size> <rng-state> <out.png> [--define SYMBOL] [--players 1..8] [--zones restriction-ID]\n"
             "  swgbtool mp3 <file.mp3>\n");
     return 2;
 }
@@ -5853,7 +5855,8 @@ static int cmdRmsScript(const char *path,const char *number,int argc,char **argv
 static int cmdRenderRms(const char *dataDir, const char *path, const char *sizeText,
                         const char *stateText, const char *output, const char *resourceNumber=nullptr,
                         int optionCount=0, char **options=nullptr) {
-    uint32_t size=0,state=0,playerCount=2;
+    uint32_t size=0,state=0,playerCount=2,zoneRestriction=0;
+    bool showZones=false;
     auto parse=[](const char *text,uint32_t &value) {
         const char *end=text+std::strlen(text);
         const auto result=std::from_chars(text,end,value);
@@ -5865,12 +5868,13 @@ static int cmdRenderRms(const char *dataDir, const char *path, const char *sizeT
     std::unordered_set<std::string> defines;
     for (int i=0;i<optionCount;i+=2) {
         if (i+1==optionCount) {
-            std::fprintf(stderr,"error: expected --define SYMBOL or --players 1..8\n"); return 2;
+            std::fprintf(stderr,"error: expected --define SYMBOL, --players 1..8 or --zones restriction-ID\n"); return 2;
         }
         if (!std::strcmp(options[i],"--define")) defines.insert(options[i+1]);
         else if (!std::strcmp(options[i],"--players") && parse(options[i+1],playerCount) &&
                  playerCount>=1 && playerCount<=8) {}
-        else { std::fprintf(stderr,"error: expected --define SYMBOL or --players 1..8\n"); return 2; }
+        else if (!std::strcmp(options[i],"--zones") && parse(options[i+1],zoneRestriction)) showZones=true;
+        else { std::fprintf(stderr,"error: expected --define SYMBOL, --players 1..8 or --zones restriction-ID\n"); return 2; }
     }
     RmsScript script;
     std::string error;
@@ -5906,6 +5910,31 @@ static int cmdRenderRms(const char *dataDir, const char *path, const char *sizeT
     Assets assets(&renderer);
     if (!assets.init(dataDir,&error)) {
         std::fprintf(stderr,"error: %s\n",error.c_str()); return 1;
+    }
+    if (showZones) {
+        if (zoneRestriction>=assets.dat().terrainRestrictions.size()) {
+            std::fprintf(stderr,"error: terrain restriction ID out of range\n"); return 2;
+        }
+        RmsMap map;
+        RmsZones zones;
+        const auto &passability=assets.dat().terrainRestrictions[zoneRestriction].passableBuildableDmgMultiplier;
+        if (!generateRmsMap(script,defines,size,size,assets.dat(),state,map,&error,playerCount) ||
+            !generateRmsZones(size,map.terrain,passability,zones,&error)) {
+            std::fprintf(stderr,"error: %s\n",error.c_str()); return 1;
+        }
+        const uint32_t scale=std::max(1u,512u/size);
+        renderer.beginFrame(size*scale,size*scale,1,0,0,0);
+        for (uint32_t y=0;y<size;++y) for (uint32_t x=0;x<size;++x) {
+            const uint32_t id=zones.tiles[y*size+x];
+            const uint32_t shade=passability[map.terrain[y*size+x]]>0?1:2;
+            renderer.fillRect(x*scale,y*scale,scale,scale,
+                (48+(id*73)%192)/shade,(48+(id*131+61)%192)/shade,(48+(id*197+127)%192)/shade,255);
+        }
+        renderer.endFrame();
+        if (!renderer.savePng(output)) { std::fprintf(stderr,"error: cannot save image\n"); return 1; }
+        std::printf("RMS terrain zones: restriction %u, count %u (capped255; IDs wrap), final RNG %u -> %s\n",
+                    zoneRestriction,zones.count,state,output);
+        return 0;
     }
     Game game(assets);
     if (!game.initRms(script,defines,static_cast<int>(size),state,&error,playerCount)) {

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check file/DRS RMS rendering with a built swgbtool and installed game assets."""
 import os
+import re
 from pathlib import Path
 import struct
 import subprocess
@@ -35,11 +36,20 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
             raise RuntimeError(result.stdout)
         return result.stdout
 
-    run(['render-rms',data,work/'map.rms',32,1,work/'file.png'],0)
+    rendered=run(['render-rms',data,work/'map.rms',32,1,work/'file.png'],0)
     base = ['render-rms-resource',data,work/'test.drs',60000,32,1,work/'archive.png']
     run([*base,'--define','TEST_MAP'],0)
     assert (work/'file.png').read_bytes() == (work/'archive.png').read_bytes(), 'DRS and file rendering differ'
     two_player_image = (work/'file.png').read_bytes()
+    zone_file=run(['render-rms',data,work/'map.rms',32,1,work/'zones.png','--zones',4],0)
+    run(['render-rms-resource',data,work/'test.drs',60000,32,1,work/'archive-zones.png',
+         '--define','TEST_MAP','--zones',4],0)
+    assert (work/'zones.png').read_bytes()==(work/'archive-zones.png').read_bytes(), 'File/DRS zones differ'
+    assert 'RMS terrain zones: restriction 4' in zone_file
+    assert re.search(r'final RNG (\d+)',rendered).group(1)==re.search(r'final RNG (\d+)',zone_file).group(1), 'Zone rendering changed map RNG'
+    for bad in ['-1','bad','999999']:
+        run(['render-rms',data,work/'map.rms',32,1,work/'bad-zones.png','--zones',bad],2)
+    assert not (work/'bad-zones.png').exists(), 'Invalid restriction created an image'
     run(['render-rms',data,work/'map.rms',32,1,work/'file.png','--players',8],0)
     run([*base,'--define','TEST_MAP','--players',8],0)
     assert (work/'file.png').read_bytes() == (work/'archive.png').read_bytes(), 'Eight-player DRS and file rendering differ'
