@@ -77,9 +77,9 @@ struct RmsGlobalGroupPlacement {
 // Their constructors consume seven draws, including three action timers.
 // Predators126/812/1197 support Far ungrouped mode0: two single objects/player at30..40,
 // radius3, no variance/spacing; no grouped placement or variance draws.
-// Tree413 supports Near2/player at4..5 or Far3/player at6..8, mode0,
+// Trees348/349/413 support Near2/player at4..5 or Far3/player at6..8, mode0,
 // spacing2, radius3, no variance; restriction11 and one static facet draw.
-// Global tree413 supports100 mode0 placements, player exclusion6 and spacing2.
+// Global trees348/349/413 support100 mode0 placements, player exclusion6 and spacing2.
 // Global predators126/812/1197 support four scaled loose single-object groups (1197 also pairs), exclusion40,
 // spacing12; Forest Eopie1365 also supports three objects with variance1.
 // Tree occupancy must include all retained mobiles as well as scenery/deposits

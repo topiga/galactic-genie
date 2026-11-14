@@ -40,20 +40,23 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  ground[0]=22;rng=1;const auto before=eligible;
  check(!swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),1585,{0,7,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && rng==1 && placed.empty() && eligible==before,"unsupported wave quantity rejected atomically");
  // Controlled original replays vary forage/Nerf quantities, retaining all later rows.
- const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1;} variations[]={
+ const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413;} variations[]={
   {4,2,126,220,1662422u,278519141u,513271022u},
   {2,1,126,210,3750728331u,4161792159u,758251980u},
   {8,4,126,235,989150139u,2125502712u,2483236625u},
   {4,2,812,220,1670957952u,278519141u,513271022u},
   {4,2,1197,220,3239039312u,278519141u,513271022u},
-  {4,2,1197,224,1665827321u,44224755u,513271022u,2}};
+  {4,2,1197,224,1665827321u,44224755u,513271022u,2},
+  {4,2,126,220,3933298748u,278519141u,513271022u,1,348},
+  {4,2,126,220,2518584576u,278519141u,513271022u,1,349}};
  for(const auto &v:variations) {
   std::vector<swgb::RmsToken> tokens;rng=16160;
   check(script.preprocess(defines,tokens,&error,&rng) && rng==1993207714u,"Forest preprocessing RNG");
-  std::string source,unit;unsigned changes=0,herdRow=0,predatorRow=0,predatorChanges=0;
+  std::string source,unit;unsigned changes=0,herdRow=0,predatorRow=0,predatorChanges=0,treeRows=0;
   for(size_t i=0;i<tokens.size();++i) {
    if(tokens[i].text=="create_object" && i+1<tokens.size()) {
-    unit=tokens[i+1].text;if(unit=="126"){tokens[i+1].text=std::to_string(v.predator);++predatorRow;}
+    unit=tokens[i+1].text;if(unit=="413"){tokens[i+1].text=std::to_string(v.treeUnit);++treeRows;}
+    if(unit=="126"){tokens[i+1].text=std::to_string(v.predator);++predatorRow;}
    }
    if((unit=="59" || unit=="594") && tokens[i].text=="number_of_objects" && i+1<tokens.size()) {
     const int expected=unit=="59"?12:herdRow==0?4:2;
@@ -66,7 +69,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
    }
    source+=tokens[i].text+" ";
   }
-  check(changes==3 && herdRow==2 && predatorChanges==1,"controlled forage and two herd rows");
+  check(changes==3 && herdRow==2 && predatorChanges==1 && treeRows==3,"controlled forage and two herd rows");
   swgb::RmsScript varied;
   check(varied.load(0,[&](int32_t resource,std::vector<uint8_t>&bytes){if(resource)return false;bytes.assign(source.begin(),source.end());return true;},{},&error),error.c_str());
   check(swgb::generateRmsMap(varied,defines,120,120,assets.dat(),rng,map,&error,2,{1,1}),error.c_str());
@@ -79,6 +82,17 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   }
   check(hash==v.poses,"controlled resource all original Gaia poses/order");
   check(frames==v.frames && herds==uint32_t(v.nearHerd*2+v.farHerd*4),"controlled original Nerf animation frames/count");
+  if(v.treeUnit!=413) {
+   rng=1993207714u;
+   check(game.initRms(varied,defines,120,rng,&error,2,{1,1}) && rng==v.rng,"explicit tree species native import");
+   unsigned trees=0;
+   for(size_t i=0;i<map.resourcesAfterOwned.size();++i) {
+    const auto &o=map.resourcesAfterOwned[i];if(o.unitId!=v.treeUnit)continue;++trees;
+    const uint32_t id=uint32_t(map.scenery.size()+map.ownedObjects.size()+i+1);const auto pos=game.objectPosition(id);
+    check(game.objectUnitId(id)==v.treeUnit && pos[0]==o.x && pos[1]==o.y && game.objectResourceAmount(id)==100,"native explicit tree positions and carbon amount");
+   }
+   check(trees==110,"original near/far/global explicit tree counts");
+  }
   if(v.predator!=126) {
    rng=1993207714u;
    check(game.initRms(varied,defines,120,rng,&error,2,{1,1}) && rng==v.rng,"controlled predator native import");
@@ -96,6 +110,6 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   }
 
  }
- std::puts("PASS: controlled forage, Nerf herds and predator variants through all Forest rows");
+ std::puts("PASS: controlled forage, herds, predators and tree variants through all Forest rows");
  std::puts("PASS: full packaged Forest23 rows,7802 objects, original grids/RNG and native import");
 }

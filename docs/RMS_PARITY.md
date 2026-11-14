@@ -595,3 +595,14 @@ pose, original startup frames/idle delays, grids and native import. The combined
 hunt-profile checks are now in `tools/rms_hunt_profile_checks.h`; the separate
 historical row20 fixture in `tools/rms_forest_hunt_checks.h` remains intact.
 These prove the terminal row profiles, not sequences that omit or reorder Nerfs.
+
+### Explicit tree species348/349 (2026-11-14)
+
+Original full23-row replays preserve all7554 automatic413 trees and substitute
+348 or349 only in the two near-start and one global explicit-tree rows. With
+forage3, both replays create110 explicit trees,220 Gaia objects total and end at
+RNG278519141. The original loader confirms12 facets for348 and11 for349, each
+with100 carbon instead of413's125. The native regression compares every object
+pose/facet/order, grids, RNG and imported explicit-tree positions/carbon.
+Existing grouped348 profiles remain separate from these mode0 rows. This does
+not yet establish owned startup on automatic348/349 forest terrain18/20.

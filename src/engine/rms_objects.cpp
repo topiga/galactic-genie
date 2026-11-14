@@ -9,6 +9,7 @@
 
 namespace swgb {
 namespace {
+bool isTree(int unit) { return unit==348 || unit==349 || unit==413; }
 bool isPredator(int unit) { return unit==126 || unit==812 || unit==1197; }
 struct ResourceSpec { int id, graphic, type, cls, hp, restriction, angles, resource, amount, doppel; float height; };
 const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
@@ -19,6 +20,7 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
     };
     static constexpr ResourceSpec specs[]={
         {348,5282,10,31,50,11,12,1,100,2,2.f},
+        {349,5289,10,31,50,11,11,1,100,2,2.f},
         {413,5301,10,31,50,11,12,1,125,2,2.f},
         {59,5192,10,27,0,8,6,0,125,1,1.f},
         {66,5134,30,29,0,8,10,3,800,1,1.f},
@@ -209,7 +211,7 @@ bool generateRmsResourcePlacements(uint32_t width, uint32_t height,
         if (err) *err = std::string("RMS resource: ") + reason;
         return false;
     };
-    if(unitId==59 || unitId==413) return fail("resource requires the verified grouped row");
+    if(unitId==59 || unitId==349 || unitId==413) return fail("resource requires the verified grouped row");
     if (!width || !height || width > 1024 || height > 1024 ||
         terrain.size() != static_cast<size_t>(width)*height || requested > terrain.size())
         return fail("invalid dimensions, terrain size or object count");
@@ -258,12 +260,13 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     };
     const size_t count=size_t(width)*height;
     if(!width || !height || width>1024 || height>1024 || terrain.size()!=count ||
-       (group.mode!=1 && group.mode!=2 && !((isPredator(unitId) || unitId==822 || unitId==1249 || unitId==413 || unitId==816 || unitId==69 || unitId==1585) && group.mode==0)) || group.groups>count || group.perGroup>count ||
+       (group.mode!=1 && group.mode!=2 && !((isPredator(unitId) || unitId==822 || unitId==1249 || isTree(unitId) || unitId==816 || unitId==69 || unitId==1585) && group.mode==0)) || group.groups>count || group.perGroup>count ||
        group.variance>1024 || group.radius>1024)
         return fail("unsupported dimensions or grouping parameters");
     const bool hunt=unitId==1363 || unitId==1365;
     const bool predator=isPredator(unitId);
-    const bool tree=unitId==413,bird=unitId==816,aquatic=unitId==69 || unitId==1585;
+    if((unitId==349 || unitId==413) && group.mode!=0)return fail("tree species requires verified mode0 rows");
+    const bool tree=isTree(unitId) && group.mode==0,bird=unitId==816,aquatic=unitId==69 || unitId==1585;
     const bool bigHunt=unitId==822 || unitId==1249;
     const bool herd=unitId==594 || hunt || predator || bigHunt;
     const auto *spec=aquatic?validateAquatic(data,unitId,terrain,err):bird?validateBird(data,terrain,err):herd?validateHerd(data,unitId,terrain,err):validateResource(data,unitId,terrain,err);

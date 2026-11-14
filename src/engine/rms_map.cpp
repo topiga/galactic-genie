@@ -19,6 +19,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     uint32_t &randomState, RmsMap &out, std::string *err, uint32_t playerCount,
                     const std::vector<uint16_t> &playerCivilizations,
                     const std::vector<std::vector<uint8_t>> &diplomacy) {
+    const auto isTree=[](int unit){return unit==348 || unit==349 || unit==413;};
     const auto isBigHunt=[](int unit){return unit==822 || unit==1249;};
     const auto isPredator=[](int unit){return unit==126 || unit==812 || unit==1197;};
     out = {};
@@ -297,12 +298,14 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 else if(loose)row={row.unit,row.unit==822?4:2,3,16,22,0,RmsResourceDistance::Near,1,1};
                 else row={row.unit,1,3,16,22,0,RmsResourceDistance::Near,0,1};
             }
+            if(row.unit==413 && i<tokens.size() && (tokens[i].text=="348" || tokens[i].text=="349"))
+                row.unit=tokens[i].text=="348"?348:349;
             const bool animal=row.unit==594 || row.unit==1363 || row.unit==1365 || isPredator(row.unit) || isBigHunt(row.unit);
             if (!number(value) || value!=row.unit || i==tokens.size() || tokens[i++].text!="{")
                 return fail("expected next verified stock resource row");
             bool each=row.global,gaia=row.global,mode=row.mode==0,count=false,inner=row.inner<0,outer=(row.global || isBigHunt(row.unit)) && row.outer<0;
             bool scale=!row.scaled,terrainFilter=row.unit!=1585;
-            bool spacing=row.spacing==0,zone=animal || row.global || row.unit==413,radius=row.radius==3,groups=row.mode==0 || row.groups==1,variance=row.variance==0;
+            bool spacing=row.spacing==0,zone=animal || row.global || isTree(row.unit),radius=row.radius==3,groups=row.mode==0 || row.groups==1,variance=row.variance==0;
             while (i<tokens.size() && tokens[i].text!="}") {
                 const auto name=tokens[i++].text;
                 if(row.scaled && name=="set_scaling_to_map_size") { scale=true;continue; }
@@ -320,7 +323,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 else if(name=="min_distance_to_players" && value==row.inner) inner=true;
                 else if(row.outer>=0 && name=="max_distance_to_players" && value==row.outer) outer=true;
                 else if(name=="min_distance_group_placement" && value==row.spacing) spacing=true;
-                else if(!animal && !row.global && row.unit!=413 && name=="max_distance_to_other_zones" && value==7) zone=true;
+                else if(!animal && !row.global && !isTree(row.unit) && name=="max_distance_to_other_zones" && value==7) zone=true;
                 else return fail("unsupported resource parameter/value "+name);
             }
             if(i==tokens.size() || !each || !gaia || !mode || !count || !inner || !outer || !spacing || !zone || !radius || !groups || !variance || !scale || !terrainFilter)
@@ -823,7 +826,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                             for(int x=int(object.x)-2;x<int(object.x)+2;++x) rowBlockers.push_back(uint32_t(y)*width+x);
                     // Original herd gates ignore mobile units, holocrons and other animals.
                     for(const auto &object:generated.resourcesAfterOwned)
-                        if(object.unitId==59 || object.unitId==66 || object.unitId==102 || object.unitId==413)
+                        if(object.unitId==59 || object.unitId==66 || object.unitId==102 || isTree(object.unitId))
                             rowBlockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
                 }
                 std::vector<RmsTimberPlacement> placed;
