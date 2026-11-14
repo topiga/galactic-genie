@@ -25,6 +25,13 @@ struct RmsConnectionRecord {
     std::vector<RmsConnectionPoint> points;
     RmsConnectionSettings settings;
 };
+// Original cross-check prefix0x4dfe90 with isAlly0x4c0450. Matrix includes Gaia
+// row/column0. State0 is allied; other states are not. Each player inherits the
+// first earlier player it regards as allied, otherwise starts a new ordinal.
+// This is directional and does not merge previously assigned teams.
+// Failure leaves output unchanged. This does not place players on the map.
+bool resolveRmsConnectionTeams(const std::vector<std::vector<uint8_t>> &diplomacy,
+    std::vector<int> &out,std::string *err=nullptr);
 struct RmsConnectionCommand {
     int kind=63; // 63 players, 64 teams, 65/66 all lands
     RmsConnectionSettings settings;

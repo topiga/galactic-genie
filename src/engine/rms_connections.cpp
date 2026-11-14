@@ -100,6 +100,23 @@ bool connectRmsLandPair(uint32_t width,uint32_t height,
     randomState=rng;
     return true;
 }
+bool resolveRmsConnectionTeams(const std::vector<std::vector<uint8_t>> &diplomacy,
+    std::vector<int> &out,std::string *err) {
+    if(err)err->clear();
+    if(diplomacy.size()<2||diplomacy.size()>9||
+       std::any_of(diplomacy.begin(),diplomacy.end(),[&](const auto &row){return row.size()!=diplomacy.size();})) {
+        if(err)*err="RMS connections: require square diplomacy for Gaia and 1..8 players";
+        return false;
+    }
+    std::vector<int> teams(diplomacy.size());
+    int count=0;
+    for(size_t player=1;player<diplomacy.size();++player) {
+        size_t earlier=1;
+        while(earlier<player&&diplomacy[player][earlier]!=0)++earlier;
+        teams[player]=earlier==player?++count:teams[earlier];
+    }
+    out=std::move(teams);return true;
+}
 bool resolveRmsConnectionRecords(const std::vector<RmsConnectionCommand> &commands,
     const std::vector<RmsConnectionLand> &lands,const std::vector<int> &playerTeamOrdinals,
     std::vector<RmsConnectionRecord> &out,std::string *err) {
