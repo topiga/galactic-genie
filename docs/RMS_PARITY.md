@@ -606,3 +606,19 @@ with100 carbon instead of413's125. The native regression compares every object
 pose/facet/order, grids, RNG and imported explicit-tree positions/carbon.
 Existing grouped348 profiles remain separate from these mode0 rows. This does
 not yet establish owned startup on automatic348/349 forest terrain18/20.
+
+### Nerf-free small-hunt prefixes (2026-11-14)
+
+Four original eleven-row replays omit both Nerf rows before the terminal1363 or
+1365 hunt. On the same selected geometry with forage3, count4 creates eight
+animals (67 Gaia, RNG2951609664); count8 creates sixteen (75 Gaia,
+RNG4160012160). The existing hunt-profile regression checks all object poses,
+grids, original animation startup and native import. The parser accepts these
+verified prefixes and still rejects their unverified later object rows.
+This is controlled sequence evidence, not a second complete packaged seed.
+
+The rebuilt CLI still rejects all eight additional audited seeds
+(1,2,3,42,12345,16161,32767,65535). Seeds1/16161 now get past the omitted-Nerf
+prefix, and65535 gets past its count8 hunt; they stop at later, unverified rows.
+Seeds3/42 still fail the earlier expected resource profile. No audit rejection
+was converted into an approximate map.

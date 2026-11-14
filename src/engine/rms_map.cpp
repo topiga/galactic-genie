@@ -275,9 +275,13 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if(i==tokens.size() || !count || !distance || !spacing) return fail("incomplete stock holocron row");
             ++i;holocrons=true;
         } else if (stage==3 && command=="create_object" && startingScouts) {
-            if ((!holocrons && nearNova) || (holocrons && (resourceRows.size()>=19 || (resourceRows.size()>=9 && !isPredator(resourceRows[8].unit)))))
+            if ((holocrons && resourceRows.size()==7 && (resourceRows.back().unit==1363 || resourceRows.back().unit==1365)) ||
+                (!holocrons && nearNova) || (holocrons && (resourceRows.size()>=19 || (resourceRows.size()>=9 && !isPredator(resourceRows[8].unit)))))
                 return fail("unsupported resource row after verified stock prefix");
             auto row=stockResources[holocrons?resourceRows.size():1];
+            // shortcut: Nerf-free branches stop after the hunt row until later rows have original evidence.
+            if(holocrons && resourceRows.size()==6 && i<tokens.size() &&
+               (tokens[i].text=="1363" || tokens[i].text=="1365"))row=stockResources[8];
             if(row.unit==1363 && i<tokens.size()) {
                 if(tokens[i].text=="1365") row.unit=1365;
                 else if(tokens[i].text=="822") row.unit=822;
