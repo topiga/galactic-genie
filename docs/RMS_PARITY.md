@@ -704,3 +704,13 @@ new complete packaged parity results; seed16160 remains the only such result.
 The reported startup terrain is9 for both seeds2/12345. Explicit CLI checks
 also reject a fourth prefix hunt, a second distant hunt and a near-only group
 in the distant slot without writing an output image.
+
+### Mixed Forest terrain9 (2026-11-15)
+
+A full original23-row controlled Forest18 run replaces the selected terrain5
+patches with9. It retains220 Gaia objects and RNG278519141; all Gaia poses and
+Nerf frames match the control, while the terrain hash changes to3296036497.
+The native source fixture swaps the same terrain IDs in generation/connection
+rules and checks the resulting grid, scenery, resources and import. Startup
+now permits terrain9. Seeds2/12345 advance to their next guard, terrain22;
+they still do not constitute complete generated or verified packaged maps.

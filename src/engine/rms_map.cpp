@@ -699,7 +699,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 return fail("owned forest starts require dry terrain and live411 scenery");
         } else if (ownedMixedForest) {
             for(auto tile:generated.terrain)
-                if(tile!=1 && tile!=2 && tile!=5 && tile!=6 && tile!=12 && tile!=18 && tile!=20 && tile!=21)
+                if(tile!=1 && tile!=2 && tile!=5 && tile!=6 && tile!=9 && tile!=12 && tile!=18 && tile!=20 && tile!=21)
                     return fail("unsupported Forest startup terrain "+std::to_string(tile));
             for(const auto &tree:generated.scenery)
                 if(!isTree(tree.unitId) || !tree.alive) return fail("Forest startup requires live348/349/413 scenery");
