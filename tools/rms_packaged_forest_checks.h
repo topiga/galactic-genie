@@ -40,7 +40,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  ground[0]=22;rng=1;const auto before=eligible;
  check(!swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),1585,{0,7,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && rng==1 && placed.empty() && eligible==before,"unsupported wave quantity rejected atomically");
  // Controlled original replays vary forage/Nerf quantities, retaining all later rows.
- const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413,forestTerrain=21;uint32_t sceneryPoses=2138192714u,terrainHash=3348257725u;bool chainedHunt=false,omitNerfs=false;unsigned explicitTrees=110;bool omitForage=false;} variations[]={
+ const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413,forestTerrain=21;uint32_t sceneryPoses=2138192714u,terrainHash=3348257725u;bool chainedHunt=false,omitNerfs=false;unsigned explicitTrees=110;bool omitForage=false;unsigned longChain=0;} variations[]={
   {4,2,126,220,1662422u,278519141u,513271022u},
   {2,1,126,210,3750728331u,4161792159u,758251980u},
   {8,4,126,235,989150139u,2125502712u,2483236625u},
@@ -53,7 +53,9 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   {4,2,126,220,2518584576u,278519141u,513271022u,1,349,20,4094354918u,3646470573u},
   {4,2,126,226,921507206u,2914264210u,513271022u,1,348,18,780123404u,1911528789u,true},
   {0,0,126,211,1050928889u,2709380116u,2166136261u,1,349,20,4094354918u,3646470573u,true,true},
-  {4,2,126,213,3985350200u,3794078108u,3773911184u,1,348,18,780123404u,1911528789u,false,false,110,true}};
+  {4,2,126,213,3985350200u,3794078108u,3773911184u,1,348,18,780123404u,1911528789u,false,false,110,true},
+  {4,2,126,238,2497652140u,1393824384u,513271022u,1,348,18,780123404u,1911528789u,true,false,110,false,1},
+  {0,0,126,219,4220003808u,2530534559u,2166136261u,1,349,20,4094354918u,3646470573u,true,true,110,false,2}};
  for(const auto &v:variations) {
   std::vector<swgb::RmsToken> tokens;rng=16160;
   check(script.preprocess(defines,tokens,&error,&rng) && rng==1993207714u,"Forest preprocessing RNG");
@@ -71,6 +73,11 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
     unit=tokens[i+1].text;
     if((unit=="594" && v.omitNerfs) || (unit=="59" && v.omitForage)){while(i<tokens.size() && tokens[i].text!="}")++i;continue;}
     if(unit=="126" && predatorRow==0 && v.chainedHunt)source+="create_object 1365 { number_of_objects 4 group_variance 1 set_loose_grouping set_gaia_object_only set_place_for_every_player min_distance_to_players 14 max_distance_to_players 30 } ";
+    if(unit=="126" && predatorRow==0 && v.longChain) {
+     source+=v.longChain==1?
+      "create_object 822 { number_of_objects 4 set_loose_grouping set_gaia_object_only set_place_for_every_player min_distance_to_players 16 max_distance_to_players 22 } create_object 1249 { number_of_objects 2 set_gaia_object_only set_place_for_every_player min_distance_to_players 16 max_distance_to_players 22 } ":
+      "create_object 1249 { number_of_objects 2 set_loose_grouping set_gaia_object_only set_place_for_every_player min_distance_to_players 16 max_distance_to_players 22 } create_object 822 { number_of_objects 1 set_gaia_object_only set_place_for_every_player min_distance_to_players 16 max_distance_to_players 22 } ";
+    }
     if(unit=="413"){tokens[i+1].text=std::to_string(v.treeUnit);++treeRows;}
     if(unit=="126"){tokens[i+1].text=std::to_string(v.predator);++predatorRow;}
    }

@@ -87,7 +87,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     };
     std::vector<ResourceRow> resourceRows;
     size_t resourceProfile=0;
-    bool prefixHunt=false;
+    unsigned prefixHunts=0;
     constexpr int scoutIds[]={550,552,556,554,258,558,927,932};
     int workerMinDistance=1,workerMaxDistance=3;
     bool startingStalagmites = false;
@@ -282,9 +282,10 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if(holocrons && resourceProfile==0 && i<tokens.size() && tokens[i].text=="66")resourceProfile=1;
             if(holocrons && resourceProfile==6 && i<tokens.size() &&
                (tokens[i].text=="1363" || tokens[i].text=="1365"))resourceProfile=8;
-            // shortcut: one optional hunt before predators; verify longer hunt chains before accepting them.
-            if(holocrons && resourceProfile==8 && prefixHunt &&
-               (i==tokens.size() || (tokens[i].text!="126" && tokens[i].text!="812" && tokens[i].text!="1197")))
+            // shortcut: one initial hunt and up to two large-hunt rows; verify other sequences before accepting them.
+            if(holocrons && resourceProfile==8 && prefixHunts &&
+               (i==tokens.size() || (tokens[i].text!="126" && tokens[i].text!="812" && tokens[i].text!="1197" &&
+                (prefixHunts>=3 || (tokens[i].text!="822" && tokens[i].text!="1249")))))
                 return fail("unsupported additional hunt row");
             auto row=stockResources[holocrons?resourceProfile:1];
             if(row.unit==1363 && i<tokens.size()) {
@@ -339,7 +340,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 return fail("incomplete stock per-player resource row");
             ++i;resourceRows.push_back(row);
             if(holocrons) {
-                if(resourceProfile==8 && !isPredator(row.unit))prefixHunt=true;
+                if(resourceProfile==8 && !isPredator(row.unit))++prefixHunts;
                 else ++resourceProfile;
             }
             if(!holocrons) nearNova=true;

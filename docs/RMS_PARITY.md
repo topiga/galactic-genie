@@ -674,3 +674,14 @@ with and without the preceding Nerf rows. With Nerfs they create four Eopies
 RNG3061237336). Regression coverage includes all resource poses/order, original
 animation frames, delays and heading, unchanged grids and native import.
 This verifies the quantity that blocked seed3, not that seed's complete layout.
+
+### Three-row hunting prefixes (2026-11-15)
+
+Full original controlled sequences now cover1365 count4 followed by822 loose4
+and1249 two singles on Forest18, and1365 count4 followed by1249 loose2 and822
+one single on Forest20 without Nerfs. The original26/24-row runs retain all
+later rows and produce238/219 Gaia objects, ending at RNG1393824384/2530534559.
+The native fixture compares all object poses/order, grids, tree facets and
+native tree import. The parser permits an initial hunt followed by at most two
+large-hunt rows before predators; quantities and grouping remain validated.
+This is sequence evidence on controlled geometry, not complete packaged seeds.
