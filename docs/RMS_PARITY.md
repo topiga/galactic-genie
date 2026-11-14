@@ -140,3 +140,32 @@ geometry, but is not yet connected to full map startup. Evidence:
 `rms-height-smoothing-oracle-2026-11-14.json` and
 `rms-slope-oracle-2026-11-14.json` and
 `rms-sparse-smoothing-oracle-2026-11-14.json`.
+
+The complete native elevation helper now matches 180 original growth-worker
+fixtures and 83 composed stage fixtures, including height reset, persistent
+protection, smoothing, slope classification and exact final RNG. One fixture
+executes both Forest elevation blocks on a **120×120 uniform terrain-6 grid with
+stage-entry seed 1**, using the two live protection centers. It matches every
+height, slope and protection-mask byte (via full-grid fingerprints) and final
+RNG 1103906832. This controlled stage is **not the live Forest terrain or entry
+RNG**, and does not establish whole-map equality.
+
+Original parsing expands those blocks into four then seven successive level
+rows. At 120×120, `set_scale_by_groups` produces 1008 tiles/10 clumps for each
+first-block row and 6192 tiles/7 clumps for each second-block row. Elevation's
+scaling differs from terrain: that keyword scales tile counts only, while
+`set_scale_by_size` scales clump counts only. Original parser/finalizer execution
+also confirms protection radius 13 and weight 20 at each positive-owner center.
+
+The full-stage fixture exposed a lifecycle dependency: candidate-node links
+survive between elevation rows even though the list sentinel resets. Preserving
+those links is necessary to match the third and later Forest rows. The original
+stage clears all node links at entry (`4d6b40`), so incoming land-stage links do
+not carry into this elevation stage. Zero-row execution preserves initial
+height/slope/RNG but rebuilds protection. The helper remains bounded to square
+maps and already finalized rows; no map parser activation or complete
+land/elevation/terrain/object pipeline parity is claimed. Private evidence:
+`rms-elevation-worker-oracle-2026-11-14.json`,
+`rms-elevation-stage-oracle-2026-11-14.json`,
+`rms-elevation-forest-groups-oracle-2026-11-14.json` and
+`rms-elevation-forest-parser-oracle-2026-11-14.json`.

@@ -22,4 +22,17 @@ bool generateRmsElevationRow(uint32_t width, uint32_t height, const RmsElevation
     const std::vector<uint8_t> &terrain, uint32_t &randomState,
     std::vector<uint8_t> &heights, std::vector<uint8_t> &protection,
     std::string *err = nullptr);
+struct RmsElevationProtection {
+    int32_t x = 0, y = 0;
+    uint32_t radius = 13, weight = 20;
+};
+// Original 0x4d9950 stage for already finalized rows. Resets heights only when
+// rows exist, builds protection once, then grows/smooths/classifies each row.
+// Empty rows preserve input heights/slopes. No object or visual refresh callbacks.
+// Failure preserves height, slope, protection-mask and RNG outputs.
+bool generateRmsElevation(uint32_t width, uint32_t height,
+    const std::vector<RmsElevationRow> &rows, const std::vector<uint8_t> &terrain,
+    uint32_t &randomState, std::vector<uint8_t> &heights,
+    std::vector<uint8_t> &slopes, std::vector<uint8_t> &mask,
+    const std::vector<RmsElevationProtection> &protection = {}, std::string *err = nullptr);
 } // namespace swgb

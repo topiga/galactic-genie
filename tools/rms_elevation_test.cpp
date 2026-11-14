@@ -193,7 +193,9 @@ static uint32_t hash(const std::vector<uint8_t> &values) {
     for (auto v:values) h=(h^v)*16777619u;
     return h;
 }
+#include "rms_elevation_stage_checks.h"
 int main() {
+    checkElevationStage();
     for (const auto &c:fixtures) {
         const uint8_t baseHeight=c.profile==2?1:0;
         std::vector<uint8_t> terrain(c.size*c.size,6),heights(terrain.size(),baseHeight),mask(terrain.size());
@@ -225,5 +227,5 @@ int main() {
     heights[0]=8;rejects(5,5,valid);heights[0]=0;
     heights.pop_back();rejects(5,5,valid);heights.push_back(0);
     mask.pop_back();rejects(5,5,valid);
-    std::cout << "180 original elevation worker height/mask/RNG fixtures and rollback checks passed\n";
+    std::cout << "180 original elevation worker and 83 composed stage fixtures and rollback checks passed\n";
 }
