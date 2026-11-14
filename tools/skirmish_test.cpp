@@ -43,7 +43,7 @@ static void check(bool value, const char *message) {
 #include "rms_forest_hunt_checks.h"
 #include "rms_packaged_forest_checks.h"
 #include "rms_wave_checks.h"
-#include "rms_large_hunt_checks.h"
+#include "rms_hunt_profile_checks.h"
 #include "rms_forest21_owned_checks.h"
 #include "rms_forest21_holocron_checks.h"
 #include "rms_forest21_water_resource_checks.h"
@@ -304,7 +304,7 @@ int main(int argc, char **argv) {
         rmsGlobalPredatorChecks(assets.dat());
         rmsForestHuntChecks(assets.dat());
         rmsPackagedForestChecks(assets,argv[1]);
-        rmsLargeHuntChecks(assets,argv[1]);
+        rmsHuntProfileChecks(assets,argv[1]);
         rmsWaveChecks(assets.dat());
         checkRmsForest21Owned(assets);
         checkRmsForest21Holocrons(assets.dat());

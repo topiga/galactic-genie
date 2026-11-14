@@ -311,7 +311,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         const uint32_t expectedGroups=bigHunt?(group.mode==0?group.groups:1u):tree?(far?3u:2u):herd && far && !hunt?2u:1u;
         const uint32_t expectedCount=bigHunt?(far?3u:group.mode==0?1u:unitId==822?4u:2u):(tree || predator)?1u:hunt?4u:herd?(far?2u:4u):forage?6u:ore?(far?4u:5u):(medium || far)?4u:7u;
         if((unitId!=66 && !forage && !ore && !herd && !tree) || (!bigHunt && group.mode!=((tree || predator)?0:herd?1:2)) ||
-           group.groups!=expectedGroups || (group.perGroup!=expectedCount && !(forage && (group.perGroup==3 || group.perGroup==12)) && !(unitId==822 && !far && group.mode==1 && group.perGroup==2) && !(unitId==1365 && group.perGroup==3) && !(unitId==594 && (group.perGroup==expectedCount/2 || group.perGroup==expectedCount*2))) ||
+           group.groups!=expectedGroups || (group.perGroup!=expectedCount && !(forage && (group.perGroup==3 || group.perGroup==12)) && !(unitId==822 && !far && group.mode==1 && group.perGroup==2) && !(hunt && group.perGroup==8) && !(unitId==1365 && group.perGroup==3) && !(unitId==594 && (group.perGroup==expectedCount/2 || group.perGroup==expectedCount*2))) ||
            group.variance!=((hunt || (bigHunt && far))?1u:0u) || group.radius!=(ore?2u:3u) || novaPlayerStarts.size()>8)
             return fail("unsupported per-player resource row");
         for(auto t:terrain) if(restriction[t]!=1.f && (width!=120 || (t!=1 && t!=2 && t!=5 && t!=6 && t!=12 && t!=21)))

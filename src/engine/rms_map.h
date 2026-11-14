@@ -56,6 +56,7 @@ struct RmsMap {
 // forage, near/medium/far Nova, near/far ore and two Nerf rows, in that order.
 // The Forest resource/Nerf prefix may end with verified grouped/ungrouped822/1249,
 // or either large hunt species with distant loose3/variance1 and spacing5.
+// Forest21 also supports a terminal small-hunt1363/1365 row with count4/8.
 // Flat profiles may append the verified FOODC3 hunt variant; Forest21 supports
 // the resource/Nerf prefix with fixed or randomized enemy starts. The selected
 // Forest sequence may continue with ungrouped predators126/812/1197, two global deposit rows

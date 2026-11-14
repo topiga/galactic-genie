@@ -542,7 +542,7 @@ in the native RMS input even though they occur after OBJECTS in the source.
 The original rejects blocking objects in the surrounding3x3 tiles and rejects
 outermost map tiles. These differ from the previously supported small animals.
 Both large species consume seven constructor draws, versus eight for the small
-hunting species. `tools/rms_large_hunt_checks.h` checks terrain/elevation, every
+hunting species. `tools/rms_hunt_profile_checks.h` checks terrain/elevation, every
 Gaia pose, terminal RNG, animation frames/extra idle delays and native import.
 The prefix still cannot continue with arbitrary additional hunt rows; the distant
 35-tile profiles and the full alternate packaged sequences remain unverified.
@@ -584,3 +584,14 @@ quantity. Seeds1/16161 also need the branch that omits Nerfs. Next integration
 work must preserve those script sequences, verify small-hunt count8 and explicit
 trees348/349, then repeat complete original-executable and live Windows seed
 comparisons. Individual row parity is not complete-map parity.
+
+### Small hunt quantities on selected Forest geometry (2026-11-14)
+
+Four original thirteen-row prefixes now cover both1363 and1365 after forage3 and
+the stock Nerf rows on the complete selected Forest geometry. Count4/variance1
+produces seven animals (82 Gaia objects, RNG2967105290); count8/variance1 produces
+sixteen (91 Gaia objects, RNG3099826770). The native comparisons check every
+pose, original startup frames/idle delays, grids and native import. The combined
+hunt-profile checks are now in `tools/rms_hunt_profile_checks.h`; the separate
+historical row20 fixture in `tools/rms_forest_hunt_checks.h` remains intact.
+These prove the terminal row profiles, not sequences that omit or reorder Nerfs.

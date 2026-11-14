@@ -68,7 +68,7 @@ struct RmsGlobalGroupPlacement {
 // Ore102 uses radius2: Near tight5/distances14..18, Far tight4/distances20..26.
 // Nerf594 uses loose groups: Near2/4/8 once/player at10..12, Far1/2/4 twice/player
 // at14..30, radius3 and no spacing; includes original animated startup state.
-// Kaadu1363/Eopie1365 support Far loose4, variance1, one group/player at14..30;
+// Kaadu1363/Eopie1365 support Far loose4/8, variance1, one group/player at14..30;
 // their original constructor adds a military timer draw and species animation.
 // Large hunt822 supports Near loose2/4 or one mode0 single;1249 supports loose2
 // or mode0 singles1/2,
