@@ -86,6 +86,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         {69,1,3,-1,-1,0,RmsResourceDistance::Near,0,3,0,true,true}
     };
     std::vector<ResourceRow> resourceRows;
+    size_t resourceProfile=0;
+    bool prefixHunt=false;
     constexpr int scoutIds[]={550,552,556,554,258,558,927,932};
     int workerMinDistance=1,workerMaxDistance=3;
     bool startingStalagmites = false;
@@ -275,13 +277,15 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if(i==tokens.size() || !count || !distance || !spacing) return fail("incomplete stock holocron row");
             ++i;holocrons=true;
         } else if (stage==3 && command=="create_object" && startingScouts) {
-            if ((holocrons && resourceRows.size()==7 && (resourceRows.back().unit==1363 || resourceRows.back().unit==1365)) ||
-                (!holocrons && nearNova) || (holocrons && (resourceRows.size()>=19 || (resourceRows.size()>=9 && !isPredator(resourceRows[8].unit)))))
+            if ((!holocrons && nearNova) || (holocrons && resourceProfile>=19))
                 return fail("unsupported resource row after verified stock prefix");
-            auto row=stockResources[holocrons?resourceRows.size():1];
-            // shortcut: Nerf-free branches stop after the hunt row until later rows have original evidence.
-            if(holocrons && resourceRows.size()==6 && i<tokens.size() &&
-               (tokens[i].text=="1363" || tokens[i].text=="1365"))row=stockResources[8];
+            if(holocrons && resourceProfile==6 && i<tokens.size() &&
+               (tokens[i].text=="1363" || tokens[i].text=="1365"))resourceProfile=8;
+            // shortcut: one optional hunt before predators; verify longer hunt chains before accepting them.
+            if(holocrons && resourceProfile==8 && prefixHunt &&
+               (i==tokens.size() || (tokens[i].text!="126" && tokens[i].text!="812" && tokens[i].text!="1197")))
+                return fail("unsupported additional hunt row");
+            auto row=stockResources[holocrons?resourceProfile:1];
             if(row.unit==1363 && i<tokens.size()) {
                 if(tokens[i].text=="1365") row.unit=1365;
                 else if(tokens[i].text=="822") row.unit=822;
@@ -333,6 +337,10 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if(i==tokens.size() || !each || !gaia || !mode || !count || !inner || !outer || !spacing || !zone || !radius || !groups || !variance || !scale || !terrainFilter)
                 return fail("incomplete stock per-player resource row");
             ++i;resourceRows.push_back(row);
+            if(holocrons) {
+                if(resourceProfile==8 && !isPredator(row.unit))prefixHunt=true;
+                else ++resourceProfile;
+            }
             if(!holocrons) nearNova=true;
         } else if (stage==3 && command=="create_object" && startingWorkers && !startingScouts) {
             if (!number(value) || value!=550 || i==tokens.size() || tokens[i++].text!="{")
@@ -435,7 +443,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     const bool ownedMixedForest=ownedObjects && playerLands && base==6 && lands[0].terrain==6 &&
         width==120 && height==120 && playerCount==2 && playerCivilizations==std::vector<uint16_t>{1,1} &&
         startingWorkers && startingScouts && workerMinDistance==6 && workerMaxDistance==6 &&
-        (resourceRows.size()<=8 || (resourceRows.size()>=9 && (isPredator(resourceRows[8].unit) || isBigHunt(resourceRows[8].unit) || resourceRows[8].unit==1363 || resourceRows[8].unit==1365))) && !startingStalagmites;
+        !startingStalagmites;
     if (startingStalagmites) {
         if (!ownedForest)
             return fail("starting573 requires forest Command Centers");

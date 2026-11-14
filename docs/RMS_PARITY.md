@@ -635,3 +635,17 @@ Gaia poses and imported tree positions/carbon. Forest20 uses11 tree facets;
 Forest18 uses12. Owned startup and resource validation now admit these species.
 This proves controlled startup on those terrains, not the terrain-generation
 stages of another packaged seed or mixed-owner/civilization configurations.
+
+### Hunt-to-predator continuation (2026-11-15)
+
+Two original controller replays insert a1365 loose count4/variance1 hunt before
+the near predator and retain all later rows. On controlled Forest18 with both
+Nerf rows, the24-row sequence produces226 Gaia objects and RNG2914264210.
+On controlled Forest20 without either Nerf row, the22-row sequence produces211
+Gaia objects and RNG2709380116. Both retain7554 automatic trees and10 owned
+starts. The regression checks all Gaia poses/order, grids, tree facets and
+native tree import. The parser tracks the resource profile independently of
+physical row position, allowing one hunt then predators and the stock suffix.
+Additional consecutive hunt rows remain rejected pending sequence evidence.
+These remain controlled sequences on relabeled selected geometry, not complete
+seed1/2/16161 parity or a fresh live Windows comparison.

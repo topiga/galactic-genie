@@ -40,7 +40,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  ground[0]=22;rng=1;const auto before=eligible;
  check(!swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),1585,{0,7,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && rng==1 && placed.empty() && eligible==before,"unsupported wave quantity rejected atomically");
  // Controlled original replays vary forage/Nerf quantities, retaining all later rows.
- const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413,forestTerrain=21;uint32_t sceneryPoses=2138192714u,terrainHash=3348257725u;} variations[]={
+ const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413,forestTerrain=21;uint32_t sceneryPoses=2138192714u,terrainHash=3348257725u;bool chainedHunt=false,omitNerfs=false;unsigned explicitTrees=110;} variations[]={
   {4,2,126,220,1662422u,278519141u,513271022u},
   {2,1,126,210,3750728331u,4161792159u,758251980u},
   {8,4,126,235,989150139u,2125502712u,2483236625u},
@@ -50,7 +50,9 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   {4,2,126,220,3933298748u,278519141u,513271022u,1,348},
   {4,2,126,220,2518584576u,278519141u,513271022u,1,349},
   {4,2,126,220,3933298748u,278519141u,513271022u,1,348,18,780123404u,1911528789u},
-  {4,2,126,220,2518584576u,278519141u,513271022u,1,349,20,4094354918u,3646470573u}};
+  {4,2,126,220,2518584576u,278519141u,513271022u,1,349,20,4094354918u,3646470573u},
+  {4,2,126,226,921507206u,2914264210u,513271022u,1,348,18,780123404u,1911528789u,true},
+  {0,0,126,211,1050928889u,2709380116u,2166136261u,1,349,20,4094354918u,3646470573u,true,true}};
  for(const auto &v:variations) {
   std::vector<swgb::RmsToken> tokens;rng=16160;
   check(script.preprocess(defines,tokens,&error,&rng) && rng==1993207714u,"Forest preprocessing RNG");
@@ -65,7 +67,10 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   std::string source,unit;unsigned changes=0,herdRow=0,predatorRow=0,predatorChanges=0,treeRows=0;
   for(size_t i=0;i<tokens.size();++i) {
    if(tokens[i].text=="create_object" && i+1<tokens.size()) {
-    unit=tokens[i+1].text;if(unit=="413"){tokens[i+1].text=std::to_string(v.treeUnit);++treeRows;}
+    unit=tokens[i+1].text;
+    if(unit=="594" && v.omitNerfs){while(i<tokens.size() && tokens[i].text!="}")++i;continue;}
+    if(unit=="126" && predatorRow==0 && v.chainedHunt)source+="create_object 1365 { number_of_objects 4 group_variance 1 set_loose_grouping set_gaia_object_only set_place_for_every_player min_distance_to_players 14 max_distance_to_players 30 } ";
+    if(unit=="413"){tokens[i+1].text=std::to_string(v.treeUnit);++treeRows;}
     if(unit=="126"){tokens[i+1].text=std::to_string(v.predator);++predatorRow;}
    }
    if((unit=="59" || unit=="594") && tokens[i].text=="number_of_objects" && i+1<tokens.size()) {
@@ -79,7 +84,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
    }
    source+=tokens[i].text+" ";
   }
-  check(changes==3 && herdRow==2 && predatorChanges==1 && treeRows==3,"controlled forage and two herd rows");
+  check(changes==(v.omitNerfs?1u:3u) && herdRow==(v.omitNerfs?0u:2u) && predatorChanges==1 && treeRows==3,"controlled forage and two herd rows");
   swgb::RmsScript varied;
   check(varied.load(0,[&](int32_t resource,std::vector<uint8_t>&bytes){if(resource)return false;bytes.assign(source.begin(),source.end());return true;},{},&error),error.c_str());
   check(swgb::generateRmsMap(varied,defines,120,120,assets.dat(),rng,map,&error,2,{1,1}),error.c_str());
@@ -107,7 +112,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
     const uint32_t id=uint32_t(map.scenery.size()+map.ownedObjects.size()+i+1);const auto pos=game.objectPosition(id);
     check(game.objectUnitId(id)==v.treeUnit && pos[0]==o.x && pos[1]==o.y && game.objectResourceAmount(id)==100,"native explicit tree positions and carbon amount");
    }
-   check(trees==110,"original near/far/global explicit tree counts");
+   check(trees==v.explicitTrees,"original near/far/global explicit tree counts");
   }
   if(v.predator!=126) {
    rng=1993207714u;
