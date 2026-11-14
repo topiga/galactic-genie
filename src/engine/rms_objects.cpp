@@ -206,7 +206,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     std::vector<RmsTimberPlacement> &out,std::string *err,
     const std::vector<uint32_t> &occupiedTiles,size_t maxWork,
     const std::vector<RmsPlayerStart> &novaPlayerStarts,RmsResourceDistance distance,
-    std::vector<uint8_t> *rowEligibility) {
+    std::vector<uint8_t> *rowEligibility,const RmsGlobalGroupPlacement *globalPlacement) {
     out.clear(); if(err) err->clear();
     auto fail=[&](const char *reason) {
         if(err) *err=std::string("RMS grouped resource: ")+reason;
@@ -224,14 +224,25 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     if(!spec) return false;
     const auto &restriction=data.terrainRestrictions[spec->restriction].passableBuildableDmgMultiplier;
     const bool perPlayer=!novaPlayerStarts.empty();
+    if(globalPlacement) {
+        if(perPlayer || (unitId!=66 && unitId!=102) || group.mode!=2 ||
+           distance!=RmsResourceDistance::Near || globalPlacement->minDistance<0 ||
+           globalPlacement->minDistance>1024 || globalPlacement->spacing<0 || globalPlacement->spacing>1024 ||
+           globalPlacement->landCenters.size()>1024)
+            return fail("unsupported global group placement");
+        for(const auto &land:globalPlacement->landCenters)
+            if(land.x<0 || land.y<0 || uint32_t(land.x)>=width || uint32_t(land.y)>=height)
+                return fail("global land center outside map");
+    }
     const bool forage=unitId==59,ore=unitId==102 && perPlayer;
     const bool medium=distance==RmsResourceDistance::Medium,far=distance==RmsResourceDistance::Far;
     if(distance!=RmsResourceDistance::Near && !medium && !far) return fail("invalid resource distance profile");
     if((medium || far) && (!perPlayer || (unitId!=66 && !((ore || herd) && far)) || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
         return fail("distance profile requires verified120-square two-player resource row");
     if((hunt || predator) && !far) return fail("hunting animals require the verified far row");
-    const int playerMin=predator?30:herd?(far?14:10):forage?10:ore?(far?20:14):medium?18:far?25:12;
-    const int playerMax=predator?40:herd?(far?30:12):forage?12:ore?(far?26:18):medium?26:far?35:16,playerSpacing=herd?0:forage?6:7;
+    const int playerMin=globalPlacement?globalPlacement->minDistance:predator?30:herd?(far?14:10):forage?10:ore?(far?20:14):medium?18:far?25:12;
+    const int playerMax=predator?40:herd?(far?30:12):forage?12:ore?(far?26:18):medium?26:far?35:16,playerSpacing=globalPlacement?globalPlacement->spacing:perPlayer?(herd?0:forage?6:7):0;
+    const auto &exclusionCenters=globalPlacement?globalPlacement->landCenters:novaPlayerStarts;
     if((forage || ore || herd) && (!perPlayer || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
         return fail("resource row requires verified120-square two-player profile");
     if((forage || ore || herd || medium || far) && std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
@@ -347,7 +358,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             if(!spend(1)) return fail("work limit exceeded");
             const int center=pop(outer);
             const int x=center%width,y=center/width;
-            if(perPlayer && std::any_of(novaPlayerStarts.begin(),novaPlayerStarts.end(),[&](const auto &start) {
+            if((perPlayer || globalPlacement) && std::any_of(exclusionCenters.begin(),exclusionCenters.end(),[&](const auto &start) {
                 return std::abs(x-start.x)<playerMin && std::abs(y-start.y)<playerMin;
             })) continue;
             if(perPlayer) {
@@ -363,7 +374,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
                 create(center);--groupsLeft;continue;
             }
             if(!pass(center)) continue;
-            if(perPlayer && playerSpacing) {
+            if(playerSpacing) {
                 // Original4de1b0 unlinks the spacing square before the group uses shared nodes.
                 for(int sy=std::max(0,y-playerSpacing);sy<=std::min(int(height)-1,y+playerSpacing);++sy)
                     for(int sx=std::max(0,x-playerSpacing);sx<=std::min(int(width)-1,x+playerSpacing);++sx) unlink(sy*width+sx);
@@ -404,7 +415,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
                 if(!spend(1)) return fail("work limit exceeded");
                 pop(inner);
             }
-            if(perPlayer && playerSpacing) {
+            if(playerSpacing) {
                 // Original4de090 persists spacing only on passable tiles, across later rows.
                 for(int sy=std::max(0,y-playerSpacing);sy<=std::min(int(height)-1,y+playerSpacing);++sy)
                     for(int sx=std::max(0,x-playerSpacing);sx<=std::min(int(width)-1,x+playerSpacing);++sx)

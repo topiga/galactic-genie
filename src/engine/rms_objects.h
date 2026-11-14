@@ -51,6 +51,12 @@ struct RmsResourceGroups {
     uint8_t mode=1; // Original1 loose or2 tight.
     uint32_t groups=1, perGroup=1, variance=0, radius=3;
 };
+// Original global selector-2 uses every land record, including neutral lands.
+// No terrain selector, temporary spacing or zone-clearance modifiers here.
+struct RmsGlobalGroupPlacement {
+    std::vector<RmsPlayerStart> landCenters;
+    int32_t minDistance=0, spacing=0;
+};
 // Default Gaia modifiers, one grouped row. Shared original queue nodes are preserved.
 // Optional starts select the verified near-Nova row: tight7, radius3, one group/player,
 // distances12..16, spacing7, zone7 on uniformly passable terrain.
@@ -77,7 +83,8 @@ bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
     const std::vector<uint32_t> &occupiedTiles={}, size_t maxWork=16000000,
     const std::vector<RmsPlayerStart> &novaPlayerStarts={},
     RmsResourceDistance distance=RmsResourceDistance::Near,
-    std::vector<uint8_t> *rowEligibility=nullptr);
+    std::vector<uint8_t> *rowEligibility=nullptr,
+    const RmsGlobalGroupPlacement *globalPlacement=nullptr);
 // Original stock holocron285 row: five global placements, player exclusion25,
 // temporary spacing20. Bounded to64-square grass or120-square dry/Forest21 terrain
 // with two starts;120 may retain centered411/413 trees. Slopes do not restrict it. Owned starting

@@ -19,6 +19,7 @@ static swgb::dat::DatFile fixtureData() {
  d.terrainRestrictions[11].passableBuildableDmgMultiplier={1.f,0.f,0.f,1.f,0.f,1.f,1.f,0.f,0.f,1.f,1.f,1.f,1.f,1.f,1.f,0.f,0.f,1.f,1.f,1.f,1.f,1.f,0.f,0.f,0.00999999978f,0.00999999978f,1.f,1.f,0.f,0.f,0.f,0.f,1.f,1.f,1.f,0.f,1.f,0.f,0.00999999978f,0.00999999978f,0.f,1.f,0.00999999978f,1.f,0.00999999978f,1.f,1.f,1.f,0.f,1.f,1.f,0.f,1.f};
 return d;
 }
+#include "rms_global_group_checks.h"
 int main(){auto data=fixtureData();std::string error;std::vector<swgb::RmsTimberPlacement> out;
 { uint32_t rng=1u; swgb::RmsResourceGroups cfg{2,2,5,0,2};
 assert(swgb::generateRmsGroupedResourcePlacements(7,7,{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},data,348,cfg,rng,out,&error,{}));
@@ -235,4 +236,5 @@ assert(rng==1255958651u && out.size()==0);
  assert(!swgb::generateRmsGroupedResourcePlacements(7,7,std::vector<uint8_t>(49,0),data,348,cfg,rng,out,&error));
  assert(out.empty() && rng==1);
 }
+checkRmsGlobalGroups(data);
 std::cout<<"Original grouped resource fixtures passed\n";}
