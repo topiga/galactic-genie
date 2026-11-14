@@ -100,5 +100,13 @@ static void ownedRmsSpawnChecks(swgb::Assets &assets,swgb::SoftRenderer &rendere
         game.render(renderer,960,544);
         check(game.terrainAtForTesting(13,20)==0,"Deferred foundation is consumed exactly once");
     }
+    uint32_t manyState=1;
+    check(game.initRms(script,{},64,manyState,&error,8,{1,2,3,4,5,6,7,8}),error.c_str());
+    check(game.activeObjectCount()==8,"All eight original owners imported");
+    for(int owner=1;owner<=8;++owner)
+        check(game.objectPlayer(owner)==owner && game.resource(owner,98)==375 &&
+              game.populationUsedForTesting(owner)==0 &&
+              game.populationCapacityForTesting(owner)==(owner==5?200.f:5.f),
+              "Independent owner resources and population after many-owner import");
     std::puts("PASS: owned RMS Command Center import, civilization order, population and cost accounting");
 }

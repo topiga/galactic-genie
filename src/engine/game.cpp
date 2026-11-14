@@ -1200,22 +1200,29 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         unit.unitId=placement.unitId;unit.player=uint8_t(placement.owner);
         unit.spawnId=nextId++;unit.state=2;
         unit.x=mapSize-placement.y;unit.y=placement.x;
-        unit.rotation=kPi*.5f; // Verified109 graphics have one angle; no Gaia facet draw.
+        unit.rotation=(placement.unitId==109?0.f:rmsTimberFacing(placement.facet,8))+kPi*.5f;
         scenario.units.push_back(unit);
     }
     scenario.nextUnitId=nextId;
     if (!initScenario(scenario,err)) return false;
     for (size_t index=0;index<generated.ownedObjects.size();++index) {
         const auto &placement=generated.ownedObjects[index];
-        if (auto *object=findObject(nextId-uint32_t(generated.ownedObjects.size())+uint32_t(index)))
+        if (auto *object=findObject(nextId-uint32_t(generated.ownedObjects.size())+uint32_t(index))) {
             object->pendingFoundation=placement.pendingFoundation;
+            object->animTime=placement.animationFrame;
+            object->initialIdleDelay=placement.initialIdleDelay;
+        }
         const auto &unit=assets_.dat().civs[placement.civilization].units[placement.unitId];
         float cost=0;
         for (const auto &entry:unit.costs)
             if ((entry.flag&0xff) && entry.type>=0 && entry.type<=3) cost+=entry.amount;
-        // Original completed starting buildings record their cost without charging the owner.
+        // Original starting objects record their cost without charging the owner.
         resources_[placement.owner][98]+=cost;
-        resources_[placement.owner][165]+=cost;
+        resources_[placement.owner][unit.type==dat::UT_Building?165:164]+=cost;
+        if (unit.cls==58) {
+            resources_[placement.owner][11]+=1;
+            resources_[placement.owner][37]+=1;
+        }
     }
     randomState=rng;
     return true;
@@ -14916,7 +14923,14 @@ void Game::update(float dt, const InputState &incoming) {
             std::find(masterHeroes.begin(),masterHeroes.end(),o.unit->id) != masterHeroes.end();
         if (master) recover(playerAttribute(o.player,49));
         else if (o.unit->trait & 0x20) recover(playerAttribute(o.player,96));
-        o.animTime += dt;
+        float animationDt=dt;
+        if (o.initialIdleDelay>0) {
+            if (o.state==State::Idle && o.animTime==7.f) {
+                const float held=std::min(animationDt,o.initialIdleDelay);
+                o.initialIdleDelay-=held;animationDt-=held;
+            } else o.initialIdleDelay=0;
+        }
+        o.animTime += animationDt;
         o.approachRetry = std::max(0.0f, o.approachRetry - dt);
         o.flashTime = std::max(0.0f, o.flashTime - dt);
         updateUnitCommandOrder(o, dt);
@@ -16156,9 +16170,11 @@ void Game::render(Renderer &r, int screenW, int screenH) {
                 int(viewW/(2*kTileHalfW)),int(viewH/(2*kTileHalfH)),
                 int(mapSize_-object.y),int(object.x))) continue;
         const int cx=int(object.x),cy=int(object.y);
+        const int civ=civilizationForPlayer(object.player);
+        const uint8_t foundation=object.pendingFoundation==27?(civ==2?4:civ==6?6:27):object.pendingFoundation;
         for (int y=cy-2;y<cy+2;++y) for (int x=cx-2;x<cx+2;++x)
             if (x>=0 && y>=0 && x<mapSize_ && y<mapSize_)
-                terrain_[size_t(y)*mapSize_+x]=object.pendingFoundation;
+                terrain_[size_t(y)*mapSize_+x]=foundation;
         object.pendingFoundation=255;
         foundationPainted=true;
     }

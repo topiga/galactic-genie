@@ -87,4 +87,12 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     assert not image.exists(), 'Rejected owned setup created an image'
     output=run([*owned_args,'--players',2,'--civilization',1,'--civilization',2],0)
     assert '2 native objects' in output and '1410736551' in output and image.stat().st_size>100
+    output=run(['render-rms',data,root/'tools/fixtures/owned-workers.rms',32,1,work/'workers.png',
+                '--players',1,'--civilization',1],0)
+    assert '4 native objects' in output and '1943766570' in output
+    assert (work/'workers.png').stat().st_size>100
+    run(['render-rms',data,root/'tools/fixtures/owned-workers.rms',32,1,work/'invalid-workers.png',
+         '--players',2,'--civilization',1,'--civilization',2],1)
+    assert not (work/'invalid-workers.png').exists()
+
 print('RMS file/DRS parity, includes, defines and rejection checks passed')

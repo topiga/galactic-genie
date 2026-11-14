@@ -26,6 +26,8 @@ static void check(bool value, const char *message) {
 #include "fog_edge_checks.h"
 #include "rms_spawn_checks.h"
 #include "rms_owned_spawn_checks.h"
+#include "rms_worker_spawn_checks.h"
+#include "rms_many_owned_checks.h"
 #include "rms_grouped_checks.h"
 #include "point_move_checks.h"
 
@@ -249,6 +251,8 @@ int main(int argc, char **argv) {
         fogEdgeChecks(argv[1]);
         rmsSpawnChecks(assets);
         ownedRmsSpawnChecks(assets,renderer);
+        rmsWorkerSpawnChecks(assets);
+        manyOwnedRmsMapChecks(assets.dat());
         rmsGroupedChecks(assets);
         pointMoveChecks(assets);
     fogRendering(assets,renderer);

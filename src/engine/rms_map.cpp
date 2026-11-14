@@ -40,6 +40,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     int stage = 0, base = -1;
     bool hasObjects = false;
     bool ownedObjects = false;
+    bool startingWorkers = false;
     bool playerLands = false;
     bool playerSetup = false;
     RmsResourceGroups grouping;
@@ -143,6 +144,23 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             } else row.targetTiles=tileAmount;
             if (scaling==2) row.clumps=uint64_t(row.clumps)*width*height/10000;
             terrainRows.push_back(row);
+        } else if (stage==3 && command=="create_object" && ownedObjects && !startingWorkers) {
+            if (!number(value) || value!=83 || i==tokens.size() || tokens[i++].text!="{")
+                return fail("only an83 worker row may follow owned109");
+            bool count=false,each=false,inner=false,outer=false;
+            while (i<tokens.size() && tokens[i].text!="}") {
+                const auto name=tokens[i++].text;
+                if (name=="set_place_for_every_player") { each=true; continue; }
+                if (!number(value)) return fail("missing worker parameter value");
+                if (name=="number_of_objects" && value==1) count=true;
+                else if (name=="min_distance_to_players" && value==1) inner=true;
+                else if (name=="max_distance_to_players" && value==3) outer=true;
+                else if (name!="group_placement_radius" || value!=18)
+                    return fail("unsupported worker parameter/value "+name);
+            }
+            if (i==tokens.size() || !count || !each || !inner || !outer)
+                return fail("workers require count1, every-player placement and distances1..3");
+            ++i; startingWorkers=true;
         } else if (stage == 3 && command == "create_object" && !hasObjects) {
             if (!number(value) || (value!=348 && value!=66 && value!=102 && value!=109) || i==tokens.size() || tokens[i++].text!="{")
                 return fail("only one Gaia348/66/102 or owned109 object block is supported");
@@ -192,9 +210,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if (base<0 || lands.empty()) return fail("explicit base terrain and at least one land required");
     std::vector<uint8_t> foundations;
     if (ownedObjects) {
-        if (width!=height || !playerLands || playerCount>2 || playerCivilizations.size()!=playerCount ||
+        if (width!=height || !playerLands || playerCivilizations.size()!=playerCount ||
             base!=0 || !terrainRows.empty() || lands[0].terrain!=0)
-            return fail("owned109 requires one or two explicit civilizations on square bare-grass player lands");
+            return fail("owned109 requires explicit civilizations for every owner on square bare-grass player lands");
         for (const auto ownedCiv:playerCivilizations) {
             if (!ownedCiv || ownedCiv>8 || ownedCiv>=data.civs.size() || data.civs[ownedCiv].units.size()<=109)
                 return fail("owned109 requires an original playable civilization1..8");
@@ -225,6 +243,37 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 !std::isfinite(data.terrainRestrictions[4].passableBuildableDmgMultiplier[0]))
                 return fail("owned109 requires buildable grass");
             foundations.push_back(ownedCiv==2?4:ownedCiv==6?6:27);
+        }
+    }
+    if (startingWorkers) {
+        if (playerCount!=1) return fail("RMS workers require one local owner");
+        const auto &civ=data.civs[playerCivilizations[0]];
+        if (civ.resources.size()<=84 || civ.resources[84]!=3 || civ.units.size()<=293 ||
+            data.terrainRestrictions.size()<=25)
+            return fail("unsupported worker startup resources");
+        const auto &pass=data.terrainRestrictions[25].passableBuildableDmgMultiplier;
+        for (int terrain:{0,4,6,27})
+            if (size_t(terrain)>=pass.size() || !std::isfinite(pass[terrain]) || pass[terrain]<=0)
+                return fail("workers require connected passable grass and foundations");
+        for (int id:{83,293}) {
+            const auto &u=civ.units[id];
+            const int standing=playerCivilizations[0]<=6?7016+playerCivilizations[0]:8624+playerCivilizations[0];
+            const auto *graphic=data.graphic(standing);
+            if (!u.exists || u.id!=id || u.type!=dat::UT_Creatable || u.cls!=58 || u.hitPoints!=40 ||
+                u.collisionSize[0]!=.2f || u.collisionSize[1]!=.2f || u.collisionSize[2]!=2 ||
+                u.clearanceSize[0]!=.2f || u.clearanceSize[1]!=.2f || u.lineOfSight!=5 ||
+                u.terrainRestriction!=25 || u.headUnit!=-1 || u.trainSound!=570 || u.speed!=.8f ||
+                u.trackingUnit!=-1 || u.trackingUnitMode || u.trackingUnitDensity!=0 ||
+                u.flyMode || u.hillMode || u.trait!=16 || u.convertTerrain ||
+                u.standingGraphic[0]!=standing || !graphic || graphic->sequenceType!=7 ||
+                graphic->frameCount!=8 || graphic->angleCount!=8 || graphic->frameDuration!=1 ||
+                graphic->replayDelay!=3 || graphic->soundId!=-1 ||
+                !graphic->angleSounds.empty() || u.costs[0].type!=0 || u.costs[0].amount!=50 ||
+                (u.costs[0].flag&255)!=1 || u.resourceStorages[0].type!=4 ||
+                u.resourceStorages[0].amount!=-1 || u.resourceStorages[0].flag!=2 ||
+                u.resourceStorages[1].type!=11 || u.resourceStorages[1].amount!=1 ||
+                u.resourceStorages[1].flag!=2)
+                return fail("unsupported starting worker prototype or graphics");
         }
     }
     auto safeTerrain = [&](uint8_t terrain, bool allowScenery=false) {
@@ -302,9 +351,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             std::any_of(generated.terrain.begin(),generated.terrain.end(),[](uint8_t tile){return tile!=0;}))
             return fail("owned109 requires scenery-free grass");
         // shortcut: close starts need startup sight-mask timing; accept only separated owners until traced.
-        if (playerCount==2 &&
-            std::abs(generated.playerStarts[0].x-generated.playerStarts[1].x)<11 &&
-            std::abs(generated.playerStarts[0].y-generated.playerStarts[1].y)<11)
+        for (uint32_t other=1;other<playerCount;++other)
+        if (std::abs(generated.playerStarts[0].x-generated.playerStarts[other].x)<11 &&
+            std::abs(generated.playerStarts[0].y-generated.playerStarts[other].y)<11)
             return fail("owned109 close starts require startup visibility callbacks");
         for (uint16_t owner=1;owner<=playerCount;++owner) {
             const auto &center=generated.playerStarts[owner-1];
@@ -316,11 +365,43 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             const uint8_t foundation=foundations[owner-1];
             generated.ownedObjects.push_back({float(center.x),float(center.y),owner,
                                              playerCivilizations[owner-1],109,
-                                             uint8_t(owner==1?255:foundation)});
+                                             uint8_t(owner==1?255:27)});
             // Local completed109 paints its clearance footprint (557c10/557cf0).
             if (owner==1) for (int32_t y=center.y-2;y<center.y+2;++y)
                 for (int32_t x=center.x-2;x<center.x+2;++x)
                     generated.terrain[size_t(y)*width+x]=foundation;
+        }
+        if (startingWorkers) {
+            const auto &center=generated.playerStarts[0];
+            // shortcut: edge-clipped and nonlocal worker callbacks need composed original fixtures.
+            if (center.x<3 || center.y<3 || center.x>int32_t(width)-4 || center.y>int32_t(height)-4)
+                return fail("workers require an unclipped starting area");
+            std::vector<uint32_t> candidates;
+            if (!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,3,rng,candidates,err)) return false;
+            int remaining=3;
+            int16_t unitId=83;
+            for (const auto tile:candidates) {
+                const int x=tile%width,y=tile/width;
+                if (x==center.x && y==center.y) continue;
+                const float px=x+.5f,py=y+.5f;
+                if (std::abs(px-center.x)<2.2f && std::abs(py-center.y)<2.2f) continue;
+                if (unitId==83 && genieRandomDraw(rng)>16383) unitId=293;
+                uint8_t facet=0,frame=0;
+                float delay=0;
+                for (int draw=0;draw<7;++draw) {
+                    const auto value=genieRandomDraw(rng);
+                    if (draw==2) {
+                        const float elapsed=float(value*11u)*(1.f/32767.f);
+                        frame=uint8_t(std::min(7,int(elapsed)));
+                        delay=std::max(0.f,elapsed-8.f);
+                    }
+                    if (draw==3) facet=uint8_t((value*8u/32767u+7)%8);
+                }
+                generated.ownedObjects.push_back({px,py,1,playerCivilizations[0],unitId,255,facet,frame,delay});
+                if (!--remaining) break;
+            }
+            // The verified unclipped ring always has room; don't invent fallback placement.
+            if (remaining) return fail("worker starting area exhausted");
         }
     } else if (hasObjects) {
         const bool ok=grouping.mode ?

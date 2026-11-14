@@ -8,6 +8,8 @@
 static void check(bool ok,const std::string &message) {
     if (!ok) { std::cerr<<message<<'\n'; std::exit(1); }
 }
+#include "rms_many_owned_checks.h"
+
 int main() {
     using namespace swgb;
     dat::DatFile data;
@@ -277,7 +279,7 @@ int main() {
             const auto &cc=map.ownedObjects[owner];
             check(cc.owner==owner+1 && cc.civilization==(owner?civ:1) &&
                   cc.x==twoX[seed][owner] && cc.y==twoY[seed][owner] &&
-                  cc.pendingFoundation==(owner?(civ==2?4:civ==6?6:27):255),
+                  cc.pendingFoundation==(owner?27:255),
                   "original two-owner placement and deferred terrain byte");
         }
         hash=2166136261u;
@@ -288,12 +290,13 @@ int main() {
     check(!generateRmsMap(script,{},16,16,data,state,map,&error,2,{1,2}) && state==1 &&
           map.terrain.empty() && map.ownedObjects.empty() && error.find("close starts")!=std::string::npos,
           "Unclosed startup sight contexts fail atomically");
+    manyOwnedRmsMapChecks(data);
     auto rejectsOwned=[&](uint32_t count,const std::vector<uint16_t> &civs) {
         state=12345;
         check(!generateRmsMap(script,{},32,32,data,state,map,&error,count,civs) && state==12345 &&
               map.terrain.empty() && map.ownedObjects.empty() && !error.empty(),"unsupported owned109 must fail atomically");
     };
-    rejectsOwned(1,{}); rejectsOwned(1,{0}); rejectsOwned(1,{9}); rejectsOwned(2,{1}); rejectsOwned(3,{1,2,3});
+    rejectsOwned(1,{}); rejectsOwned(1,{0}); rejectsOwned(1,{9}); rejectsOwned(2,{1}); rejectsOwned(3,{1,2});
     for (const auto &row:{"create_object 109 { set_place_for_every_player }",
                          "create_object 109 { set_place_for_every_player number_of_objects 2 min_distance_to_players 0 max_distance_to_players 0 }",
                          "create_object 109 { set_place_for_every_player number_of_objects 1 min_distance_to_players 1 max_distance_to_players 1 }",

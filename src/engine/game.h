@@ -194,6 +194,10 @@ public:
         const Object *o = findObject(spawnId);
         return o ? o->facing : 0.0f;
     }
+    std::array<float,2> objectAnimationForTesting(uint32_t id) const {
+        const Object *o=findObject(id);
+        return o?std::array<float,2>{o->animTime,o->initialIdleDelay}:std::array<float,2>{};
+    }
     void groupMoveForTesting(const std::vector<uint32_t> &spawnIds, float x,
                              float y, int formation = -1);
     const FrameStats &stats() const { return stats_; }
@@ -661,6 +665,7 @@ private:
         float facing = 0; // radians, 0 = +x world axis
         State state = State::Idle;
         float animTime = 0;
+        float initialIdleDelay = 0;
         float stateTime = 0;
         float targetX = 0, targetY = 0;
         float hitPoints = 1, maxHitPoints = 1;
