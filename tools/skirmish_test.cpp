@@ -41,6 +41,7 @@ static void check(bool value, const char *message) {
 #include "rms_many_forest_cleanup_checks.h"
 #include "rms_many_forest_worker_checks.h"
 #include "rms_many_clipped_worker_checks.h"
+#include "rms_packaged_worker_checks.h"
 #include "rms_grouped_checks.h"
 #include "point_move_checks.h"
 
@@ -279,6 +280,8 @@ int main(int argc, char **argv) {
         manyForestCleanupChecks(assets);
         manyForestWorkerChecks(assets);
         manyClippedWorkerChecks(assets);
+        packagedWorkerChecks(assets);
+        packagedWorkerBoundaryChecks(assets);
         rmsGroupedChecks(assets);
         pointMoveChecks(assets);
     fogRendering(assets,renderer);

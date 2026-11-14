@@ -435,5 +435,16 @@ Command Center, worker and leading decoration rows accept an omitted
 `number_of_objects`; unsupported explicit quantities still fail. CLI regression
 checks the complete foundation/decor-cleanup/worker fixture against explicit
 counts, including final RNG and rendered output. Packaged shared resource54103
-uses this default, but its worker distances6..6 and later scout/resource rows
-still require separate implementation and original-executable comparisons.
+uses this default. Its worker distances6..6 and default group radius3 now use
+original comparisons for three and eight owners, two seeds each. The existing
+1..3 diagnostic profile remains supported. Candidate generation uses the outer
+distance; integer tiles within both coordinate distances of any player start
+are excluded before the placement gate. The four stock fixtures reproduce
+worker coordinates, variants, animation, terrain and final RNG, then verify
+native import and per-owner costs. Six additional original cases cover two-owner
+forest with and without decoration cleanup, plus eight-owner 8×8 starts: the
+latter correctly place no workers because every candidate is inside another
+start's exclusion area. Other distance/radius combinations still
+fail; later scout/resource rows and complete packaged-map startup remain
+outside this proof. Local evidence: `rms-worker-packaged54103-stage-oracle-2026-11-14.json`
+and the independent `rms-worker-packaged54103-model-2026-11-14.py`.

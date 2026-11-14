@@ -41,6 +41,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     bool hasObjects = false;
     bool ownedObjects = false;
     bool startingWorkers = false;
+    int workerMinDistance=1,workerMaxDistance=3;
     bool startingStalagmites = false;
     bool playerLands = false;
     bool playerSetup = false;
@@ -149,20 +150,23 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if (!number(value) || value!=83 || i==tokens.size() || tokens[i++].text!="{")
                 return fail("only an83 worker row may follow owned109");
             // Original4e3850 initializes object quantity to1 before parsing attributes.
-            bool count=true,each=false,inner=false,outer=false;
+            bool count=true,each=false;
+            int inner=-1,outer=-1,groupRadius=-1;
             while (i<tokens.size() && tokens[i].text!="}") {
                 const auto name=tokens[i++].text;
                 if (name=="set_place_for_every_player") { each=true; continue; }
                 if (!number(value)) return fail("missing worker parameter value");
                 if (name=="number_of_objects" && value==1) count=true;
-                else if (name=="min_distance_to_players" && value==1) inner=true;
-                else if (name=="max_distance_to_players" && value==3) outer=true;
-                else if (name!="group_placement_radius" || value!=18)
-                    return fail("unsupported worker parameter/value "+name);
+                else if (name=="min_distance_to_players") inner=value;
+                else if (name=="max_distance_to_players") outer=value;
+                else if (name=="group_placement_radius" && value>=0) groupRadius=value;
+                else return fail("unsupported worker parameter/value "+name);
             }
-            if (i==tokens.size() || !count || !each || !inner || !outer)
-                return fail("workers require count1, every-player placement and distances1..3");
-            ++i; startingWorkers=true;
+            const bool diagnostic=inner==1 && outer==3 && (groupRadius==-1 || groupRadius==18);
+            const bool packaged=inner==6 && outer==6 && (groupRadius==-1 || groupRadius==3);
+            if (i==tokens.size() || !count || !each || (!diagnostic && !packaged))
+                return fail("workers require count1, every-player placement and verified distances1..3 or6..6");
+            ++i; startingWorkers=true;workerMinDistance=inner;workerMaxDistance=outer;
         } else if (stage == 3 && command == "create_object" && !hasObjects) {
             if (!number(value) || (value!=348 && value!=66 && value!=102 && value!=109 && value!=573) || i==tokens.size() || tokens[i++].text!="{")
                 return fail("expected Gaia348/66/102, owned109, or leading Gaia573 block");
@@ -422,13 +426,13 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         if (startingWorkers) for (uint16_t owner=1;owner<=playerCount;++owner) {
             const auto &center=generated.playerStarts[owner-1];
             std::vector<uint32_t> candidates;
-            if (!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,3,rng,candidates,err)) return false;
+            if (!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,workerMaxDistance,rng,candidates,err)) return false;
             int remaining=3;
             int16_t unitId=83;
             for (const auto tile:candidates) {
                 const int x=tile%width,y=tile/width;
                 if (std::any_of(generated.playerStarts.begin(),generated.playerStarts.end(),[&](const auto &start) {
-                    return x==start.x && y==start.y;
+                    return std::abs(x-start.x)<workerMinDistance && std::abs(y-start.y)<workerMinDistance;
                 })) continue;
                 const float px=x+.5f,py=y+.5f;
                 // Original RMS placement ignores existing workers, but blocks every owner's CC.
