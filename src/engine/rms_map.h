@@ -32,8 +32,10 @@ struct RmsMap {
 // The RMS random_placement directive itself does not select this game setting.
 // Elevation executes before terrain, including late/repeated/empty sections.
 // Terrain rows use original height/slope filters. Post-elevation411/413 scenery
-// is supported; owned startup on nonflat maps remains unverified.
-// Player/team-land connections execute after terrain; integrated players are enemies.
+// is supported. A bounded120-square Empire Forest21 profile supports elevated
+// CC/worker/scout startup, with terrain connectivity and final placement gates.
+// Player/team-land connections execute after terrain. Optional diplomacy includes
+// Gaia row/column0; allies currently require randomized starts and no owned rows.
 // Rejects other stages/commands; not a complete packaged random-map generator.
 // Also supports one to eight owned109 starts on bare grass0 with explicit
 // civilizations and zero placement distances. Enemy foundation remains deferred.
@@ -46,10 +48,11 @@ struct RmsMap {
 // tight near-Nova66 row (7 objects, radius3, distances12..16, spacing/zone7).
 // Two civilization1 randomized starts may instead append the stock holocron285
 // row on64 grass or120 grass/dry forest. The120 profile may continue with stock
-// forage, near/medium/far Nova and near/far ore, in that order.
+// forage, near/medium/far Nova, near/far ore and two Nerf rows, in that order.
 // RNG is the shared CRT state at script entry. Failure clears output and leaves RNG unchanged.
 bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::string> &defines,
                     uint32_t width, uint32_t height, const dat::DatFile &data,
                     uint32_t &randomState, RmsMap &out, std::string *err = nullptr, uint32_t playerCount = 2,
-                    const std::vector<uint16_t> &playerCivilizations = {});
+                    const std::vector<uint16_t> &playerCivilizations = {},
+                    const std::vector<std::vector<uint8_t>> &diplomacy = {});
 } // namespace swgb

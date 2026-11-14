@@ -33,6 +33,8 @@ static void check(bool value, const char *message) {
 #include "rms_holocron_map_checks.h"
 #include "rms_forage_checks.h"
 #include "rms_resource_prefix_checks.h"
+#include "rms_herd_checks.h"
+#include "rms_forest21_owned_checks.h"
 #include "rms_elevation_import_checks.h"
 #include "rms_many_owned_checks.h"
 #include "rms_owned_forest_checks.h"
@@ -280,6 +282,8 @@ int main(int argc, char **argv) {
         rmsHolocronMapChecks(assets.dat());
         rmsForageChecks(assets.dat());
         rmsResourcePrefixChecks(assets);
+        rmsHerdChecks(assets);
+        checkRmsForest21Owned(assets);
         manyOwnedRmsMapChecks(assets.dat());
         ownedForestSpawnChecks(assets);
         overlappingRmsFoundationChecks(assets,renderer);

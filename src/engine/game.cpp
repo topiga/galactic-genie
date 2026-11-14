@@ -1158,11 +1158,12 @@ static float rmsTimberFacing(uint8_t facet,int angleCount=12) {
 
 bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string> &defines,
                    int mapSize, uint32_t &randomState, std::string *err, uint32_t playerCount,
-                   const std::vector<uint16_t> &playerCivilizations) {
+                   const std::vector<uint16_t> &playerCivilizations,
+                   const std::vector<std::vector<uint8_t>> &diplomacy) {
     uint32_t rng = randomState;
     RmsMap generated;
     if (!generateRmsMap(script,defines,mapSize,mapSize,assets_.dat(),rng,generated,err,playerCount,
-                        playerCivilizations)) return false;
+                        playerCivilizations,diplomacy)) return false;
     Scenario scenario;
     scenario.map.width=scenario.map.height=generated.width;
     scenario.map.tiles.resize(generated.terrain.size());
@@ -1196,7 +1197,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         player.civilization=scenario.civilizations[placement.owner-1]=placement.civilization;
         player.color=placement.owner-1;player.populationLimit=200;
         for (const auto &other:generated.ownedObjects)
-            player.diplomacy[other.owner]=other.owner==placement.owner?0:3;
+            player.diplomacy[other.owner]=diplomacy.empty()?(other.owner==placement.owner?0:3):diplomacy[placement.owner][other.owner];
         ScenarioUnit unit;
         unit.unitId=placement.unitId;unit.player=uint8_t(placement.owner);
         unit.spawnId=nextId++;unit.state=2;
@@ -1204,6 +1205,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         unit.rotation=(placement.unitId==109?0.f:rmsTimberFacing(placement.facet,8))+kPi*.5f;
         scenario.units.push_back(unit);
     }
+    const uint32_t resourceIdBase=nextId;
     for (const auto &placement:generated.resourcesAfterOwned)
         placeResource(placement.unitId,placement.x,placement.y,placement.facet,nextId++);
     scenario.nextUnitId=nextId;
@@ -1236,6 +1238,15 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         if (unit.cls==58 || unit.cls==47) {
             resources_[placement.owner][11]+=1;
             resources_[placement.owner][unit.cls==58?37:40]+=1;
+        }
+    }
+    for(size_t index=0;index<generated.resourcesAfterOwned.size();++index) {
+        const auto &placement=generated.resourcesAfterOwned[index];
+        if(placement.unitId!=594) continue;
+        if(auto *object=findObject(resourceIdBase+uint32_t(index))) {
+            const auto *graphic=assets_.dat().graphic(object->unit->standingGraphic[0]);
+            object->animTime=placement.animationFrame*graphic->frameDuration;
+            object->initialIdleDelay=placement.initialIdleDelay;
         }
     }
     randomState=rng;

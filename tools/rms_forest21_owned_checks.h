@@ -4,7 +4,8 @@
 // Original495f80/4ddd40 on native-generated authored geometry. Geometry helpers
 // have separate original execution tests; these fixtures cover composed scenery
 // and owned startup, not a fresh original run of the entire RMS script.
-static void checkRmsForest21Owned(const swgb::dat::DatFile &data) {
+static void checkRmsForest21Owned(swgb::Assets &assets) {
+    const auto &data=assets.dat();
     const std::string source=R"(<LAND_GENERATION> base_terrain 6 create_player_lands { terrain_type 6 base_size 3 number_of_tiles 60 }
 <ELEVATION_GENERATION> create_elevation 2 { base_terrain 6 number_of_tiles 200 number_of_clumps 4 }
 <TERRAIN_GENERATION> create_terrain 21 { base_terrain 6 number_of_tiles 100 number_of_clumps 4 spacing_to_other_terrain_types 1 set_avoid_player_start_areas }
@@ -16,7 +17,21 @@ create_object 550 { set_place_for_every_player min_distance_to_players 7 max_dis
     swgb::RmsScript script;std::string error;
     check(script.load(0,[&](int32_t id,std::vector<uint8_t>&out) {
         if(id)return false;out.assign(source.begin(),source.end());return true;
-    },{},&error),error);
+    },{},&error),error.c_str());
+    auto checkImport=[&](uint32_t seed,const swgb::RmsMap &map,uint32_t final) {
+        swgb::Game game(assets);uint32_t state=seed;
+        check(game.initRms(script,{},120,state,&error,2,{1,1}),error.c_str());
+        check(state==final && game.activeObjectCount()==map.scenery.size()+10,"Forest21 native import count/RNG");
+        for(size_t i=0;i<map.ownedObjects.size();++i) {
+            const auto id=uint32_t(map.scenery.size()+1+i);const auto &expected=map.ownedObjects[i];
+            const auto position=game.objectPosition(id);const auto animation=game.objectAnimationForTesting(id);
+            const auto &unit=data.civs[1].units[expected.unitId];const auto *graphic=data.graphic(unit.standingGraphic[0]);
+            check(game.objectUnitId(id)==expected.unitId && game.objectPlayer(id)==expected.owner &&
+                position[0]==expected.x && position[1]==expected.y &&
+                animation[0]==expected.animationFrame*graphic->frameDuration && animation[1]==expected.initialIdleDelay,
+                "Forest21 native starting IDs/positions/animation");
+        }
+    };
     auto hash=[](const std::vector<uint8_t>&bytes) {
         uint32_t value=2166136261u;for(auto b:bytes)value=(value^b)*16777619u;return value;
     };
@@ -24,7 +39,9 @@ create_object 550 { set_place_for_every_player min_distance_to_players 7 max_dis
     struct Tree { int tile,facet; };
     {
         uint32_t rng=1u;swgb::RmsMap map;
-        check(swgb::generateRmsMap(script,{},120,120,data,rng,map,&error,2,{1,1}),error);
+        const auto seed=rng;
+        check(swgb::generateRmsMap(script,{},120,120,data,rng,map,&error,2,{1,1}),error.c_str());
+        checkImport(seed,map,rng);
         check(rng==2607337858u && map.ownedObjects.size()==10,"Forest21 owned final RNG/count");
         check(hash(map.terrain)==1015550221u,"Forest21 original terrain");
         check(hash(map.elevation)==4089223887u,"Forest21 original elevation");
@@ -58,7 +75,9 @@ create_object 550 { set_place_for_every_player min_distance_to_players 7 max_dis
     }
     {
         uint32_t rng=12345u;swgb::RmsMap map;
-        check(swgb::generateRmsMap(script,{},120,120,data,rng,map,&error,2,{1,1}),error);
+        const auto seed=rng;
+        check(swgb::generateRmsMap(script,{},120,120,data,rng,map,&error,2,{1,1}),error.c_str());
+        checkImport(seed,map,rng);
         check(rng==2786029445u && map.ownedObjects.size()==10,"Forest21 owned final RNG/count");
         check(hash(map.terrain)==520995590u,"Forest21 original terrain");
         check(hash(map.elevation)==2763925479u,"Forest21 original elevation");

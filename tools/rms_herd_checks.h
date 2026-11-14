@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 // Original twelve-row stage, actual Gaia Nerf594 factories and retained resources.
-static void rmsHerdChecks(const swgb::dat::DatFile &data) {
+static void rmsHerdChecks(swgb::Assets &assets) {
+ const auto &data=assets.dat();
  struct Run {unsigned count;uint8_t value;};
  struct Point {float x,y,heading,delay;unsigned facet,frame;};
  const struct {uint32_t states[3];swgb::RmsPlayerStart starts[2];std::vector<Run> terrain,eligible;std::vector<uint32_t> occupied;Point points[16];} cases[]={
@@ -10,6 +11,7 @@ static void rmsHerdChecks(const swgb::dat::DatFile &data) {
 {{2746381968u,861252074u,1470866806u},{{72,14},{46,82}},{{1510,0},{4,27},{116,0},{4,27},{116,0},{4,27},{116,0},{4,27},{12526,0}},{{69,1},{13,0},{107,1},{13,0},{107,1},{13,0},{107,1},{13,0},{107,1},{13,0},{107,1},{13,0},{107,1},{27,0},{93,1},{27,0},{93,1},{27,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{80,1},{15,0},{10,1},{15,0},{80,1},{15,0},{10,1},{15,0},{80,1},{15,0},{84,1},{15,0},{6,1},{15,0},{84,1},{15,0},{6,1},{15,0},{84,1},{15,0},{6,1},{15,0},{84,1},{15,0},{6,1},{15,0},{84,1},{15,0},{6,1},{15,0},{84,1},{15,0},{6,1},{15,0},{84,1},{15,0},{6,1},{15,0},{3,1},{15,0},{66,1},{15,0},{6,1},{15,0},{3,1},{15,0},{66,1},{15,0},{6,1},{15,0},{3,1},{23,0},{58,1},{15,0},{6,1},{15,0},{3,1},{23,0},{58,1},{15,0},{6,1},{15,0},{3,1},{23,0},{58,1},{15,0},{6,1},{15,0},{3,1},{23,0},{58,1},{15,0},{24,1},{23,0},{58,1},{15,0},{24,1},{23,0},{58,1},{15,0},{24,1},{23,0},{97,1},{23,0},{97,1},{23,0},{97,1},{23,0},{97,1},{23,0},{97,1},{23,0},{97,1},{23,0},{105,1},{15,0},{105,1},{15,0},{692,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{57,1},{15,0},{33,1},{15,0},{57,1},{15,0},{33,1},{15,0},{57,1},{15,0},{33,1},{15,0},{57,1},{15,0},{33,1},{15,0},{57,1},{15,0},{33,1},{15,0},{57,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{343,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{6,1},{13,0},{86,1},{15,0},{6,1},{13,0},{86,1},{15,0},{6,1},{13,0},{86,1},{15,0},{6,1},{21,0},{78,1},{15,0},{6,1},{21,0},{78,1},{15,0},{6,1},{21,0},{99,1},{21,0},{91,1},{29,0},{91,1},{29,0},{91,1},{29,0},{91,1},{29,0},{91,1},{29,0},{91,1},{29,0},{91,1},{29,0},{91,1},{29,0},{91,1},{29,0},{91,1},{29,0},{91,1},{29,0},{91,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{1513,1}},{195,196,315,434,435,554,1407,1408,1510,1511,1512,1513,1527,1528,1630,1631,1632,1633,1648,1750,1751,1752,1753,1870,1871,1872,1873,2823,2824,2944,2945,3063,3064,3183,3522,3523,3643,3763,4160,4161,4281,4401,4527,4528,4529,4647,6916,7036,7037,7157,7829,7949,8068,8069,8188,9644,9645,9646,9647,9764,9765,9766,9767,9884,9885,9886,9887,10004,10005,10006,10007,10106,10224,10225,10226,10967,11086,11087,11205,11206,11207,11453,11454,11573,11574,11575,11694,11695,11918,12038,12039,12040},{{63.5f,11.5f,4.71238899230957f,0.0f,5,3},{59.5f,9.5f,2.356194496154785f,0.0f,2,0},{61.5f,9.5f,5.497786998748779f,0.0f,6,1},{60.5f,13.5f,4.71238899230957f,0.0f,5,5},{44.5f,71.5f,5.497786998748779f,0.0f,6,4},{41.5f,71.5f,3.9269907474517822f,0.0f,4,6},{42.5f,71.5f,3.9269907474517822f,0.0f,4,7},{45.5f,69.5f,5.497786998748779f,0.0f,6,0},{51.5f,20.5f,3.9269907474517822f,0.0f,4,0},{49.5f,21.5f,2.356194496154785f,0.0f,2,2},{94.5f,25.5f,4.71238899230957f,0.0f,5,4},{94.5f,23.5f,4.71238899230957f,0.0f,5,0},{64.5f,94.5f,1.5707963705062866f,0.0f,1,4},{66.5f,92.5f,0.0f,0.0f,7,2},{17.5f,50.5f,0.0f,0.0f,7,3},{16.5f,50.5f,3.1415927410125732f,0.0f,3,6}}},
 {{698240864u,958947642u,3923128262u},{{14,77},{82,41}},{{9012,0},{4,27},{116,0},{4,27},{116,0},{4,27},{116,0},{4,27},{5024,0}},{{1413,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{85,1},{15,0},{5,1},{15,0},{85,1},{15,0},{5,1},{15,0},{85,1},{15,0},{5,1},{15,0},{85,1},{15,0},{5,1},{15,0},{85,1},{15,0},{5,1},{15,0},{85,1},{15,0},{5,1},{15,0},{85,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{1057,1},{13,0},{107,1},{13,0},{107,1},{13,0},{107,1},{13,0},{107,1},{13,0},{107,1},{13,0},{107,1},{13,0},{99,1},{21,0},{18,1},{15,0},{66,1},{21,0},{18,1},{15,0},{66,1},{21,0},{18,1},{15,0},{66,1},{21,0},{18,1},{15,0},{66,1},{21,0},{18,1},{15,0},{66,1},{21,0},{18,1},{15,0},{66,1},{15,0},{24,1},{15,0},{66,1},{15,0},{24,1},{15,0},{66,1},{15,0},{24,1},{15,0},{66,1},{15,0},{24,1},{15,0},{66,1},{15,0},{24,1},{15,0},{12,1},{13,0},{41,1},{15,0},{24,1},{15,0},{12,1},{13,0},{41,1},{15,0},{24,1},{15,0},{12,1},{13,0},{41,1},{15,0},{24,1},{15,0},{12,1},{13,0},{41,1},{15,0},{24,1},{15,0},{12,1},{13,0},{74,1},{15,0},{18,1},{13,0},{12,1},{15,0},{47,1},{15,0},{18,1},{13,0},{12,1},{15,0},{47,1},{15,0},{18,1},{13,0},{12,1},{15,0},{47,1},{15,0},{18,1},{13,0},{12,1},{15,0},{47,1},{15,0},{18,1},{13,0},{12,1},{15,0},{47,1},{15,0},{18,1},{13,0},{12,1},{15,0},{47,1},{15,0},{18,1},{13,0},{12,1},{15,0},{47,1},{15,0},{18,1},{13,0},{12,1},{15,0},{47,1},{15,0},{43,1},{15,0},{47,1},{15,0},{43,1},{15,0},{47,1},{15,0},{43,1},{15,0},{47,1},{15,0},{43,1},{24,0},{38,1},{15,0},{43,1},{24,0},{38,1},{15,0},{35,1},{32,0},{38,1},{15,0},{35,1},{32,0},{88,1},{15,0},{2,1},{15,0},{88,1},{15,0},{2,1},{15,0},{88,1},{15,0},{2,1},{15,0},{68,1},{13,0},{7,1},{15,0},{2,1},{15,0},{68,1},{13,0},{7,1},{15,0},{2,1},{15,0},{68,1},{13,0},{7,1},{15,0},{2,1},{15,0},{68,1},{13,0},{7,1},{15,0},{2,1},{15,0},{68,1},{13,0},{7,1},{15,0},{2,1},{15,0},{68,1},{13,0},{7,1},{15,0},{2,1},{15,0},{68,1},{13,0},{7,1},{15,0},{2,1},{15,0},{68,1},{13,0},{7,1},{15,0},{2,1},{15,0},{68,1},{13,0},{7,1},{15,0},{85,1},{13,0},{7,1},{15,0},{85,1},{13,0},{7,1},{15,0},{85,1},{13,0},{7,1},{15,0},{85,1},{13,0},{7,1},{15,0},{85,1},{13,0},{7,1},{15,0},{85,1},{13,0},{7,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{105,1},{15,0},{1645,1}},{2260,2261,2380,2381,3199,3200,3201,3320,3321,3440,3441,4760,4761,4762,4763,4880,4881,4882,4883,5000,5001,5002,5003,5120,5121,5122,5123,5831,5832,5951,5952,6071,6072,6665,6784,6785,6824,6903,6904,6943,6944,6945,7810,7930,7931,7932,8049,8050,8734,8735,8736,8737,8794,8795,8914,8915,9012,9013,9014,9015,9132,9133,9134,9135,9252,9253,9254,9255,9372,9373,9374,9375,10002,10003,10004,10124,10227,10347,10348,10349,10350,10467,10470,10924,10925,10926,10927,11046,11787,11907,12026,12027},{{14.5f,87.5f,0.0f,0.0f,7,7},{13.5f,88.5f,5.497786998748779f,0.0f,6,0},{14.5f,85.5f,1.5707963705062866f,0.0f,1,5},{13.5f,84.5f,3.1415927410125732f,0.0f,3,3},{78.5f,49.5f,0.0f,0.0f,7,6},{78.5f,48.5f,4.71238899230957f,0.0f,5,6},{79.5f,48.5f,0.7853981852531433f,0.0f,0,7},{80.5f,48.5f,0.0f,0.0f,7,0},{3.5f,52.5f,3.1415927410125732f,0.0f,3,2},{4.5f,53.5f,4.71238899230957f,0.0f,5,4},{31.5f,56.5f,2.356194496154785f,0.0f,2,0},{30.5f,59.5f,1.5707963705062866f,0.0f,1,1},{75.5f,12.5f,5.497786998748779f,0.0f,6,6},{76.5f,15.5f,2.356194496154785f,0.0f,2,0},{108.5f,47.5f,4.71238899230957f,0.0f,5,5},{109.5f,45.5f,5.497786998748779f,0.0f,6,2}}},
 };
+ size_t caseIndex=0;
  for(const auto &c:cases) {
   std::vector<uint8_t> terrain,eligible;for(auto run:c.terrain)terrain.insert(terrain.end(),run.count,run.value);for(auto run:c.eligible)eligible.insert(eligible.end(),run.count,run.value);
   auto retained=eligible;auto occupied=c.occupied;std::vector<swgb::RmsPlayerStart> starts(c.starts,c.starts+2);
@@ -26,6 +28,48 @@ static void rmsHerdChecks(const swgb::dat::DatFile &data) {
     // Original Nerfs do not block another animal at the same tile.
    }
    check(eligible==retained,"loose Nerf rows retain prior eligibility");
+  }
+  const bool forest=caseIndex<2;const uint32_t seed=(caseIndex++%2)?12345u:1u;
+  std::string source=std::string("<LAND_GENERATION> base_terrain ")+(forest?"41":"0")+
+    " create_player_lands { terrain_type "+(forest?"9":"0")+" base_size 3 number_of_tiles 60 } ";
+  if(forest) source+="<TERRAIN_GENERATION> create_terrain 10 { base_terrain 41 number_of_tiles 37 number_of_clumps 4 spacing_to_other_terrain_types 1 set_avoid_player_start_areas } create_terrain 6 { base_terrain 9 number_of_tiles 9 number_of_clumps 2 clumping_factor 6 } ";
+  source+=R"(<OBJECTS_GENERATION>
+    create_object 109 { number_of_objects 1 set_place_for_every_player min_distance_to_players 0 max_distance_to_players 0 }
+    create_object 83 { number_of_objects 1 set_place_for_every_player min_distance_to_players 6 max_distance_to_players 6 }
+    create_object 550 { set_place_for_every_player min_distance_to_players 7 max_distance_to_players 9 match_player_civ }
+    create_object 285 { number_of_objects 5 min_distance_to_players 25 temp_min_distance_group_placement 20 })";
+  const int counts[]={6,7,4,4,5,4},inner[]={10,12,18,25,14,20},outer[]={12,16,26,35,18,26};
+  for(int row=0;row<6;++row) {
+    const std::string object="create_object "+std::to_string(row>=4?102:row?66:59)+
+      " { set_place_for_every_player set_gaia_object_only set_tight_grouping number_of_objects "+std::to_string(counts[row])+
+      " group_placement_radius "+std::to_string(row>=4?2:3)+" min_distance_to_players "+std::to_string(inner[row])+
+      " max_distance_to_players "+std::to_string(outer[row])+" min_distance_group_placement "+std::to_string(row?7:6)+
+      " max_distance_to_other_zones 7 } ";
+    source+=object;
+  }
+  for(int row=0;row<2;++row) {
+    source+=" create_object 594 { set_place_for_every_player set_gaia_object_only set_loose_grouping number_of_objects "+
+      std::to_string(row?2:4)+" number_of_groups "+std::to_string(row?2:1)+
+      " min_distance_to_players "+std::to_string(row?14:10)+" max_distance_to_players "+std::to_string(row?30:12)+" } ";
+    swgb::RmsScript script;std::string error;
+    check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes){if(id)return false;bytes.assign(source.begin(),source.end());return true;},{},&error),error.c_str());
+    uint32_t state=seed;swgb::RmsMap map;
+    check(swgb::generateRmsMap(script,{},120,120,data,state,map,&error,2,{1,1}),error.c_str());
+    const auto count=size_t(8*(row+1));const uint32_t final=c.states[row+1]*214013u+2531011u;
+    check(state==final && map.terrain==terrain && map.resourcesAfterOwned.size()==65+count,"original whole herd-prefix terrain/count/RNG");
+    swgb::Game game(assets);state=seed;
+    check(game.initRms(script,{},120,state,&error,2,{1,1}),error.c_str());
+    check(state==final && game.activeObjectCount()==map.scenery.size()+75+count,"herd native import count/RNG");
+    for(size_t j=0;j<count;++j) {
+      const auto &expected=c.points[j];const auto &actual=map.resourcesAfterOwned[65+j];
+      check(actual.unitId==594 && actual.x==expected.x && actual.y==expected.y && actual.facet==expected.facet &&
+        actual.headingRadians==expected.heading && actual.animationFrame==expected.frame && actual.initialIdleDelay==expected.delay,
+        "original herd prefix coordinate/appearance");
+      const auto id=uint32_t(map.scenery.size()+76+j);const auto position=game.objectPosition(id);
+      const auto animation=game.objectAnimationForTesting(id);
+      check(game.objectUnitId(id)==594 && game.objectPlayer(id)==0 && position[0]==expected.x && position[1]==expected.y &&
+        animation[0]==expected.frame*.275f && animation[1]==expected.delay,"native herd IDs/position/animation");
+    }
   }
   swgb::RmsResourceGroups invalid{1,1,4,0,3};std::vector<swgb::RmsTimberPlacement> out;std::string error;auto before=rng;
   check(!swgb::generateRmsGroupedResourcePlacements(120,120,terrain,data,594,invalid,rng,out,&error,occupied,16000000,starts,swgb::RmsResourceDistance::Medium,&eligible),"unproven medium herd rejected");

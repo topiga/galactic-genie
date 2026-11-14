@@ -127,7 +127,8 @@ public:
     // Diagnostic RMS world; explicit civilization context is required for supported owned starts.
     bool initRms(const RmsScript &script, const std::unordered_set<std::string> &defines,
                  int mapSize, uint32_t &randomState, std::string *err = nullptr, uint32_t playerCount = 2,
-                 const std::vector<uint16_t> &playerCivilizations = {});
+                 const std::vector<uint16_t> &playerCivilizations = {},
+                 const std::vector<std::vector<uint8_t>> &diplomacy = {});
     bool loadAiScript(
         int player, const std::string &path,
         const std::unordered_set<std::string> &defines,

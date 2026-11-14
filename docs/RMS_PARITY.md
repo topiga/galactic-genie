@@ -237,3 +237,72 @@ final eligibility masks. The full parser/pipeline tests check all six successive
 resource prefixes in those four setups. Later animal rows and elevated stock
 resource startup remain unsupported. Holocron placement alone does not establish
 pickup or victory gameplay parity.
+
+
+### Forest starting units, connectivity and allied connections
+
+The native Forest21 profile now composes base6/player-land6 geometry, hills,
+automatic413 trees, Command Centers, packaged workers and scouts for two Empire
+players on120-square maps. It rejects additional unverified terrain/scenery and
+later resource rows on this elevated profile. Existing flat grass/forest paths
+retain their previous supported civilizations and owner counts.
+
+Original starting-unit placement first clones the unit's terrain restriction,
+forces the start-center terrain type passable for zone lookup, and compares
+terrain-only component IDs. Different components are skipped without RNG draws.
+The final gate still uses the unmodified restriction threshold greater than.05,
+plus occupancy; the last rejected candidate can still be forced. The cache is
+shared across owner/row lookups. Workers/scouts have hillMode0, so slopes alone
+do not reject them. Original tests cover1802 terrain/slope gate calls and108
+component queries in12 water/hill/forest contexts; explicit cliff objects remain
+unsupported.
+
+The full native live-Forest starting prefix now matches the original replay:
+terrain/elevation/slope fingerprints,7554 trees,10 owned objects with initial
+poses/animation holds, and final RNG302719008. A fresh read-only Windows process
+inspection independently confirms both CCs and all four local mobile units' IDs,
+types and positions. Enemy mobiles had moved or changed work variants under AI,
+so their current positions are not used as startup evidence. Two smaller authored
+map fixtures compare original scenery/object-stage execution on separately
+validated native geometry, including every tree and owned pose.
+
+Private evidence: `rms-live-forest-owned-fullstage-oracle-2026-11-14.json`,
+`live-forest-starting-objects-comparison-2026-11-14.json`,
+`rms-owned-connectivity-findings-2026-11-14.txt` and authored Forest21 oracles.
+
+Connection teams follow the original directional rule: inherit the first earlier
+player regarded as allied, otherwise create a new ordinal. It is not a union of
+mutually allied groups. The helper matches4096 directed four-player matrices and
+100 additional mixed-state cases. Ten full parser/scheduler comparisons now
+cover mutual allies and directed four-player groups. Optional diplomacy is
+accepted for randomized geometry; allied owned startup remains unverified.
+Fixed starts reject any directed playable-player alliance, including alliances
+that do not merge connection ordinals, because original fixed placement changes
+in those cases. The packaged corpus uses only the implemented63/64 commands.
+
+### Nerf startup rows
+
+The ordered flat120-square resource prefix now extends through two original
+Nerf594 rows: four near each start, then two groups of two farther away. Each
+constructor consumes seven CRT draws, including initial animation and heading.
+Original collision queries show that trees, deposits and Command Centers block
+Nerfs, whereas workers, scouts, holocrons and existing Nerfs do not. Row-specific
+blockers preserve that distinction while retaining earlier resource-spacing
+exclusions. Native import restores the initial animation frame and hold.
+
+Four original twelve-row compositions verify64 animals and each row's RNG.
+These establish startup placement/appearance, not later animal wandering,
+capture, nursery or complete gameplay parity. Other herd types, hunting animals,
+predators and the remaining packaged object rows are still open.
+
+
+Reference-harness audit: earlier low-ID master loaders resolved null task-header
+pointers. The current bounded twelve-row startup was therefore replayed with all
+ten type70/80 master task pointers deliberately unmapped and instrumented. Both
+forest seeds made zero accesses to those fields and reproduced all91 creation
+records, states/RNG and eligibility exactly. The original controller's max-X/Y
+fields were also corrected to119; both flat resource fixtures remained identical.
+This establishes task-header independence for the tested startup path, not for
+later AI ticks. Live Windows header reads identify the real task-list vtable as
+667414 and provide counts for workers, CCs, holocrons, scouts and animals. Full
+header loading is being added before extending behavior beyond that boundary.
