@@ -60,7 +60,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     bool startingScouts = false;
     bool nearNova = false;
     bool holocrons = false;
-    struct ResourceRow { int16_t unit; int count,radius,inner,outer,spacing; RmsResourceDistance distance; uint8_t mode=2; uint32_t groups=1,variance=0; bool global=false; };
+    struct ResourceRow { int16_t unit; int count,radius,inner,outer,spacing; RmsResourceDistance distance; uint8_t mode=2; uint32_t groups=1,variance=0; bool global=false,scaled=false; };
     const ResourceRow stockResources[]={
         {59,6,3,10,12,6,RmsResourceDistance::Near},
         {66,7,3,12,16,7,RmsResourceDistance::Near},
@@ -74,7 +74,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         {66,3,2,40,-1,9,RmsResourceDistance::Near,2,2,0,true},
         {102,4,2,30,-1,9,RmsResourceDistance::Near,2,1,1,true},
         {413,1,3,4,5,2,RmsResourceDistance::Near,0,2},
-        {413,1,3,6,8,2,RmsResourceDistance::Far,0,3}
+        {413,1,3,6,8,2,RmsResourceDistance::Far,0,3},
+        {816,1,3,-1,-1,0,RmsResourceDistance::Near,0,6,0,true,true}
     };
     std::vector<ResourceRow> resourceRows;
     constexpr int scoutIds[]={550,552,556,554,258,558,927,932};
@@ -266,7 +267,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if(i==tokens.size() || !count || !distance || !spacing) return fail("incomplete stock holocron row");
             ++i;holocrons=true;
         } else if (stage==3 && command=="create_object" && startingScouts) {
-            if ((!holocrons && nearNova) || (holocrons && (resourceRows.size()>=13 || (resourceRows.size()>=9 && resourceRows[8].unit!=126))))
+            if ((!holocrons && nearNova) || (holocrons && (resourceRows.size()>=14 || (resourceRows.size()>=9 && resourceRows[8].unit!=126))))
                 return fail("unsupported resource row after verified stock prefix");
             auto row=stockResources[holocrons?resourceRows.size():1];
             if(row.unit==1363 && i<tokens.size()) {
@@ -276,10 +277,12 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             const bool animal=row.unit==594 || row.unit==1363 || row.unit==1365 || row.unit==126;
             if (!number(value) || value!=row.unit || i==tokens.size() || tokens[i++].text!="{")
                 return fail("expected next verified stock resource row");
-            bool each=row.global,gaia=row.global,mode=row.mode==0,count=false,inner=false,outer=row.global;
+            bool each=row.global,gaia=row.global,mode=row.mode==0,count=false,inner=row.unit==816,outer=row.global;
+            bool scale=!row.scaled;
             bool spacing=row.spacing==0,zone=animal || row.global || row.unit==413,radius=row.radius==3,groups=row.mode==0 || row.groups==1,variance=row.variance==0;
             while (i<tokens.size() && tokens[i].text!="}") {
                 const auto name=tokens[i++].text;
+                if(row.scaled && name=="set_scaling_to_map_size") { scale=true;continue; }
                 if(!row.global && name=="set_place_for_every_player") { each=true;continue; }
                 if(!row.global && name=="set_gaia_object_only") { gaia=true;continue; }
                 if(row.mode && name==(row.mode==2?"set_tight_grouping":"set_loose_grouping")) { mode=true;continue; }
@@ -295,7 +298,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 else if(!animal && !row.global && row.unit!=413 && name=="max_distance_to_other_zones" && value==7) zone=true;
                 else return fail("unsupported resource parameter/value "+name);
             }
-            if(i==tokens.size() || !each || !gaia || !mode || !count || !inner || !outer || !spacing || !zone || !radius || !groups || !variance)
+            if(i==tokens.size() || !each || !gaia || !mode || !count || !inner || !outer || !spacing || !zone || !radius || !groups || !variance || !scale)
                 return fail("incomplete stock per-player resource row");
             ++i;resourceRows.push_back(row);
             if(!holocrons) nearNova=true;
@@ -786,7 +789,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             // Original spacing exclusions survive successive resource rows.
             std::vector<uint8_t> eligibility;
             for(const auto &row:resourceRows) {
-                RmsResourceGroups group{row.mode,row.groups,uint32_t(row.count),row.variance,uint32_t(row.radius)};
+                RmsResourceGroups group{row.mode,row.scaled?std::max(1u,row.groups*width*height/10000u):row.groups,uint32_t(row.count),row.variance,uint32_t(row.radius)};
                 auto rowBlockers=blockers;
                 if(row.unit==594 || row.unit==1363 || row.unit==1365 || row.unit==126) {
                     rowBlockers=occupied;
@@ -800,13 +803,13 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 }
                 std::vector<RmsTimberPlacement> placed;
                 RmsGlobalGroupPlacement global;
-                if(row.global) {
+                if(row.global && row.unit!=816) {
                     for(const auto &land:generated.lands) global.landCenters.push_back(land.center);
                     global.minDistance=row.inner;global.spacing=row.spacing;
                 }
                 if(!generateRmsGroupedResourcePlacements(width,height,generated.terrain,data,row.unit,group,rng,
                     placed,err,rowBlockers,16000000,row.global?std::vector<RmsPlayerStart>{}:generated.playerStarts,
-                    row.distance,&eligibility,row.global?&global:nullptr)) return false;
+                    row.distance,&eligibility,(row.global && row.unit!=816)?&global:nullptr)) return false;
                 for(const auto &object:placed)
                     blockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
                 generated.resourcesAfterOwned.insert(generated.resourcesAfterOwned.end(),placed.begin(),placed.end());

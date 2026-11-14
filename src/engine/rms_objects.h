@@ -76,6 +76,9 @@ struct RmsGlobalGroupPlacement {
 // spacing2, radius3, no variance; restriction11 and one static facet draw.
 // Tree occupancy must include all retained mobiles as well as scenery/deposits
 // and building footprints; trees block later placements on their tile.
+// Bird816 supports the scaled120-square global row: mode0,8 single birds,
+// no spacing/variance, one heading draw and the original first-frame delay.
+// Flying birds ignore occupied ground tiles and retain the eligibility mask.
 // Herd occupancy includes blocking deposits/trees/buildings only: original Nerfs
 // ignore workers/scouts/holocrons/other Nerfs, and do not block later herd groups.
 // Optional rowEligibility preserves original spacing exclusions across rows; an

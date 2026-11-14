@@ -391,3 +391,15 @@ restriction11, a single facet draw, and collisions against every retained object
 class, including mobiles and holocrons. Four authored-water row cases compare
 positions, facets, row RNG and complete persistent eligibility, including work-limit
 rollback. Rows18..23 remain unsupported; startup parity is not animal-AI parity.
+
+
+Row18 is now verified: eight flying816 birds (six scaled by120*120/10000),
+125 Gaia objects and7689 total native objects, terminal RNG2235827064. Original
+4dddf0 scales group count by map area and clamps to one; this profile remains
+bounded to120-square maps. Each bird consumes one heading draw, starts at frame0
+with a0.1265-second hold, ignores ground occupancy, and preserves eligibility.
+227 original gate probes cover all53 terrain IDs and retained object centers.
+All125 Gaia positions/types/facets and the terminal RNG match original replay.
+Private evidence: `rms-live-selected-forest-bird18-fullstage-oracle-2026-11-14.json`,
+`rms-bird-gate-checks-2026-11-14.json`, `rms-object-row-scale-4dddf0-2026-11-14.asm`.
+The next unsupported row is the global grouped predator row19.

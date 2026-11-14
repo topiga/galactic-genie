@@ -1242,7 +1242,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     }
     for(size_t index=0;index<generated.resourcesAfterOwned.size();++index) {
         const auto &placement=generated.resourcesAfterOwned[index];
-        if(placement.unitId!=594 && placement.unitId!=1363 && placement.unitId!=1365 && placement.unitId!=126) continue;
+        if(placement.unitId!=594 && placement.unitId!=1363 && placement.unitId!=1365 && placement.unitId!=126 && placement.unitId!=816) continue;
         if(auto *object=findObject(resourceIdBase+uint32_t(index))) {
             const auto *graphic=assets_.dat().graphic(object->unit->standingGraphic[0]);
             object->animTime=placement.animationFrame*graphic->frameDuration;

@@ -87,6 +87,23 @@ const ResourceSpec *validateHerd(const dat::DatFile &data,int16_t unitId,const s
     for(auto t:terrain) if(t>=restriction.size() || !std::isfinite(restriction[t]) || (hunt && restriction[t]!=1.f)) return fail();
     return &spec;
 }
+const ResourceSpec *validateBird(const dat::DatFile &data,const std::vector<uint8_t> &terrain,std::string *err) {
+    static constexpr ResourceSpec bird{816,6,70,20,5,23,8,-1,0,0,0};
+    auto fail=[&]()->const ResourceSpec* {if(err)*err="RMS bird: unsupported original metadata";return nullptr;};
+    if(data.civs.empty() || data.civs[0].units.size()<=816 || data.terrainRestrictions.size()<=23) return fail();
+    const auto &u=data.civs[0].units[816];const auto *g=data.graphic(6);
+    if(!u.exists || u.id!=816 || u.type!=70 || u.cls!=20 || u.hitPoints!=5 || u.standingGraphic[0]!=6 || u.standingGraphic[1]!=-1 ||
+       u.collisionSize[0]!=.1f || u.collisionSize[1]!=.1f || u.collisionSize[2]!=0 || u.clearanceSize[0]!=0 || u.clearanceSize[1]!=0 ||
+       u.lineOfSight!=5 || u.speed!=1.32f || u.terrainRestriction!=23 || u.obstructionType!=5 || u.obstructionClass!=2 ||
+       u.hillMode || u.flyMode!=1 || u.canBeBuiltOn || u.recyclable || u.civilization || u.enableAutoGather || u.createDoppelgangerOnDeath ||
+       u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 || u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
+       u.trainSound!=618 || !g || g->sequenceType!=3 || g->frameCount!=8 || g->angleCount!=8 || g->frameDuration!=.1265f ||
+       g->replayDelay!=0 || g->soundId!=-1 || !g->angleSounds.empty()) return fail();
+    for(const auto &storage:u.resourceStorages) if(storage.flag || storage.type>=0) return fail();
+    const auto &restriction=data.terrainRestrictions[23].passableBuildableDmgMultiplier;
+    for(auto t:terrain) if(t>=restriction.size() || restriction[t]!=1.f) return fail();
+    return &bird;
+}
 } // namespace
 
 bool generateRmsObjectCandidates(uint32_t width,uint32_t height,uint32_t &randomState,
@@ -215,17 +232,20 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     };
     const size_t count=size_t(width)*height;
     if(!width || !height || width>1024 || height>1024 || terrain.size()!=count ||
-       (group.mode!=1 && group.mode!=2 && !((unitId==126 || unitId==413) && group.mode==0)) || group.groups>count || group.perGroup>count ||
+       (group.mode!=1 && group.mode!=2 && !((unitId==126 || unitId==413 || unitId==816) && group.mode==0)) || group.groups>count || group.perGroup>count ||
        group.variance>1024 || group.radius>1024)
         return fail("unsupported dimensions or grouping parameters");
     const bool hunt=unitId==1363 || unitId==1365;
     const bool predator=unitId==126;
-    const bool tree=unitId==413;
+    const bool tree=unitId==413,bird=unitId==816;
     const bool herd=unitId==594 || hunt || predator;
-    const auto *spec=herd?validateHerd(data,unitId,terrain,err):validateResource(data,unitId,terrain,err);
+    const auto *spec=bird?validateBird(data,terrain,err):herd?validateHerd(data,unitId,terrain,err):validateResource(data,unitId,terrain,err);
     if(!spec) return false;
     const auto &restriction=data.terrainRestrictions[spec->restriction].passableBuildableDmgMultiplier;
     const bool perPlayer=!novaPlayerStarts.empty();
+    if(bird && (width!=120 || height!=120 || perPlayer || globalPlacement || distance!=RmsResourceDistance::Near ||
+       group.mode!=0 || group.groups!=8 || group.perGroup!=1 || group.variance || group.radius!=3))
+        return fail("unsupported stock bird row");
     if(globalPlacement) {
         if(perPlayer || (unitId!=66 && unitId!=102) || group.mode!=2 ||
            distance!=RmsResourceDistance::Near || globalPlacement->minDistance<0 ||
@@ -316,10 +336,15 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         }
         return true;
     };
-    auto pass=[&](int tile) { return !occupied[tile] && restriction[terrain[tile]]>.05f; };
+    auto pass=[&](int tile) { return (bird || !occupied[tile]) && restriction[terrain[tile]]>.05f; };
     auto create=[&](int tile) {
         RmsTimberPlacement placement{float(tile%width)+.5f,float(tile/width)+.5f,0,0,unitId};
-        if(herd) {
+        if(bird) {
+            const uint32_t heading=genieRandomDraw(rng)*8u/32767u;
+            placement.headingRadians=float(double(heading)*3.14159265358979323846/4.);
+            placement.facet=uint8_t((heading+7)%8);
+            placement.initialIdleDelay=data.graphic(6)->frameDuration;
+        } else if(herd) {
             // Base facet, animated initial frame/phase, heading, then three action timers.
             genieRandomDraw(rng);genieRandomDraw(rng);
             const auto &g=*data.graphic(spec->graphic);
@@ -336,7 +361,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             const auto appearance=drawRmsCarbonAppearance(rng,static_cast<uint8_t>(spec->angles));
             placement.facet=appearance.facet;placement.headingRadians=appearance.headingRadians;
         } else placement.facet=static_cast<uint8_t>(std::min(unsigned(spec->angles-1),genieRandomDraw(rng)*unsigned(spec->angles)/32767u));
-        result.push_back(placement);if(!herd) occupied[tile]=true;
+        result.push_back(placement);if(!herd && !bird) occupied[tile]=true;
     };
     RmsZoneCache resourceZones;
     for(size_t player=0;player<(perPlayer?novaPlayerStarts.size():1);++player) {
@@ -369,7 +394,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
                 if(!herd && !tree && (!sameZone(x,y-7) || !sameZone(x+5,y-5) || !sameZone(x+7,y) || !sameZone(x+5,y+5) ||
                     !sameZone(x,y+7) || !sameZone(x-5,y+5) || !sameZone(x-7,y) || !sameZone(x-5,y-5))) continue;
             }
-            if(predator || tree) {
+            if(predator || tree || bird) {
                 // Original mode0 has no inner queue/variance draw. A failed final gate
                 // forces the last candidate (4dec9c), after distance/zone exclusions.
                 const bool forced=!pass(center);
