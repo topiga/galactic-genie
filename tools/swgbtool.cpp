@@ -5958,8 +5958,8 @@ static int cmdRenderRms(const char *dataDir, const char *path, const char *sizeT
     game.setZoom(std::min(1.f,800.f/(2.f*Game::kTileHalfW*size)));
     game.render(renderer,960,544);
     if (!renderer.savePng(output)) { std::fprintf(stderr,"error: cannot save image\n"); return 1; }
-    std::printf("RMS diagnostic (randomized-position mode, %u players): %ux%u, %zu native objects, final RNG %u -> %s\n",
-                playerCount,size,size,game.activeObjectCount(),state,output);
+    std::printf("RMS diagnostic (%s-position mode, %u players): %ux%u, %zu native objects, final RNG %u -> %s\n",
+                defines.count("FIXED_POSITIONS")?"fixed":"randomized",playerCount,size,size,game.activeObjectCount(),state,output);
     return 0;
 }
 

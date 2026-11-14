@@ -37,6 +37,7 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
         return result.stdout
 
     rendered=run(['render-rms',data,work/'map.rms',32,1,work/'file.png'],0)
+    assert 'randomized-position mode' in rendered
     base = ['render-rms-resource',data,work/'test.drs',60000,32,1,work/'archive.png']
     run([*base,'--define','TEST_MAP'],0)
     assert (work/'file.png').read_bytes() == (work/'archive.png').read_bytes(), 'DRS and file rendering differ'
@@ -57,7 +58,8 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     assert (work/'file.png').read_bytes() != two_player_image, 'Configured player count was ignored'
     (work/'archive.png').unlink()
     assert 'unsupported' in run(base,1)
-    run([*base,'--define','TEST_MAP','--define','FIXED_POSITIONS'],0)
+    fixed = run([*base,'--define','TEST_MAP','--define','FIXED_POSITIONS'],0)
+    assert 'fixed-position mode' in fixed
     assert (work/'archive.png').read_bytes()!=two_player_image, 'Fixed setting used randomized starts'
     (work/'archive.png').unlink()
     run([*base,'--define'],2)
