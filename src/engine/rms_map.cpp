@@ -75,7 +75,12 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         {102,4,2,30,-1,9,RmsResourceDistance::Near,2,1,1,true},
         {413,1,3,4,5,2,RmsResourceDistance::Near,0,2},
         {413,1,3,6,8,2,RmsResourceDistance::Far,0,3},
-        {816,1,3,-1,-1,0,RmsResourceDistance::Near,0,6,0,true,true}
+        {816,1,3,-1,-1,0,RmsResourceDistance::Near,0,6,0,true,true},
+        {126,1,3,40,120,12,RmsResourceDistance::Near,1,3,0,true,true},
+        {1365,3,3,14,30,0,RmsResourceDistance::Far,1,1,1},
+        {1585,1,3,-1,-1,0,RmsResourceDistance::Near,0,8,0,true},
+        {413,1,3,6,-1,2,RmsResourceDistance::Near,0,100,0,true},
+        {69,1,3,-1,-1,0,RmsResourceDistance::Near,0,3,0,true,true}
     };
     std::vector<ResourceRow> resourceRows;
     constexpr int scoutIds[]={550,552,556,554,258,558,927,932};
@@ -267,7 +272,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if(i==tokens.size() || !count || !distance || !spacing) return fail("incomplete stock holocron row");
             ++i;holocrons=true;
         } else if (stage==3 && command=="create_object" && startingScouts) {
-            if ((!holocrons && nearNova) || (holocrons && (resourceRows.size()>=14 || (resourceRows.size()>=9 && resourceRows[8].unit!=126))))
+            if ((!holocrons && nearNova) || (holocrons && (resourceRows.size()>=19 || (resourceRows.size()>=9 && resourceRows[8].unit!=126))))
                 return fail("unsupported resource row after verified stock prefix");
             auto row=stockResources[holocrons?resourceRows.size():1];
             if(row.unit==1363 && i<tokens.size()) {
@@ -277,8 +282,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             const bool animal=row.unit==594 || row.unit==1363 || row.unit==1365 || row.unit==126;
             if (!number(value) || value!=row.unit || i==tokens.size() || tokens[i++].text!="{")
                 return fail("expected next verified stock resource row");
-            bool each=row.global,gaia=row.global,mode=row.mode==0,count=false,inner=row.unit==816,outer=row.global;
-            bool scale=!row.scaled;
+            bool each=row.global,gaia=row.global,mode=row.mode==0,count=false,inner=row.inner<0,outer=row.global && row.outer<0;
+            bool scale=!row.scaled,terrainFilter=row.unit!=1585;
             bool spacing=row.spacing==0,zone=animal || row.global || row.unit==413,radius=row.radius==3,groups=row.mode==0 || row.groups==1,variance=row.variance==0;
             while (i<tokens.size() && tokens[i].text!="}") {
                 const auto name=tokens[i++].text;
@@ -287,18 +292,19 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(!row.global && name=="set_gaia_object_only") { gaia=true;continue; }
                 if(row.mode && name==(row.mode==2?"set_tight_grouping":"set_loose_grouping")) { mode=true;continue; }
                 if(!number(value)) return fail("missing resource parameter value");
-                if(name=="number_of_objects" && row.mode==0 && value==int(row.groups)) count=true;
+                if(name=="terrain_to_place_on" && row.unit==1585 && value==22) terrainFilter=true;
+                else if(name=="number_of_objects" && row.mode==0 && value==int(row.groups)) count=true;
                 else if(name=="number_of_objects" && row.mode!=0 && (value==row.count || (row.unit==59 && value==12))) { row.count=value;count=true; }
                 else if(name=="number_of_groups" && value==int(row.groups)) groups=true;
                 else if(name=="group_placement_radius" && value==row.radius) radius=true;
                 else if(name=="group_variance" && value==int(row.variance)) variance=true;
                 else if(name=="min_distance_to_players" && value==row.inner) inner=true;
-                else if(!row.global && name=="max_distance_to_players" && value==row.outer) outer=true;
+                else if(row.outer>=0 && name=="max_distance_to_players" && value==row.outer) outer=true;
                 else if(name=="min_distance_group_placement" && value==row.spacing) spacing=true;
                 else if(!animal && !row.global && row.unit!=413 && name=="max_distance_to_other_zones" && value==7) zone=true;
                 else return fail("unsupported resource parameter/value "+name);
             }
-            if(i==tokens.size() || !each || !gaia || !mode || !count || !inner || !outer || !spacing || !zone || !radius || !groups || !variance || !scale)
+            if(i==tokens.size() || !each || !gaia || !mode || !count || !inner || !outer || !spacing || !zone || !radius || !groups || !variance || !scale || !terrainFilter)
                 return fail("incomplete stock per-player resource row");
             ++i;resourceRows.push_back(row);
             if(!holocrons) nearNova=true;
@@ -798,19 +804,19 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                             for(int x=int(object.x)-2;x<int(object.x)+2;++x) rowBlockers.push_back(uint32_t(y)*width+x);
                     // Original herd gates ignore mobile units, holocrons and other animals.
                     for(const auto &object:generated.resourcesAfterOwned)
-                        if(object.unitId==59 || object.unitId==66 || object.unitId==102)
+                        if(object.unitId==59 || object.unitId==66 || object.unitId==102 || object.unitId==413)
                             rowBlockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
                 }
                 std::vector<RmsTimberPlacement> placed;
                 RmsGlobalGroupPlacement global;
-                if(row.global && row.unit!=816) {
+                if(row.global && row.inner>=0) {
                     for(const auto &land:generated.lands) global.landCenters.push_back(land.center);
                     global.minDistance=row.inner;global.spacing=row.spacing;
                 }
                 if(!generateRmsGroupedResourcePlacements(width,height,generated.terrain,data,row.unit,group,rng,
                     placed,err,rowBlockers,16000000,row.global?std::vector<RmsPlayerStart>{}:generated.playerStarts,
-                    row.distance,&eligibility,(row.global && row.unit!=816)?&global:nullptr)) return false;
-                for(const auto &object:placed)
+                    row.distance,&eligibility,(row.global && row.inner>=0)?&global:nullptr)) return false;
+                for(const auto &object:placed) if(object.unitId!=816)
                     blockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
                 generated.resourcesAfterOwned.insert(generated.resourcesAfterOwned.end(),placed.begin(),placed.end());
             }

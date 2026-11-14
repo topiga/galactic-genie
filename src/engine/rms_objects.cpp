@@ -84,7 +84,7 @@ const ResourceSpec *validateHerd(const dat::DatFile &data,int16_t unitId,const s
     }
     if(stores!=(predator?0:1)) return fail();
     const auto &restriction=data.terrainRestrictions[spec.restriction].passableBuildableDmgMultiplier;
-    for(auto t:terrain) if(t>=restriction.size() || !std::isfinite(restriction[t]) || (hunt && restriction[t]!=1.f)) return fail();
+    for(auto t:terrain) if(t>=restriction.size() || !std::isfinite(restriction[t])) return fail();
     return &spec;
 }
 const ResourceSpec *validateBird(const dat::DatFile &data,const std::vector<uint8_t> &terrain,std::string *err) {
@@ -103,6 +103,27 @@ const ResourceSpec *validateBird(const dat::DatFile &data,const std::vector<uint
     const auto &restriction=data.terrainRestrictions[23].passableBuildableDmgMultiplier;
     for(auto t:terrain) if(t>=restriction.size() || restriction[t]!=1.f) return fail();
     return &bird;
+}
+const ResourceSpec *validateAquatic(const dat::DatFile &data,int16_t unitId,const std::vector<uint8_t> &terrain,std::string *err) {
+    static constexpr ResourceSpec fish{69,5268,30,25,0,9,1,17,200,1,0};
+    static constexpr ResourceSpec wave{1585,10295,30,42,1000,31,1,-1,0,0,0};
+    const auto &spec=unitId==69?fish:wave;
+    auto fail=[&]()->const ResourceSpec* {if(err)*err="RMS aquatic: unsupported original profile";return nullptr;};
+    if(data.civs.empty() || data.civs[0].units.size()<=size_t(unitId) || data.terrainRestrictions.size()<=size_t(spec.restriction))return fail();
+    const auto &u=data.civs[0].units[unitId];const auto *g=data.graphic(spec.graphic);
+    if(!u.exists || u.id!=unitId || u.type!=30 || u.cls!=spec.cls || u.hitPoints!=spec.hp || u.standingGraphic[0]!=spec.graphic || u.standingGraphic[1]!=-1 ||
+       u.collisionSize[0]!=.5f || u.collisionSize[1]!=.5f || u.collisionSize[2]!=0 || u.clearanceSize[0]!=.5f || u.clearanceSize[1]!=.5f ||
+       u.lineOfSight!=0 || u.speed!=(unitId==69?1.32f:0.f) || u.terrainRestriction!=spec.restriction || u.obstructionType || u.obstructionClass ||
+       u.hillMode || u.flyMode || u.canBeBuiltOn || u.recyclable || u.civilization || u.enableAutoGather!=(unitId==69) || u.createDoppelgangerOnDeath!=spec.doppel ||
+       u.placementSideTerrain[0]!=(unitId==69?2:-1) || u.placementSideTerrain[1]!=(unitId==69?35:-1) || u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
+       u.trainSound!=-1 || !g || g->sequenceType!=7 || g->frameCount!=(unitId==69?12:48) || g->angleCount!=1 || g->frameDuration!=.13f ||
+       g->replayDelay!=0 || g->soundId!=-1 || !g->angleSounds.empty())return fail();
+    int stores=0;for(const auto &storage:u.resourceStorages){if(storage.flag || (storage.type>=0 && (storage.type!=spec.resource || storage.amount!=spec.amount)))return fail();stores+=storage.type>=0;}
+    if(stores!=(unitId==69?1:0))return fail();
+    const auto &restriction=data.terrainRestrictions[spec.restriction].passableBuildableDmgMultiplier;
+    for(auto t:terrain)if(t>=restriction.size() || !std::isfinite(restriction[t]) || (unitId==1585 && t==22))return fail();
+    // shortcut: only empty terrain22 wave rows verified; admit actual waves after an original placement fixture.
+    return &spec;
 }
 } // namespace
 
@@ -232,22 +253,29 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     };
     const size_t count=size_t(width)*height;
     if(!width || !height || width>1024 || height>1024 || terrain.size()!=count ||
-       (group.mode!=1 && group.mode!=2 && !((unitId==126 || unitId==413 || unitId==816) && group.mode==0)) || group.groups>count || group.perGroup>count ||
+       (group.mode!=1 && group.mode!=2 && !((unitId==126 || unitId==413 || unitId==816 || unitId==69 || unitId==1585) && group.mode==0)) || group.groups>count || group.perGroup>count ||
        group.variance>1024 || group.radius>1024)
         return fail("unsupported dimensions or grouping parameters");
     const bool hunt=unitId==1363 || unitId==1365;
     const bool predator=unitId==126;
-    const bool tree=unitId==413,bird=unitId==816;
+    const bool tree=unitId==413,bird=unitId==816,aquatic=unitId==69 || unitId==1585;
     const bool herd=unitId==594 || hunt || predator;
-    const auto *spec=bird?validateBird(data,terrain,err):herd?validateHerd(data,unitId,terrain,err):validateResource(data,unitId,terrain,err);
+    const auto *spec=aquatic?validateAquatic(data,unitId,terrain,err):bird?validateBird(data,terrain,err):herd?validateHerd(data,unitId,terrain,err):validateResource(data,unitId,terrain,err);
     if(!spec) return false;
     const auto &restriction=data.terrainRestrictions[spec->restriction].passableBuildableDmgMultiplier;
     const bool perPlayer=!novaPlayerStarts.empty();
+    if(aquatic && (width!=120 || height!=120 || perPlayer || globalPlacement || distance!=RmsResourceDistance::Near ||
+       group.mode!=0 || group.groups!=(unitId==69?4u:8u) || group.perGroup!=1 || group.variance || group.radius!=3))
+        return fail("unsupported stock aquatic row");
     if(bird && (width!=120 || height!=120 || perPlayer || globalPlacement || distance!=RmsResourceDistance::Near ||
        group.mode!=0 || group.groups!=8 || group.perGroup!=1 || group.variance || group.radius!=3))
         return fail("unsupported stock bird row");
     if(globalPlacement) {
-        if(perPlayer || (unitId!=66 && unitId!=102) || group.mode!=2 ||
+        if(perPlayer || (!predator && !tree && ((unitId!=66 && unitId!=102) || group.mode!=2)) ||
+           (predator && (width!=120 || height!=120 || group.mode!=1 || group.groups!=4 || group.perGroup!=1 || group.variance || group.radius!=3 ||
+            globalPlacement->landCenters.size()!=2 || globalPlacement->minDistance!=40 || globalPlacement->spacing!=12)) ||
+           (tree && (width!=120 || height!=120 || group.mode!=0 || group.groups!=100 || group.perGroup!=1 || group.variance || group.radius!=3 ||
+            globalPlacement->landCenters.size()!=2 || globalPlacement->minDistance!=6 || globalPlacement->spacing!=2)) ||
            distance!=RmsResourceDistance::Near || globalPlacement->minDistance<0 ||
            globalPlacement->minDistance>1024 || globalPlacement->spacing<0 || globalPlacement->spacing>1024 ||
            globalPlacement->landCenters.size()>1024)
@@ -261,24 +289,24 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     if(distance!=RmsResourceDistance::Near && !medium && !far) return fail("invalid resource distance profile");
     if((medium || far) && (!perPlayer || (unitId!=66 && !((ore || herd || tree) && far)) || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
         return fail("distance profile requires verified120-square two-player resource row");
-    if((hunt || predator) && !far) return fail("hunting animals require the verified far row");
+    if((hunt || predator) && !far && !globalPlacement) return fail("hunting animals require the verified far row");
     const int playerMin=globalPlacement?globalPlacement->minDistance:tree?(far?6:4):predator?30:herd?(far?14:10):forage?10:ore?(far?20:14):medium?18:far?25:12;
     const int playerMax=tree?(far?8:5):predator?40:herd?(far?30:12):forage?12:ore?(far?26:18):medium?26:far?35:16,playerSpacing=globalPlacement?globalPlacement->spacing:perPlayer?(tree?2:herd?0:forage?6:7):0;
     const auto &exclusionCenters=globalPlacement?globalPlacement->landCenters:novaPlayerStarts;
-    if((forage || ore || herd || tree) && (!perPlayer || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
+    if((forage || ore || herd || tree) && !globalPlacement && (!perPlayer || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
         return fail("resource row requires verified120-square two-player profile");
     if((forage || ore || herd || tree || medium || far) && std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
-        const bool forest21=width==120 && !hunt && (t==1 || t==2 || t==5 || t==12 || t==21);
+        const bool forest21=width==120 && (t==1 || t==2 || t==5 || t==12 || t==21);
         return !forest21 && t!=0 && t!=6 && t!=9 && t!=10 && t!=27 && t!=41;
     })) return fail("resource row requires verified grass/forest terrain");
     if(perPlayer) {
         const uint32_t expectedGroups=tree?(far?3u:2u):herd && far && !hunt?2u:1u;
         const uint32_t expectedCount=(tree || predator)?1u:hunt?4u:herd?(far?2u:4u):forage?6u:ore?(far?4u:5u):(medium || far)?4u:7u;
         if((unitId!=66 && !forage && !ore && !herd && !tree) || group.mode!=((tree || predator)?0:herd?1:2) ||
-           group.groups!=expectedGroups || (group.perGroup!=expectedCount && !(forage && group.perGroup==12)) ||
+           group.groups!=expectedGroups || (group.perGroup!=expectedCount && !(forage && group.perGroup==12) && !(unitId==1365 && group.perGroup==3)) ||
            group.variance!=(hunt?1u:0u) || group.radius!=(ore?2u:3u) || novaPlayerStarts.size()>8)
             return fail("unsupported per-player resource row");
-        for(auto t:terrain) if(restriction[t]!=1.f && (width!=120 || hunt || (t!=1 && t!=2 && t!=5 && t!=6 && t!=12 && t!=21)))
+        for(auto t:terrain) if(restriction[t]!=1.f && (width!=120 || (t!=1 && t!=2 && t!=5 && t!=6 && t!=12 && t!=21)))
             return fail("resource row has unverified nonuniform passability");
         for(const auto &start:novaPlayerStarts)
             if(start.x<0 || start.y<0 || uint32_t(start.x)>=width || uint32_t(start.y)>=height)
@@ -336,15 +364,23 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         }
         return true;
     };
-    auto pass=[&](int tile) { return (bird || !occupied[tile]) && restriction[terrain[tile]]>.05f; };
+    auto pass=[&](int tile) {
+        if(unitId==1585 && terrain[tile]!=22)return false;
+        if(unitId==69) {
+            const int x=tile%width,y=tile/width;
+            auto shore=[&](int at){return terrain[at]==2 || terrain[at]==35;};
+            if(!((x>0 && shore(tile-1)) || (x+1<int(width) && shore(tile+1)) ||
+                 (y>0 && shore(tile-int(width))) || (y+1<int(height) && shore(tile+int(width)))))return false;
+        }
+        return (bird || !occupied[tile]) && restriction[terrain[tile]]>.05f;
+    };
     auto create=[&](int tile) {
         RmsTimberPlacement placement{float(tile%width)+.5f,float(tile/width)+.5f,0,0,unitId};
         if(bird) {
             const uint32_t heading=genieRandomDraw(rng)*8u/32767u;
             placement.headingRadians=float(double(heading)*3.14159265358979323846/4.);
             placement.facet=uint8_t((heading+7)%8);
-            placement.initialIdleDelay=data.graphic(6)->frameDuration;
-        } else if(herd) {
+        } else if(herd || aquatic) {
             // Base facet, animated initial frame/phase, heading, then three action timers.
             genieRandomDraw(rng);genieRandomDraw(rng);
             const auto &g=*data.graphic(spec->graphic);
@@ -353,10 +389,10 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             const int frame=int(elapsed/g.frameDuration);
             placement.animationFrame=uint8_t(std::min(int(g.frameCount)-1,frame));
             if(frame>=g.frameCount) placement.initialIdleDelay=std::max(0.f,float(elapsed-double(g.frameCount-1)*g.frameDuration)-g.frameDuration);
-            const uint32_t heading=genieRandomDraw(rng)*8u/32767u;
+            const uint32_t heading=aquatic?0:genieRandomDraw(rng)*8u/32767u;
             placement.headingRadians=float(double(heading)*3.14159265358979323846/4.);
             placement.facet=uint8_t((heading+7)%8);
-            for(int timer=0;timer<((hunt || predator)?4:3);++timer)genieRandomDraw(rng);
+            if(!aquatic)for(int timer=0;timer<((hunt || predator)?4:3);++timer)genieRandomDraw(rng);
         } else if(spec->type==30) {
             const auto appearance=drawRmsCarbonAppearance(rng,static_cast<uint8_t>(spec->angles));
             placement.facet=appearance.facet;placement.headingRadians=appearance.headingRadians;
@@ -394,11 +430,11 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
                 if(!herd && !tree && (!sameZone(x,y-7) || !sameZone(x+5,y-5) || !sameZone(x+7,y) || !sameZone(x+5,y+5) ||
                     !sameZone(x,y+7) || !sameZone(x-5,y+5) || !sameZone(x-7,y) || !sameZone(x-5,y-5))) continue;
             }
-            if(predator || tree || bird) {
+            if((predator && group.mode==0) || tree || bird || aquatic) {
                 // Original mode0 has no inner queue/variance draw. A failed final gate
                 // forces the last candidate (4dec9c), after distance/zone exclusions.
                 const bool forced=!pass(center);
-                if(forced && next[outer]>=0) continue;
+                if(forced && (globalPlacement || aquatic || next[outer]>=0)) continue;
                 if(tree) {
                     const int x0=std::max(0,x-playerSpacing),x1=std::min(int(width)-1,x+playerSpacing);
                     const int y0=std::max(0,y-playerSpacing),y1=std::min(int(height)-1,y+playerSpacing);

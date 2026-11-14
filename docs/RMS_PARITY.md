@@ -1,6 +1,35 @@
 # Clone Campaigns random-map parity
 
-## Packaged-script baseline: 2026-11-14
+## Current complete-map result: 2026-11-14
+
+Forest resource 54204 now runs directly from `gamedata_x1.drs`, including all 23
+object rows. For seed 16160, 120×120, Tiny, FIXED_POSITIONS, DEFAULT_RESOURCES and two
+Empire players, native generation matches the original executable replay:
+
+| Check | Result |
+|---|---|
+| Terrain and elevation | All 14,400 bytes of each equal the saved Windows grid |
+| Automatic scenery | All 7,554 trees match creation order, position and facet |
+| Owned startup | All 10 objects match type, owner, creation order, position and facet |
+| Explicit Gaia objects | All 238 match type, creation order, position and facet |
+| Final RNG | 3740942338 in both implementations |
+| Native import | 7,802 objects; all IDs/types/owners/positions checked; animal/fish animation checked |
+| Fresh live Windows read | All 201 static resources/explicit trees match; none missing |
+
+`tools/rms_packaged_forest_checks.h` loads the user's actual archive and verifies
+the complete map plus native import. It does not embed the game's RMS source.
+The image `clone-campaigns-forest-full.png` in the external build directory is a
+native diagnostic render, not a claim of a fully configured playable match.
+Starting resources/UI map selection and later simulation remain separate work.
+
+This proves this complete configuration, **not general 1:1 terrain generation**.
+Other seeds, sizes, civilizations, team setups and map families still need complete
+comparisons. Actual wave 1585 spawning on terrain 22 remains rejected; this verified
+Forest seed contains no 22 tiles and the original wave row creates zero objects.
+The engine executes its candidate shuffle, preserving subsequent RNG exactly.
+Historical checkpoints below describe earlier coverage, not the current result.
+
+## Historical packaged-script baseline: 2026-11-14
 
 At commit `039f3e5`, the local audit ran 46 packaged RMS resources with three
 seeds each: 138 attempts, **zero complete native maps generated**. Passing
@@ -403,3 +432,21 @@ All125 Gaia positions/types/facets and the terminal RNG match original replay.
 Private evidence: `rms-live-selected-forest-bird18-fullstage-oracle-2026-11-14.json`,
 `rms-bird-gate-checks-2026-11-14.json`, `rms-object-row-scale-4dddf0-2026-11-14.asm`.
 The next unsupported row is the global grouped predator row19.
+
+
+### Complete Forest tail and evidence
+
+The final rows include scaled global Rancor groups, variable Eopie herds, the
+empty wave row,100 globally scattered413 trees and four area-scaled69 fish.
+Fish require cardinal contact with shore2/35 (diagonal contact fails), pass their
+terrain restriction and consume three constructor draws. Their native idle delay
+is the original animation hold minus the normal frame duration. Birds likewise
+start with no extra idle delay; the normal frame timer already supplies that hold.
+
+Private evidence: `rms-live-selected-forest-full23-fullstage-oracle-2026-11-14.json`,
+`native-live-forest-actual-23-rows-2026-11-14/comparison.json`, and
+`live-complete-forest-static-comparison-2026-11-14.json`. The full replay uses the
+original object controller, constructors, real-loaded masters/headers/graphics,
+retained world objects, zone/occupancy gates and persistent spacing state.
+Terrain/elevation for that replay are independently matched to Windows. The
+original executable and all extracted game records remain local.

@@ -57,7 +57,9 @@ struct RmsMap {
 // Flat profiles may append the verified FOODC3 hunt variant; Forest21 supports
 // the resource/Nerf prefix with fixed or randomized enemy starts. The selected
 // Forest sequence may continue with ungrouped Rancors, two global deposit rows
-// and the two near-start tree413 rows, then the area-scaled flying bird816 row.
+// and the two near-start tree413 rows, then birds, global Rancors, Eopie herds,
+// an empty wave row, global trees and shore fish: all23 selected Forest54204 rows.
+// Actual wave spawning on terrain22 remains guarded.
 // RNG is the shared CRT state at script entry. Failure clears output and leaves RNG unchanged.
 bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::string> &defines,
                     uint32_t width, uint32_t height, const dat::DatFile &data,

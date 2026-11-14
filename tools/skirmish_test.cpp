@@ -39,6 +39,9 @@ static void check(bool value, const char *message) {
 #include "rms_explicit_tree_checks.h"
 #include "rms_global_prefix_checks.h"
 #include "rms_bird_checks.h"
+#include "rms_global_predator_checks.h"
+#include "rms_forest_hunt_checks.h"
+#include "rms_packaged_forest_checks.h"
 #include "rms_forest21_owned_checks.h"
 #include "rms_forest21_holocron_checks.h"
 #include "rms_forest21_water_resource_checks.h"
@@ -296,6 +299,9 @@ int main(int argc, char **argv) {
         rmsExplicitTreeChecks(assets.dat());
         rmsGlobalPrefixChecks(assets);
         rmsBirdChecks(assets.dat());
+        rmsGlobalPredatorChecks(assets.dat());
+        rmsForestHuntChecks(assets.dat());
+        rmsPackagedForestChecks(assets,argv[1]);
         checkRmsForest21Owned(assets);
         checkRmsForest21Holocrons(assets.dat());
         checkRmsForest21WaterResources(assets.dat());

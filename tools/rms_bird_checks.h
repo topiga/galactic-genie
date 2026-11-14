@@ -11,7 +11,7 @@ static void rmsBirdChecks(const swgb::dat::DatFile &data) {
  swgb::RmsResourceGroups group{0,8,1,0,3};
  check(swgb::generateRmsGroupedResourcePlacements(120,120,terrain,data,816,group,rng,out,&error,occupied,16000000,{},swgb::RmsResourceDistance::Near,&eligible),error.c_str());
  check(rng==177739033u && out.size()==8 && eligible==retained,"original birds count/RNG/eligibility");
- for(size_t i=0;i<out.size();++i){const auto&o=out[i];const auto&e=points[i];check(o.unitId==816 && o.x==e.x && o.y==e.y && o.facet==e.facet && o.headingRadians==e.heading && o.animationFrame==0 && o.initialIdleDelay==.1265f,"original bird position/heading/animation");}
+ for(size_t i=0;i<out.size();++i){const auto&o=out[i];const auto&e=points[i];check(o.unitId==816 && o.x==e.x && o.y==e.y && o.facet==e.facet && o.headingRadians==e.heading && o.animationFrame==0 && o.initialIdleDelay==0,"original bird position/heading/animation");}
  const auto before=rng;group.groups=6;
  check(!swgb::generateRmsGroupedResourcePlacements(120,120,terrain,data,816,group,rng,out,&error,occupied,16000000,{},swgb::RmsResourceDistance::Near,&eligible) && rng==before && out.empty() && eligible==retained,"unscaled bird count rejected atomically");
  std::puts("PASS: original scaled birds, flying occupancy and animation startup");

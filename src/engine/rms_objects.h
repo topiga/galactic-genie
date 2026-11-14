@@ -74,13 +74,18 @@ struct RmsGlobalGroupPlacement {
 // radius3, no variance/spacing; no grouped placement or variance draws.
 // Tree413 supports Near2/player at4..5 or Far3/player at6..8, mode0,
 // spacing2, radius3, no variance; restriction11 and one static facet draw.
+// Global tree413 supports100 mode0 placements, player exclusion6 and spacing2.
+// Global Rancor126 supports four scaled loose single-object groups, exclusion40,
+// spacing12; Forest Eopie1365 also supports three objects with variance1.
 // Tree occupancy must include all retained mobiles as well as scenery/deposits
 // and building footprints; trees block later placements on their tile.
 // Bird816 supports the scaled120-square global row: mode0,8 single birds,
-// no spacing/variance, one heading draw and the original first-frame delay.
+// no spacing/variance, one heading draw and frame0, without an extra idle delay.
 // Flying birds ignore occupied ground tiles and retain the eligibility mask.
 // Herd occupancy includes blocking deposits/trees/buildings only: original Nerfs
 // ignore workers/scouts/holocrons/other Nerfs, and do not block later herd groups.
+// Aquatic69 supports four scaled single placements with cardinal shore2/35 contact;
+// wave1585 supports only the verified empty terrain22 row (eight requested).
 // Optional rowEligibility preserves original spacing exclusions across rows; an
 // empty vector starts all-eligible. Failure preserves it and RNG and clears output.
 bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
