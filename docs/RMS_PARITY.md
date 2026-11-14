@@ -48,7 +48,33 @@ Bounded raw-DEFLATE decompression yielded 2280369 bytes beginning `VER 9.4`;
 the stream ended cleanly without trailing bytes. This establishes the container
 format only; startup seed and terrain fields have not been decoded.
 
-The initial seed was not recovered. There is **no seed-matched live/native
-whole-map comparison yet**. The local audit and executable-oracle JSON files
+### Decoded grid and live seed recovery
+
+`python3 script/inspect_cc_save.py SAVE.ga1 --output-directory NEW_DIRECTORY`
+extracts row-major terrain/elevation bytes through the verified 1.1 save prefix.
+It validates the format, bounds decompression and counts, and rejects malformed
+input. It does not load objects or treat saved RNG checkpoints as map seeds.
+Authored fixtures run with `python3 script/test_cc_save.py`.
+
+Original serialization evidence: `5fe970`, `40f230`, `5817f0`, `418190`,
+`61ffa0`, `494560` and `625c70`. The private REA bundle is
+`save-prefix-rea-evidence-2026-11-14.json`; the map-serializer record is
+`ev_3b59c2169184a10b7635490bd2a4f9e4eeb52a846e414560314667bd8f043e0c`.
+The live save decodes to 120×120 tiles at inflated offset 439134, four zone
+records, local player 1 and three players including Gaia. Terrain SHA-256:
+`14ea7ec5f7aefd0290f93134bdccbe914776acc6219bbaaba786a3b7b08ab5cf`.
+
+Read-only Windows process inspection verified the reference executable hash
+and recovered **new-game seed 28724** at application offset `0x4c` and
+**map seed 16160** at offset `0x50`. The configured overrides at `0x44/0x48`
+were both -1. `61df00` preserves the former; `5c9df0` preserves and reseeds
+from the latter. These are separate from save-time checkpoints 28186/31754
+and the current full CRT state. Raw observations and the read-only probe are
+retained privately as `live-forest-startup-seeds-2026-11-14.json` and
+`read-live-startup-seeds-2026-11-14.ps1`.
+
+There is **no seed-matched live/native whole-map comparison yet**: the precise
+map-seed-to-RMS-entry transition and remaining stock rows must be established.
+The local audit and executable-oracle JSON files
 are under `Research/windows-reference` in Galactic Genie's application-support
 directory; no original game scripts or saves are committed to this repository.
