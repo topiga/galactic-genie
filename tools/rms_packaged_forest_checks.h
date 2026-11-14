@@ -40,7 +40,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  ground[0]=22;rng=1;const auto before=eligible;
  check(!swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),1585,{0,7,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && rng==1 && placed.empty() && eligible==before,"unsupported wave quantity rejected atomically");
  // Controlled original replays vary forage/Nerf quantities, retaining all later rows.
- const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413,forestTerrain=21;uint32_t sceneryPoses=2138192714u,terrainHash=3348257725u;bool chainedHunt=false,omitNerfs=false;unsigned explicitTrees=110;bool omitForage=false;unsigned longChain=0;} variations[]={
+ const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413,forestTerrain=21;uint32_t sceneryPoses=2138192714u,terrainHash=3348257725u;bool chainedHunt=false,omitNerfs=false;unsigned explicitTrees=110;bool omitForage=false;unsigned longChain=0,lateHunt=0;} variations[]={
   {4,2,126,220,1662422u,278519141u,513271022u},
   {2,1,126,210,3750728331u,4161792159u,758251980u},
   {8,4,126,235,989150139u,2125502712u,2483236625u},
@@ -55,7 +55,10 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   {0,0,126,211,1050928889u,2709380116u,2166136261u,1,349,20,4094354918u,3646470573u,true,true},
   {4,2,126,213,3985350200u,3794078108u,3773911184u,1,348,18,780123404u,1911528789u,false,false,110,true},
   {4,2,126,238,2497652140u,1393824384u,513271022u,1,348,18,780123404u,1911528789u,true,false,110,false,1},
-  {0,0,126,219,4220003808u,2530534559u,2166136261u,1,349,20,4094354918u,3646470573u,true,true,110,false,2}};
+  {0,0,126,219,4220003808u,2530534559u,2166136261u,1,349,20,4094354918u,3646470573u,true,true,110,false,2},
+  {4,2,126,242,4120192947u,1364577121u,1289455766u,1,348,18,780123404u,1911528789u,true,false,110,false,1,1},
+  {0,0,126,220,3799455950u,734846818u,2166136261u,1,349,20,4094354918u,3646470573u,true,true,110,false,2,2},
+  {0,0,126,219,3181366234u,3194867101u,2166136261u,1,349,20,4094354918u,3646470573u,true,true,110,false,2,3}};
  for(const auto &v:variations) {
   std::vector<swgb::RmsToken> tokens;rng=16160;
   check(script.preprocess(defines,tokens,&error,&rng) && rng==1993207714u,"Forest preprocessing RNG");
@@ -71,6 +74,13 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   for(size_t i=0;i<tokens.size();++i) {
    if(tokens[i].text=="create_object" && i+1<tokens.size()) {
     unit=tokens[i+1].text;
+    if(unit=="1365" && v.lateHunt) {
+     while(i<tokens.size() && tokens[i].text!="}")++i;
+     if(v.lateHunt==1)source+="create_object 594 { number_of_objects 2 set_loose_grouping set_gaia_object_only set_place_for_every_player min_distance_to_players 10 max_distance_to_players 12 } ";
+     else if(v.lateHunt==2)source+="create_object 822 { number_of_objects 1 set_gaia_object_only set_place_for_every_player min_distance_to_players 16 max_distance_to_players 22 } ";
+     continue;
+    }
+    if(unit=="413" && treeRows==2 && v.lateHunt)source+="create_object "+std::to_string(v.lateHunt==1?1249:822)+" { number_of_objects 3 group_variance 1 set_loose_grouping set_gaia_object_only set_place_for_every_player min_distance_to_players 35 min_distance_group_placement 5 } ";
     if((unit=="594" && v.omitNerfs) || (unit=="59" && v.omitForage)){while(i<tokens.size() && tokens[i].text!="}")++i;continue;}
     if(unit=="126" && predatorRow==0 && v.chainedHunt)source+="create_object 1365 { number_of_objects 4 group_variance 1 set_loose_grouping set_gaia_object_only set_place_for_every_player min_distance_to_players 14 max_distance_to_players 30 } ";
     if(unit=="126" && predatorRow==0 && v.longChain) {
@@ -106,7 +116,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
    if(o.unitId==594){frames=(frames^o.animationFrame)*16777619u;++herds;check(o.initialIdleDelay==0,"original Nerf extra idle delay");}
   }
   check(hash==v.poses,"controlled resource all original Gaia poses/order");
-  check(frames==v.frames && herds==uint32_t(v.nearHerd*2+v.farHerd*4),"controlled original Nerf animation frames/count");
+  check(frames==v.frames && herds==uint32_t(v.nearHerd*2+v.farHerd*4+(v.lateHunt==1?4:0)),"controlled original Nerf animation frames/count");
   if(v.treeUnit!=413) {
    rng=1993207714u;
    check(game.initRms(varied,defines,120,rng,&error,2,{1,1}) && rng==v.rng,"explicit tree species native import");

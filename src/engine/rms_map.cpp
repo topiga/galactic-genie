@@ -88,6 +88,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     std::vector<ResourceRow> resourceRows;
     size_t resourceProfile=0;
     unsigned prefixHunts=0;
+    bool distantHunt=false;
     constexpr int scoutIds[]={550,552,556,554,258,558,927,932};
     int workerMinDistance=1,workerMaxDistance=3;
     bool startingStalagmites = false;
@@ -287,7 +288,15 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                (i==tokens.size() || (tokens[i].text!="126" && tokens[i].text!="812" && tokens[i].text!="1197" &&
                 (prefixHunts>=3 || (tokens[i].text!="822" && tokens[i].text!="1249")))))
                 return fail("unsupported additional hunt row");
+            if(holocrons && resourceProfile==15 && i<tokens.size() && tokens[i].text=="1585")resourceProfile=16;
             auto row=stockResources[holocrons?resourceProfile:1];
+            if(holocrons && i<tokens.size()) {
+                if(resourceProfile==15 && tokens[i].text=="594")row=stockResources[6];
+                if((resourceProfile==15 || resourceProfile==17) && (tokens[i].text=="822" || tokens[i].text=="1249")) {
+                    if(resourceProfile==17 && distantHunt)return fail("unsupported repeated distant hunt row");
+                    row.unit=tokens[i].text=="822"?822:1249;
+                }
+            }
             if(row.unit==1363 && i<tokens.size()) {
                 if(tokens[i].text=="1365") row.unit=1365;
                 else if(tokens[i].text=="822") row.unit=822;
@@ -304,6 +313,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     const auto parsed=std::from_chars(text.data(),text.data()+text.size(),distance);
                     if(parsed.ec==std::errc{} && parsed.ptr==text.data()+text.size() && distance==35)distant=true;
                 }
+                if(holocrons && resourceProfile==17 && !distant)return fail("late large hunt requires distance35");
                 if(distant)row={row.unit,3,3,35,-1,5,RmsResourceDistance::Far,1,1,1};
                 else if(loose)row={row.unit,row.unit==822?4:2,3,16,22,0,RmsResourceDistance::Near,1,1};
                 else row={row.unit,1,3,16,22,0,RmsResourceDistance::Near,0,1};
@@ -341,6 +351,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             ++i;resourceRows.push_back(row);
             if(holocrons) {
                 if(resourceProfile==8 && !isPredator(row.unit))++prefixHunts;
+                else if(resourceProfile==17 && isBigHunt(row.unit))distantHunt=true;
                 else ++resourceProfile;
             }
             if(!holocrons) nearNova=true;
@@ -689,7 +700,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         } else if (ownedMixedForest) {
             for(auto tile:generated.terrain)
                 if(tile!=1 && tile!=2 && tile!=5 && tile!=6 && tile!=12 && tile!=18 && tile!=20 && tile!=21)
-                    return fail("unsupported Forest startup terrain");
+                    return fail("unsupported Forest startup terrain "+std::to_string(tile));
             for(const auto &tree:generated.scenery)
                 if(!isTree(tree.unitId) || !tree.alive) return fail("Forest startup requires live348/349/413 scenery");
         } else if (!generated.scenery.empty() ||

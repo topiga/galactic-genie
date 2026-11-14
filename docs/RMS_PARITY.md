@@ -685,3 +685,22 @@ The native fixture compares all object poses/order, grids, tree facets and
 native tree import. The parser permits an initial hunt followed by at most two
 large-hunt rows before predators; quantities and grouping remain validated.
 This is sequence evidence on controlled geometry, not complete packaged seeds.
+
+### Late hunting rows and distant groups (2026-11-15)
+
+Three original complete controlled sequences extend the three-row hunt prefix:
+late two-Nerf group plus distant1249 on Forest18 (242 Gaia, RNG1364577121),
+late single822 plus distant822 on Forest20 without Nerfs (220 Gaia,
+RNG734846818), and no late near hunt plus distant822 (219 Gaia, RNG3194867101).
+Each distant group uses count3/variance1, distance35 and spacing5. The native
+fixture compares all resulting Gaia poses/order, grids, automatic tree facets,
+Nerf animation frames and imported tree state. The parser retains the stock
+suffix after these optional rows and rejects repeated distant groups.
+
+The eight-seed audit advances seeds2/12345 past object parsing to the startup
+terrain guard. The other six still reject specific quantities or species:
+1249 loose count1 near/far; late1363 count3; or global126 pairs. These are not
+new complete packaged parity results; seed16160 remains the only such result.
+The reported startup terrain is9 for both seeds2/12345. Explicit CLI checks
+also reject a fourth prefix hunt, a second distant hunt and a near-only group
+in the distant slot without writing an output image.
