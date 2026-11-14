@@ -144,6 +144,29 @@ int main() {
         for(uint8_t v:slopes) slopeHash=(slopeHash^v)*16777619u;
         check(heightHash==fixture[3] && slopeHash==fixture[4]);
     }
+    const uint32_t sparse[][4]={
+        {32,0,410655402u,1253853877u},
+        {32,1,2630615873u,2824267061u},
+        {32,2,3073650368u,2069937073u},
+        {64,0,3685433194u,2010352309u},
+        {64,1,2412129281u,1712082421u},
+        {64,2,3554867026u,368600415u}
+    };
+    for(const auto &fixture:sparse) {
+        const int width=fixture[0],kind=fixture[1];
+        heights.assign(width*width,0);
+        for(int y=0;y<width;++y) for(int x=0;x<width;++x) {
+            if(kind==0) heights[y*width+x]=x==width/2 && y==width/2 ? 7:0;
+            else if(kind==1) heights[y*width+x]=std::abs(x-width/2)+std::abs(y-width/2)<width/4 ? 4:0;
+            else heights[y*width+x]=(x*17+y*31)%97==0 ? 1:0;
+        }
+        check(swgb::smoothRmsHeights(width,width,heights,&error));
+        check(swgb::generateRmsSlopes(width,width,heights,slopes,&error));
+        uint32_t heightHash=2166136261u,slopeHash=2166136261u;
+        for(uint8_t v:heights) heightHash=(heightHash^v)*16777619u;
+        for(uint8_t v:slopes) slopeHash=(slopeHash^v)*16777619u;
+        check(heightHash==fixture[2] && slopeHash==fixture[3]);
+    }
     heights={9};
     check(!swgb::smoothRmsHeights(1,1,heights,&error) && heights==std::vector<uint8_t>{9});
     heights={8};
@@ -153,5 +176,5 @@ int main() {
     for(uint32_t width:{0u,1025u,UINT32_MAX,2u})
         check(!swgb::generateRmsSlopes(width,3,inputs[0],slopes,&error) && slopes==std::vector<uint8_t>{42} && !error.empty());
     check(swgb::generateRmsSlopes(1,1,{255},slopes,&error) && slopes==std::vector<uint8_t>{0} && error.empty());
-    std::cout<<"19683 original slope neighborhoods, 100 smoothing maps, boundaries and validation passed\n";
+    std::cout<<"19683 original slope neighborhoods, 106 smoothing maps, boundaries and validation passed\n";
 }

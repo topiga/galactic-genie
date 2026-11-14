@@ -130,12 +130,13 @@ Private evidence: `rms-flat-terrain-oracle-2026-11-14.json` and
 `rms-flat-terrain-findings-2026-11-14.txt`. These controlled-worker fixtures
 prove filtering, not complete hill generation or whole-map parity.
 
-The native height smoother now matches 100 original whole-map fixtures,
-including rectangular maps, using original ceiling 8 and heights 0..8. The
+The native height smoother now matches 106 original whole-map fixtures,
+including rectangular maps and sparse hills on 32×32/64×64 grids, using original ceiling 8 and heights 0..8. The
 comparison executes `4925d0`, `4922c0`, `491fc0`, `495bb0` and `496170`;
 only final visual refresh callbacks are skipped, with no objects/local player.
 The original slope classifier additionally matches 19,683 neighboring-height
 cases and edge fixtures. This replaces corner-gradient guessing for RMS
 geometry, but is not yet connected to full map startup. Evidence:
 `rms-height-smoothing-oracle-2026-11-14.json` and
-`rms-slope-oracle-2026-11-14.json`.
+`rms-slope-oracle-2026-11-14.json` and
+`rms-sparse-smoothing-oracle-2026-11-14.json`.
