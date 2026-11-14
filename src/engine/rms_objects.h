@@ -72,6 +72,7 @@ struct RmsGlobalGroupPlacement {
 // their original constructor adds a military timer draw and species animation.
 // Large hunt822 supports Near loose2/4;1249 supports Near mode0 singles1/2,
 // distance16..22, no variance, clearance3x3 and no outermost tile placements.
+// Far large hunt uses loose3/variance1, min35, no maximum, spacing5 and one group/player.
 // Their constructors consume seven draws, including three action timers.
 // Predators126/812/1197 support Far ungrouped mode0: two single objects/player at30..40,
 // radius3, no variance/spacing; no grouped placement or variance draws.

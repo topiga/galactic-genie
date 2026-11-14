@@ -54,7 +54,8 @@ struct RmsMap {
 // Two civilization1 randomized starts may instead append the stock holocron285
 // row on64 grass or120 grass/dry forest. The120 profile may continue with stock
 // forage, near/medium/far Nova, near/far ore and two Nerf rows, in that order.
-// The Forest resource/Nerf prefix may end with hunt822 loose2/4 or1249 singles1/2.
+// The Forest resource/Nerf prefix may end with hunt822 loose2/4 or1249 singles1/2,
+// or either large hunt species with distant loose3/variance1 and spacing5.
 // Flat profiles may append the verified FOODC3 hunt variant; Forest21 supports
 // the resource/Nerf prefix with fixed or randomized enemy starts. The selected
 // Forest sequence may continue with ungrouped predators126/812/1197, two global deposit rows

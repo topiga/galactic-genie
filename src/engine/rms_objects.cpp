@@ -295,10 +295,10 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     if(distance!=RmsResourceDistance::Near && !medium && !far) return fail("invalid resource distance profile");
     if((medium || far) && (!perPlayer || (unitId!=66 && !((ore || herd || tree) && far)) || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
         return fail("distance profile requires verified120-square two-player resource row");
-    if(bigHunt && (distance!=RmsResourceDistance::Near || (unitId==1249 && group.groups!=1 && group.groups!=2))) return fail("unsupported large-hunt row");
+    if(bigHunt && (medium || (!far && unitId==1249 && group.groups!=1 && group.groups!=2))) return fail("unsupported large-hunt row");
     if((hunt || predator) && !far && !globalPlacement) return fail("hunting animals require the verified far row");
-    const int playerMin=globalPlacement?globalPlacement->minDistance:tree?(far?6:4):predator?30:bigHunt?16:herd?(far?14:10):forage?10:ore?(far?20:14):medium?18:far?25:12;
-    const int playerMax=tree?(far?8:5):predator?40:bigHunt?22:herd?(far?30:12):forage?12:ore?(far?26:18):medium?26:far?35:16,playerSpacing=globalPlacement?globalPlacement->spacing:perPlayer?(tree?2:herd?0:forage?6:7):0;
+    const int playerMin=globalPlacement?globalPlacement->minDistance:tree?(far?6:4):predator?30:bigHunt?(far?35:16):herd?(far?14:10):forage?10:ore?(far?20:14):medium?18:far?25:12;
+    const int playerMax=tree?(far?8:5):predator?40:bigHunt?(far?-1:22):herd?(far?30:12):forage?12:ore?(far?26:18):medium?26:far?35:16,playerSpacing=globalPlacement?globalPlacement->spacing:perPlayer?(tree?2:bigHunt && far?5:herd?0:forage?6:7):0;
     const auto &exclusionCenters=globalPlacement?globalPlacement->landCenters:novaPlayerStarts;
     if((forage || ore || herd || tree) && !globalPlacement && (!perPlayer || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
         return fail("resource row requires verified120-square two-player profile");
@@ -307,11 +307,11 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         return !forest21 && t!=0 && t!=6 && t!=9 && t!=10 && t!=27 && t!=41;
     })) return fail("resource row requires verified grass/forest terrain");
     if(perPlayer) {
-        const uint32_t expectedGroups=unitId==1249?group.groups:tree?(far?3u:2u):herd && far && !hunt?2u:1u;
-        const uint32_t expectedCount=(tree || predator || unitId==1249)?1u:bigHunt?4u:hunt?4u:herd?(far?2u:4u):forage?6u:ore?(far?4u:5u):(medium || far)?4u:7u;
-        if((unitId!=66 && !forage && !ore && !herd && !tree) || group.mode!=((tree || predator || unitId==1249)?0:herd?1:2) ||
-           group.groups!=expectedGroups || (group.perGroup!=expectedCount && !(forage && (group.perGroup==3 || group.perGroup==12)) && !(unitId==822 && group.perGroup==2) && !(unitId==1365 && group.perGroup==3) && !(unitId==594 && (group.perGroup==expectedCount/2 || group.perGroup==expectedCount*2))) ||
-           group.variance!=(hunt?1u:0u) || group.radius!=(ore?2u:3u) || novaPlayerStarts.size()>8)
+        const uint32_t expectedGroups=bigHunt?(far?1u:unitId==1249?group.groups:1u):tree?(far?3u:2u):herd && far && !hunt?2u:1u;
+        const uint32_t expectedCount=bigHunt?(far?3u:unitId==1249?1u:4u):(tree || predator)?1u:hunt?4u:herd?(far?2u:4u):forage?6u:ore?(far?4u:5u):(medium || far)?4u:7u;
+        if((unitId!=66 && !forage && !ore && !herd && !tree) || group.mode!=((bigHunt && far)?1:(tree || predator || unitId==1249)?0:herd?1:2) ||
+           group.groups!=expectedGroups || (group.perGroup!=expectedCount && !(forage && (group.perGroup==3 || group.perGroup==12)) && !(unitId==822 && !far && group.perGroup==2) && !(unitId==1365 && group.perGroup==3) && !(unitId==594 && (group.perGroup==expectedCount/2 || group.perGroup==expectedCount*2))) ||
+           group.variance!=((hunt || (bigHunt && far))?1u:0u) || group.radius!=(ore?2u:3u) || novaPlayerStarts.size()>8)
             return fail("unsupported per-player resource row");
         for(auto t:terrain) if(restriction[t]!=1.f && (width!=120 || (t!=1 && t!=2 && t!=5 && t!=6 && t!=12 && t!=21)))
             return fail("resource row has unverified nonuniform passability");
@@ -384,7 +384,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             if(x==0 || y==0 || x+1==int(width) || y+1==int(height))return false;
             for(int yy=y-1;yy<=y+1;++yy)
                 for(int xx=x-1;xx<=x+1;++xx)
-                    if(occupied[yy*width+xx])return false;
+                    if(occupied[yy*width+xx] || restriction[terrain[yy*width+xx]]<=.05f)return false;
         }
         return (bird || !occupied[tile]) && restriction[terrain[tile]]>.05f;
     };
@@ -417,7 +417,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     for(size_t player=0;player<(perPlayer?novaPlayerStarts.size():1);++player) {
         const int startX=perPlayer?novaPlayerStarts[player].x:-1;
         const int startY=perPlayer?novaPlayerStarts[player].y:-1;
-        if(!build(outer,startX,startY,perPlayer?playerMax:-1)) return fail("work limit exceeded");
+        if(!build(outer,perPlayer && playerMax>=0?startX:-1,perPlayer && playerMax>=0?startY:-1,perPlayer?playerMax:-1)) return fail("work limit exceeded");
         const RmsZones *zones=nullptr;
         uint8_t centerZone=0;
         if(perPlayer) {

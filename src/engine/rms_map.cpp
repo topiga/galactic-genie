@@ -284,10 +284,19 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 else if(tokens[i].text=="126" || tokens[i].text=="812" || tokens[i].text=="1197") row={int16_t(tokens[i].text=="812"?812:tokens[i].text=="1197"?1197:126),1,3,30,40,0,RmsResourceDistance::Far,0,2};
             }
             if(row.unit==126 && i<tokens.size() && (tokens[i].text=="812" || tokens[i].text=="1197")) row.unit=int16_t(tokens[i].text=="812"?812:tokens[i].text=="1197"?1197:126);
+            if(isBigHunt(row.unit)) {
+                for(size_t p=i+2;p+1<tokens.size() && tokens[p].text!="}";++p) {
+                    if(tokens[p].text!="min_distance_to_players")continue;
+                    const auto &text=tokens[p+1].text;int distance=0;
+                    const auto parsed=std::from_chars(text.data(),text.data()+text.size(),distance);
+                    if(parsed.ec==std::errc{} && parsed.ptr==text.data()+text.size() && distance==35)
+                        row={row.unit,3,3,35,-1,5,RmsResourceDistance::Far,1,1,1};
+                }
+            }
             const bool animal=row.unit==594 || row.unit==1363 || row.unit==1365 || isPredator(row.unit) || isBigHunt(row.unit);
             if (!number(value) || value!=row.unit || i==tokens.size() || tokens[i++].text!="{")
                 return fail("expected next verified stock resource row");
-            bool each=row.global,gaia=row.global,mode=row.mode==0,count=false,inner=row.inner<0,outer=row.global && row.outer<0;
+            bool each=row.global,gaia=row.global,mode=row.mode==0,count=false,inner=row.inner<0,outer=(row.global || isBigHunt(row.unit)) && row.outer<0;
             bool scale=!row.scaled,terrainFilter=row.unit!=1585;
             bool spacing=row.spacing==0,zone=animal || row.global || row.unit==413,radius=row.radius==3,groups=row.mode==0 || row.groups==1,variance=row.variance==0;
             while (i<tokens.size() && tokens[i].text!="}") {
@@ -298,9 +307,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(row.mode && name==(row.mode==2?"set_tight_grouping":"set_loose_grouping")) { mode=true;continue; }
                 if(!number(value)) return fail("missing resource parameter value");
                 if(name=="terrain_to_place_on" && row.unit==1585 && value==22) terrainFilter=true;
-                else if(name=="number_of_objects" && row.unit==1249 && (value==1 || value==2)) { row.groups=value;count=true; }
+                else if(name=="number_of_objects" && row.unit==1249 && row.mode==0 && (value==1 || value==2)) { row.groups=value;count=true; }
                 else if(name=="number_of_objects" && row.mode==0 && value==int(row.groups)) count=true;
-                else if(name=="number_of_objects" && row.mode!=0 && (value==row.count || (row.unit==822 && value==2) || (row.unit==1197 && row.global && value==2) || (row.unit==59 && (value==3 || value==12)) || (row.unit==594 && (value==row.count/2 || value==row.count*2)))) { row.count=value;count=true; }
+                else if(name=="number_of_objects" && row.mode!=0 && (value==row.count || (row.unit==822 && row.distance==RmsResourceDistance::Near && value==2) || (row.unit==1197 && row.global && value==2) || (row.unit==59 && (value==3 || value==12)) || (row.unit==594 && (value==row.count/2 || value==row.count*2)))) { row.count=value;count=true; }
                 else if(name=="number_of_groups" && value==int(row.groups)) groups=true;
                 else if(name=="group_placement_radius" && value==row.radius) radius=true;
                 else if(name=="group_variance" && value==int(row.variance)) variance=true;

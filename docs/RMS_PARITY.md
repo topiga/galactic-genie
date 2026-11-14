@@ -546,3 +546,22 @@ hunting species. `tools/rms_large_hunt_checks.h` checks terrain/elevation, every
 Gaia pose, terminal RNG, animation frames/extra idle delays and native import.
 The prefix still cannot continue with arbitrary additional hunt rows; the distant
 35-tile profiles and the full alternate packaged sequences remain unverified.
+
+### Distant large hunt rows (2026-11-14)
+
+The original command handler decodes the packaged distant large-hunt request as
+loose count3, variance1, one group/player, minimum35, maximum-1 and spacing5.
+Controlled original thirteen-row prefixes for 822 and1249 each produce five
+animals, 80 Gaia objects total and final RNG3597322543. Their differing terrain
+restrictions change the positions in the second group. The original checks
+passability across the full3x3 clearance footprint: checking just the centre tile
+incorrectly admits animals next to impassable water. The distant fixtures catch
+that error while the near-start fixtures retain neighbour and edge coverage.
+
+The helper uses a full-map outer candidate queue for this no-maximum profile,
+then applies player exclusions, connected zones, spacing and large-animal
+clearance. The parser validates the complete distant profile, including explicit
+variance and spacing. Both original results join the packaged-data regression
+with every pose, startup animation and native import checked. This supersedes
+the preceding note about the35-tile profile; arbitrary row sequences remain
+unsupported.
