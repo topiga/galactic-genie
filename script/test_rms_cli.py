@@ -73,4 +73,16 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
         output=run(['render-rms',data,root/'tools/fixtures'/(fixture+'.rms'),32,1,work/(fixture+'.png')],0)
         assert f'{count} native objects' in output, output
         assert (work/(fixture+'.png')).stat().st_size>100, 'Missing terrain rendering'
+    owned = root/'tools/fixtures/owned-command-center.rms'
+    image = work/'owned.png'
+    owned_args = ['render-rms',data,owned,32,1,image,'--players',1]
+    output=run([*owned_args,'--civilization',2],0)
+    assert '1 native objects' in output and image.stat().st_size>100
+    image.unlink()
+    run(owned_args,1)
+    run([*owned_args,'--civilization',2,'--players',2],1)
+    for bad in ['0','9','-1','bad']:
+        run([*owned_args,'--civilization',bad],2)
+    run([*owned_args,'--civilization',2,'--civilization',2],2)
+    assert not image.exists(), 'Rejected owned setup created an image'
 print('RMS file/DRS parity, includes, defines and rejection checks passed')

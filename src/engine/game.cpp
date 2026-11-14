@@ -1156,10 +1156,12 @@ static float rmsTimberFacing(uint8_t facet,int angleCount=12) {
 }
 
 bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string> &defines,
-                   int mapSize, uint32_t &randomState, std::string *err, uint32_t playerCount) {
+                   int mapSize, uint32_t &randomState, std::string *err, uint32_t playerCount,
+                   const std::vector<uint16_t> &playerCivilizations) {
     uint32_t rng = randomState;
     RmsMap generated;
-    if (!generateRmsMap(script,defines,mapSize,mapSize,assets_.dat(),rng,generated,err,playerCount)) return false;
+    if (!generateRmsMap(script,defines,mapSize,mapSize,assets_.dat(),rng,generated,err,playerCount,
+                        playerCivilizations)) return false;
     Scenario scenario;
     scenario.map.width=scenario.map.height=generated.width;
     scenario.map.tiles.resize(generated.terrain.size());
@@ -1186,8 +1188,29 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     }
     for (const auto &placement:generated.objects)
         placeResource(placement.unitId,placement.x,placement.y,placement.facet,nextId++);
+    for (const auto &placement:generated.ownedObjects) {
+        auto &player=scenario.players[placement.owner-1];
+        player.active=true;player.human=placement.owner==1;
+        player.civilization=scenario.civilizations[placement.owner-1]=placement.civilization;
+        player.color=placement.owner-1;player.populationLimit=200;
+        ScenarioUnit unit;
+        unit.unitId=placement.unitId;unit.player=uint8_t(placement.owner);
+        unit.spawnId=nextId++;unit.state=2;
+        unit.x=mapSize-placement.y;unit.y=placement.x;
+        unit.rotation=kPi*.5f; // Verified109 graphics have one angle; no Gaia facet draw.
+        scenario.units.push_back(unit);
+    }
     scenario.nextUnitId=nextId;
     if (!initScenario(scenario,err)) return false;
+    for (const auto &placement:generated.ownedObjects) {
+        const auto &unit=assets_.dat().civs[placement.civilization].units[placement.unitId];
+        float cost=0;
+        for (const auto &entry:unit.costs)
+            if ((entry.flag&0xff) && entry.type>=0 && entry.type<=3) cost+=entry.amount;
+        // Original completed starting buildings record their cost without charging the owner.
+        resources_[placement.owner][98]+=cost;
+        resources_[placement.owner][165]+=cost;
+    }
     randomState=rng;
     return true;
 }

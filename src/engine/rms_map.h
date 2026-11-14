@@ -6,12 +6,18 @@
 #include "rms_player_starts.h"
 
 namespace swgb {
+struct RmsOwnedPlacement {
+    float x=0, y=0;
+    uint16_t owner=1, civilization=1;
+    int16_t unitId=109;
+};
 struct RmsMap {
     uint32_t width = 0, height = 0;
     std::vector<uint8_t> terrain;
     std::vector<RmsTimberPlacement> objects;
     std::vector<RmsSceneryPlacement> scenery; // Creation order, including removed early scenery.
     std::vector<RmsPlayerStart> playerStarts; // Owner order1..playerCount; no starting units implied.
+    std::vector<RmsOwnedPlacement> ownedObjects; // Completed buildings, in creation order.
 };
 
 // Strict script pipeline: explicit nonplayer lands OR one player-land block (1..8 players)
@@ -20,8 +26,12 @@ struct RmsMap {
 // The RMS random_placement directive itself does not select this game setting.
 // Terrain rows support spacing, scaling and player-start protection on flat maps.
 // Rejects other stages/commands; not a complete packaged random-map generator.
+// Also supports one local-player109 on bare grass0 with explicit civilization and
+// zero placement distances. Includes its civilization-specific foundation terrain.
+// Multiplayer owned starts require visibility-dependent foundation callbacks.
 // RNG is the shared CRT state at script entry. Failure clears output and leaves RNG unchanged.
 bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::string> &defines,
                     uint32_t width, uint32_t height, const dat::DatFile &data,
-                    uint32_t &randomState, RmsMap &out, std::string *err = nullptr, uint32_t playerCount = 2);
+                    uint32_t &randomState, RmsMap &out, std::string *err = nullptr, uint32_t playerCount = 2,
+                    const std::vector<uint16_t> &playerCivilizations = {});
 } // namespace swgb

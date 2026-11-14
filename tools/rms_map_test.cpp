@@ -3,6 +3,7 @@
 #include "core/genie_dat.h"
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 
 static void check(bool ok,const std::string &message) {
     if (!ok) { std::cerr<<message<<'\n'; std::exit(1); }
@@ -222,5 +223,69 @@ int main() {
     state=1;
     check(!generateRmsMap(script,{},32,32,data,state,map,&error) && state==1 && map.terrain.empty(),
           "invalid generated shore alias fails transactionally after cleanup");
+    data={};
+    data.terrainBlock.terrains.resize(28);
+    data.terrainBlock.terrainsUsed=28;
+    for (int id:{0,4,6,27}) data.terrainBlock.terrains[id].enabled=1;
+    data.civs.resize(9); data.graphics.resize(7833); data.terrainRestrictions.resize(5);
+    data.terrainRestrictions[4].passableBuildableDmgMultiplier={1};
+    for (uint16_t civ=1;civ<=8;++civ) {
+        data.civs[civ].units.resize(110);
+        auto &u=data.civs[civ].units[109];
+        u.exists=true; u.id=109; u.type=dat::UT_Building; u.cls=18; u.hitPoints=2500; u.lineOfSight=8;
+        u.collisionSize[0]=u.collisionSize[1]=2; u.collisionSize[2]=4;
+        u.clearanceSize[0]=u.clearanceSize[1]=2; u.terrainRestriction=4; u.hillMode=2;
+        u.obstructionType=2; u.obstructionClass=3;
+        u.placementTerrain[0]=u.placementTerrain[1]=u.placementSideTerrain[0]=u.placementSideTerrain[1]=-1;
+        u.standingGraphic[0]=civ<=6?2271+civ:7824+civ;
+        u.constructionGraphic=civ<=6?366+civ:7390+civ;
+        u.foundationTerrainId=27; u.techId=22; u.headUnit=621; u.secondaryProjectileUnit=54;
+        u.trainTime=100; u.constructionSound=597;
+        for (auto &annex:u.annexes) annex.unitId=-1;
+        auto &standing=data.graphics[u.standingGraphic[0]], &construction=data.graphics[u.constructionGraphic];
+        standing.exists=true; standing.sequenceType=1; standing.frameCount=8; standing.angleCount=1;
+        construction.exists=true; construction.sequenceType=11; construction.frameCount=1; construction.angleCount=3;
+    }
+    const std::string ownedLand="<LAND_GENERATION> base_terrain 0 create_player_lands { terrain_type 0 base_size 3 number_of_tiles 60 }";
+    const std::string ownedRow=" <OBJECTS_GENERATION> create_object 109 { set_place_for_every_player number_of_objects 1 min_distance_to_players 0 max_distance_to_players 0 group_placement_radius 18 }";
+    load(ownedLand+ownedRow);
+    // Original full4ddd40 stage, actual foundation writes and final scheduler draw.
+    const uint32_t ownedSeeds[]={1,12345,0xffffffff}, ownedFinal[]={2036296550,2943925683u,764690905};
+    const int ownedX[]={18,20,20},ownedY[]={5,11,10};
+    const uint32_t ownedHashes[3][3]={{2282508853u,1877077813u,2491377461u},
+        {470130693u,461407749u,3220284933u},{2078377669u,3067649733u,3863289541u}};
+    for (uint16_t civ=1;civ<=8;++civ) for (int seed=0;seed<3;++seed) {
+        state=ownedSeeds[seed];
+        check(generateRmsMap(script,{},32,32,data,state,map,&error,1,{civ}),error);
+        check(state==ownedFinal[seed] && map.objects.empty() && map.scenery.empty() && map.ownedObjects.size()==1,
+              "original owned109 object count/RNG mismatch");
+        const auto &cc=map.ownedObjects[0];
+        check(cc.owner==1 && cc.civilization==civ && cc.unitId==109 && cc.x==ownedX[seed] && cc.y==ownedY[seed],
+              "original owned109 owner/civilization/position mismatch");
+        hash=2166136261u;
+        for (auto tile:map.terrain) hash=(hash^tile)*16777619u;
+        check(hash==ownedHashes[civ==2?1:civ==6?2:0][seed],"original owned109 foundation raster mismatch");
+    }
+    auto rejectsOwned=[&](uint32_t count,const std::vector<uint16_t> &civs) {
+        state=12345;
+        check(!generateRmsMap(script,{},32,32,data,state,map,&error,count,civs) && state==12345 &&
+              map.terrain.empty() && map.ownedObjects.empty() && !error.empty(),"unsupported owned109 must fail atomically");
+    };
+    rejectsOwned(1,{}); rejectsOwned(1,{0}); rejectsOwned(1,{9}); rejectsOwned(2,{1,2});
+    for (const auto &row:{"create_object 109 { set_place_for_every_player }",
+                         "create_object 109 { set_place_for_every_player number_of_objects 2 min_distance_to_players 0 max_distance_to_players 0 }",
+                         "create_object 109 { set_place_for_every_player number_of_objects 1 min_distance_to_players 1 max_distance_to_players 1 }",
+                         "create_object 109 { set_gaia_object_only number_of_objects 1 min_distance_to_players 0 max_distance_to_players 0 }"}) {
+        load(ownedLand+" <OBJECTS_GENERATION> "+row); rejectsOwned(1,{1});
+    }
+    load(ownedLand+ownedRow);
+    data.civs[1].units[109].annexes[0].unitId=1; rejectsOwned(1,{1});
+    data.civs[1].units[109].annexes[0].unitId=-1;
+    data.civs[1].units[109].convertTerrain=1; rejectsOwned(1,{1});
+    data.civs[1].units[109].convertTerrain=0;
+    data.terrainRestrictions[4].passableBuildableDmgMultiplier[0]=std::numeric_limits<float>::infinity();
+    rejectsOwned(1,{1}); data.terrainRestrictions[4].passableBuildableDmgMultiplier[0]=1;
+    data.terrainBlock.terrains[27].numTerrainUnitsUsed=1;
+    data.terrainBlock.terrains[27].terrainUnitId[0]=348; rejectsOwned(1,{1});
     std::cout<<"RMS integrated map tests passed\n";
 }

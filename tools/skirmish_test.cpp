@@ -25,6 +25,7 @@ static void check(bool value, const char *message) {
 #include "conquest_checks.h"
 #include "fog_edge_checks.h"
 #include "rms_spawn_checks.h"
+#include "rms_owned_spawn_checks.h"
 #include "rms_grouped_checks.h"
 #include "point_move_checks.h"
 
@@ -247,6 +248,7 @@ int main(int argc, char **argv) {
         if(playerConquest) {swgb::Game game(assets);playerMatch(game,assets,renderer,true);return 0;}
         fogEdgeChecks(argv[1]);
         rmsSpawnChecks(assets);
+        ownedRmsSpawnChecks(assets);
         rmsGroupedChecks(assets);
         pointMoveChecks(assets);
     fogRendering(assets,renderer);

@@ -65,8 +65,8 @@ static int usage() {
             "  swgbtool ai-script <entry.per>\n"
             "  swgbtool test-ai <DataDir> <AiDir>\n"
             "  swgbtool rms-script <archive.drs> <resourceId> [--rng-state N] [--define SYMBOL] [--dump]\n"
-            "  swgbtool render-rms <DataDir> <self-contained.rms> <size> <rng-state> <out.png> [--players 1..8] [--zones restriction-ID]\n"
-            "  swgbtool render-rms-resource <DataDir> <archive.drs> <id> <size> <rng-state> <out.png> [--define SYMBOL] [--players 1..8] [--zones restriction-ID]\n"
+            "  swgbtool render-rms <DataDir> <self-contained.rms> <size> <rng-state> <out.png> [--players 1..8] [--civilization 1..8] [--zones restriction-ID]\n"
+            "  swgbtool render-rms-resource <DataDir> <archive.drs> <id> <size> <rng-state> <out.png> [--define SYMBOL] [--players 1..8] [--civilization 1..8] [--zones restriction-ID]\n"
             "  swgbtool mp3 <file.mp3>\n");
     return 2;
 }
@@ -5856,6 +5856,7 @@ static int cmdRenderRms(const char *dataDir, const char *path, const char *sizeT
                         const char *stateText, const char *output, const char *resourceNumber=nullptr,
                         int optionCount=0, char **options=nullptr) {
     uint32_t size=0,state=0,playerCount=2,zoneRestriction=0;
+    std::vector<uint16_t> playerCivilizations;
     bool showZones=false;
     auto parse=[](const char *text,uint32_t &value) {
         const char *end=text+std::strlen(text);
@@ -5868,13 +5869,20 @@ static int cmdRenderRms(const char *dataDir, const char *path, const char *sizeT
     std::unordered_set<std::string> defines;
     for (int i=0;i<optionCount;i+=2) {
         if (i+1==optionCount) {
-            std::fprintf(stderr,"error: expected --define SYMBOL, --players 1..8 or --zones restriction-ID\n"); return 2;
+            std::fprintf(stderr,"error: expected --define SYMBOL, --players 1..8, --civilization 1..8 or --zones restriction-ID\n"); return 2;
         }
         if (!std::strcmp(options[i],"--define")) defines.insert(options[i+1]);
         else if (!std::strcmp(options[i],"--players") && parse(options[i+1],playerCount) &&
                  playerCount>=1 && playerCount<=8) {}
         else if (!std::strcmp(options[i],"--zones") && parse(options[i+1],zoneRestriction)) showZones=true;
-        else { std::fprintf(stderr,"error: expected --define SYMBOL, --players 1..8 or --zones restriction-ID\n"); return 2; }
+        else if (!std::strcmp(options[i],"--civilization")) {
+            uint32_t civilization=0;
+            if (!playerCivilizations.empty() || !parse(options[i+1],civilization) || civilization<1 || civilization>8) {
+                std::fprintf(stderr,"error: specify one civilization ID1..8\n"); return 2;
+            }
+            playerCivilizations.push_back(uint16_t(civilization));
+        }
+        else { std::fprintf(stderr,"error: expected --define SYMBOL, --players 1..8, --civilization 1..8 or --zones restriction-ID\n"); return 2; }
     }
     RmsScript script;
     std::string error;
@@ -5919,7 +5927,7 @@ static int cmdRenderRms(const char *dataDir, const char *path, const char *sizeT
         RmsZoneCache zoneCache;
         uint32_t zoneIndex;
         const auto &passability=assets.dat().terrainRestrictions[zoneRestriction].passableBuildableDmgMultiplier;
-        if (!generateRmsMap(script,defines,size,size,assets.dat(),state,map,&error,playerCount) ||
+        if (!generateRmsMap(script,defines,size,size,assets.dat(),state,map,&error,playerCount,playerCivilizations) ||
             !zoneCache.lookup(size,map.terrain,passability,zoneIndex,&error)) {
             std::fprintf(stderr,"error: %s\n",error.c_str()); return 1;
         }
@@ -5944,7 +5952,7 @@ static int cmdRenderRms(const char *dataDir, const char *path, const char *sizeT
         return 0;
     }
     Game game(assets);
-    if (!game.initRms(script,defines,static_cast<int>(size),state,&error,playerCount)) {
+    if (!game.initRms(script,defines,static_cast<int>(size),state,&error,playerCount,playerCivilizations)) {
         std::fprintf(stderr,"error: %s\n",error.c_str()); return 1;
     }
     game.setZoom(std::min(1.f,800.f/(2.f*Game::kTileHalfW*size)));

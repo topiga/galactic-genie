@@ -1,0 +1,14 @@
+<LAND_GENERATION>
+base_terrain 0
+create_player_lands {
+    terrain_type 0
+    base_size 3
+    number_of_tiles 60
+}
+<OBJECTS_GENERATION>
+create_object 109 {
+    number_of_objects 1
+    set_place_for_every_player
+    min_distance_to_players 0
+    max_distance_to_players 0
+}
