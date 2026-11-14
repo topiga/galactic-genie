@@ -524,3 +524,25 @@ regression checks all poses plus twelve predator startup animations (four near
 players and eight global), including native import. Other predator species still
 accept only the verified single-object global groups. This adds an individual
 row profile; seed 32767 still needs its hunt animals and explicit tree variant.
+
+### Large hunt placement and clearance (2026-11-14)
+
+Controlled original thirteen-row prefixes retain the selected Forest geometry,
+forage3 and both stock Nerf rows, then substitute a large hunt row at distances
+16..22. The local player remains1. All later elevation/connection sections remain
+in the native RMS input even though they occur after OBJECTS in the source.
+
+| Unit | Placement per player | Gaia objects | Final RNG |
+|---|---|---|---|
+| 822 | loose group of2 | 79 | 1777230500 |
+| 822 | loose group of4 | 83 | 1427887360 |
+| 1249 | one ungrouped object | 77 | 3550983994 |
+| 1249 | two ungrouped objects | 79 | 1585104208 |
+
+The original rejects blocking objects in the surrounding3x3 tiles and rejects
+outermost map tiles. These differ from the previously supported small animals.
+Both large species consume seven constructor draws, versus eight for the small
+hunting species. `tools/rms_large_hunt_checks.h` checks terrain/elevation, every
+Gaia pose, terminal RNG, animation frames/extra idle delays and native import.
+The prefix still cannot continue with arbitrary additional hunt rows; the distant
+35-tile profiles and the full alternate packaged sequences remain unverified.
