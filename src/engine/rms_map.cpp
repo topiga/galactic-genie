@@ -62,7 +62,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         if (command == "<OBJECTS_GENERATION>" && (stage == 1 || stage == 2)) { stage = 3; continue; }
         int32_t value = 0;
         if (stage == 1 && command == "base_terrain") {
-            if (!number(value)) return fail("base_terrain requires an integer");
+            if (!number(value) || value<0 || value>255) return fail("base_terrain requires an integer in0..255");
             base = static_cast<uint8_t>(value);
         } else if (stage == 1 && (command == "create_land" || command == "create_player_lands")) {
             const bool players=command=="create_player_lands";
@@ -78,7 +78,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             while (i < tokens.size() && tokens[i].text != "}") {
                 const auto name = tokens[i++].text;
                 if (!number(value)) return fail(name + " requires an integer");
-                if (name == "terrain_type") { land.terrain=static_cast<uint8_t>(value); terrain=true; }
+                if (name == "terrain_type" && value>=0 && value<=255) { land.terrain=static_cast<uint8_t>(value); terrain=true; }
                 else if (name == "land_position" && !players) {
                     int32_t y=0;
                     if (!number(y) || value<0 || value>99 || y<0 || y>99) return fail("positions must be 0..99");

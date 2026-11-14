@@ -66,9 +66,15 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     run(['render-rms-resource',data,work/'test.drs',60002,32,1,work/'archive.png'],1)
     assert not (work/'archive.png').exists(), 'Rejected input created output'
     (work/'invalid.rms').write_text(source.replace('base_terrain 0','base_terrain 256'))
-    assert 'unsupported terrain parameter/value base_terrain' in run(
+    assert 'base_terrain' in run(
         ['render-rms',data,work/'invalid.rms',32,1,work/'rejected.png'],1)
     assert not (work/'rejected.png').exists(), 'Wrapped terrain ID created output'
+    for directive, original in [('base_terrain', 0), ('terrain_type', 3)]:
+        for value in [-256, 256, 259]:
+            path=work/'invalid-land-terrain.rms'
+            path.write_text(source.replace(f'{directive} {original}', f'{directive} {value}', 1))
+            run(['render-rms',data,path,32,1,work/'rejected.png'],1)
+            assert not (work/'rejected.png').exists(), 'Wrapped land terrain ID created output'
     for fixture, count in [('dry-terrain',0),('water-terrain',0),('forest-terrain',40),('carbon-terrain',40),('early-forest',756),('nova-resource',492),('grouped-nova',503)]:
         output=run(['render-rms',data,root/'tools/fixtures'/(fixture+'.rms'),32,1,work/(fixture+'.png')],0)
         assert f'{count} native objects' in output, output
