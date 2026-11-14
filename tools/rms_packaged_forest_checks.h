@@ -39,5 +39,25 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  check(swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),69,{0,4,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && placed.size()==1 && placed[0].x==60.5f && placed[0].y==60.5f,"fish accept cardinal shore contact");
  ground[0]=22;rng=1;const auto before=eligible;
  check(!swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),1585,{0,7,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && rng==1 && placed.empty() && eligible==before,"unsupported wave quantity rejected atomically");
+ // Controlled original replay changes only forage quantity, retaining all later rows.
+ std::vector<swgb::RmsToken> tokens;rng=16160;
+ check(script.preprocess(defines,tokens,&error,&rng) && rng==1993207714u,"Forest preprocessing RNG");
+ std::string source;bool forage=false;unsigned changes=0;
+ for(size_t i=0;i<tokens.size();++i) {
+  if(tokens[i].text=="create_object" && i+1<tokens.size())forage=tokens[i+1].text=="59";
+  if(forage && tokens[i].text=="number_of_objects" && i+1<tokens.size()) {
+   check(tokens[i+1].text=="12","original Forest forage quantity");tokens[i+1].text="3";++changes;
+  }
+  source+=tokens[i].text+" ";
+ }
+ check(changes==1,"one controlled forage row");
+ swgb::RmsScript smallForage;
+ check(smallForage.load(0,[&](int32_t resource,std::vector<uint8_t>&bytes){if(resource)return false;bytes.assign(source.begin(),source.end());return true;},{},&error),error.c_str());
+ check(swgb::generateRmsMap(smallForage,defines,120,120,assets.dat(),rng,map,&error,2,{1,1}),error.c_str());
+ check(rng==278519141u && map.scenery.size()==7554 && map.ownedObjects.size()==10 && map.resourcesAfterOwned.size()==220,"controlled forage3 full-stage count/RNG");
+ check(bytesHash(map.terrain)==3348257725u && bytesHash(map.elevation)==908132044u,"controlled forage3 original grids");
+ hash=2166136261u;for(const auto&o:map.resourcesAfterOwned)pose(o.unitId,0,o.x,o.y,o.facet);
+ check(hash==1662422u,"controlled forage3 all220 original Gaia poses/order");
+ std::puts("PASS: controlled forage3 and all subsequent Forest rows match original");
  std::puts("PASS: full packaged Forest23 rows,7802 objects, original grids/RNG and native import");
 }

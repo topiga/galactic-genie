@@ -60,7 +60,7 @@ struct RmsGlobalGroupPlacement {
 // Default Gaia modifiers, one grouped row. Shared original queue nodes are preserved.
 // Optional starts select the verified near-Nova row: tight7, radius3, one group/player,
 // distances12..16, spacing7, zone7 on uniformly passable terrain.
-// Also supports forage59 tight6/12 on120-square dry/Forest21 maps with two starts:
+// Also supports forage59 tight3/6/12 on120-square dry/Forest21 maps with two starts:
 // distances10..12, spacing6, zone7; occupiedTiles must include retained scenery,
 // prior resources and owned footprints. Other forage rows remain unsupported.
 // Forest21 rows use original connected-zone and eight-point clearance gates.

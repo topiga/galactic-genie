@@ -462,3 +462,23 @@ wave positions, animation frames, facet 7 and zero extra idle delay. Entry RNG
 The full map terrain whitelist remains unchanged because earlier startup and
 resource rows on terrain 22 have not yet been compared. Unsupported wave
 quantities still fail atomically.
+
+### Controlled smaller forage groups (2026-11-14)
+
+The same original full-stage replay also ran with the forage59 quantity changed
+from twelve to three per owner, keeping all other 23-row Forest inputs unchanged.
+The native parser and shared placement helper now accept this verified quantity.
+The packaged Forest test preprocesses the user's script, changes that single
+quantity and compares all 220 resulting Gaia object poses in creation order,
+unchanged terrain/elevation grids and final RNG 278519141. This checks the random
+sequence's downstream effects, not just the six forage plants. Quantity two
+remains an atomic rejection in the shared helper test. This controlled variation
+does not establish another complete packaged seed or arbitrary group quantities.
+
+The eight additional packaged seeds audited (1, 2, 3, 42, 12345, 16161, 32767,
+65535) still reject at explicit profile boundaries. Seeds 16161 and 32767 now
+pass the three-forage row and reach later unsupported rows. The current complete
+packaged comparison remains seed 16160 only. The additional data inventory
+identifies hunt units 822/1249, predators 812/1197 and explicit trees 348/349 as
+next comparison targets; their original placement/constructor behavior is not
+established by reading their metadata alone.

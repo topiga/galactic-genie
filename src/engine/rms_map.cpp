@@ -294,7 +294,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(!number(value)) return fail("missing resource parameter value");
                 if(name=="terrain_to_place_on" && row.unit==1585 && value==22) terrainFilter=true;
                 else if(name=="number_of_objects" && row.mode==0 && value==int(row.groups)) count=true;
-                else if(name=="number_of_objects" && row.mode!=0 && (value==row.count || (row.unit==59 && value==12))) { row.count=value;count=true; }
+                else if(name=="number_of_objects" && row.mode!=0 && (value==row.count || (row.unit==59 && (value==3 || value==12)))) { row.count=value;count=true; }
                 else if(name=="number_of_groups" && value==int(row.groups)) groups=true;
                 else if(name=="group_placement_radius" && value==row.radius) radius=true;
                 else if(name=="group_variance" && value==int(row.variance)) variance=true;

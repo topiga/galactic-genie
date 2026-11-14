@@ -19,7 +19,7 @@ static void rmsForageChecks(const swgb::dat::DatFile &data) {
   check(rng==c.final && out.size()==12,"original forage final RNG/count");
   for(size_t i=0;i<out.size();++i)check(out[i].x==c.points[i].x && out[i].y==c.points[i].y && out[i].facet==c.points[i].facet && out[i].headingRadians==0 && out[i].unitId==59,"original forage coordinate/facet");
   for(int invalid=0;invalid<3;++invalid) {
-   auto bad=group; if(invalid==0)bad.perGroup=3;if(invalid==1)bad.radius=4;
+   auto bad=group; if(invalid==0)bad.perGroup=2;if(invalid==1)bad.radius=4;
    rng=c.entry;out.push_back({});
    check(!swgb::generateRmsGroupedResourcePlacements(120,120,terrain,data,59,bad,rng,out,&error,c.occupied,invalid==2?1:16000000,starts),"unsupported forage row/work limit rejected");
    check(rng==c.entry && out.empty(),"forage failure atomic");
