@@ -17,6 +17,7 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
     };
     static constexpr ResourceSpec specs[]={
         {348,5282,10,31,50,11,12,1,100,2,2.f},
+        {59,5192,10,27,0,8,6,0,125,1,1.f},
         {66,5134,30,29,0,8,10,3,800,1,1.f},
         {102,5232,30,30,0,8,10,2,350,1,1.f}};
     const ResourceSpec *match=nullptr;
@@ -136,6 +137,7 @@ bool generateRmsResourcePlacements(uint32_t width, uint32_t height,
         if (err) *err = std::string("RMS resource: ") + reason;
         return false;
     };
+    if(unitId==59) return fail("forage requires the verified grouped row");
     if (!width || !height || width > 1024 || height > 1024 ||
         terrain.size() != static_cast<size_t>(width)*height || requested > terrain.size())
         return fail("invalid dimensions, terrain size or object count");
@@ -163,7 +165,7 @@ bool generateRmsResourcePlacements(uint32_t width, uint32_t height,
             out.push_back({float(tile%width)+.5f,float(tile/width)+.5f,appearance.facet,
                            appearance.headingRadians,unitId});
         } else {
-            const auto facet=static_cast<uint8_t>(std::min(11u,genieRandomDraw(rng)*12u/32767u));
+            const auto facet=static_cast<uint8_t>(std::min(unsigned(spec.angles-1),genieRandomDraw(rng)*unsigned(spec.angles)/32767u));
             out.push_back({float(tile%width)+.5f,float(tile/width)+.5f,facet,0,unitId});
         }
     }
@@ -190,15 +192,22 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     if(!spec) return false;
     const auto &restriction=data.terrainRestrictions[spec->restriction].passableBuildableDmgMultiplier;
     const bool perPlayer=!novaPlayerStarts.empty();
+    const bool forage=unitId==59;
+    const int playerMin=forage?10:12,playerMax=forage?12:16,playerSpacing=forage?6:7;
+    if(forage && (!perPlayer || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
+        return fail("forage requires verified120-square two-player profile");
+    if(forage && std::any_of(terrain.begin(),terrain.end(),[](uint8_t t) {
+        return t!=0 && t!=6 && t!=9 && t!=10 && t!=27 && t!=41;
+    })) return fail("forage requires the verified dry terrain profile");
     if(perPlayer) {
-        if(unitId!=66 || group.mode!=2 || group.groups!=1 || group.perGroup!=7 ||
+        if((unitId!=66 && !forage) || group.mode!=2 || group.groups!=1 || group.perGroup!=(forage?6u:7u) ||
            group.variance || group.radius!=3 || novaPlayerStarts.size()>8)
-            return fail("unsupported per-player Nova row");
+            return fail("unsupported per-player resource row");
         // Verified connected dry profiles give one restriction8 zone; zone7 cannot reject.
-        for(auto t:terrain) if(restriction[t]!=1.f) return fail("Nova requires a uniform passable zone");
+        for(auto t:terrain) if(restriction[t]!=1.f) return fail("resource row requires a uniform passable zone");
         for(const auto &start:novaPlayerStarts)
             if(start.x<0 || start.y<0 || uint32_t(start.x)>=width || uint32_t(start.y)>=height)
-                return fail("Nova player start outside map");
+                return fail("resource player start outside map");
     }
     std::vector<bool> occupied(count),eligible(count,true);
     for(uint32_t tile:occupiedTiles) {
@@ -253,26 +262,26 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         if(spec->type==30) {
             const auto appearance=drawRmsCarbonAppearance(rng,static_cast<uint8_t>(spec->angles));
             placement.facet=appearance.facet;placement.headingRadians=appearance.headingRadians;
-        } else placement.facet=static_cast<uint8_t>(std::min(11u,genieRandomDraw(rng)*12u/32767u));
+        } else placement.facet=static_cast<uint8_t>(std::min(unsigned(spec->angles-1),genieRandomDraw(rng)*unsigned(spec->angles)/32767u));
         result.push_back(placement);occupied[tile]=true;
     };
     for(size_t player=0;player<(perPlayer?novaPlayerStarts.size():1);++player) {
         const int startX=perPlayer?novaPlayerStarts[player].x:-1;
         const int startY=perPlayer?novaPlayerStarts[player].y:-1;
-        if(!build(outer,startX,startY,perPlayer?16:-1)) return fail("work limit exceeded");
+        if(!build(outer,startX,startY,perPlayer?playerMax:-1)) return fail("work limit exceeded");
         uint32_t groupsLeft=group.groups;
         while(next[outer]>=0 && groupsLeft) {
             if(!spend(1)) return fail("work limit exceeded");
             const int center=pop(outer);
             const int x=center%width,y=center/width;
             if(perPlayer && std::any_of(novaPlayerStarts.begin(),novaPlayerStarts.end(),[&](const auto &start) {
-                return std::abs(x-start.x)<12 && std::abs(y-start.y)<12;
+                return std::abs(x-start.x)<playerMin && std::abs(y-start.y)<playerMin;
             })) continue;
             if(!pass(center)) continue;
             if(perPlayer) {
                 // Original4de1b0 unlinks the spacing square before the group uses shared nodes.
-                for(int sy=std::max(0,y-7);sy<=std::min(int(height)-1,y+7);++sy)
-                    for(int sx=std::max(0,x-7);sx<=std::min(int(width)-1,x+7);++sx) unlink(sy*width+sx);
+                for(int sy=std::max(0,y-playerSpacing);sy<=std::min(int(height)-1,y+playerSpacing);++sy)
+                    for(int sx=std::max(0,x-playerSpacing);sx<=std::min(int(width)-1,x+playerSpacing);++sx) unlink(sy*width+sx);
             }
             const int xmin=std::max(0,x-int(group.radius)),xmax=std::min(int(width)-1,x+int(group.radius));
             const int ymin=std::max(0,y-int(group.radius)),ymax=std::min(int(height)-1,y+int(group.radius));
@@ -312,8 +321,8 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             }
             if(perPlayer) {
                 // Original4de090 persists this square across player-land queues.
-                for(int sy=std::max(0,y-7);sy<=std::min(int(height)-1,y+7);++sy)
-                    for(int sx=std::max(0,x-7);sx<=std::min(int(width)-1,x+7);++sx) eligible[sy*width+sx]=false;
+                for(int sy=std::max(0,y-playerSpacing);sy<=std::min(int(height)-1,y+playerSpacing);++sy)
+                    for(int sx=std::max(0,x-playerSpacing);sx<=std::min(int(width)-1,x+playerSpacing);++sx) eligible[sy*width+sx]=false;
             }
             --groupsLeft;
         }

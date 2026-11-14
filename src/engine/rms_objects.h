@@ -51,6 +51,9 @@ struct RmsResourceGroups {
 // Default Gaia modifiers, one grouped row. Shared original queue nodes are preserved.
 // Optional starts select the verified near-Nova row: tight7, radius3, one group/player,
 // distances12..16, spacing7, zone7 on uniformly passable terrain.
+// Also supports forage59 tight6 on flat120-square dry maps with two starts:
+// distances10..12, spacing6, zone7; occupiedTiles must include retained scenery,
+// prior resources and owned footprints. Other forage rows remain unsupported.
 // Failure clears output and preserves RNG, including exhaustion of maxWork.
 bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
     const std::vector<uint8_t> &terrain, const dat::DatFile &data, int16_t unitId,
