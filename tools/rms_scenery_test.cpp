@@ -259,6 +259,7 @@ int main() {
         unit.id=spec[2]; unit.standingGraphic[0]=spec[3]; unit.terrainRestriction=spec[4];
         data.graphics[spec[3]]=graphic; data.graphics[spec[3]].angleCount=spec[5];
     }
+    checkElevatedSceneryOriginal(data,413,21);
     {
         rng=1u;
         const std::vector<uint8_t> tiles={9,10,10,9,10,10,9,10,10,9,10,10,9,10,10,9,10,10,9,10,10,9,10,10,9,10,10,9,10,10};
