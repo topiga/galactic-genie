@@ -481,3 +481,13 @@ Local evidence: `rms-nova-composed-{two-owner,forest}-fullstage-oracle-2026-11-1
 and `rms-nova-composed-occupied-oracle-2026-11-14.json`. The four-row fixture
 omits packaged54103's intervening holocron/food rows; it is not complete
 packaged-map startup or a claim of arbitrary later resource-row equivalence.
+
+A separate, unconnected holocron285 placement helper now matches the original
+shared54103 row on64×64 bare grass with two starts after retained owned units:
+requested count5, player exclusion25 and temporary group spacing20. Two full
+original cases create5 and3 holocrons respectively; exhaustion remains partial
+success. All8 positions, static facing and six CRT draws per type70 creation
+match; original Gaia class28 list registration executes in the reference probe.
+The helper rejects other dimensions, owner counts, terrain and changed prototype
+metadata. It is not wired into RMS parsing/import or holocron pickup/gameplay.
+Local evidence: `rms-holocron64-composed-fullstage-oracle-2026-11-14.json`.

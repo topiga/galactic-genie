@@ -322,4 +322,58 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     out=std::move(result);randomState=rng;
     return true;
 }
+bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
+    const std::vector<uint8_t> &terrain,const dat::DatFile &data,
+    const std::vector<RmsPlayerStart> &playerStarts,uint32_t &randomState,
+    std::vector<RmsTimberPlacement> &out,std::string *err) {
+    out.clear();if(err) err->clear();
+    auto fail=[&](const char *reason) {
+        if(err) *err=std::string("RMS holocron: ")+reason;
+        return false;
+    };
+    if(width!=64 || height!=64 || terrain.size()!=4096 || playerStarts.size()!=2)
+        return fail("requires64-square grass and two player starts");
+    for(const auto &start:playerStarts)
+        if(start.x<2 || start.y<2 || start.x>62 || start.y>62) return fail("invalid player start");
+    if(std::any_of(terrain.begin(),terrain.end(),[](uint8_t t){return t!=0 && t!=27;}))
+        return fail("requires bare grass and original local foundations");
+    if(data.civs.empty() || data.civs[0].units.size()<=285 || data.terrainRestrictions.size()<=7)
+        return fail("missing original Gaia holocron metadata");
+    const auto &u=data.civs[0].units[285];const auto *g=data.graphic(5200);
+    if(!u.exists || u.id!=285 || u.type!=dat::UT_Creatable || u.cls!=28 || u.hitPoints!=30 ||
+       u.collisionSize[0]!=.3f || u.collisionSize[1]!=.3f || u.collisionSize[2]!=2 ||
+       u.clearanceSize[0]!=.3f || u.clearanceSize[1]!=.3f || u.terrainRestriction!=7 ||
+       u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 ||
+       u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
+       u.hillMode || u.flyMode || u.canBeBuiltOn || u.recyclable || u.lineOfSight!=7 ||
+       u.obstructionType!=5 || u.obstructionClass!=2 || u.speed!=0 || u.trait ||
+       u.trackingUnit!=-1 || u.trackingUnitMode || u.trackingUnitDensity!=0 ||
+       u.headUnit!=-1 || u.trainSound!=542 || u.convertTerrain || u.enableAutoGather ||
+       u.createDoppelgangerOnDeath || u.standingGraphic[0]!=5200 || u.standingGraphic[1]!=-1 ||
+       !g || g->sequenceType!=4 || g->frameCount!=1 || g->angleCount!=1 ||
+       g->soundId!=-1 || !g->angleSounds.empty() || !g->deltas.empty())
+        return fail("unsupported holocron prototype or graphics");
+    for(auto t:terrain) {
+        const auto &pass=data.terrainRestrictions[7].passableBuildableDmgMultiplier;
+        if(t>=pass.size() || pass[t]!=1.f) return fail("requires uniform passable terrain");
+    }
+    uint32_t rng=randomState;std::vector<uint32_t> candidates;
+    if(!generateRmsObjectCandidates(width,height,rng,candidates,err)) return false;
+    std::vector<bool> removed(terrain.size());std::vector<RmsTimberPlacement> placements;
+    for(auto tile:candidates) {
+        if(removed[tile]) continue;
+        const int x=tile%width,y=tile/width;
+        if(std::any_of(playerStarts.begin(),playerStarts.end(),[&](const auto &start) {
+            return std::abs(x-start.x)<25 && std::abs(y-start.y)<25;
+        })) continue;
+        // Original4de1b0 removes temporary spacing nodes from this row's queue.
+        for(int sy=std::max(0,y-20);sy<=std::min(63,y+20);++sy)
+            for(int sx=std::max(0,x-20);sx<=std::min(63,x+20);++sx) removed[sy*64+sx]=true;
+        // Static type70: base facet, sprite frame, three action timers, military timer.
+        for(int draw=0;draw<6;++draw) genieRandomDraw(rng);
+        placements.push_back({x+.5f,y+.5f,7,0,285});
+        if(placements.size()==5) break;
+    }
+    out=std::move(placements);randomState=rng;return true;
+}
 } // namespace swgb

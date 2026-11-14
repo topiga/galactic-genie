@@ -58,4 +58,13 @@ bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
     std::vector<RmsTimberPlacement> &out, std::string *err=nullptr,
     const std::vector<uint32_t> &occupiedTiles={}, size_t maxWork=16000000,
     const std::vector<RmsPlayerStart> &novaPlayerStarts={});
+// Original stock holocron285 row: five global placements, player exclusion25,
+// temporary spacing20. Bounded to a flat64-square grass map with two starts,
+// no Gaia scenery, and owned starting objects confined within9 tiles of starts.
+// This helper does not import holocrons or implement their pickup/gameplay.
+// Partial placement when the candidate queue exhausts is successful.
+bool generateRmsHolocronPlacements(uint32_t width, uint32_t height,
+    const std::vector<uint8_t> &terrain, const dat::DatFile &data,
+    const std::vector<RmsPlayerStart> &playerStarts, uint32_t &randomState,
+    std::vector<RmsTimberPlacement> &out, std::string *err=nullptr);
 } // namespace swgb

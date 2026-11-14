@@ -29,6 +29,7 @@ static void check(bool value, const char *message) {
 #include "rms_worker_spawn_checks.h"
 #include "rms_scout_checks.h"
 #include "rms_near_nova_checks.h"
+#include "rms_holocron_checks.h"
 #include "rms_many_owned_checks.h"
 #include "rms_owned_forest_checks.h"
 #include "rms_foundation_overlap_checks.h"
@@ -270,6 +271,7 @@ int main(int argc, char **argv) {
         rmsWorkerSpawnChecks(assets);
         rmsScoutChecks(assets);
         rmsNearNovaChecks(assets);
+        rmsHolocronChecks(assets.dat());
         manyOwnedRmsMapChecks(assets.dat());
         ownedForestSpawnChecks(assets);
         overlappingRmsFoundationChecks(assets,renderer);
