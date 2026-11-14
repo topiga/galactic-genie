@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "rms_map.h"
 #include "rms_terrain.h"
+#include "rms_elevation.h"
 #include "rms_terrain_cleanup.h"
 #include "rms_early_forest.h"
 #include "../core/genie_dat.h"
@@ -52,14 +53,17 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     int32_t objectUnitId=348;
     std::vector<RmsLandGrowth> lands;
     std::vector<RmsTerrainRow> terrainRows;
+    std::vector<RmsElevationRow> elevationRows;
+    bool elevationStage=false;
     while (i < tokens.size()) {
         const std::string command = tokens[i++].text;
         if (command == "<PLAYER_SETUP>" && stage == 0 && !playerSetup) { playerSetup=true; continue; }
         // Original handler0x4e2c10 accepts this without changing the game setting.
         if (command == "random_placement" && stage == 0 && playerSetup) continue;
         if (command == "<LAND_GENERATION>" && stage == 0) { stage = 1; continue; }
-        if (command == "<TERRAIN_GENERATION>" && stage == 1) { stage = 2; continue; }
-        if (command == "<OBJECTS_GENERATION>" && (stage == 1 || stage == 2)) { stage = 3; continue; }
+        if (command == "<TERRAIN_GENERATION>" && stage>0) { stage = 2; continue; }
+        if (command == "<OBJECTS_GENERATION>" && stage>0) { stage = 3; continue; }
+        if (command == "<ELEVATION_GENERATION>" && stage>0) { stage=4; elevationStage=true; continue; }
         int32_t value = 0;
         if (stage == 1 && command == "base_terrain") {
             if (!number(value) || value<0 || value>255) return fail("base_terrain requires an integer in0..255");
@@ -112,6 +116,32 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 playerLands=true;
                 for (uint32_t owner=1;owner<=playerCount;++owner) { land.zone=owner; lands.push_back(land); }
             } else lands.push_back(land);
+        } else if (stage==4 && command=="create_elevation") {
+            if (!number(value) || value<1 || value>7 || elevationRows.size()+value>99 ||
+                i==tokens.size() || tokens[i++].text!="{") return fail("unsupported elevation block");
+            const int levels=value;
+            uint32_t target=width,clumps=1;
+            int terrain=-1,scaling=0;
+            while(i<tokens.size() && tokens[i].text!="}") {
+                const auto name=tokens[i++].text;
+                if(name=="set_scale_by_groups") { scaling=1;continue; }
+                if(name=="set_scale_by_size") { scaling=2;continue; }
+                if(!number(value)) return fail(name+" requires an integer");
+                if(name=="base_terrain" && value>=0 && value<=255) terrain=value;
+                else if(name=="number_of_tiles" && value>=0) target=value;
+                else if(name=="number_of_clumps" && value>=0 && value<=999) clumps=value;
+                else return fail("unsupported elevation parameter/value "+name);
+            }
+            if(i==tokens.size() || terrain<0) return fail("elevation requires a closed block and explicit base terrain");
+            ++i;
+            // Elevation scales tiles OR clumps, unlike the terrain handler.
+            const uint64_t product=uint64_t(scaling==1?target:clumps)*width*height;
+            if(scaling && product>INT32_MAX) return fail("elevation scaling exceeds supported signed arithmetic");
+            if(scaling==1) target=product/10000;
+            if(scaling==2) clumps=product/10000;
+            for(int level=1;level<=levels;++level)
+                elevationRows.push_back({target,static_cast<uint8_t>(level),clumps,level==1?2u:1u,
+                    static_cast<uint8_t>(level-1),static_cast<uint8_t>(terrain)});
         } else if (stage == 2 && command == "create_terrain") {
             if (terrainRows.size()==99 || !number(value) || value<0 || value>255 ||
                 i==tokens.size() || tokens[i++].text!="{")
@@ -449,10 +479,26 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                           64*1024*1024,earlyForest?&earlyPaints:nullptr)) return false;
     if (earlyForest && !generateRmsEarlyForest(width,height,earlyPaints,data,rng,early,err,static_cast<uint8_t>(base))) return false;
     genieRandomDraw(rng);
-    if (!generateRmsTerrain(width,height,terrainRows,rng,generated.terrain,err,protection)) return false;
+    if(elevationStage) {
+        generated.elevation.assign(generated.terrain.size(),0);
+        generated.slopes.assign(generated.terrain.size(),0);
+        std::vector<uint8_t> mask;
+        std::vector<RmsElevationProtection> elevationProtection;
+        for(const auto &p:protection) elevationProtection.push_back({p.x,p.y,p.radius,p.weight});
+        if(!generateRmsElevation(width,height,elevationRows,generated.terrain,rng,
+            generated.elevation,generated.slopes,mask,elevationProtection,err)) return false;
+        genieRandomDraw(rng);
+    }
+    if (!generateRmsTerrain(width,height,terrainRows,rng,generated.terrain,err,protection,
+        generated.elevation,generated.slopes)) return false;
     if (!smoothRmsTerrain(width,height,1,generated.terrain,generated.terrain,err) ||
         !cleanupRmsTerrain(width,height,generated.terrain,err)) return false;
     genieRandomDraw(rng);
+    if(std::any_of(generated.elevation.begin(),generated.elevation.end(),[](uint8_t h){return h!=0;})) {
+        if(hasObjects || ownedObjects || earlyForest) return fail("object startup on elevations is not verified");
+        for(uint8_t terrain:generated.terrain)
+            if(!safeTerrain(terrain)) return fail("scenery startup on elevations is not verified");
+    }
     if (earlyForest) {
         if (!finishRmsEarlyForest(width,height,generated.terrain,data,early,rng,generated.scenery,err,static_cast<uint8_t>(base))) return false;
     } else if (!generateRmsScenery(width,height,generated.terrain,data,rng,generated.scenery,err)) return false;

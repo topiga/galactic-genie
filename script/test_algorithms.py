@@ -10,7 +10,7 @@ build.mkdir(parents=True, exist_ok=True)
 cases = {
     'terrain_draw_scan': [],
     'rms': ['src/engine/rms_script.cpp', 'src/core/drs.cpp'],
-    'rms_map': ['src/engine/rms_early_forest.cpp', 'src/engine/rms_terrain_cleanup.cpp', 'src/engine/rms_scenery.cpp', 'src/engine/rms_scenery_appearance.cpp', 'src/engine/rms_terrain.cpp', 'src/engine/rms_map.cpp', 'src/engine/rms_script.cpp', 'src/engine/rms_objects.cpp', 'src/engine/rms_player_starts.cpp', 'src/core/drs.cpp'],
+    'rms_map': ['src/engine/rms_elevation.cpp', 'src/engine/rms_slopes.cpp', 'src/engine/rms_early_forest.cpp', 'src/engine/rms_terrain_cleanup.cpp', 'src/engine/rms_scenery.cpp', 'src/engine/rms_scenery_appearance.cpp', 'src/engine/rms_terrain.cpp', 'src/engine/rms_map.cpp', 'src/engine/rms_script.cpp', 'src/engine/rms_objects.cpp', 'src/engine/rms_player_starts.cpp', 'src/core/drs.cpp'],
     'rms_terrain_cleanup': ['src/engine/rms_terrain_cleanup.cpp'],
     'rms_slopes': ['src/engine/rms_slopes.cpp'],
     'rms_elevation': ['src/engine/rms_elevation.cpp', 'src/engine/rms_slopes.cpp'],

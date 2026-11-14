@@ -10,9 +10,11 @@ static void check(bool ok,const std::string &message) {
 }
 #include "rms_many_owned_checks.h"
 #include "rms_elevation_pipeline_checks.h"
+#include "rms_elevation_map_checks.h"
 
 int main() {
     checkRmsElevationPipeline();
+    checkRmsElevationMap();
     using namespace swgb;
     dat::DatFile data;
     data.terrainBlock.terrains.resize(4);
@@ -82,7 +84,7 @@ int main() {
     state=1;
     check(generateRmsMap(script,{},7,7,data,state,map,&error) && state==expectedState && map.terrain==expected.terrain,
           "preprocessing and generation must share one RNG stream");
-    load(randomPrefix+land+" <ELEVATION_GENERATION>");
+    load(randomPrefix+land+" <CLIFF_GENERATION>");
     state=1;
     check(!generateRmsMap(script,{},7,7,data,state,map,&error) && state==1 && map.terrain.empty(),
           "unsupported stage must not return partial map/RNG");
