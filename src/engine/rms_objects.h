@@ -44,6 +44,7 @@ bool generateRmsResourcePlacements(uint32_t width, uint32_t height,
     uint32_t requested, uint32_t &randomState,
     std::vector<RmsTimberPlacement> &out, std::string *err=nullptr,
     const std::vector<uint32_t> &occupiedTiles={});
+enum class RmsResourceDistance { Near, Medium, Far };
 struct RmsResourceGroups {
     uint8_t mode=1; // Original1 loose or2 tight.
     uint32_t groups=1, perGroup=1, variance=0, radius=3;
@@ -54,13 +55,18 @@ struct RmsResourceGroups {
 // Also supports forage59 tight6 on flat120-square dry maps with two starts:
 // distances10..12, spacing6, zone7; occupiedTiles must include retained scenery,
 // prior resources and owned footprints. Other forage rows remain unsupported.
-// Failure clears output and preserves RNG, including exhaustion of maxWork.
+// Explicit Medium/Far selects stock Nova4 distances18..26/25..35 on120 maps.
+// Near ore102 uses tight5/radius2/distances14..18 on the same bounded profile.
+// Optional rowEligibility preserves original spacing exclusions across rows; an
+// empty vector starts all-eligible. Failure preserves it and RNG and clears output.
 bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
     const std::vector<uint8_t> &terrain, const dat::DatFile &data, int16_t unitId,
     const RmsResourceGroups &groups, uint32_t &randomState,
     std::vector<RmsTimberPlacement> &out, std::string *err=nullptr,
     const std::vector<uint32_t> &occupiedTiles={}, size_t maxWork=16000000,
-    const std::vector<RmsPlayerStart> &novaPlayerStarts={});
+    const std::vector<RmsPlayerStart> &novaPlayerStarts={},
+    RmsResourceDistance distance=RmsResourceDistance::Near,
+    std::vector<uint8_t> *rowEligibility=nullptr);
 // Original stock holocron285 row: five global placements, player exclusion25,
 // temporary spacing20. Bounded to flat64-square grass or120-square dry terrain
 // with two starts;120 may retain centered411 tree occupancy. Owned starting

@@ -177,7 +177,8 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     const RmsResourceGroups &group,uint32_t &randomState,
     std::vector<RmsTimberPlacement> &out,std::string *err,
     const std::vector<uint32_t> &occupiedTiles,size_t maxWork,
-    const std::vector<RmsPlayerStart> &novaPlayerStarts) {
+    const std::vector<RmsPlayerStart> &novaPlayerStarts,RmsResourceDistance distance,
+    std::vector<uint8_t> *rowEligibility) {
     out.clear(); if(err) err->clear();
     auto fail=[&](const char *reason) {
         if(err) *err=std::string("RMS grouped resource: ")+reason;
@@ -192,16 +193,21 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     if(!spec) return false;
     const auto &restriction=data.terrainRestrictions[spec->restriction].passableBuildableDmgMultiplier;
     const bool perPlayer=!novaPlayerStarts.empty();
-    const bool forage=unitId==59;
-    const int playerMin=forage?10:12,playerMax=forage?12:16,playerSpacing=forage?6:7;
-    if(forage && (!perPlayer || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
-        return fail("forage requires verified120-square two-player profile");
-    if(forage && std::any_of(terrain.begin(),terrain.end(),[](uint8_t t) {
+    const bool forage=unitId==59,ore=unitId==102 && perPlayer;
+    const bool medium=distance==RmsResourceDistance::Medium,far=distance==RmsResourceDistance::Far;
+    if(distance!=RmsResourceDistance::Near && !medium && !far) return fail("invalid resource distance profile");
+    if((medium || far) && (!perPlayer || unitId!=66 || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
+        return fail("medium/far Nova requires verified120-square two-player profile");
+    const int playerMin=forage?10:ore?14:medium?18:far?25:12;
+    const int playerMax=forage?12:ore?18:medium?26:far?35:16,playerSpacing=forage?6:7;
+    if((forage || ore) && (!perPlayer || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
+        return fail("resource row requires verified120-square two-player profile");
+    if((forage || ore || medium || far) && std::any_of(terrain.begin(),terrain.end(),[](uint8_t t) {
         return t!=0 && t!=6 && t!=9 && t!=10 && t!=27 && t!=41;
-    })) return fail("forage requires the verified dry terrain profile");
+    })) return fail("resource row requires the verified dry terrain profile");
     if(perPlayer) {
-        if((unitId!=66 && !forage) || group.mode!=2 || group.groups!=1 || group.perGroup!=(forage?6u:7u) ||
-           group.variance || group.radius!=3 || novaPlayerStarts.size()>8)
+        if((unitId!=66 && !forage && !ore) || group.mode!=2 || group.groups!=1 || group.perGroup!=(forage?6u:ore?5u:(medium || far)?4u:7u) ||
+           group.variance || group.radius!=(ore?2u:3u) || novaPlayerStarts.size()>8)
             return fail("unsupported per-player resource row");
         // Verified connected dry profiles give one restriction8 zone; zone7 cannot reject.
         for(auto t:terrain) if(restriction[t]!=1.f) return fail("resource row requires a uniform passable zone");
@@ -210,6 +216,11 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
                 return fail("resource player start outside map");
     }
     std::vector<bool> occupied(count),eligible(count,true);
+    if(rowEligibility && !rowEligibility->empty()) {
+        if(rowEligibility->size()!=count || std::any_of(rowEligibility->begin(),rowEligibility->end(),[](uint8_t v){return v>1;}))
+            return fail("invalid persistent row eligibility");
+        for(size_t i=0;i<count;++i) eligible[i]=(*rowEligibility)[i]!=0;
+    }
     for(uint32_t tile:occupiedTiles) {
         if(tile>=count) return fail("occupied tile outside map");
         occupied[tile]=true;
@@ -328,6 +339,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         }
         while(next[outer]>=0) pop(outer);
     }
+    if(rowEligibility) rowEligibility->assign(eligible.begin(),eligible.end());
     out=std::move(result);randomState=rng;
     return true;
 }

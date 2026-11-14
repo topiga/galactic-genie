@@ -31,6 +31,7 @@ static void check(bool value, const char *message) {
 #include "rms_near_nova_checks.h"
 #include "rms_holocron_checks.h"
 #include "rms_forage_checks.h"
+#include "rms_resource_prefix_checks.h"
 #include "rms_elevation_import_checks.h"
 #include "rms_many_owned_checks.h"
 #include "rms_owned_forest_checks.h"
@@ -276,6 +277,7 @@ int main(int argc, char **argv) {
         rmsNearNovaChecks(assets);
         rmsHolocronChecks(assets.dat());
         rmsForageChecks(assets.dat());
+        rmsResourcePrefixChecks(assets.dat());
         manyOwnedRmsMapChecks(assets.dat());
         ownedForestSpawnChecks(assets);
         overlappingRmsFoundationChecks(assets,renderer);
