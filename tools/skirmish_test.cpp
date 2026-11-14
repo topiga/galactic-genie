@@ -32,6 +32,10 @@ static void check(bool value, const char *message) {
 #include "rms_foundation_overlap_checks.h"
 #include "rms_forest_worker_checks.h"
 #include "rms_worker_tree_collision_checks.h"
+#include "rms_stalagmite_worker_checks.h"
+#include "rms_near_forest_cc_checks.h"
+#include "rms_near_worker_checks.h"
+#include "rms_near_stalagmite_checks.h"
 #include "rms_grouped_checks.h"
 #include "point_move_checks.h"
 
@@ -261,6 +265,10 @@ int main(int argc, char **argv) {
         overlappingRmsFoundationChecks(assets,renderer);
         forestWorkerSpawnChecks(assets);
         rmsWorkerTreeCollisionChecks(assets);
+        stalagmiteWorkerSpawnChecks(assets);
+        nearForestCommandCenterChecks(assets);
+        rmsNearWorkerChecks(assets);
+        nearStalagmiteCleanupChecks(assets);
         rmsGroupedChecks(assets);
         pointMoveChecks(assets);
     fogRendering(assets,renderer);

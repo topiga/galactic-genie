@@ -18,9 +18,9 @@ struct RmsMap {
     uint32_t width = 0, height = 0;
     std::vector<uint8_t> terrain;
     std::vector<RmsTimberPlacement> objects;
-    std::vector<RmsSceneryPlacement> scenery; // Creation order, including removed early scenery.
+    std::vector<RmsSceneryPlacement> scenery; // Creation order, including removed scenery.
     std::vector<RmsPlayerStart> playerStarts; // Owner order1..playerCount; no starting units implied.
-    std::vector<RmsOwnedPlacement> ownedObjects; // Completed buildings, in creation order.
+    std::vector<RmsOwnedPlacement> ownedObjects; // Starting buildings and workers, in creation order.
 };
 
 // Strict script pipeline: explicit nonplayer lands OR one player-land block (1..8 players)
@@ -29,10 +29,11 @@ struct RmsMap {
 // The RMS random_placement directive itself does not select this game setting.
 // Terrain rows support spacing, scaling and player-start protection on flat maps.
 // Rejects other stages/commands; not a complete packaged random-map generator.
-// Also supports one to eight owned109 starts separated from the local owner on bare grass0 with explicit
+// Also supports one to eight owned109 starts on bare grass0 with explicit
 // civilizations and zero placement distances. Enemy foundation remains deferred.
 // One or two owners may append83 workers with explicit count1 and distances1..3.
-// A bounded two-civ1 dry forest profile retains live411 trees outside CC footprints.
+// A bounded two-owner dry forest profile retains live411 trees outside CC footprints.
+// A leading Gaia573 row supports verified destructive starting-scenery cleanup.
 // RNG is the shared CRT state at script entry. Failure clears output and leaves RNG unchanged.
 bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::string> &defines,
                     uint32_t width, uint32_t height, const dat::DatFile &data,

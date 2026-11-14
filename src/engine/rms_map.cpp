@@ -219,8 +219,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if (base<0 || lands.empty()) return fail("explicit base terrain and at least one land required");
     const bool ownedForest=ownedObjects && playerLands && base==41 && lands[0].terrain==9;
     if (startingStalagmites) {
-        if (!ownedForest || startingWorkers || playerCivilizations!=std::vector<uint16_t>{1,1})
-            return fail("starting573 requires two civilization1 forest Command Centers without workers");
+        if (!ownedForest)
+            return fail("starting573 requires forest Command Centers");
         if (data.civs.empty() || data.civs[0].units.size()<=573) return fail("missing starting573 prototype");
         const auto &u=data.civs[0].units[573];
         const auto *g=data.graphic(u.standingGraphic[0]);
@@ -389,12 +389,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         } else if (!generated.scenery.empty() ||
                    std::any_of(generated.terrain.begin(),generated.terrain.end(),[](uint8_t tile){return tile!=0;}))
             return fail("owned109 requires scenery-free grass");
-        // Fresh default startup retains zero visibility masks until after RMS.
-        // Worker/scenery combinations still require separated placement neighborhoods.
-        if (startingWorkers || ownedForest) for (uint32_t other=1;other<playerCount;++other)
-        if (std::abs(generated.playerStarts[0].x-generated.playerStarts[other].x)<11 &&
-            std::abs(generated.playerStarts[0].y-generated.playerStarts[other].y)<11)
-            return fail("worker/forest starts require separated placement neighborhoods");
+        // Fresh default startup retains zero owner visibility-query masks until after RMS.
         for (uint16_t owner=1;owner<=playerCount;++owner) {
             const auto &center=generated.playerStarts[owner-1];
             if (center.x<2 || center.y<2 || center.x>int32_t(width)-2 || center.y>int32_t(height)-2)
@@ -409,6 +404,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     if (std::abs(tree.x-center.x)<2.5f && std::abs(tree.y-center.y)<2.5f)
                         return fail("owned forest starts require scenery outside building footprints");
             }
+        }
+        for (uint16_t owner=1;owner<=playerCount;++owner) {
+            const auto &center=generated.playerStarts[owner-1];
             // Radius0 has one candidate; original controller forces its final rejected gate too.
             for (int draw=0;draw<4;++draw) genieRandomDraw(rng);
             rng=genieRandomDraw(rng); // Completion reseeds the CRT with its fifth15-bit draw.
@@ -438,7 +436,10 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 const int x=tile%width,y=tile/width;
                 if (x==center.x && y==center.y) continue;
                 const float px=x+.5f,py=y+.5f;
-                if (std::abs(px-center.x)<2.2f && std::abs(py-center.y)<2.2f) continue;
+                // Original RMS placement ignores existing workers, but blocks either owner's CC.
+                if (std::any_of(generated.ownedObjects.begin(),generated.ownedObjects.end(),[&](const auto &object) {
+                    return object.unitId==109 && std::abs(px-object.x)<2.2f && std::abs(py-object.y)<2.2f;
+                })) continue;
                 // Final411 scenery is row-major; half-tile worker footprints collide only on the same tile.
                 if (std::binary_search(occupied.begin(),occupied.end(),tile)) continue;
                 if (unitId==83 && genieRandomDraw(rng)>16383) unitId=293;

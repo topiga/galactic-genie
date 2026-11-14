@@ -100,7 +100,7 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     output=run(['render-rms',data,root/'tools/fixtures/owned-forest.rms',32,1,work/'owned-forest.png',
                 '--players',2,'--civilization',1,'--civilization',1],0)
     assert '39 native objects' in output and '2026451952' in output
-    for fixture,count,state in [('owned-forest-workers',45,4221457422),('owned-forest-cleanup',39,2026451952)]:
+    for fixture,count,state in [('owned-forest-workers',45,4221457422),('owned-forest-cleanup',39,2026451952),('owned-forest-cleanup-workers',45,4221457422)]:
         output=run(['render-rms',data,root/'tools/fixtures'/(fixture+'.rms'),32,1,work/(fixture+'.png'),
                     '--players',2,'--civilization',1,'--civilization',1],0)
         assert f'{count} native objects' in output and str(state) in output
