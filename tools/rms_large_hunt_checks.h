@@ -7,13 +7,15 @@ static void rmsLargeHuntChecks(swgb::Assets &assets,const std::string &dataDir) 
  check(resources.add(dataDir+"/gamedata_x1.drs",&error) && script.load(54204,resources,&error),error.c_str());
  const std::unordered_set<std::string> defines{"TINY_MAP","FIXED_POSITIONS","DEFAULT_RESOURCES"};
  struct Animation{uint8_t frame;float delay,heading;};
- const struct{int unit,count;uint32_t rng,poses;std::vector<Animation> animations;bool distant=false;} cases[]={
-{822,2,1777230500u,1964833593u,{{9,0.373876095f,4.71238899f},{2,0.f,3.14159274f},{9,0.0606158301f,1.57079637f},{9,0.477223992f,0.f}}},
-{822,4,1427887360u,3213888073u,{{9,0.373876095f,4.71238899f},{2,0.f,3.14159274f},{2,0.f,3.92699075f},{2,0.f,1.57079637f},{1,0.f,4.71238899f},{5,0.f,2.3561945f},{4,0.f,4.71238899f},{9,0.f,1.57079637f}}},
-{1249,1,3550983994u,288820904u,{{6,0.f,0.785398185f},{2,0.f,0.f}}},
-{1249,2,1585104208u,2409764850u,{{6,0.f,0.785398185f},{9,0.373876095f,4.71238899f},{9,0.f,0.785398185f},{9,0.362825364f,0.785398185f}}},
-{822,3,3597322543u,4039699298u,{{5,0.f,1.57079637f},{4,0.f,0.785398185f},{9,0.412164629f,0.f},{3,0.f,2.3561945f},{9,0.f,1.57079637f}},true},
-{1249,3,3597322543u,433503753u,{{5,0.f,1.57079637f},{4,0.f,0.785398185f},{9,0.412164629f,0.f},{3,0.f,2.3561945f},{9,0.f,1.57079637f}},true}};
+ const struct{int unit,count;bool grouped;uint32_t rng,poses;std::vector<Animation> animations;bool distant=false;} cases[]={
+{822,2,true,1777230500u,1964833593u,{{9,0.373876095f,4.71238899f},{2,0.f,3.14159274f},{9,0.0606158301f,1.57079637f},{9,0.477223992f,0.f}}},
+{822,4,true,1427887360u,3213888073u,{{9,0.373876095f,4.71238899f},{2,0.f,3.14159274f},{2,0.f,3.92699075f},{2,0.f,1.57079637f},{1,0.f,4.71238899f},{5,0.f,2.3561945f},{4,0.f,4.71238899f},{9,0.f,1.57079637f}}},
+{1249,1,false,3550983994u,288820904u,{{6,0.f,0.785398185f},{2,0.f,0.f}}},
+{1249,2,false,1585104208u,2409764850u,{{6,0.f,0.785398185f},{9,0.373876095f,4.71238899f},{9,0.f,0.785398185f},{9,0.362825364f,0.785398185f}}},
+{822,3,true,3597322543u,4039699298u,{{5,0.f,1.57079637f},{4,0.f,0.785398185f},{9,0.412164629f,0.f},{3,0.f,2.3561945f},{9,0.f,1.57079637f}},true},
+{1249,3,true,3597322543u,433503753u,{{5,0.f,1.57079637f},{4,0.f,0.785398185f},{9,0.412164629f,0.f},{3,0.f,2.3561945f},{9,0.f,1.57079637f}},true},
+{822,1,false,3550983994u,481104102u,{{6,0.f,0.785398185f},{2,0.f,0.f}}},
+{1249,2,true,1777230500u,1048510013u,{{9,0.373876095f,4.71238899f},{2,0.f,3.14159274f},{9,0.0606158301f,1.57079637f},{9,0.477223992f,0.f}}}};
  for(const auto &c:cases) {
   uint32_t rng=16160;std::vector<swgb::RmsToken> tokens;
   check(script.preprocess(defines,tokens,&error,&rng) && rng==1993207714u,"large hunt preprocessing RNG");
@@ -32,7 +34,7 @@ static void rmsLargeHuntChecks(swgb::Assets &assets,const std::string &dataDir) 
     }
    } else if(rows==13) {
     source+="create_object "+std::to_string(c.unit)+" { number_of_objects "+std::to_string(c.count)+" ";
-    if(c.unit==822 || c.distant)source+="set_loose_grouping ";
+    if(c.grouped)source+="set_loose_grouping ";
     source+="set_gaia_object_only set_place_for_every_player ";
     source+=c.distant?"group_variance 1 min_distance_to_players 35 min_distance_group_placement 5 } ":"min_distance_to_players 16 max_distance_to_players 22 } ";
    }

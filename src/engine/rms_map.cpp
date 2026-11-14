@@ -279,19 +279,23 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             auto row=stockResources[holocrons?resourceRows.size():1];
             if(row.unit==1363 && i<tokens.size()) {
                 if(tokens[i].text=="1365") row.unit=1365;
-                else if(tokens[i].text=="822") row={822,4,3,16,22,0,RmsResourceDistance::Near,1,1};
-                else if(tokens[i].text=="1249") row={1249,1,3,16,22,0,RmsResourceDistance::Near,0,1};
+                else if(tokens[i].text=="822") row.unit=822;
+                else if(tokens[i].text=="1249") row.unit=1249;
                 else if(tokens[i].text=="126" || tokens[i].text=="812" || tokens[i].text=="1197") row={int16_t(tokens[i].text=="812"?812:tokens[i].text=="1197"?1197:126),1,3,30,40,0,RmsResourceDistance::Far,0,2};
             }
             if(row.unit==126 && i<tokens.size() && (tokens[i].text=="812" || tokens[i].text=="1197")) row.unit=int16_t(tokens[i].text=="812"?812:tokens[i].text=="1197"?1197:126);
             if(isBigHunt(row.unit)) {
+                bool loose=false,distant=false;
                 for(size_t p=i+2;p+1<tokens.size() && tokens[p].text!="}";++p) {
+                    if(tokens[p].text=="set_loose_grouping")loose=true;
                     if(tokens[p].text!="min_distance_to_players")continue;
                     const auto &text=tokens[p+1].text;int distance=0;
                     const auto parsed=std::from_chars(text.data(),text.data()+text.size(),distance);
-                    if(parsed.ec==std::errc{} && parsed.ptr==text.data()+text.size() && distance==35)
-                        row={row.unit,3,3,35,-1,5,RmsResourceDistance::Far,1,1,1};
+                    if(parsed.ec==std::errc{} && parsed.ptr==text.data()+text.size() && distance==35)distant=true;
                 }
+                if(distant)row={row.unit,3,3,35,-1,5,RmsResourceDistance::Far,1,1,1};
+                else if(loose)row={row.unit,row.unit==822?4:2,3,16,22,0,RmsResourceDistance::Near,1,1};
+                else row={row.unit,1,3,16,22,0,RmsResourceDistance::Near,0,1};
             }
             const bool animal=row.unit==594 || row.unit==1363 || row.unit==1365 || isPredator(row.unit) || isBigHunt(row.unit);
             if (!number(value) || value!=row.unit || i==tokens.size() || tokens[i++].text!="{")

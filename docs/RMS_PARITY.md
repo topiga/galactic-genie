@@ -565,3 +565,22 @@ variance and spacing. Both original results join the packaged-data regression
 with every pose, startup animation and native import checked. This supersedes
 the preceding note about the35-tile profile; arbitrary row sequences remain
 unsupported.
+
+### Alternate large hunt grouping (2026-11-14)
+
+Two additional original prefixes verify the other grouping forms present in the
+audited scripts: one ungrouped822 per player (77 Gaia objects, RNG3550983994),
+and a loose pair of1249 per player (79 Gaia objects, RNG1777230500). The parser
+selects the profile from the grouping command and distance; absence of the loose
+command keeps the ungrouped path, which consumes no group-variance draw. The
+regression now contains eight large-hunt profiles with original pose/animation
+expectations and native import. Quantities and row sequences outside these
+verified profiles remain rejected.
+
+The final eight-seed audit still rejects every additional complete script. Seeds
+12345 and32767 now pass their nonstandard Nerf quantities but stop at the extra
+hunt rows after the existing prefix; 65535 reaches its unverified small-hunt
+quantity. Seeds1/16161 also need the branch that omits Nerfs. Next integration
+work must preserve those script sequences, verify small-hunt count8 and explicit
+trees348/349, then repeat complete original-executable and live Windows seed
+comparisons. Individual row parity is not complete-map parity.

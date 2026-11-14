@@ -70,7 +70,8 @@ struct RmsGlobalGroupPlacement {
 // at14..30, radius3 and no spacing; includes original animated startup state.
 // Kaadu1363/Eopie1365 support Far loose4, variance1, one group/player at14..30;
 // their original constructor adds a military timer draw and species animation.
-// Large hunt822 supports Near loose2/4;1249 supports Near mode0 singles1/2,
+// Large hunt822 supports Near loose2/4 or one mode0 single;1249 supports loose2
+// or mode0 singles1/2,
 // distance16..22, no variance, clearance3x3 and no outermost tile placements.
 // Far large hunt uses loose3/variance1, min35, no maximum, spacing5 and one group/player.
 // Their constructors consume seven draws, including three action timers.
