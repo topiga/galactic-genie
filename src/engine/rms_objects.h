@@ -70,12 +70,12 @@ struct RmsGlobalGroupPlacement {
 // at14..30, radius3 and no spacing; includes original animated startup state.
 // Kaadu1363/Eopie1365 support Far loose4, variance1, one group/player at14..30;
 // their original constructor adds a military timer draw and species animation.
-// Rancor126 supports Far ungrouped mode0: two single objects/player at30..40,
+// Predators126/812/1197 support Far ungrouped mode0: two single objects/player at30..40,
 // radius3, no variance/spacing; no grouped placement or variance draws.
 // Tree413 supports Near2/player at4..5 or Far3/player at6..8, mode0,
 // spacing2, radius3, no variance; restriction11 and one static facet draw.
 // Global tree413 supports100 mode0 placements, player exclusion6 and spacing2.
-// Global Rancor126 supports four scaled loose single-object groups, exclusion40,
+// Global predators126/812/1197 support four scaled loose single-object groups, exclusion40,
 // spacing12; Forest Eopie1365 also supports three objects with variance1.
 // Tree occupancy must include all retained mobiles as well as scenery/deposits
 // and building footprints; trees block later placements on their tile.

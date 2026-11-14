@@ -56,8 +56,8 @@ struct RmsMap {
 // forage, near/medium/far Nova, near/far ore and two Nerf rows, in that order.
 // Flat profiles may append the verified FOODC3 hunt variant; Forest21 supports
 // the resource/Nerf prefix with fixed or randomized enemy starts. The selected
-// Forest sequence may continue with ungrouped Rancors, two global deposit rows
-// and the two near-start tree413 rows, then birds, global Rancors, Eopie herds,
+// Forest sequence may continue with ungrouped predators126/812/1197, two global deposit rows
+// and the two near-start tree413 rows, then birds, global predators, Eopie herds,
 // an empty wave row, global trees and shore fish: all23 selected Forest54204 rows.
 // Full terrain22 startup remains guarded; the aquatic helper has a positive wave fixture.
 // RNG is the shared CRT state at script entry. Failure clears output and leaves RNG unchanged.

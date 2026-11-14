@@ -19,6 +19,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     uint32_t &randomState, RmsMap &out, std::string *err, uint32_t playerCount,
                     const std::vector<uint16_t> &playerCivilizations,
                     const std::vector<std::vector<uint8_t>> &diplomacy) {
+    const auto isPredator=[](int unit){return unit==126 || unit==812 || unit==1197;};
     out = {};
     if (err) err->clear();
     std::vector<RmsToken> tokens;
@@ -272,14 +273,15 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if(i==tokens.size() || !count || !distance || !spacing) return fail("incomplete stock holocron row");
             ++i;holocrons=true;
         } else if (stage==3 && command=="create_object" && startingScouts) {
-            if ((!holocrons && nearNova) || (holocrons && (resourceRows.size()>=19 || (resourceRows.size()>=9 && resourceRows[8].unit!=126))))
+            if ((!holocrons && nearNova) || (holocrons && (resourceRows.size()>=19 || (resourceRows.size()>=9 && !isPredator(resourceRows[8].unit)))))
                 return fail("unsupported resource row after verified stock prefix");
             auto row=stockResources[holocrons?resourceRows.size():1];
             if(row.unit==1363 && i<tokens.size()) {
                 if(tokens[i].text=="1365") row.unit=1365;
-                else if(tokens[i].text=="126") row={126,1,3,30,40,0,RmsResourceDistance::Far,0,2};
+                else if(tokens[i].text=="126" || tokens[i].text=="812" || tokens[i].text=="1197") row={int16_t(tokens[i].text=="812"?812:tokens[i].text=="1197"?1197:126),1,3,30,40,0,RmsResourceDistance::Far,0,2};
             }
-            const bool animal=row.unit==594 || row.unit==1363 || row.unit==1365 || row.unit==126;
+            if(row.unit==126 && i<tokens.size() && (tokens[i].text=="812" || tokens[i].text=="1197")) row.unit=int16_t(tokens[i].text=="812"?812:tokens[i].text=="1197"?1197:126);
+            const bool animal=row.unit==594 || row.unit==1363 || row.unit==1365 || isPredator(row.unit);
             if (!number(value) || value!=row.unit || i==tokens.size() || tokens[i++].text!="{")
                 return fail("expected next verified stock resource row");
             bool each=row.global,gaia=row.global,mode=row.mode==0,count=false,inner=row.inner<0,outer=row.global && row.outer<0;
@@ -409,7 +411,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     const bool ownedForest21=ownedObjects && playerLands && base==6 && lands[0].terrain==6 &&
         width==120 && height==120 && playerCount==2 && playerCivilizations==std::vector<uint16_t>{1,1} &&
         startingWorkers && startingScouts && workerMinDistance==6 && workerMaxDistance==6 &&
-        (resourceRows.size()<=8 || (resourceRows.size()>=9 && resourceRows[8].unit==126)) && !startingStalagmites;
+        (resourceRows.size()<=8 || (resourceRows.size()>=9 && isPredator(resourceRows[8].unit))) && !startingStalagmites;
     if (startingStalagmites) {
         if (!ownedForest)
             return fail("starting573 requires forest Command Centers");
@@ -797,7 +799,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             for(const auto &row:resourceRows) {
                 RmsResourceGroups group{row.mode,row.scaled?std::max(1u,row.groups*width*height/10000u):row.groups,uint32_t(row.count),row.variance,uint32_t(row.radius)};
                 auto rowBlockers=blockers;
-                if(row.unit==594 || row.unit==1363 || row.unit==1365 || row.unit==126) {
+                if(row.unit==594 || row.unit==1363 || row.unit==1365 || isPredator(row.unit)) {
                     rowBlockers=occupied;
                     for(const auto &object:generated.ownedObjects) if(object.unitId==109)
                         for(int y=int(object.y)-2;y<int(object.y)+2;++y)

@@ -499,3 +499,20 @@ order, all Nerf animation frames, zero extra idle delay, terrain/elevation grids
 and final random state. These are controlled object-stage variants, not three
 new seed matches. The shared helper still rejects unverified quantities such as
 three Nerfs, preserving RNG and the eligibility mask on failure.
+
+### Controlled predator species (2026-11-14)
+
+Original DAT master, graphics, sound and task loaders now provide runtime records
+for 812, 822, 1197 and 1249. Controlled full-stage probes substitute predator 812
+or 1197 for both Rancor rows in the three-forage Forest variation. Both original
+runs produce 220 Gaia objects and final RNG 278519141. Their positions and random
+consumption match the Rancor variation, while their animation frame duration
+(0.1 seconds) and replay delay (1 second) change startup animation state.
+
+The native parser/helper and packaged regression cover these two predator
+substitutions, all resulting object poses and the eight predators' original
+frames/extra idle delays through native import. The import regression caught and
+fixed the old species whitelist discarding these new predators' animation state.
+This does not establish arbitrary
+predator quantities or alternative terrain profiles. Hunt species 822/1249 have
+loaded runtime records but still need placement/constructor comparisons.
