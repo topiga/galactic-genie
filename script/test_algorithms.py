@@ -15,6 +15,7 @@ cases = {
     'rms_land_placement': ['src/engine/rms_land_placement.cpp'],
     'rms_connections': ['src/engine/rms_connections.cpp', 'src/engine/rms_script.cpp', 'src/engine/rms_terrain_cleanup.cpp', 'src/core/drs.cpp'],
     'rms_slopes': ['src/engine/rms_slopes.cpp'],
+    'rms_cliffs': ['src/engine/rms_cliffs.cpp'],
     'rms_elevation': ['src/engine/rms_elevation.cpp', 'src/engine/rms_slopes.cpp'],
     'rms_terrain': ['src/engine/rms_terrain.cpp'],
     'rms_player_starts': ['src/engine/rms_player_starts.cpp'],

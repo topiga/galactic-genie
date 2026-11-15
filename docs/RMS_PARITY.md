@@ -22,10 +22,10 @@ The image `clone-campaigns-forest-full.png` in the external build directory is a
 native diagnostic render, not a claim of a fully configured playable match.
 Starting resources/UI map selection and later simulation remain separate work.
 
-Civilization coverage now includes all eight same-civilization pairs and all mixed orders among
-Empire, Gungans, Royal Naboo and Wookiees in the Tiny Forest profile. Full controlled original
-startup comparisons back these additions; live Windows coverage includes two
-Empire, Gungan, Royal Naboo and Wookiee players. Other mixed orders remain gated.
+Civilization coverage includes all 64 ordered pairs in the controlled Tiny Forest
+profile. Live Windows coverage includes all eight same-civilization pairs and four
+mixed orders. These startup comparisons do not establish later simulation parity;
+the detailed coverage and limitations are recorded below.
 
 Fresh live Windows restarts independently verify fifteen more packaged Forest
 seeds with the same size, defines and civilizations:
@@ -1312,3 +1312,42 @@ instead of every controller instruction. Complete evidence for baseline pair 1/3
 is identical before and after that change; subsequent runs take about 19–24 seconds
 instead of roughly 90 seconds. Original instructions and emulated behavior are unchanged.
 Evidence: `rms-pair-tracing-optimization-2026-11-15.json`.
+
+
+### Cliff path stage: original-executable comparison
+
+`planRmsCliffs` matches 90 controlled original-generator cases for ordered map
+segment calls and final RNG. Coverage includes flat ground, all seven excluded
+terrain IDs, uneven heights, protected starts, curl and spacing, zero-count and
+short-length stages, map dimensions not divisible by three, and seeds forcing
+32767 at the bucket, initial-direction and curl draws. Sanitized checks also
+verify invalid inputs and excessive work leave caller output/RNG unchanged.
+
+The implementation preserves the original two-pass 100-bucket shuffle, reversed
+path emission, initial zero-length segment, and the direction helper's unusual
+period-three wrapping outside 0..3. On square maps, the original bottom-bound
+clearing bug only touches unused coarse-grid rows; native clearing stays within
+the logical grid. Rectangular maps are not accepted by this helper.
+
+This is a **path-stage boundary**, not newly playable cliff maps. The original
+map virtual+0x20 was replaced by an inert segment recorder in these fixtures.
+The real map vtable is 0x66759c: line callback 0x5cbbc0 delegates to 0x493300,
+which calls point callback 0x5cba10 and topology worker 0x5cb4b0. Object creator
+0x5cb1b0 consumes RNG when an alternate graphic exists, before calling Gaia's
+object factory. Those effects must be interleaved with path generation before
+integrating the stage into `generateRmsMap`; replaying all paths afterward would
+not preserve the original random sequence. Production cliff maps remain gated.
+
+The private oracle is `rms-cliff-path-oracle-2026-11-15.json`, produced by
+`rms-cliff-path-probe-2026-11-15.py` plus the build-directory extension probe.
+The executable SHA-256 is
+`c01d78a039514211a845b41338c6f342e0d9c9b3396c8ff558f05d00ae67420d`.
+Generator addresses: 0x4d76b0, initialization 0x4d7700, walk 0x4d79c0,
+direction 0x4d7c70 and spacing 0x4d7d50. No binary modification is involved.
+
+A separate private diagnostic skips explicit object blocks while retaining RNG
+preprocessing to locate earlier blockers across 46 packaged resources and three
+seeds. Its successful geometry-only runs are **not original comparisons or full
+map support**. Many other resources stop at cliff generation; elevation/scenery
+and connection/forest combinations remain additional blockers. Evidence:
+`rms-geometry-only-audit-2026-11-15.json`.
