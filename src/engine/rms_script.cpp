@@ -143,7 +143,8 @@ bool RmsScript::load(int32_t id, const Resolver &resolver, const Limits &limits,
     }
 }
 bool RmsScript::preprocess(const std::unordered_set<std::string> &initialDefines,
-                           std::vector<RmsToken> &out, std::string *err, uint32_t *randomState) const {
+                           std::vector<RmsToken> &out, std::string *err, uint32_t *randomState,
+                           const std::function<void(const RmsToken &, uint32_t &)> &onToken) const {
     out.clear();
     if (err) err->clear();
     std::vector<RmsToken> result;
@@ -258,6 +259,7 @@ bool RmsScript::preprocess(const std::unordered_set<std::string> &initialDefines
                 auto token = t;
                 auto constant = constants.find(s);
                 if (constant != constants.end()) token.text = std::to_string(constant->second);
+                if (onToken) onToken(token, rng);
                 result.push_back(std::move(token));
             }
         }

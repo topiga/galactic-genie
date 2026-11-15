@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <charconv>
 #include <cmath>
+#include <unordered_map>
 
 namespace swgb {
 bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::string> &defines,
@@ -49,7 +50,22 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 allies|=player!=other && diplomacy[player][other]==0;
         if(allies && defines.count("FIXED_POSITIONS")) return fail("allied fixed-position starts remain unverified");
     }
-    if (!script.preprocess(defines,tokens,err,&rng)) return false;
+    // Zone draws must precede later script random branches, including overwritten zones.
+    std::unordered_map<size_t,std::vector<int>> randomLandZones;
+    size_t emitted=0;
+    uint32_t selectedLands=0;
+    auto resolveZones=[&](const RmsToken &token,uint32_t &state) {
+        if(token.text=="create_player_lands") selectedLands=playerCount;
+        else if(token.text=="create_land") selectedLands=1;
+        else if(token.text=="}") selectedLands=0;
+        else if(token.text=="set_zone_randomly" && selectedLands) {
+            auto &zones=randomLandZones[emitted];
+            for(uint32_t n=0;n<selectedLands;++n)
+                zones.push_back(static_cast<int>(genieRandomDraw(state)*playerCount/32767u)+2);
+        }
+        ++emitted;
+    };
+    if (!script.preprocess(defines,tokens,err,&rng,resolveZones)) return false;
     auto number = [&](int32_t &value) {
         if (i == tokens.size()) return false;
         const auto &text = tokens[i++].text;
@@ -132,10 +148,18 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             land.targetTiles=width*height;
             land.borderFuzziness=20;
             bool terrain=false,position=false,zoneSpecified=false,teamZone=false;
+            std::vector<int> randomZones;
             int landId=players?1:0,minPlacementDistance=-1;
             while (i < tokens.size() && tokens[i].text != "}") {
                 const auto name = tokens[i++].text;
-                if(name=="set_zone_by_team" && players) { teamZone=true;zoneSpecified=true;continue; }
+                if(name=="set_zone_by_team" && players) { teamZone=true;zoneSpecified=true;randomZones.clear();continue; }
+                if(name=="set_zone_randomly") {
+                    const auto found=randomLandZones.find(i-1);
+                    if(found==randomLandZones.end() || found->second.size()!=(players?playerCount:1))
+                        return fail("random zone requires a selected land block");
+                    randomZones=found->second;land.zone=randomZones.front();
+                    teamZone=false;zoneSpecified=true;continue;
+                }
                 if (!number(value)) return fail(name + " requires an integer");
                 if (name == "terrain_type" && value>=0 && value<=255) { land.terrain=static_cast<uint8_t>(value); terrain=true; }
                 else if (name == "land_position" && !players) {
@@ -163,7 +187,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 } else if (name == "clumping_factor" && value>=0 && value<=100) land.clumpingFactor=value;
                 else if (name == "border_fuzziness" && value>=0 && value<=255) land.borderFuzziness=value;
                 else if (name == "other_zone_avoidance_distance" && value>=0 && value<=1024) land.separation=value;
-                else if (name == "zone" && value>=-10 && value<=53) { land.zone=value+10;zoneSpecified=true;teamZone=false; }
+                else if (name == "zone" && value>=-10 && value<=53) { land.zone=value+10;zoneSpecified=true;teamZone=false;randomZones.clear(); }
                 else return fail("unsupported land parameter/value " + name);
             }
             if (i == tokens.size()) return fail("unterminated land block");
@@ -174,7 +198,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if (players) {
                 playerLands=true;playerLandBegin=lands.size();playerZoneOverride=zoneSpecified;
                 for (uint32_t owner=1;owner<=playerCount;++owner) {
-                    if(teamZone) {
+                    if(!randomZones.empty()) land.zone=randomZones[owner-1];
+                    else if(teamZone) {
                         uint32_t earlier=1;
                         while(earlier<owner && (diplomacy.empty() || diplomacy[earlier][owner]!=0)) ++earlier;
                         land.zone=earlier+1;

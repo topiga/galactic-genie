@@ -7,8 +7,42 @@ static void checkRmsMixedLandMap() {
  dat::DatFile data;data.terrainBlock.terrains.resize(7);data.terrainBlock.terrainsUsed=7;
  for(int id:{0,3,6})data.terrainBlock.terrains[id].enabled=1;
  struct Case { const char *pattern;bool explicitPosition,fixed;uint32_t seed,rng,hash;
-   std::vector<RmsMapLand> lands; bool bordered=false;int zone=-11;bool byTeam=false;uint32_t players=2;int diplomacyMode=0; };
+   std::vector<RmsMapLand> lands; bool bordered=false;int zone=-11;bool byTeam=false;uint32_t players=2;int diplomacyMode=0;int randomMode=0;bool branchAfterZone=false; };
  const Case cases[]={
+  // Original random roll after zone draws selects the player-land radius.
+  {"PL",false,false,1u,2346674949u,3229331100u,{{{18,20},1,1},{{12,4},1,2},{{12,16},0,0}},false,-11,false,2,0,1,true},
+  {"LP",false,false,1u,990727494u,1590383450u,{{{12,16},0,0},{{18,20},1,1},{{12,4},1,2}},false,-11,false,2,0,1,true},
+  {"PLL",false,false,1u,4094222005u,668152985u,{{{18,20},1,1},{{12,4},1,2},{{12,16},0,0},{{19,5},0,0}},false,-11,false,2,0,1,true},
+  {"LPL",false,false,1u,3892924275u,3627241417u,{{{12,16},0,0},{{18,20},1,1},{{12,4},1,2},{{19,5},0,0}},false,-11,false,2,0,1,true},
+  {"PL",false,false,12345u,462096214u,2759840788u,{{{5,20},1,1},{{20,11},1,2},{{8,11},0,0}},false,-11,false,2,0,1,true},
+  {"LP",false,false,12345u,1824067029u,1640800343u,{{{8,11},0,0},{{5,20},1,1},{{20,11},1,2}},false,-11,false,2,0,1,true},
+  {"PLL",false,false,12345u,3630617685u,4160332618u,{{{5,20},1,1},{{20,11},1,2},{{8,11},0,0},{{14,3},0,0}},false,-11,false,2,0,1,true},
+  {"LPL",false,false,12345u,2935540536u,2624122340u,{{{8,11},0,0},{{5,20},1,1},{{20,11},1,2},{{14,3},0,0}},false,-11,false,2,0,1,true},
+  {"PL",false,false,1u,4113803621u,197050695u,{{{18,20},1,1},{{13,5},1,2},{{12,16},0,0}},false,-11,false,2,0,2},
+  {"LP",false,false,1u,2023555501u,417573832u,{{{12,16},0,0},{{18,20},1,1},{{13,5},1,2}},false,-11,false,2,0,2},
+  {"PLL",false,false,1u,2638439004u,2586309961u,{{{18,20},1,1},{{13,5},1,2},{{12,16},0,0},{{19,5},0,0}},false,-11,false,2,0,2},
+  {"LPL",false,false,1u,1523394346u,3336384910u,{{{12,16},0,0},{{18,20},1,1},{{13,5},1,2},{{19,5},0,0}},false,-11,false,2,0,2},
+  {"PL",false,false,12345u,763790782u,2016665755u,{{{5,20},1,1},{{20,11},1,2},{{8,11},0,0}},false,-11,false,2,0,2},
+  {"LP",false,false,12345u,1966328104u,3134132583u,{{{8,11},0,0},{{5,20},1,1},{{20,11},1,2}},false,-11,false,2,0,2},
+  {"PLL",false,false,12345u,3352365749u,1146715021u,{{{5,20},1,1},{{20,11},1,2},{{8,11},0,0},{{14,3},0,0}},false,-11,false,2,0,2},
+  {"LPL",false,false,12345u,3515808607u,2620746562u,{{{8,11},0,0},{{5,20},1,1},{{20,11},1,2},{{14,3},0,0}},false,-11,false,2,0,2},
+  {"PL",false,false,1u,2142102936u,549356852u,{{{18,20},1,1},{{13,5},1,2},{{12,16},0,0}},false,-11,false,2,0,3},
+  {"LP",false,false,1u,3509533219u,1594492146u,{{{12,16},0,0},{{18,20},1,1},{{13,5},1,2}},false,-11,false,2,0,3},
+  {"PLL",false,false,1u,3320720278u,2356812638u,{{{18,20},1,1},{{13,5},1,2},{{12,16},0,0},{{19,5},0,0}},false,-11,false,2,0,3},
+  {"LPL",false,false,1u,1658932731u,2242280374u,{{{12,16},0,0},{{18,20},1,1},{{13,5},1,2},{{19,5},0,0}},false,-11,false,2,0,3},
+  {"PL",false,false,12345u,1631224286u,2988190689u,{{{5,20},1,1},{{20,11},1,2},{{8,11},0,0}},false,-11,false,2,0,3},
+  {"LP",false,false,12345u,1268107786u,2765684401u,{{{8,11},0,0},{{5,20},1,1},{{20,11},1,2}},false,-11,false,2,0,3},
+  {"PLL",false,false,12345u,195530691u,394367107u,{{{5,20},1,1},{{20,11},1,2},{{8,11},0,0},{{14,3},0,0}},false,-11,false,2,0,3},
+  {"LPL",false,false,12345u,4251356269u,388809916u,{{{8,11},0,0},{{5,20},1,1},{{20,11},1,2},{{14,3},0,0}},false,-11,false,2,0,3},
+  // Original random-zone handler draws before finalization and geometry.
+  {"PL",false,false,1u,2513781837u,2676832002u,{{{18,20},1,1},{{13,5},1,2},{{12,16},0,0}},false,-11,false,2,0,1},
+  {"LP",false,false,1u,259500580u,2141676856u,{{{12,16},0,0},{{18,20},1,1},{{13,5},1,2}},false,-11,false,2,0,1},
+  {"PLL",false,false,1u,3304816620u,500453425u,{{{18,20},1,1},{{13,5},1,2},{{12,16},0,0},{{19,5},0,0}},false,-11,false,2,0,1},
+  {"LPL",false,false,1u,3001900622u,3539346959u,{{{12,16},0,0},{{18,20},1,1},{{13,5},1,2},{{19,5},0,0}},false,-11,false,2,0,1},
+  {"PL",false,false,12345u,462096214u,2759840788u,{{{5,20},1,1},{{20,11},1,2},{{8,11},0,0}},false,-11,false,2,0,1},
+  {"LP",false,false,12345u,1824067029u,1640800343u,{{{8,11},0,0},{{5,20},1,1},{{20,11},1,2}},false,-11,false,2,0,1},
+  {"PLL",false,false,12345u,3630617685u,4160332618u,{{{5,20},1,1},{{20,11},1,2},{{8,11},0,0},{{14,3},0,0}},false,-11,false,2,0,1},
+  {"LPL",false,false,12345u,2935540536u,2624122340u,{{{8,11},0,0},{{5,20},1,1},{{20,11},1,2},{{14,3},0,0}},false,-11,false,2,0,1},
   // Actual team-zone handler, including directional diplomacy and noncontiguous representative IDs.
   {"PL",false,false,1u,389168431u,1430324621u,{{{18,5},1,1},{{13,20},1,2},{{16,10},0,0}},false,-11,true,2,0},
   {"LP",false,false,1u,2586468562u,3242314021u,{{{16,10},0,0},{{18,5},1,1},{{13,20},1,2}},false,-11,true,2,0},
@@ -107,10 +141,12 @@ static void checkRmsMixedLandMap() {
   std::string source="<LAND_GENERATION> base_terrain 0 ";
   const std::string player="create_player_lands { terrain_type 6 base_size 3 number_of_tiles 60 "+
    std::string(c.bordered?"left_border 20 right_border 5 top_border 30 bottom_border 10 ":"")+
-   (c.zone>=-10?"zone "+std::to_string(c.zone)+" ":"")+
-   (c.byTeam?"set_zone_by_team ":"")+"} ";
+   (c.zone>=-10?"set_zone_by_team zone "+std::to_string(c.zone)+" ":"")+
+   (c.byTeam?"zone 2 set_zone_by_team ":"")+(c.randomMode&1?"set_zone_randomly ":"")+
+   "if MISSING set_zone_randomly endif "+
+   (c.branchAfterZone?"start_random percent_chance 50 base_size 2 percent_chance 50 base_size 3 end_random ":"")+"} ";
   const std::string neutral="create_land { terrain_type 3 base_size 1 number_of_tiles 40 "+
-    std::string(c.explicitPosition?"land_position 50 50 ":"")+"} ";
+    std::string(c.explicitPosition?"land_position 50 50 ":"")+(c.randomMode&2?"set_zone_randomly ":"")+"} ";
   for(const char *p=c.pattern;*p;++p)source+=*p=='P'?player:neutral;
   source+=paint+connect;
   RmsScript script;RmsMap map;std::string error;
@@ -141,7 +177,7 @@ static void checkRmsMixedLandMap() {
   }
  }
  for(const char *bounds:{"left_border -1","right_border 101","left_border 100",
-     "left_border 60 right_border 60","left_border 25 right_border 25 base_size 13","bottom_border 100","zone -11","zone 54"}) {
+     "left_border 60 right_border 60","left_border 25 right_border 25 base_size 13","bottom_border 100","zone -11","zone 54","set_zone_randomly zone 54"}) {
   const std::string source="<LAND_GENERATION> base_terrain 0 create_player_lands { terrain_type 6 base_size 3 number_of_tiles 60 "+std::string(bounds)+" }";
   RmsScript script;RmsMap map;std::string error;
   check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes){if(id)return false;bytes.assign(source.begin(),source.end());return true;},{},&error),error);

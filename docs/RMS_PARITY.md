@@ -77,7 +77,7 @@ stay in the user's game archive and private research directory.
 | Remaining per-player resources, spacing and zone filters | Full stock-row composition still required |
 | Fixed-position player starts | 29 original cases, live Windows corroboration and settings integration |
 | Mixed player/nonplayer lands, borders and random land placement | Still blocked in the integrated importer |
-| Team/random zones and flat-terrain flags | Still blocked in the integrated importer |
+| Team/random zones and flat-terrain flags | Zone geometry now compared with the original; owned startup remains gated. See current evidence below |
 | Packaged elevation and one conditional syntax branch | Still blocked in the loader |
 
 Ten resources shared the initial omitted-quantity failure. Fixing that default
@@ -1202,7 +1202,7 @@ geometry cases, including four-player allied pairs and both directions of
 asymmetric diplomacy. Native terrain, final RNG, centers and land ownership match.
 The directive takes no argument and consumes no RNG. Explicit numeric zones and
 team zones obey their source order. Owned startup with either override remains
-gated; random-zone directives still need their parser RNG timing verified.
+gated. Random-zone timing is covered in the following section.
 
 Private evidence: `rms-teamzone-parser-oracle-2026-11-15.json`,
 `rms-teamzone-mixed-geometry-oracle-2026-11-15.json`,
@@ -1210,3 +1210,32 @@ Private evidence: `rms-teamzone-parser-oracle-2026-11-15.json`,
 case0x1d corroborates the rule, retained as
 `rms-player-zone-handler-ghidra-2026-11-15.json`, evidence
 `ev_830e5a531f99f1c3a87bb24ae20dfbb38ab2742af75b931276cce6f6a139a2e1`.
+
+
+### Random land zones and interleaved script RNG
+
+`set_zone_randomly` consumes one original CRT draw per selected land, assigning
+`floor(draw * playerCount / 32767) + 2`. Neutral lands use the same player-count
+multiplier. These draws occur during command dispatch, before subsequent script
+random choices, and still occur if a later zone directive replaces their result.
+
+The preprocessor now lets the map importer consume command RNG as active tokens
+are emitted. The importer retains those zone values for land parsing. Inactive
+branches consume nothing; failed map generation preserves the caller's RNG.
+Existing preprocessing callers retain their previous behavior without a visitor.
+
+Evidence includes 112 executions of the original dispatcher and land handler
+(one to eight players, player/neutral lands, seven seeds), checking zone bytes,
+RNG state and the following `start_random` roll. Twenty-four geometry cases cover
+player-only, neutral-only and both kinds of random zones. Eight additional
+composed cases execute the original subsequent random roll, select the radius
+using the previously verified inclusive 50-percent threshold, then execute the
+original finalizer and geometry scheduler. These test command/branch interleaving;
+they do not execute the original file tokenizer. Native terrain bytes, final RNG,
+land centers and ownership match all 32 geometry cases.
+
+Private evidence: `rms-randomzone-dispatch-oracle-2026-11-15.json`,
+`rms-randomzone-mixed-geometry-oracle-2026-11-15.json`, the corresponding
+`randomzone2` / `randomzone3` files, and
+`rms-randomzone-branch-geometry-oracle-2026-11-15.json`.
+Owned player starts with zone overrides remain gated until object-stage comparison.

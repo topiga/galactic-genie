@@ -36,9 +36,12 @@ public:
     // the loaded source. Optional RNG state enables original nonnested random
     // blocks; it is advanced only on success. This is shared CRT state at script
     // entry, not a promise that a map seed reproduces a generated map.
+    // onToken observes active, resolved tokens in source order and may consume
+    // shared RNG before subsequent random branches; its own state is caller-owned.
     bool preprocess(const std::unordered_set<std::string> &defines,
                     std::vector<RmsToken> &out, std::string *err = nullptr,
-                    uint32_t *randomState = nullptr) const;
+                    uint32_t *randomState = nullptr,
+                    const std::function<void(const RmsToken &, uint32_t &)> &onToken = {}) const;
 private:
     std::vector<RmsToken> tokens_;
 };
