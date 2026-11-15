@@ -1077,8 +1077,22 @@ extended to the two-Gungan case; shared placement logic already matched.
 Native import also checks all10 starting identities, owners and positions.
 
 Private evidence: `rms-controlled-gungan2-forest-fullstage-oracle-2026-11-14.json`
-(replayed November15; filename inherited from its harness). This is controlled
-object-stage evidence, not a live Windows comparison of Gungan map startup.
-Mixed civilizations, other civilization pairs and other map sizes remain outside
+(replayed November15; filename inherited from its harness). This first replay is controlled object-stage evidence.
+Other civilization pairs beyond Empire/Gungans and other map sizes remain outside
 this Forest profile. The512-seed acceptance audit and15 live comparisons above
 used two Empire owners.
+
+A subsequent live Windows two-Gungan startup at seed16160 also matches all14400
+cells of terrain, elevation and slopes (FNV1056424125/908132044/458332910),
+all197 static object identities/positions/order (FNV163032056), and all7554
+automatic trees including facets (FNV2138192714). Moving AI workers/scout and
+first-tick forage facets are excluded from static startup claims. Evidence is
+`gungan-live-seed16160-comparison-2026-11-15.json` and its full-scenery companion.
+The temporary seed override was restored to the original unset value.
+
+Both mixed Empire/Gungan orders also match controlled original23-row replays:
+terrain FNV3348257725 for1/2 and1056424125 for2/1; owned-pose FNV3019737774
+and888513054 respectively. Both retain220 Gaia objects, Gaia-pose FNV1670957952
+and final RNG278519141. Fixtures also verify Gungan scout animation frame7 and
+normalized initial hold times, including native import. Private evidence:
+`rms-controlled-mixed-gungan-forest-fullstage-oracle-2026-11-14.json` (replayed15th).

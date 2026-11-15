@@ -457,7 +457,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if(ownedObjects && lands.size()!=playerCount) return fail("mixed-land owned-object startup remains unverified");
     const bool ownedForest=ownedObjects && playerLands && base==41 && lands[0].terrain==9;
     const bool ownedMixedForest=ownedObjects && playerLands && (base==6 || base==12 || base==41) && lands[0].terrain==base &&
-        width==120 && height==120 && playerCount==2 && (playerCivilizations==std::vector<uint16_t>{1,1} || playerCivilizations==std::vector<uint16_t>{2,2}) &&
+        width==120 && height==120 && playerCount==2 && playerCivilizations.size()==2 &&
+        std::all_of(playerCivilizations.begin(),playerCivilizations.end(),[](uint16_t civ){return civ==1 || civ==2;}) &&
         startingWorkers && startingScouts && workerMinDistance==6 && workerMaxDistance==6 &&
         !startingStalagmites;
     if (startingStalagmites) {
