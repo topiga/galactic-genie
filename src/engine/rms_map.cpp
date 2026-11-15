@@ -282,7 +282,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 return fail("unsupported resource row after verified stock prefix");
             if(holocrons && resourceProfile==0 && i<tokens.size() && tokens[i].text=="66")resourceProfile=1;
             if(holocrons && resourceProfile==6 && i<tokens.size() &&
-               (tokens[i].text=="1363" || tokens[i].text=="1365" || tokens[i].text=="812"))resourceProfile=8;
+               (tokens[i].text=="1363" || tokens[i].text=="1365" || tokens[i].text=="812" || tokens[i].text=="1197"))resourceProfile=8;
             // shortcut: one initial hunt and up to two large-hunt rows; verify other sequences before accepting them.
             if(holocrons && resourceProfile==8 && prefixHunts &&
                (i==tokens.size() || (tokens[i].text!="126" && tokens[i].text!="812" && tokens[i].text!="1197" &&

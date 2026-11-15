@@ -44,6 +44,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   {4,2,126,220,1662422u,278519141u,513271022u},
   {2,1,126,210,3750728331u,4161792159u,758251980u},
   {8,4,126,235,989150139u,2125502712u,2483236625u},
+  {0,0,1197,203,639490319u,1423244924u,2166136261u,1,413,21,2138192714u,3348257725u,false,true},
   {0,0,812,203,1233270215u,1423244924u,2166136261u,1,413,21,2138192714u,3348257725u,false,true},
   {4,2,812,224,3286888937u,44224755u,513271022u,2},
   {4,2,812,220,1670957952u,278519141u,513271022u},
@@ -179,21 +180,25 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
 
  }
  // Live captures after restart verify geometry/static positions; moving units and runtime facets are separate.
- const struct {uint32_t seed,terrain,elevation,slopes,staticCount,positions;} liveCases[]={
+ const struct {uint32_t seed,terrain,elevation,slopes,staticCount,positions,sceneryCount=0,sceneryHash=0;} liveCases[]={
   {13,1910713631u,3966973382u,1711829304u,178,421779072u},
-  {19,2994838923u,264109179u,2976087397u,186,2122276350u},
+  {19,2994838923u,264109179u,2976087397u,186,2122276350u,7622,3968719120u},
   {16161,1490735139u,806980228u,17576837u,178,2671961992u},
   {42,2001427337u,3311179382u,4121805816u,172,1396991924u},
   {1,1441896192u,2681332084u,2744061788u,188,712461888u},
   {2,4035986315u,3707759835u,3939991058u,202,582877992u},
   {3,1730168867u,94274854u,3441657481u,180,195710362u},
   {12345,519134464u,169086623u,2102275482u,193,4181115470u},
-  {32767,1119165674u,3881025133u,4054086905u,174,2295777464u},
-  {65535,3846652479u,2050240623u,913491704u,190,1188849762u}};
+  {32767,1119165674u,3881025133u,4054086905u,174,2295777464u,7687,1594315501u},
+  {65535,3846652479u,2050240623u,913491704u,190,1188849762u,7639,1630944130u}};
  for(const auto &live:liveCases) {
   rng=live.seed;
   check(swgb::generateRmsMap(script,defines,120,120,assets.dat(),rng,map,&error,2,{1,1}),error.c_str());
   check(bytesHash(map.terrain)==live.terrain && bytesHash(map.elevation)==live.elevation && bytesHash(map.slopes)==live.slopes,"live Windows complete terrain/elevation/slopes");
+  if(live.sceneryCount) {
+   hash=2166136261u;for(const auto &o:map.scenery)pose(o.unitId,0,o.x,o.y,o.facet);
+   check(map.scenery.size()==live.sceneryCount && hash==live.sceneryHash,"live Windows complete automatic-tree identities/positions/facets/order");
+  }
   hash=2166136261u;unsigned staticCount=0;
   for(const auto &o:map.resourcesAfterOwned) {
    if(o.unitId!=285 && o.unitId!=59 && o.unitId!=66 && o.unitId!=102 && o.unitId!=348 && o.unitId!=349 && o.unitId!=413 && o.unitId!=1585)continue;

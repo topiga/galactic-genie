@@ -912,3 +912,36 @@ no-early-herd branch. Both match all three grids and their static resource recor
 The expanded native audit now accepts all256 seeds0–255 under the stated Tiny
 Forest/two-Empire configuration. This is a generation coverage result; only the
 independently compared seeds and controlled branches constitute parity evidence.
+
+## Full live automatic scenery and distributed seed audit: 2026-11-15
+
+The read-only Windows object reader now batches its memory reads in C# rather
+than making thousands of PowerShell calls. It verifies the executable hash, image
+base, table bound and each object ID before serializing records. It made no game
+or system changes. Every automatic tree matches native identity, owner, creation
+order, position and sprite facet in three fresh live maps:
+
+| Seed | Tree type | Trees | Live pose/facet FNV |
+|---|---:|---:|---:|
+| 19 | 348 | 7622 | 3968719120 |
+| 32767 | 349 | 7687 | 1594315501 |
+| 65535 | 413 | 7639 | 1630944130 |
+
+The six stationary starting objects also match in each capture. Three AI workers
+and the AI scout have already moved or changed jobs, so these captures do not
+certify their original startup pose. The committed fixture checks the full tree
+hashes independently of the static-resource hashes. Private evidence is
+`live-seed{19,32767,65535}-full-scenery-comparison-2026-11-15.json` and the complete
+original object snapshots beside it. The seed override was restored after capture.
+
+Consecutive seeds0–255 all generate, but a reproducible Python Random(0x53475742)
+sample of256 unsigned32-bit seeds initially generated189. The remaining67 expose
+domesticated Bantha833, Ronto1364, explicit411 trees, and1197 predators without early herds.
+These are unsupported branches, not certified mismatches. The distributed audit
+is retained as `forest-spread256seed-audit-2026-11-15.json`.
+
+A further original21-row replay verifies1197 with both early herds omitted:
+203 Gaia objects, final RNG1423244924, pose/facet FNV639490319. Its eight predator
+frames/delays equal the independently checked812 no-herd sequence. Evidence is
+`rms-controlled-predator1197-no-herds-fullstage-oracle-2026-11-14.json` (template
+filename date retained; execution on November15).
