@@ -741,3 +741,13 @@ map_seed16160. All197 static resource records (unit/owner/position) in the
 original ID range match the retained original reference; mobile animals and
 later-created objects were excluded. This reconfirms the old live baseline,
 not either newly generated seed. The Windows game was not restarted or edited.
+
+### Remaining Forest hunt quantities (2026-11-15)
+
+Three original controlled thirteen-row prefixes verify loose1249 count1 near
+and far, and Kaadu1363 count3. They produce respectively77/77/80 Gaia objects,
+with final RNG1885517358/1126655240/2341451770. Native regressions check all
+poses/order, animal frames, extra idle delay and heading against those original
+records. The parser and resource validation admit these quantities, including
+the late Kaadu row. The complete ASan/UBSan skirmish suite passes. These are
+controlled object comparisons, not additional complete packaged-map proofs.

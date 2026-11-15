@@ -292,6 +292,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             auto row=stockResources[holocrons?resourceProfile:1];
             if(holocrons && i<tokens.size()) {
                 if(resourceProfile==15 && tokens[i].text=="594")row=stockResources[6];
+                if(resourceProfile==15 && tokens[i].text=="1363")row.unit=1363;
                 if((resourceProfile==15 || resourceProfile==17) && (tokens[i].text=="822" || tokens[i].text=="1249")) {
                     if(resourceProfile==17 && distantHunt)return fail("unsupported repeated distant hunt row");
                     row.unit=tokens[i].text=="822"?822:1249;
@@ -336,7 +337,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(name=="terrain_to_place_on" && row.unit==1585 && value==22) terrainFilter=true;
                 else if(name=="number_of_objects" && row.unit==1249 && row.mode==0 && (value==1 || value==2)) { row.groups=value;count=true; }
                 else if(name=="number_of_objects" && row.mode==0 && value==int(row.groups)) count=true;
-                else if(name=="number_of_objects" && row.mode!=0 && (value==row.count || ((row.unit==1363 || row.unit==1365) && value==8) || (row.unit==1365 && value==2) || (row.unit==822 && row.distance==RmsResourceDistance::Near && value==2) || (row.unit==1197 && row.global && value==2) || (row.unit==59 && (value==3 || value==12)) || (row.unit==594 && (value==row.count/2 || value==row.count*2)))) { row.count=value;count=true; }
+                else if(name=="number_of_objects" && row.mode!=0 && (value==row.count || ((row.unit==1363 || row.unit==1365) && value==8) || (row.unit==1365 && value==2) || (row.unit==1363 && value==3) || (row.unit==1249 && value==1) || (row.unit==822 && row.distance==RmsResourceDistance::Near && value==2) || (row.unit==1197 && row.global && value==2) || (row.unit==59 && (value==3 || value==12)) || (row.unit==594 && (value==row.count/2 || value==row.count*2)))) { row.count=value;count=true; }
                 else if(name=="number_of_groups" && value==int(row.groups)) groups=true;
                 else if(name=="group_placement_radius" && value==row.radius) radius=true;
                 else if(name=="group_variance" && value==int(row.variance)) variance=true;
