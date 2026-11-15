@@ -8,6 +8,7 @@ static void rmsHuntProfileChecks(swgb::Assets &assets,const std::string &dataDir
  const std::unordered_set<std::string> defines{"TINY_MAP","FIXED_POSITIONS","DEFAULT_RESOURCES"};
  struct Animation{uint8_t frame;float delay,heading;};
  const struct{int unit,count;bool grouped;uint32_t rng,poses;std::vector<Animation> animations;bool distant=false,omitNerfs=false;} cases[]={
+{822,1,true,1126655240u,3564246435u,{{5,0.f,1.57079637f},{9,0.481063187f,4.71238899f}},true},
 {822,2,false,1585104208u,3911607922u,{{6,0.f,0.785398185f},{9,0.373876095f,4.71238899f},{9,0.f,0.785398185f},{9,0.362825364f,0.785398185f}}},
 {1249,4,true,1427887360u,99082249u,{{9,0.373876095f,4.71238899f},{2,0.f,3.14159274f},{2,0.f,3.92699075f},{2,0.f,1.57079637f},{1,0.f,4.71238899f},{5,0.f,2.3561945f},{4,0.f,4.71238899f},{9,0.f,1.57079637f}}},
 {1363,2,true,891822066u,1187128642u,{{3,0.f,2.3561945f},{3,0.f,3.92699075f},{10,0.f,5.497787f},{9,0.f,3.14159274f}}},

@@ -22,7 +22,7 @@ The image `clone-campaigns-forest-full.png` in the external build directory is a
 native diagnostic render, not a claim of a fully configured playable match.
 Starting resources/UI map selection and later simulation remain separate work.
 
-Fresh live Windows restarts independently verify six more packaged Forest
+Fresh live Windows restarts independently verify eight more packaged Forest
 seeds with the same size, defines and civilizations:
 
 | Seed | Terrain / elevation / slopes | Static resource identities, owners, positions and order |
@@ -30,7 +30,9 @@ seeds with the same size, defines and civilizations:
 | 1 | 14,400 / 14,400 / 14,400 cells equal | 188 / 188 equal |
 | 2 | 14,400 / 14,400 / 14,400 cells equal | 202 / 202 equal |
 | 3 | 14,400 / 14,400 / 14,400 cells equal | 180 / 180 equal |
+| 42 | 14,400 / 14,400 / 14,400 cells equal | 172 / 172 equal |
 | 12345 | 14,400 / 14,400 / 14,400 cells equal | 193 / 193 equal |
+| 16161 | 14,400 / 14,400 / 14,400 cells equal | 178 / 178 equal |
 | 32767 | 14,400 / 14,400 / 14,400 cells equal | 174 / 174 equal |
 | 65535 | 14,400 / 14,400 / 14,400 cells equal | 190 / 190 equal |
 
@@ -859,3 +861,19 @@ No later live facet is treated as a constructor reference. The broader seeds0–
 audit found 18 supported seeds before these quantity fixes; that audit is coverage
 of native generation, not independent parity evidence. Remaining rejections include
 predator quantities, terrain4 and other hunting-row combinations.
+
+## Predator pairs and distant single Bantha: 2026-11-15
+
+An independent full23-row original replay verifies global812 pairs:224 Gaia
+objects, final RNG44224755, pose/facet FNV3286888937. All12 predator frames and
+idle delays match the existing1197 pair fixture, now checked for812 as well.
+A controlled13-row distant822 count1 replay yields77 Gaia objects, final
+RNG1126655240 and pose/facet FNV3564246435. It retains group variance and
+constructor RNG, including the original's two resulting animals.
+
+Private evidence: `rms-controlled-predator812-pairs-fullstage-oracle-2026-11-14.json`
+(the inherited date in this filename is historical; this replay ran November15),
+and `rms-controlled-far822-one-fullstage-oracle-2026-11-15.json`.
+Live seeds42 and16161 also match all terrain/elevation/slope bytes and respectively
+172 and178 static resources. The temporary in-memory map-seed override was
+restored to UINT_MAX after the eight-seed comparison; no executable was patched.

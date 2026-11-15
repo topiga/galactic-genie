@@ -44,6 +44,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   {4,2,126,220,1662422u,278519141u,513271022u},
   {2,1,126,210,3750728331u,4161792159u,758251980u},
   {8,4,126,235,989150139u,2125502712u,2483236625u},
+  {4,2,812,224,3286888937u,44224755u,513271022u,2},
   {4,2,812,220,1670957952u,278519141u,513271022u},
   {4,2,1197,220,3239039312u,278519141u,513271022u},
   {4,2,1197,224,1665827321u,44224755u,513271022u,2},
@@ -172,6 +173,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  }
  // Live captures after restart verify geometry/static positions; moving units and runtime facets are separate.
  const struct {uint32_t seed,terrain,elevation,slopes,staticCount,positions;} liveCases[]={
+  {42,2001427337u,3311179382u,4121805816u,172,1396991924u},
   {1,1441896192u,2681332084u,2744061788u,188,712461888u},
   {2,4035986315u,3707759835u,3939991058u,202,582877992u},
   {3,1730168867u,94274854u,3441657481u,180,195710362u},
