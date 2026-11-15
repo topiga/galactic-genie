@@ -2048,3 +2048,30 @@ final RNG196285776. Evidence: `rms-multiline-parser-oracle-2026-11-15.json`,
 `rms-multiline-random-parser-oracle-2026-11-15.json` and
 `rms-multiline-include-parser-55012-TINY_MAP-1-2026-11-15.json`.
 Native regression checks cover expansion, branch output, RNG and source locations.
+
+### Fixed full startup across civilizations and composed hills
+
+The fixed-position23-row cliff/resource profile now accepts all64 ordered original
+civilization pairs. All192 original comparisons (three seeds per pair) match the
+complete ordered object list, terrain raster, final RNG, owned foundations/poses
+and animated Gaia poses. Native import regressions retain25 representative cases,
+covering each civilization in both owner slots and all six distinct seed/Gaia
+animation outcomes. Original research/civilization-bonus capture boundaries remain
+as documented above. Evidence: `rms-cliff-fixed-full-civ-matrix-2026-11-15.json`.
+
+Fixed Empire/Empire startup additionally supports hills composed with the same
+cliffs, forest21 and full resources. Thirty comparisons pass: requested levels1..7
+with400 tiles/eight clumps, and levels1/3/7 with8000 tiles/30 clumps, each over
+seeds1,12345,4294967295. Comparisons include complete height and slope rasters as
+well as terrain, object order/placement, RNG and animation. The small-hill seed1
+case reaches only level3 even when requesting7; the large level7 case actually
+contains3769 level7 tiles, so high-level coverage is not inferred from the request.
+Native regressions check every case, Gaia poses and imported flat-tile heights.
+
+Evidence: `rms-cliff-fixed-elevated-full-cases-oracle-2026-11-15.json` and
+`rms-cliff-fixed-elevated-full-large-cases-oracle-2026-11-15.json`, plus compressed
+per-case originals. These execute original fixed-start finalization and the real
+land/elevation/cliff/terrain/object scheduler in a configured world. The RMS file
+loader and complete gameplay are outside this comparison. Elevated startup with
+other civilizations, random positions, other hill density profiles, connections,
+water placement and arbitrary packaged maps remain unverified and gated.

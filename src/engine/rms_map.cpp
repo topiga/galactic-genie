@@ -516,19 +516,23 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             workerMinDistance==6 && workerMaxDistance==6 && !startingStalagmites &&
             cliffResources && playerCivilizations.size()==2 &&
             std::all_of(playerCivilizations.begin(),playerCivilizations.end(),[](auto civ){return civ>=1 && civ<=8;}) &&
-            (!defines.count("FIXED_POSITIONS") || (playerCivilizations==std::vector<uint16_t>{1,1} && resourceProfile==19)) &&
+            (!defines.count("FIXED_POSITIONS") || resourceProfile==19) &&
             terrainRows.size()==1 &&
             terrainRows[0].terrain==21 && terrainRows[0].targetTiles==6000 && terrainRows[0].clumps==60 &&
             terrainRows[0].spacing==2 && terrainRows[0].clumping==20 && terrainRows[0].avoidPlayerStarts &&
             !terrainRows[0].flatTerrainOnly;
+        const bool ownedCliffElevation=ownedCliff && defines.count("FIXED_POSITIONS") &&
+            playerCivilizations==std::vector<uint16_t>{1,1} && resourceProfile==19 && !elevationRows.empty() &&
+            ((elevationRows[0].targetTiles==400 && elevationRows[0].clumps==8) ||
+             (elevationRows[0].targetTiles==8000 && elevationRows[0].clumps==30));
         if(width!=120 || height!=120 || base!=6 ||
             (playerLands ? (playerCount!=2 || lands.size()!=2 || playerZoneOverride ||
-                (elevationStage && (hasObjects || !terrainRows.empty()))) : lands.size()!=1) ||
+                (elevationStage && !ownedCliffElevation && (hasObjects || !terrainRows.empty()))) : lands.size()!=1) ||
             (hasObjects && !ownedCliff) || connectionStage || terrainRows.size()>1 ||
             (elevationStage && (elevationRows.empty() || elevationRows.size()>7 ||
-                (elevationRows.size()>1 && !terrainRows.empty()))) ||
+                (elevationRows.size()>1 && !ownedCliffElevation && !terrainRows.empty()))) ||
             std::any_of(terrainRows.begin(),terrainRows.end(),[&](const auto &row) {
-                return (row.terrain!=0 && ((row.terrain!=18 && row.terrain!=20 && row.terrain!=21) || elevationStage)) || row.baseTerrain!=6 || (row.avoidPlayerStarts && !playerLands) ||
+                return (row.terrain!=0 && ((row.terrain!=18 && row.terrain!=20 && row.terrain!=21) || (elevationStage && !ownedCliffElevation))) || row.baseTerrain!=6 || (row.avoidPlayerStarts && !playerLands) ||
                     row.minHeight!=0 || row.maxHeight!=255;
             }))
             return fail("cliffs require a verified120 DIRT1 land profile");

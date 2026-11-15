@@ -101,9 +101,25 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
         '--players',2,'--civilization',1,'--civilization',1,'--define','FIXED_POSITIONS'],0)
     assert '6202 native objects, final RNG 664476888' in fixed_full
     assert (work/'cliff-full-fixed.png').stat().st_size>1000
-    run(['render-rms',data,root/'tools/fixtures/cliff-full-start.rms',120,1,work/'cliff-full-fixed-mixed.png',
-        '--players',2,'--civilization',1,'--civilization',2,'--define','FIXED_POSITIONS'],1)
-    assert not (work/'cliff-full-fixed-mixed.png').exists()
+    fixed_mixed=run(['render-rms',data,root/'tools/fixtures/cliff-full-start.rms',120,1,work/'cliff-full-fixed-mixed.png',
+        '--players',2,'--civilization',4,'--civilization',8,'--define','FIXED_POSITIONS'],0)
+    assert '6203 native objects, final RNG 3105553768' in fixed_mixed
+    assert (work/'cliff-full-fixed-mixed.png').stat().st_size>1000
+    for levels,tiles,clumps,count,state in [(3,400,8,6215,4040677865),(7,8000,30,6239,272038666)]:
+        elevated_full=work/f'cliff-full-hills-{levels}.rms'
+        elevated_full.write_text((root/'tools/fixtures/cliff-full-start.rms').read_text()+
+            f'\n<ELEVATION_GENERATION> create_elevation {levels} {{ base_terrain 6 number_of_tiles {tiles} number_of_clumps {clumps} }}')
+        output=work/f'cliff-full-hills-{levels}.png'
+        rendered=run(['render-rms',data,elevated_full,120,1,output,
+            '--players',2,'--civilization',1,'--civilization',1,'--define','FIXED_POSITIONS'],0)
+        assert f'{count} native objects, final RNG {state}' in rendered
+        assert output.stat().st_size>1000
+        for first,second,fixed in [(1,2,True),(1,1,False)]:
+            rejected=work/f'cliff-full-hills-unverified-{levels}-{first}-{second}-{fixed}.png'
+            run(['render-rms',data,elevated_full,120,1,rejected,
+                '--players',2,'--civilization',first,'--civilization',second]+
+                (['--define','FIXED_POSITIONS'] if fixed else []),1)
+            assert not rejected.exists()
     unverified_cliff=work/'cliff-full-unverified.rms'
     unverified_cliff.write_text((root/'tools/fixtures/cliff-full-start.rms').read_text().replace(
         'set_loose_grouping number_of_objects 4','set_loose_grouping number_of_objects 8',1))
