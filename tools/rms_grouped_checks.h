@@ -58,7 +58,7 @@ static void rmsGroupedChecks(swgb::Assets &assets) {
               "Native grouped resource import count/RNG");
         for(size_t i=0;i<map.objects.size();++i) {
             const auto &p=map.objects[i];const auto id=uint32_t(map.scenery.size()+i+1);
-            check(game.objectActive(id) && game.objectPosition(id)==std::array<float,2>{p.x,p.y} &&
+            check(game.objectActive(id) && game.objectPosition(id)==std::array<float,2>{p.y,32-p.x} &&
                   game.objectHitPoints(id)==(fixture.unit==348?50:0) &&
                   game.objectResourceAmount(id)==(fixture.unit==348?100:fixture.unit==66?800:350),
                   "Grouped resource identity, original health and storage");

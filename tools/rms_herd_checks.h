@@ -49,7 +49,7 @@ static void rmsHerdChecks(swgb::Assets &assets) {
         "original herd prefix coordinate/appearance");
       const auto id=uint32_t(map.scenery.size()+76+j);const auto position=game.objectPosition(id);
       const auto animation=game.objectAnimationForTesting(id);
-      check(game.objectUnitId(id)==594 && game.objectPlayer(id)==0 && position[0]==expected.x && position[1]==expected.y &&
+      check(game.objectUnitId(id)==594 && game.objectPlayer(id)==0 && position[0]==expected.y && position[1]==120-expected.x &&
         animation[0]==expected.frame*.275f && animation[1]==expected.delay,"native herd IDs/position/animation");
     }
   }

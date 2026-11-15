@@ -39,10 +39,10 @@ static void ownedRmsSpawnChecks(swgb::Assets &assets,swgb::SoftRenderer &rendere
               game.objectHitPoints(1)==2500 && game.underConstructionObjectCount()==0,
               "Owned RMS import preserves owner, ID, completed state, HP and RNG");
         const auto position=game.objectPosition(1);
-        check(position[0]==center.x && position[1]==center.y,
+        check(position[0]==center.y && position[1]==32-center.x,
               "Owned RMS import retains integer center coordinates");
         for(int y=0;y<32;++y) for(int x=0;x<32;++x)
-            check(game.terrainAtForTesting(x,y)==map.terrain[size_t(y)*32+x],
+            check(game.terrainAtForTesting(y,31-x)==map.terrain[size_t(y)*32+x],
                   "Owned RMS import preserves the final foundation raster");
         const int unlock[]={451,452,454,453,-1,455,387,388};
         std::vector<int> order={0,486};
@@ -75,30 +75,30 @@ static void ownedRmsSpawnChecks(swgb::Assets &assets,swgb::SoftRenderer &rendere
               game.populationUsedForTesting(2)==0 && game.resource(2,98)==375 && game.resource(2,165)==375,
               "Second owner receives its own civilization, population and cost accounting");
         check(!game.objectVisibleForTesting(2),"Separate owners start as enemies with no shared sight");
-        game.lookAt(13,20);
+        game.lookAt(20,19);
         game.render(renderer,960,544);
-        check(game.terrainAtForTesting(13,20)==0,"Rendering unseen enemy retains pending foundation");
-        const auto scout=game.spawnObjectForTesting(1,83,1,13,20);
+        check(game.terrainAtForTesting(20,18)==0,"Rendering unseen enemy retains pending foundation");
+        const auto scout=game.spawnObjectForTesting(1,83,1,20,19);
         check(scout && game.objectVisibleForTesting(2),"Local scout reveals enemy center");
         swgb::InputState idle;
         game.updatePaused(0,idle);
-        check(game.terrainAtForTesting(13,20)==0,"Sight and paused update do not consume deferred terrain");
+        check(game.terrainAtForTesting(20,18)==0,"Sight and paused update do not consume deferred terrain");
         check(game.moveObjectForTesting(scout,2,2),"Leave enemy in explored fog");
         game.render(renderer,960,544);
-        check(game.terrainAtForTesting(13,20)==0,"Remembered enemy rendering does not consume deferred terrain");
-        check(game.moveObjectForTesting(scout,13,20),"Reveal enemy again");
+        check(game.terrainAtForTesting(20,18)==0,"Remembered enemy rendering does not consume deferred terrain");
+        check(game.moveObjectForTesting(scout,20,19),"Reveal enemy again");
         game.lookAt(-1000,-1000);
         game.render(renderer,960,544);
-        check(game.terrainAtForTesting(13,20)==0,"Off-camera visible enemy retains pending terrain");
+        check(game.terrainAtForTesting(20,18)==0,"Off-camera visible enemy retains pending terrain");
         // Center tile is outside this96x48 viewport but inside the original padded scan.
-        game.lookAt(18,20);
+        game.lookAt(25,19);
         game.render(renderer,96,48);
         const int foundation=civ==2?4:civ==6?6:27;
         for(int y=18;y<22;++y) for(int x=11;x<15;++x)
-            check(game.terrainAtForTesting(x,y)==foundation,"Padded terrain dispatch consumes deferred16tile foundation despite clipped pixels");
-        check(game.setTerrainForTesting(13,20,0),"Replace painted terrain");
+            check(game.terrainAtForTesting(y,31-x)==foundation,"Padded terrain dispatch consumes deferred16tile foundation despite clipped pixels");
+        check(game.setTerrainForTesting(20,18,0),"Replace painted terrain");
         game.render(renderer,960,544);
-        check(game.terrainAtForTesting(13,20)==0,"Deferred foundation is consumed exactly once");
+        check(game.terrainAtForTesting(20,18)==0,"Deferred foundation is consumed exactly once");
     }
     uint32_t manyState=1;
     check(game.initRms(script,{},64,manyState,&error,8,{1,2,3,4,5,6,7,8}),error.c_str());

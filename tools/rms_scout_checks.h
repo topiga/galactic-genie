@@ -109,7 +109,7 @@ create_object 550 { set_place_for_every_player min_distance_to_players 7 max_dis
         for(uint32_t owner=1;owner<=f.players;++owner) {
             const auto &e=f.scouts[owner-1];const auto id=f.trees+4*f.players+owner;
             const auto pos=game.objectPosition(id);const auto animation=game.objectAnimationForTesting(id);
-            check(game.objectUnitId(id)==e.unit && game.objectPlayer(id)==int(owner) && pos[0]==e.x && pos[1]==e.y &&
+            check(game.objectUnitId(id)==e.unit && game.objectPlayer(id)==int(owner) && pos[0]==e.y && pos[1]==32-e.x &&
                   std::abs(animation[0]-e.frame*.2f)<.000001f && std::abs(animation[1]-e.delay)<.000001f,
                   "Scout import preserves original IDs, world positions and animation seconds");
             check(game.populationUsedForTesting(owner)==4 && game.populationCapacityForTesting(owner)==(civs[owner-1]==5?200:5) &&

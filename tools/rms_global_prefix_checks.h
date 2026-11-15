@@ -26,7 +26,7 @@ static void rmsGlobalPrefixChecks(swgb::Assets &assets) {
    const auto &e=c.points[i];const auto &o=map.resourcesAfterOwned[85+i];
    check(o.unitId==e.unit && o.x==e.x && o.y==e.y && o.facet==e.facet,"original global prefix pose");
    const uint32_t id=uint32_t(map.scenery.size()+96+i);const auto pos=game.objectPosition(id);
-   check(game.objectUnitId(id)==e.unit && game.objectPlayer(id)==0 && pos[0]==e.x && pos[1]==e.y && game.objectResourceAmount(id)==(e.unit==66?800:350),"global resource native ID/position/amount");
+   check(game.objectUnitId(id)==e.unit && game.objectPlayer(id)==0 && pos[0]==e.y && pos[1]==120-e.x && game.objectResourceAmount(id)==(e.unit==66?800:350),"global resource native ID/position/amount");
   }
  }
  std::puts("PASS: original global deposits through full parser and native import");

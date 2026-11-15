@@ -86,7 +86,7 @@ static void rmsHuntProfileChecks(swgb::Assets &assets,const std::string &dataDir
    const auto &o=map.resourcesAfterOwned[preceding+i];const auto &e=c.animations[i];
    check(o.unitId==c.unit && o.animationFrame==e.frame && std::abs(o.initialIdleDelay-e.delay)<.000001f && o.headingRadians==e.heading,"Forest hunt original hunting-animal constructor");
    const uint32_t id=uint32_t(map.scenery.size()+map.ownedObjects.size()+preceding+1+i);const auto a=game.objectAnimationForTesting(id);const auto pos=game.objectPosition(id);
-   check(game.objectUnitId(id)==c.unit && pos[0]==o.x && pos[1]==o.y && std::abs(a[0]-e.frame*.12f)<.000001f && std::abs(a[1]-e.delay)<.000001f,"Forest hunt native import position and animation");
+   check(game.objectUnitId(id)==c.unit && pos[0]==o.y && pos[1]==120-o.x && std::abs(a[0]-e.frame*.12f)<.000001f && std::abs(a[1]-e.delay)<.000001f,"Forest hunt native import position and animation");
   }
  }
  std::puts("PASS: original Forest hunt species, quantities, clearance, variance and native import");

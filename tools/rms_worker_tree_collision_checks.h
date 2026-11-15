@@ -73,12 +73,12 @@ create_object 83 {
     for(size_t i=0;i<4;++i) {
         const uint32_t id=uint32_t(i)+1;const auto position=game.objectPosition(id);
         check(game.objectUnitId(id)==411 && game.objectPlayer(id)==0 &&
-              position[0]==trees[i].x && position[1]==trees[i].y,"Original tree creation IDs remain intact");
+              position[0]==trees[i].y && position[1]==32-trees[i].x,"Original tree creation IDs remain intact");
     }
     for(size_t i=0;i<6;++i) {
         const uint32_t id=uint32_t(i)+7;const auto position=game.objectPosition(id);
         check(game.objectUnitId(id)==293 && game.objectPlayer(id)==(i<3?1:2) && game.objectHitPoints(id)==40 &&
-              position[0]==workers[i].x && position[1]==workers[i].y,"Original worker creation IDs and positions after trees");
+              position[0]==workers[i].y && position[1]==32-workers[i].x,"Original worker creation IDs and positions after trees");
     }
     for(int owner=1;owner<=2;++owner)
         check(game.populationUsedForTesting(owner)==3 && game.populationCapacityForTesting(owner)==5 &&

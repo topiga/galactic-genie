@@ -1167,16 +1167,15 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     Scenario scenario;
     scenario.map.width=scenario.map.height=generated.width;
     scenario.map.tiles.resize(generated.terrain.size());
-    // Scenario loading rotates coordinates; preserve the RMS raster's orientation.
-    for (int y=0;y<mapSize;++y) for (int x=0;x<mapSize;++x)
-        scenario.map.tiles[static_cast<size_t>(x)*mapSize+mapSize-1-y].terrain =
-            generated.terrain[static_cast<size_t>(y)*mapSize+x];
+    // RMS and saved scenarios use the same original world axes.
+    for(size_t i=0;i<generated.terrain.size();++i)
+        scenario.map.tiles[i].terrain=generated.terrain[i];
     auto placeResource = [&](int unitId,float x,float y,uint8_t facet,uint32_t spawnId) {
         ScenarioUnit unit;
         unit.unitId=unitId;
         unit.spawnId=spawnId;
         unit.state=2;
-        unit.x=mapSize-y; unit.y=x;
+        unit.x=x; unit.y=y;
         const auto &prototype=assets_.dat().civs[0].units[unitId];
         const auto *graphic=assets_.dat().graphic(prototype.standingGraphic[0]);
         unit.rotation=rmsTimberFacing(facet,graphic->angleCount)+kPi*.5f;
@@ -1205,7 +1204,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         ScenarioUnit unit;
         unit.unitId=placement.unitId;unit.player=uint8_t(placement.owner);
         unit.spawnId=nextId++;unit.state=2;
-        unit.x=mapSize-placement.y;unit.y=placement.x;
+        unit.x=placement.x;unit.y=placement.y;
         unit.rotation=(placement.unitId==109?0.f:rmsTimberFacing(placement.facet,8))+kPi*.5f;
         scenario.units.push_back(unit);
     }
@@ -1215,10 +1214,11 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     scenario.nextUnitId=nextId;
     if (!initScenario(scenario,err)) return false;
     if(!generated.elevation.empty()) {
-        // RMS retains its x/y raster; rotate slope geometry into the renderer's corner convention.
-        static constexpr uint8_t rotated[]={0,3,4,2,1,6,8,5,7,11,12,10,9,16,15,13,14};
-        tileElevation_=generated.elevation;
-        for(size_t index=0;index<tileSlope_.size();++index) tileSlope_[index]=rotated[generated.slopes[index]];
+        for(int y=0;y<mapSize;++y) for(int x=0;x<mapSize;++x) {
+            const size_t source=size_t(x)*mapSize+mapSize-1-y,destination=size_t(y)*mapSize+x;
+            tileElevation_[destination]=generated.elevation[source];
+            tileSlope_[destination]=generated.slopes[source];
+        }
         rmsTileElevation_=true;
         for(int y=0;y<=mapSize_;++y) for(int x=0;x<=mapSize_;++x)
             cornerElevation_[size_t(y)*(mapSize_+1)+x]=static_cast<uint8_t>(elevationAt(float(x),float(y)));

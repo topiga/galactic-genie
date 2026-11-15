@@ -55,7 +55,7 @@ static void rmsPredatorChecks(swgb::Assets &assets) {
     check(actual.unitId==126 && actual.x==e.x && actual.y==e.y && actual.facet==e.facet && actual.headingRadians==e.heading &&
       actual.animationFrame==e.frame && actual.initialIdleDelay==e.delay,"whole Rancor prefix coordinates/appearance");
     const auto id=uint32_t(map.scenery.size()+92+i);const auto position=game.objectPosition(id);const auto anim=game.objectAnimationForTesting(id);
-    check(game.objectUnitId(id)==126 && game.objectPlayer(id)==0 && position[0]==e.x && position[1]==e.y &&
+    check(game.objectUnitId(id)==126 && game.objectPlayer(id)==0 && position[0]==e.y && position[1]==120-e.x &&
       anim[0]==e.frame*.12f && anim[1]==e.delay && game.objectResourceAmount(id)==0,"native Rancor IDs/position/animation/no food");
    }
   }

@@ -70,9 +70,9 @@ create_elevation 2 { base_terrain 6 number_of_tiles 40 number_of_clumps 2 }
         {9.75f,4.125f,0.875f},
         {9.5f,4.5f,0.5f}
     };
-    for(const auto &p:samples) check(std::abs(game.elevationForTesting(p[0],p[1])-p[2])<0.00001f,"Original RMS triangulated height import");
+    for(const auto &p:samples) check(std::abs(game.elevationForTesting(p[1],16-p[0])-p[2])<0.00001f,"Original RMS triangulated height import");
     swgb::Scenario flat;flat.map.width=flat.map.height=16;flat.map.tiles.resize(256);
     check(game.initScenario(flat,&error),error.c_str());
-    for(const auto &p:samples) check(game.elevationForTesting(p[0],p[1])==0,"Scenario restart clears RMS tile elevation mode");
+    for(const auto &p:samples) check(game.elevationForTesting(p[1],16-p[0])==0,"Scenario restart clears RMS tile elevation mode");
     std::puts("PASS: original RMS hill import, all17 triangulations and restart");
 }

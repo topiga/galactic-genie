@@ -40,7 +40,7 @@ static void rmsWorkerSpawnChecks(swgb::Assets &assets) {
             const auto &e=f.workers[i];const uint32_t id=uint32_t(i+2);
             const auto position=game.objectPosition(id);
             check(game.objectUnitId(id)==e.unit && game.objectPlayer(id)==1 && game.objectHitPoints(id)==(civ==8?55:40) &&
-                  position[0]==e.x && position[1]==e.y,"Worker import preserves creation IDs, state and positions");
+                  position[0]==e.y && position[1]==32-e.x,"Worker import preserves creation IDs, state and positions");
             const float facing=game.objectFacing(id);
             const float theta=std::atan2(std::cos(facing)+std::sin(facing),2*(std::cos(facing)-std::sin(facing)));
             const int facet=(int(std::lround((theta-1.57079632679f)/.78539816339f))%8+8)%8;

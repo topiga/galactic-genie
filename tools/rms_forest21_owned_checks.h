@@ -27,7 +27,7 @@ create_object 550 { set_place_for_every_player min_distance_to_players 7 max_dis
             const auto position=game.objectPosition(id);const auto animation=game.objectAnimationForTesting(id);
             const auto &unit=data.civs[1].units[expected.unitId];const auto *graphic=data.graphic(unit.standingGraphic[0]);
             check(game.objectUnitId(id)==expected.unitId && game.objectPlayer(id)==expected.owner &&
-                position[0]==expected.x && position[1]==expected.y &&
+                position[0]==expected.y && position[1]==120-expected.x &&
                 animation[0]==expected.animationFrame*graphic->frameDuration && animation[1]==expected.initialIdleDelay,
                 "Forest21 native starting IDs/positions/animation");
         }

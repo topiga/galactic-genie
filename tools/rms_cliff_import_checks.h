@@ -15,7 +15,7 @@ static void checkRmsCliffImport(swgb::Assets &assets) {
     for(const auto &o:map.cliffs) {
         const uint32_t id=o.creationOrdinal+1;
         const auto p=game.objectPosition(id);
-        check(game.objectUnitId(id)==o.unit && game.objectPlayer(id)==0 && p[0]==o.x && p[1]==o.y,"native cliff original IDs/types/positions");
+        check(game.objectUnitId(id)==o.unit && game.objectPlayer(id)==0 && p[0]==o.y && p[1]==120-o.x,"native cliff original IDs/types/positions");
         const float pi=3.14159265358979323846f,theta=pi*.5f+o.facet*(2*pi/25);
         const float sx=std::cos(theta)*.5f,sy=std::sin(theta);
         const float expected=std::atan2(sy-sx,sy+sx),actual=game.objectFacing(id);
@@ -45,7 +45,7 @@ static void checkRmsCliffImport(swgb::Assets &assets) {
         uint32_t heightHash=2166136261u;
         for(const auto &o:map.cliffs) {
             const auto p=game.objectPosition(o.creationOrdinal+1);
-            check(p[0]==o.x && p[1]==o.y,"elevated cliff native import positions");
+            check(p[0]==o.y && p[1]==120-o.x,"elevated cliff native import positions");
             const float height=game.elevationForTesting(p[0],p[1]);
             check(std::isfinite(height) && height>=0 && height<=c.levels && height==std::floor(height),
                 "original cliff creation height is an exact level");
@@ -66,7 +66,7 @@ static void checkRmsCliffImport(swgb::Assets &assets) {
         uint32_t nextId=map.cliffs.back().creationOrdinal+2;
         for(const auto &tree:map.scenery) {
             const auto p=game.objectPosition(nextId);
-            check(game.objectUnitId(nextId)==spec[1] && game.objectPlayer(nextId)==0 && p[0]==tree.x && p[1]==tree.y,
+            check(game.objectUnitId(nextId)==spec[1] && game.objectPlayer(nextId)==0 && p[0]==tree.y && p[1]==120-tree.x,
                 "native trees preserve original IDs after cliff replacements and rejected overlaps");
             const float pi=3.14159265358979323846f,theta=pi*.5f+tree.facet*(2*pi/spec[2]);
             const float sx=std::cos(theta)*.5f,sy=std::sin(theta),expected=std::atan2(sy-sx,sy+sx);
@@ -94,12 +94,12 @@ static void checkRmsCliffImport(swgb::Assets &assets) {
         for(const auto &o:map.cliffs) {
             nextId=o.creationOrdinal+1;
             const auto p=game.objectPosition(nextId);
-            check(game.objectUnitId(nextId)==o.unit && p[0]==o.x && p[1]==o.y,"native player-land cliffs retain original replacement IDs");
+            check(game.objectUnitId(nextId)==o.unit && p[0]==o.y && p[1]==120-o.x,"native player-land cliffs retain original replacement IDs");
         }
         ++nextId;
         for(const auto &tree:map.scenery) {
             const auto p=game.objectPosition(nextId);
-            check(game.objectUnitId(nextId)==spec[1] && game.objectPlayer(nextId)==0 && p[0]==tree.x && p[1]==tree.y,
+            check(game.objectUnitId(nextId)==spec[1] && game.objectPlayer(nextId)==0 && p[0]==tree.y && p[1]==120-tree.x,
                 "native player-land forest retains original tree IDs and positions");
             ++nextId;
         }
@@ -655,7 +655,7 @@ create_object 69 { set_scaling_to_map_size number_of_objects 3 }
             const auto position=game.objectPosition(id),animation=game.objectAnimationForTesting(id);
             // Original civ8 adds15 worker HP in the later civilization-bonus pass.
             const float health=pose.hp+(o.civilization==8 && (o.unitId==83 || o.unitId==293)?15.f:0.f);
-            check(game.objectUnitId(id)==o.unitId && game.objectPlayer(id)==o.owner && position[0]==o.x && position[1]==o.y &&
+            check(game.objectUnitId(id)==o.unitId && game.objectPlayer(id)==o.owner && position[0]==o.y && position[1]==120-o.x &&
                 game.objectHitPoints(id)==health &&
                 game.pendingFoundationForTesting(id)==pose.pending && animation[0]==frame*graphic->frameDuration &&
                 std::abs(animation[1]-delay)<.00001f,"native original starting IDs, positions, health and pose");
@@ -664,7 +664,7 @@ create_object 69 { set_scaling_to_map_size number_of_objects 3 }
         for(const auto &o:map.resourcesAfterOwned) {
             const auto position=game.objectPosition(resourceId);
             check(game.objectUnitId(resourceId)==o.unitId && game.objectPlayer(resourceId)==0 &&
-                position[0]==o.x && position[1]==o.y,"original resource IDs and positions after cliff replacements and owned startup");
+                position[0]==o.y && position[1]==120-o.x,"original resource IDs and positions after cliff replacements and owned startup");
             ++resourceId;
         }
         for(const auto &pose:gaiaPoses) if(pose.mode==c.resources && pose.seed==c.seed) {

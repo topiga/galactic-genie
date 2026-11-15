@@ -53,7 +53,7 @@ static void rmsResourcePrefixChecks(swgb::Assets &assets) {
       for(size_t j=0;j<map.resourcesAfterOwned.size();++j) {
         const auto id=uint32_t(map.scenery.size()+11+j);const auto position=game.objectPosition(id);
         const auto &expected=map.resourcesAfterOwned[j];
-        check(game.objectUnitId(id)==expected.unitId && game.objectPlayer(id)==0 && position[0]==expected.x && position[1]==expected.y,
+        check(game.objectUnitId(id)==expected.unitId && game.objectPlayer(id)==0 && position[0]==expected.y && position[1]==120-expected.x,
               "resource prefix preserves native IDs, ownership and coordinates");
       }
       auto invalid=source;invalid.erase(invalid.rfind("group_placement_radius 2"),23);

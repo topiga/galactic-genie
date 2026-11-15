@@ -59,7 +59,7 @@ create_object 550 { set_place_for_every_player min_distance_to_players 7 max_dis
               "Appending Nova preserves original owned-object import IDs and pending foundations");
         for(uint32_t i=0;i<14;++i) {
             const auto id=f.trees+11+i;const auto pos=game.objectPosition(id);const auto &e=f.deposits[i];
-            check(game.objectUnitId(id)==66 && game.objectPlayer(id)==0 && pos[0]==e.x && pos[1]==e.y,
+            check(game.objectUnitId(id)==66 && game.objectPlayer(id)==0 && pos[0]==e.y && pos[1]==32-e.x,
                   "Nova imports after starting scouts with original IDs offset1");
         }
         for(uint32_t owner=1;owner<=2;++owner) {

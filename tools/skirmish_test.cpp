@@ -43,6 +43,7 @@ static void check(bool value, const char *message) {
 #include "rms_forest_hunt_checks.h"
 #include "rms_packaged_forest_checks.h"
 #include "rms_cliff_map_checks.h"
+#include "rms_coordinate_checks.h"
 #include "rms_cliff_import_checks.h"
 #include "rms_wave_checks.h"
 #include "rms_hunt_profile_checks.h"
@@ -289,6 +290,7 @@ int main(int argc, char **argv) {
         fogEdgeChecks(argv[1]);
         rmsSpawnChecks(assets);
         rmsElevationImportChecks(assets);
+        rmsCoordinateChecks(assets);
         ownedRmsSpawnChecks(assets,renderer);
         rmsWorkerSpawnChecks(assets);
         rmsScoutChecks(assets);

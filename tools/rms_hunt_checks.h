@@ -45,7 +45,7 @@ static void rmsHuntChecks(swgb::Assets &assets) {
     check(actual.unitId==c.unit && actual.x==e.x && actual.y==e.y && actual.facet==e.facet && actual.headingRadians==e.heading &&
       actual.animationFrame==e.frame && actual.initialIdleDelay==e.delay,"whole hunting prefix coordinates/appearance");
     const auto id=uint32_t(map.scenery.size()+92+i);const auto position=game.objectPosition(id);const auto anim=game.objectAnimationForTesting(id);
-    check(game.objectUnitId(id)==c.unit && game.objectPlayer(id)==0 && position[0]==e.x && position[1]==e.y &&
+    check(game.objectUnitId(id)==c.unit && game.objectPlayer(id)==0 && position[0]==e.y && position[1]==120-e.x &&
       anim[0]==e.frame*.12f && anim[1]==e.delay && game.objectResourceAmount(id)==(c.unit==1363?100:140),"native hunting IDs/position/animation/food");
   }
   auto before=rng;

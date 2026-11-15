@@ -1882,3 +1882,20 @@ pose captures. Extra herd-count variants, other civilizations with resources,
 fixed owned starts, hills, connections and other map sizes remain gated for this
 composition. The original RMS text/file-loader boundary remains outside these
 configured-world comparisons.
+
+### RMS import uses the scenario world axes
+
+`RmsMap` retains original coordinates and unchanged oracle hashes. `Game::initRms`
+now imports that raster and those object coordinates through the normal scenario
+transform: original `(x,y)` becomes native `(y,mapSize-x)`. Previously the import
+undid that transform while asset loading still swapped collision footprint axes;
+this misaligned asymmetric objects such as narrow cliffs. Heights rotate with the
+raster and keep their original slope IDs for the existing slope sampler.
+
+A regression compares equivalent RMS and scenario imports, including the terrain,
+object positions and worker passability around asymmetric cliffs. The original
+17 slope-shape samples and existing object/startup fixtures use native coordinate
+queries without changing their original reference values. This checks coordinate
+consistency, not exact original pathfinding. The desktop short skirmish still uses
+its procedural `initSkirmish` layout; these RMS imports are currently exercised by
+the diagnostic renderer and tests, not the default menu game.

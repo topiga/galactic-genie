@@ -25,7 +25,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  check(game.initRms(script,defines,120,rng,&error,2,{1,1}),error.c_str());
  check(rng==3740942338u && game.activeObjectCount()==7802,"full packaged Forest native import");
  uint32_t id=1;
- auto imported=[&](int unit,int owner,float x,float y){const auto p=game.objectPosition(id);check(game.objectUnitId(id)==unit && game.objectPlayer(id)==owner && p[0]==x && p[1]==y,"native Forest IDs/types/owners/positions");++id;};
+ auto imported=[&](int unit,int owner,float x,float y){const auto p=game.objectPosition(id);check(game.objectUnitId(id)==unit && game.objectPlayer(id)==owner && p[0]==y && p[1]==120-x,"native Forest IDs/types/owners/positions");++id;};
  for(const auto&o:map.scenery)imported(o.unitId,0,o.x,o.y);
  for(const auto&o:map.ownedObjects)imported(o.unitId,o.owner,o.x,o.y);
  for(const auto&o:map.resourcesAfterOwned)imported(o.unitId,0,o.x,o.y);
@@ -226,7 +226,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
     rng=1993207714u;check(game.initRms(varied,defines,120,rng,&error,2,c) && rng==start.rng,"civilization Forest native import");
     for(size_t i=0;i<civilMap.ownedObjects.size();++i) {
      const auto&o=civilMap.ownedObjects[i];const uint32_t id=uint32_t(civilMap.scenery.size()+i+1);const auto pos=game.objectPosition(id);
-     check(game.objectUnitId(id)==o.unitId && game.objectPlayer(id)==o.owner && pos[0]==o.x && pos[1]==o.y,"civilization native starting objects");
+     check(game.objectUnitId(id)==o.unitId && game.objectPlayer(id)==o.owner && pos[0]==o.y && pos[1]==120-o.x,"civilization native starting objects");
      if(i>=8) {
       const uint8_t frame=start.frames[o.owner-1];
       // Original hold includes the remaining final-frame duration.
@@ -243,7 +243,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
    if(v.forestTerrain!=21)for(size_t i=0;i<map.scenery.size();++i) {
     const auto &o=map.scenery[i];const auto pos=game.objectPosition(uint32_t(i+1));
     const int automaticTree=v.forestTerrain==10?411:v.forestTerrain==18?348:v.forestTerrain==20?349:413;
-    check(o.unitId==automaticTree && game.objectUnitId(uint32_t(i+1))==automaticTree && pos[0]==o.x && pos[1]==o.y && game.objectResourceAmount(uint32_t(i+1))==100,"native automatic forest tree positions/carbon");
+    check(o.unitId==automaticTree && game.objectUnitId(uint32_t(i+1))==automaticTree && pos[0]==o.y && pos[1]==120-o.x && game.objectResourceAmount(uint32_t(i+1))==100,"native automatic forest tree positions/carbon");
    }
    if(v.terrain22) {
     const uint8_t frames[]={1,21,46,47,34,22,1,1};size_t waves=0;
@@ -258,13 +258,13 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
    if(v.herdUnit==833)for(size_t i=0;i<map.resourcesAfterOwned.size();++i) {
     const auto&o=map.resourcesAfterOwned[i];if(o.unitId!=833)continue;
     const uint32_t id=uint32_t(map.scenery.size()+map.ownedObjects.size()+i+1);const auto animation=game.objectAnimationForTesting(id);const auto pos=game.objectPosition(id);
-    check(game.objectUnitId(id)==833 && pos[0]==o.x && pos[1]==o.y && animation[0]==o.animationFrame*.275f && animation[1]==0,"native Bantha herd identity, position and initial animation");
+    check(game.objectUnitId(id)==833 && pos[0]==o.y && pos[1]==120-o.x && animation[0]==o.animationFrame*.275f && animation[1]==0,"native Bantha herd identity, position and initial animation");
    }
    unsigned trees=0;
    for(size_t i=0;i<map.resourcesAfterOwned.size();++i) {
     const auto &o=map.resourcesAfterOwned[i];if(o.unitId!=v.treeUnit)continue;++trees;
     const uint32_t id=uint32_t(map.scenery.size()+map.ownedObjects.size()+i+1);const auto pos=game.objectPosition(id);
-    check(game.objectUnitId(id)==v.treeUnit && pos[0]==o.x && pos[1]==o.y && game.objectResourceAmount(id)==100,"native explicit tree positions and carbon amount");
+    check(game.objectUnitId(id)==v.treeUnit && pos[0]==o.y && pos[1]==120-o.x && game.objectResourceAmount(id)==100,"native explicit tree positions and carbon amount");
    }
    check(trees==v.explicitTrees,"original near/far/global explicit tree counts");
   }

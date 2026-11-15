@@ -67,10 +67,10 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         check(game.initRms(script,{},7,state,&error),error.c_str());
         check(state==fixture.finalState && game.activeObjectCount()==3,"Native RMS pipeline object count/RNG");
         for (int y=0;y<7;++y) for (int x=0;x<7;++x)
-            check(game.terrainAtForTesting(x,y)==map.terrain[y*7+x],"RMS terrain orientation preserved");
+            check(game.terrainAtForTesting(y,6-x)==map.terrain[y*7+x],"RMS terrain orientation preserved");
         for (uint32_t i=0;i<3;++i) {
             const auto p=game.objectPosition(i+1);
-            check(p[0]==fixture.objects[i].x && p[1]==fixture.objects[i].y &&
+            check(p[0]==fixture.objects[i].y && p[1]==7-fixture.objects[i].x &&
                   map.objects[i].facet==fixture.objects[i].facet,"Original RMS object fixture");
             const float facing=game.objectFacing(i+1);
             const float theta=std::atan2(std::cos(facing)+std::sin(facing),
@@ -113,7 +113,7 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         check(game.initRms(script,{},32,state,&error) && state==fixture.finalState,error.c_str());
         for (uint32_t i=0;i<3;++i) {
             const auto p=game.objectPosition(i+1);
-            check(p[0]==fixture.objects[i].x && p[1]==fixture.objects[i].y &&
+            check(p[0]==fixture.objects[i].y && p[1]==32-fixture.objects[i].x &&
                   map.objects[i].facet==fixture.objects[i].facet,"Original player-land timber fixture");
         }
     }
@@ -138,7 +138,7 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         check(game.initRms(script,{},32,state,&error) && state==dryStates[fixture] && game.activeObjectCount()==0,
               "Native dry-terrain initialization must not spawn inactive scenery slots");
         for (int y=0;y<32;++y) for (int x=0;x<32;++x)
-            check(game.terrainAtForTesting(x,y)==map.terrain[y*32+x],"Dry terrain IDs and orientation preserved");
+            check(game.terrainAtForTesting(y,31-x)==map.terrain[y*32+x],"Dry terrain IDs and orientation preserved");
     }
     const std::string waterSource=R"(<LAND_GENERATION> base_terrain 32
         create_player_lands { terrain_type 35 base_size 3 number_of_tiles 60 }
@@ -161,7 +161,7 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         check(game.initRms(script,{},32,state,&error) && state==dryStates[fixture] && game.activeObjectCount()==0,
               "Native water and ice-shore alias initialization");
         for (int y=0;y<32;++y) for (int x=0;x<32;++x)
-            check(game.terrainAtForTesting(x,y)==map.terrain[y*32+x],"Water and shore IDs preserved");
+            check(game.terrainAtForTesting(y,31-x)==map.terrain[y*32+x],"Water and shore IDs preserved");
     }
     const std::string forestSource=R"(<LAND_GENERATION> base_terrain 41
         create_player_lands { terrain_type 9 base_size 3 number_of_tiles 60 }
@@ -211,14 +211,14 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
             const auto &tree=map.scenery[i]; const auto &expectedTree=fixture.trees[i];
             check(tree.unitId==fixture.unitId && tree.x==float(expectedTree[0]%32)+.5f && tree.y==float(expectedTree[0]/32)+.5f &&
                   tree.facet==expectedTree[1],"Original ordered automatic scenery coordinates/facets");
-            check(game.objectPosition(i+1)==std::array<float,2>{tree.x,tree.y} &&
+            check(game.objectPosition(i+1)==std::array<float,2>{tree.y,32-tree.x} &&
                   game.objectHitPoints(i+1)==fixture.hitPoints && game.objectResourceAmount(i+1)==fixture.carbon,
                   "Native scenery position/HP/carbon preserved");
         }
         for (size_t i=0;i<3;++i) {
             const auto &tree=map.objects[i];const auto &expectedTree=fixture.timber[i];
             check(tree.x==expectedTree.x && tree.y==expectedTree.y && tree.facet==expectedTree.facet &&
-                  game.objectPosition(map.scenery.size()+i+1)==std::array<float,2>{tree.x,tree.y},
+                  game.objectPosition(map.scenery.size()+i+1)==std::array<float,2>{tree.y,32-tree.x},
                   "Original explicit timber after forest occupancy");
         }
         for (size_t i=0;i<map.scenery.size()+3;++i) {
@@ -328,7 +328,7 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
                 check(p.unitId==fixture.manualUnit && p.x==expected[i].x && p.y==expected[i].y &&
                       p.facet==expected[i].facet && p.headingRadians==expected[i].headingRadians,
                       "Original manual timber candidates/gates after retained and deleted early trees");
-                check(game.objectPosition(map.scenery.size()+i+1)==std::array<float,2>{p.x,p.y},
+                check(game.objectPosition(map.scenery.size()+i+1)==std::array<float,2>{p.y,32-p.x},
                       "Manual native IDs follow every prior creation including deleted ones");
                 const auto id=static_cast<uint32_t>(map.scenery.size()+i+1);
                 check(game.objectHitPoints(id)==(fixture.manualUnit==348?50:0) &&
@@ -344,7 +344,7 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         for (size_t i=0;i<map.scenery.size();++i) {
             const auto &p=map.scenery[i];
             check(game.objectHitPoints(i+1)==(p.alive?50:0),"Original creation ordinal gaps preserved in native IDs");
-            if (p.alive) check(game.objectPosition(i+1)==std::array<float,2>{p.x,p.y} &&
+            if (p.alive) check(game.objectPosition(i+1)==std::array<float,2>{p.y,32-p.x} &&
                               game.objectResourceAmount(i+1)==fixture.carbon,"Early forest survivors preserve position and resources");
         }
     }
