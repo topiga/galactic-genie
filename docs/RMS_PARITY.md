@@ -2,6 +2,11 @@
 
 ## Current comparison coverage: 2026-11-15
 
+Packaged **Forest54204 and Reytha54220** now have complete original-runner
+comparisons for three seeds each in the fixed, Tiny, two-Empire profile. The
+production acceptance audit passes6/138 attempts (two of46 map resources).
+This is bounded startup coverage; it is not general engine or gameplay parity.
+
 Forest resource 54204 now runs directly from `gamedata_x1.drs`, including all 23
 object rows. For seed 16160, 120×120, Tiny, FIXED_POSITIONS, DEFAULT_RESOURCES and two
 Empire players, native generation matches the original executable replay:
@@ -2153,3 +2158,48 @@ later simulation, all maps or every seed. The updated 46-script/three-seed nativ
 audit still accepts only Forest (3/138); the other 135 attempts reject unsupported
 object/resource sequences or attributes. Parser coverage remains a separate
 828-case result, not 828 complete generated maps.
+
+
+### Packaged Reytha: full generation and native import
+
+Reytha54220 now runs directly from the installed archive. The original full RMS
+runner and production native implementation agree for these fixed Tiny120 cases,
+with two Empire players and DEFAULT_RESOURCES/RANDOM_MAP/2_PLAYERS labels:
+
+| Seed | Live objects | Final RNG |
+|---|---:|---:|
+| 1 | 1,981 | 3962920155 |
+| 12345 | 2,013 | 1129739132 |
+| 16160 | 1,940 | 4000893853 |
+
+Comparison covers every ordered object ID/type/owner/facet/position, all14,400
+terrain, elevation and slope values, owned pending foundations, and animated
+startup frames/holds. Native-import regressions additionally verify every live
+object's ID/type/owner/position, flat-tile elevation and202 captured owned/Gaia
+health/animation records across the three cases. CLI regressions render all three
+maps from the original archive.
+
+The added behavior is a late Kaadu group at minimum distance19 with no outer
+limit,43 scaled global tree411 placements with exclusion8/no spacing, and two
+global ore groups at exclusion40/spacing9. Existing original queue and placement
+algorithms handle these rows. The cliff composition is gated to the compared
+Reytha geometry: base41, two1800-tile/radius9/fuzz15 lands, five terrain rows,
+seven elevation levels and the original30–60 cliff settings. Terrain44 is now
+accepted by the shared dry-ground resource/holocron checks. The new Kaadu range
+accepts verified counts4/8; count2, other ranges and unmatched cliff/civilization
+profiles remain rejected. Invalid inputs and work-limit failures preserve RNG
+and eligibility.
+
+Local evidence is `rms-text-full-reytha-complete-1-1-*-oracle-2026-11-15.json`
+and the corresponding comparison files. The harness validates that every Gaia
+object row has its actual captured prototype before running the modules. Early
+Reytha outputs without Bantha833 were explicitly invalidated in
+`rms-text-full-reytha-incomplete-assets-audit-2026-11-15.json`; the original silently
+skips unavailable prototypes, so those outputs are not complete-map evidence.
+All final runs include Bantha833/Ronto1364 and the other required original assets.
+
+The repeated production audit accepts6/138 combinations: Forest and Reytha for
+all three seeds. The remaining132 attempts still reject unsupported placement
+rules. These are local original-executable comparisons, not a fresh live Windows
+UI/settings comparison. The desktop's normal skirmish launcher still uses its
+procedural setup; RMS-backed menu integration and later simulation remain open.

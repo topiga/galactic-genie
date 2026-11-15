@@ -257,7 +257,8 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     std::vector<RmsTimberPlacement> &out,std::string *err,
     const std::vector<uint32_t> &occupiedTiles,size_t maxWork,
     const std::vector<RmsPlayerStart> &novaPlayerStarts,RmsResourceDistance distance,
-    std::vector<uint8_t> *rowEligibility,const RmsGlobalGroupPlacement *globalPlacement) {
+    std::vector<uint8_t> *rowEligibility,const RmsGlobalGroupPlacement *globalPlacement,
+    const RmsResourcePlayerRange *playerRange) {
     out.clear(); if(err) err->clear();
     auto fail=[&](const char *reason) {
         if(err) *err=std::string("RMS grouped resource: ")+reason;
@@ -278,6 +279,12 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     if(!spec) return false;
     const auto &restriction=data.terrainRestrictions[spec->restriction].passableBuildableDmgMultiplier;
     const bool perPlayer=!novaPlayerStarts.empty();
+    // Reytha uses an unbounded outer queue for its late Kaadu groups.
+    if(playerRange && (unitId!=1363 || !perPlayer || globalPlacement || width!=120 || height!=120 ||
+        novaPlayerStarts.size()!=2 || distance!=RmsResourceDistance::Far ||
+        playerRange->minimum!=19 || playerRange->maximum!=-1 || group.mode!=1 || group.groups!=1 ||
+        (group.perGroup!=4 && group.perGroup!=8) || group.variance!=1 || group.radius!=3))
+        return fail("unsupported explicit player resource range");
     if(aquatic && (width!=120 || height!=120 || perPlayer || globalPlacement || distance!=RmsResourceDistance::Near ||
        group.mode!=0 || group.groups!=(unitId==69?4u:8u) || group.perGroup!=1 || group.variance || group.radius!=3))
         return fail("unsupported stock aquatic row");
@@ -288,8 +295,10 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         if(perPlayer || (!predator && !tree && ((unitId!=66 && unitId!=102) || group.mode!=2)) ||
            (predator && (width!=120 || height!=120 || group.mode!=1 || group.groups!=4 || (group.perGroup!=1 && group.perGroup!=2) || group.variance || group.radius!=3 ||
             globalPlacement->landCenters.size()!=2 || globalPlacement->minDistance!=40 || globalPlacement->spacing!=12)) ||
-           (tree && (width!=120 || height!=120 || group.mode!=0 || group.groups!=100 || group.perGroup!=1 || group.variance || group.radius!=3 ||
-            globalPlacement->landCenters.size()!=2 || globalPlacement->minDistance!=6 || globalPlacement->spacing!=2)) ||
+           (tree && (width!=120 || height!=120 || group.mode!=0 || group.perGroup!=1 || group.variance || group.radius!=3 ||
+            globalPlacement->landCenters.size()!=2 ||
+            !((group.groups==100 && globalPlacement->minDistance==6 && globalPlacement->spacing==2) ||
+              (unitId==411 && group.groups==43 && globalPlacement->minDistance==8 && globalPlacement->spacing==0)))) ||
            distance!=RmsResourceDistance::Near || globalPlacement->minDistance<0 ||
            globalPlacement->minDistance>1024 || globalPlacement->spacing<0 || globalPlacement->spacing>1024 ||
            globalPlacement->landCenters.size()>1024)
@@ -306,14 +315,14 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     if(bigHunt && (medium || (far && group.mode!=1) || (group.mode!=0 && group.mode!=1) ||
        (group.mode==0 && (group.groups<1 || group.groups>2u)))) return fail("unsupported large-hunt row");
     if((hunt || predator) && !far && !globalPlacement) return fail("hunting animals require the verified far row");
-    const int playerMin=globalPlacement?globalPlacement->minDistance:tree?(far?6:4):predator?30:bigHunt?(far?35:16):herd?(far?14:10):forage?10:ore?(far?20:14):medium?18:far?25:12;
-    const int playerMax=tree?(far?8:5):predator?40:bigHunt?(far?-1:22):herd?(far?30:12):forage?12:ore?(far?26:18):medium?26:far?35:16,playerSpacing=globalPlacement?globalPlacement->spacing:perPlayer?(tree?2:bigHunt && far?5:herd?0:forage?6:7):0;
+    const int playerMin=playerRange?playerRange->minimum:globalPlacement?globalPlacement->minDistance:tree?(far?6:4):predator?30:bigHunt?(far?35:16):herd?(far?14:10):forage?10:ore?(far?20:14):medium?18:far?25:12;
+    const int playerMax=playerRange?playerRange->maximum:tree?(far?8:5):predator?40:bigHunt?(far?-1:22):herd?(far?30:12):forage?12:ore?(far?26:18):medium?26:far?35:16,playerSpacing=globalPlacement?globalPlacement->spacing:perPlayer?(tree?2:bigHunt && far?5:herd?0:forage?6:7):0;
     const auto &exclusionCenters=globalPlacement?globalPlacement->landCenters:novaPlayerStarts;
     if((forage || ore || herd || tree) && !globalPlacement && (!perPlayer || width!=120 || height!=120 || novaPlayerStarts.size()!=2))
         return fail("resource row requires verified120-square two-player profile");
     if((forage || ore || herd || tree || medium || far) && std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
         const bool forest=width==120 && (t==1 || t==2 || t==4 || t==5 || t==12 || t==18 || t==20 || t==21 || t==22);
-        return !forest && t!=0 && t!=6 && t!=9 && t!=10 && t!=27 && t!=41;
+        return !forest && t!=0 && t!=6 && t!=9 && t!=10 && t!=27 && t!=41 && t!=44;
     })) return fail("resource row requires verified grass/forest terrain");
     if(perPlayer) {
         const uint32_t expectedGroups=bigHunt?(group.mode==0?group.groups:1u):tree?(far?3u:2u):herd && far && !hunt?2u:1u;
@@ -541,7 +550,7 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
     for(const auto &start:playerStarts)
         if(start.x<2 || start.y<2 || start.x>int(width)-2 || start.y>int(height)-2) return fail("invalid player start");
     if(std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
-        return t!=0 && t!=27 && (width!=120 || (t!=1 && t!=2 && t!=4 && t!=5 && t!=6 && t!=9 && t!=10 && t!=12 && t!=18 && t!=20 && t!=21 && t!=22 && t!=41));
+        return t!=0 && t!=27 && (width!=120 || (t!=1 && t!=2 && t!=4 && t!=5 && t!=6 && t!=9 && t!=10 && t!=12 && t!=18 && t!=20 && t!=21 && t!=22 && t!=41 && t!=44));
     }) || (width==64 && !occupiedTiles.empty()))
         return fail("requires verified grass or120-square forest terrain");
     std::vector<bool> occupied(terrain.size());

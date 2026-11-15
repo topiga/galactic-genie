@@ -105,6 +105,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     size_t resourceProfile=0;
     unsigned prefixHunts=0;
     bool distantHunt=false;
+    bool lateKaadu=false;
     constexpr int scoutIds[]={550,552,556,554,258,558,927,932};
     int workerMinDistance=1,workerMaxDistance=3;
     bool startingStalagmites = false;
@@ -338,8 +339,19 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if(holocrons && i<tokens.size()) {
                 if(resourceProfile==15 && (tokens[i].text=="594" || tokens[i].text=="833"))row=stockResources[6];
                 if(resourceProfile==15 && tokens[i].text=="1363")row.unit=1363;
+                if(resourceProfile==17 && tokens[i].text=="1363") {
+                    if(lateKaadu || distantHunt) return fail("unsupported repeated late hunt");
+                    row={1363,4,3,19,-1,0,RmsResourceDistance::Far,1,1,1};
+                }
+                if(resourceProfile==17 && tokens[i].text=="411") {
+                    for(size_t p=i+2;p+1<tokens.size() && tokens[p].text!="}";++p)
+                        if(tokens[p].text=="number_of_objects" && tokens[p+1].text=="30")
+                            row={411,1,3,8,-1,0,RmsResourceDistance::Near,0,30,0,true,true};
+                }
+                if(resourceProfile==18 && tokens[i].text=="102")
+                    row={102,4,2,40,-1,9,RmsResourceDistance::Near,2,2,1,true};
                 if((resourceProfile==15 || resourceProfile==17) && (tokens[i].text=="822" || tokens[i].text=="1249" || tokens[i].text=="1364")) {
-                    if(resourceProfile==17 && distantHunt)return fail("unsupported repeated distant hunt row");
+                    if(resourceProfile==17 && (distantHunt || lateKaadu))return fail("unsupported repeated distant hunt row");
                     row.unit=tokens[i].text=="822"?822:tokens[i].text=="1249"?1249:1364;
                 }
             }
@@ -371,7 +383,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             const bool animal=row.unit==594 || row.unit==833 || row.unit==1363 || row.unit==1365 || isPredator(row.unit) || isBigHunt(row.unit);
             if (!number(value) || value!=row.unit || i==tokens.size() || tokens[i++].text!="{")
                 return fail("expected next verified stock resource row");
-            bool each=row.global,gaia=row.global,mode=row.mode==0,count=false,inner=row.inner<0,outer=(row.global || isBigHunt(row.unit)) && row.outer<0;
+            bool each=row.global,gaia=row.global,mode=row.mode==0,count=false,inner=row.inner<0,outer=(row.global || isBigHunt(row.unit) || (row.unit==1363 && row.inner==19)) && row.outer<0;
             bool scale=!row.scaled,terrainFilter=row.unit!=1585;
             bool spacing=row.spacing==0,zone=animal || row.global || isTree(row.unit),radius=row.radius==3,groups=row.mode==0 || row.groups==1,variance=row.variance==0;
             while (i<tokens.size() && tokens[i].text!="}") {
@@ -400,6 +412,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if(holocrons) {
                 if(resourceProfile==8 && !isPredator(row.unit))++prefixHunts;
                 else if(resourceProfile==17 && isBigHunt(row.unit))distantHunt=true;
+                else if(resourceProfile==17 && row.unit==1363)lateKaadu=true;
                 else ++resourceProfile;
             }
             if(!holocrons) nearNova=true;
@@ -512,45 +525,80 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     if(resourceRows[i].unit!=units[i] || resourceRows[i].count!=counts[i]) cliffResources=false;
             }
         }
-        const bool ownedCliff=ownedObjects && startingWorkers && startingScouts &&
-            workerMinDistance==6 && workerMaxDistance==6 && !startingStalagmites &&
-            cliffResources && playerCivilizations.size()==2 &&
-            std::all_of(playerCivilizations.begin(),playerCivilizations.end(),[](auto civ){return civ>=1 && civ<=8;}) &&
-            (!defines.count("FIXED_POSITIONS") || resourceProfile==19) &&
-            terrainRows.size()==1 &&
-            terrainRows[0].terrain==21 && terrainRows[0].targetTiles==6000 && terrainRows[0].clumps==60 &&
-            terrainRows[0].spacing==2 && terrainRows[0].clumping==20 && terrainRows[0].avoidPlayerStarts &&
-            !terrainRows[0].flatTerrainOnly;
-        const bool ownedCliffElevation=ownedCliff && defines.count("FIXED_POSITIONS") &&
-            playerCivilizations==std::vector<uint16_t>{1,1} && resourceProfile==19 && !elevationRows.empty() &&
-            ((elevationRows[0].targetTiles==400 && elevationRows[0].clumps==8) ||
-             (elevationRows[0].targetTiles==8000 && elevationRows[0].clumps==30));
-        if(width!=120 || height!=120 || base!=6 ||
-            (playerLands ? (playerCount!=2 || lands.size()!=2 || playerZoneOverride ||
-                (elevationStage && !ownedCliffElevation && (hasObjects || !terrainRows.empty()))) : lands.size()!=1) ||
-            (hasObjects && !ownedCliff) || connectionStage || terrainRows.size()>1 ||
-            (elevationStage && (elevationRows.empty() || elevationRows.size()>7 ||
-                (elevationRows.size()>1 && !ownedCliffElevation && !terrainRows.empty()))) ||
-            std::any_of(terrainRows.begin(),terrainRows.end(),[&](const auto &row) {
-                return (row.terrain!=0 && ((row.terrain!=18 && row.terrain!=20 && row.terrain!=21) || (elevationStage && !ownedCliffElevation))) || row.baseTerrain!=6 || (row.avoidPlayerStarts && !playerLands) ||
-                    row.minHeight!=0 || row.maxHeight!=255;
-            }))
-            return fail("cliffs require a verified120 DIRT1 land profile");
-        for(size_t index=0;index<lands.size();++index) {
-            const auto &land=lands[index];
-            if(land.terrain!=6 || (!playerLands && (placements[index].x<0 || placements[index].y<0)) ||
-                (ownedCliff ? (land.radius!=13 || land.targetTiles!=7200) :
-                    playerLands ? (land.radius>10 || land.targetTiles>8000) : (land.radius || land.targetTiles)) ||
-                land.zone!=(playerLands?int(index+1):0) ||
-                land.clumpingFactor!=8 || land.borderFuzziness!=20 || land.separation ||
-                land.leftBorder || land.topBorder || land.rightBorder!=-1 || land.bottomBorder!=-1)
-                return fail("cliffs require verified land size and growth defaults");
-        }
-        for(size_t index=0;index<elevationRows.size();++index) {
-            const auto &row=elevationRows[index];
-            if(row.elevation!=index+1 || row.baseHeight!=index || row.baseTerrain!=6 ||
-                row.targetTiles!=elevationRows[0].targetTiles || row.clumps!=elevationRows[0].clumps)
-                return fail("cliffs require one verified grass elevation block");
+        // Verified packaged Reytha geometry; other cliff compositions remain gated.
+        const bool reythaGeometry=[&]() {
+            if(width!=120 || height!=120 || base!=41 || !playerLands || playerCount!=2 ||
+                lands.size()!=2 || playerZoneOverride || !ownedObjects || !startingWorkers ||
+                !startingScouts || startingStalagmites || workerMinDistance!=6 || workerMaxDistance!=6 ||
+                playerCivilizations!=std::vector<uint16_t>{1,1} || !defines.count("FIXED_POSITIONS") ||
+                connectionStage || !elevationStage || elevationRows.size()!=7 || terrainRows.size()!=5 ||
+                cliffSettings.minCount!=30 || cliffSettings.maxCount!=60 || cliffSettings.minLength!=5 ||
+                cliffSettings.maxLength!=20 || cliffSettings.curl!=36 || cliffSettings.waterDistance!=2 ||
+                cliffSettings.cliffDistance!=2) return false;
+            for(size_t i=0;i<lands.size();++i) {
+                const auto &land=lands[i];
+                if(land.terrain!=41 || land.radius!=9 || land.targetTiles!=1800 || land.zone!=int(i+1) ||
+                    land.clumpingFactor!=8 || land.borderFuzziness!=15 || land.separation ||
+                    land.leftBorder || land.topBorder || land.rightBorder!=-1 || land.bottomBorder!=-1 ||
+                    placements[i].x!=-1 || placements[i].y!=-1 || placements[i].minPlacementDistance!=-1) return false;
+            }
+            const uint32_t terrain[]={10,9,6,6,44}, tiles[]={1728,2016,720,432,288};
+            const uint32_t clumps[]={28,50,8,12,10}, spacing[]={5,1,1,1,1};
+            for(size_t i=0;i<terrainRows.size();++i) {
+                const auto &row=terrainRows[i];
+                if(row.terrain!=terrain[i] || row.baseTerrain!=41 || row.targetTiles!=tiles[i] ||
+                    row.clumps!=clumps[i] || row.spacing!=spacing[i] || row.clumping!=20 ||
+                    row.avoidPlayerStarts!=(i==0) || row.flatTerrainOnly ||
+                    row.minHeight!=0 || row.maxHeight!=255) return false;
+            }
+            for(size_t i=0;i<elevationRows.size();++i) {
+                const auto &row=elevationRows[i];
+                if(row.elevation!=i+1 || row.baseHeight!=i || row.baseTerrain!=41 ||
+                    row.targetTiles!=2000 || row.clumps!=21 || row.spacing!=(i==0?2u:1u)) return false;
+            }
+            return true;
+        }();
+        if(!reythaGeometry) {
+            const bool ownedCliff=ownedObjects && startingWorkers && startingScouts &&
+                workerMinDistance==6 && workerMaxDistance==6 && !startingStalagmites &&
+                cliffResources && playerCivilizations.size()==2 &&
+                std::all_of(playerCivilizations.begin(),playerCivilizations.end(),[](auto civ){return civ>=1 && civ<=8;}) &&
+                (!defines.count("FIXED_POSITIONS") || resourceProfile==19) &&
+                terrainRows.size()==1 &&
+                terrainRows[0].terrain==21 && terrainRows[0].targetTiles==6000 && terrainRows[0].clumps==60 &&
+                terrainRows[0].spacing==2 && terrainRows[0].clumping==20 && terrainRows[0].avoidPlayerStarts &&
+                !terrainRows[0].flatTerrainOnly;
+            const bool ownedCliffElevation=ownedCliff && defines.count("FIXED_POSITIONS") &&
+                playerCivilizations==std::vector<uint16_t>{1,1} && resourceProfile==19 && !elevationRows.empty() &&
+                ((elevationRows[0].targetTiles==400 && elevationRows[0].clumps==8) ||
+                 (elevationRows[0].targetTiles==8000 && elevationRows[0].clumps==30));
+            if(width!=120 || height!=120 || base!=6 ||
+                (playerLands ? (playerCount!=2 || lands.size()!=2 || playerZoneOverride ||
+                    (elevationStage && !ownedCliffElevation && (hasObjects || !terrainRows.empty()))) : lands.size()!=1) ||
+                (hasObjects && !ownedCliff) || connectionStage || terrainRows.size()>1 ||
+                (elevationStage && (elevationRows.empty() || elevationRows.size()>7 ||
+                    (elevationRows.size()>1 && !ownedCliffElevation && !terrainRows.empty()))) ||
+                std::any_of(terrainRows.begin(),terrainRows.end(),[&](const auto &row) {
+                    return (row.terrain!=0 && ((row.terrain!=18 && row.terrain!=20 && row.terrain!=21) || (elevationStage && !ownedCliffElevation))) || row.baseTerrain!=6 || (row.avoidPlayerStarts && !playerLands) ||
+                        row.minHeight!=0 || row.maxHeight!=255;
+                }))
+                return fail("cliffs require a verified120 DIRT1 land profile");
+            for(size_t index=0;index<lands.size();++index) {
+                const auto &land=lands[index];
+                if(land.terrain!=6 || (!playerLands && (placements[index].x<0 || placements[index].y<0)) ||
+                    (ownedCliff ? (land.radius!=13 || land.targetTiles!=7200) :
+                        playerLands ? (land.radius>10 || land.targetTiles>8000) : (land.radius || land.targetTiles)) ||
+                    land.zone!=(playerLands?int(index+1):0) ||
+                    land.clumpingFactor!=8 || land.borderFuzziness!=20 || land.separation ||
+                    land.leftBorder || land.topBorder || land.rightBorder!=-1 || land.bottomBorder!=-1)
+                    return fail("cliffs require verified land size and growth defaults");
+            }
+            for(size_t index=0;index<elevationRows.size();++index) {
+                const auto &row=elevationRows[index];
+                if(row.elevation!=index+1 || row.baseHeight!=index || row.baseTerrain!=6 ||
+                    row.targetTiles!=elevationRows[0].targetTiles || row.clumps!=elevationRows[0].clumps)
+                    return fail("cliffs require one verified grass elevation block");
+            }
         }
         if(data.civs.empty() || data.civs[0].units.size()<=273) return fail("missing original cliff units");
         static constexpr float cliffSizes[10][2]={{1.5f,1.5f},{.5f,1.5f},{1.5f,.5f},{1,1.5f},{1,1.5f},
@@ -852,7 +900,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 return fail("owned forest starts require dry terrain and live411 scenery");
         } else if (ownedMixedForest) {
             for(auto tile:generated.terrain)
-                if(tile!=1 && tile!=2 && tile!=4 && tile!=5 && tile!=6 && tile!=9 && tile!=10 && tile!=12 && tile!=18 && tile!=20 && tile!=21 && tile!=22 && tile!=41)
+                if(tile!=1 && tile!=2 && tile!=4 && tile!=5 && tile!=6 && tile!=9 && tile!=10 && tile!=12 && tile!=18 && tile!=20 && tile!=21 && tile!=22 && tile!=41 && tile!=44)
                     return fail("unsupported Forest startup terrain "+std::to_string(tile));
             for(const auto &tree:generated.scenery)
                 if(!isTree(tree.unitId) || !tree.alive) return fail("Forest startup requires live348/349/411/413 scenery");
@@ -1013,9 +1061,12 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     for(const auto &land:generated.lands) global.landCenters.push_back(land.center);
                     global.minDistance=row.inner;global.spacing=row.spacing;
                 }
+                const RmsResourcePlayerRange range{row.inner,row.outer};
+                const bool explicitRange=row.unit==1363 && row.inner==19 && row.outer==-1;
                 if(!generateRmsGroupedResourcePlacements(width,height,generated.terrain,data,row.unit,group,rng,
                     placed,err,rowBlockers,16000000,row.global?std::vector<RmsPlayerStart>{}:generated.playerStarts,
-                    row.distance,&eligibility,(row.global && row.inner>=0)?&global:nullptr)) return false;
+                    row.distance,&eligibility,(row.global && row.inner>=0)?&global:nullptr,
+                    explicitRange?&range:nullptr)) return false;
                 // Original waves are nonblocking decorations; fish may share their tile.
                 for(const auto &object:placed) if(object.unitId!=816 && object.unitId!=1585)
                     blockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
