@@ -98,6 +98,20 @@ int main(int argc, char **argv) {
         text()=="<ELEVATION_GENERATION> ","original EOF retains an active unfinished condition");
     require(preprocess("if HOME <ELEVATION_GENERATION>",{}) && text().empty(),
         "original EOF retains an inactive unfinished condition");
+    for(bool chosen:{false,true}) {
+        const std::unordered_set<std::string> defines=chosen?std::unordered_set<std::string>{"CHOSEN"}:
+            std::unordered_set<std::string>{};
+        require(preprocess("#const CC 109 <OBJECTS_GENERATION> create_object CC { if CHOSEN "
+            "place_on_specific_land_id 20 elseif\n place_on_specific_land_id 25 "
+            "else place_on_specific_land_id 26 endif }",defines),err);
+        require(text()==(chosen?"<OBJECTS_GENERATION> create_object 109 { place_on_specific_land_id 20 place_on_specific_land_id 25 } ":
+            "<OBJECTS_GENERATION> create_object 109 { place_on_specific_land_id 26 } "),
+            "original missing elseif argument leaves the next recognized command unread");
+    }
+    require(preprocess("if HOME selected elseif",{"HOME"}) && text()=="selected ",
+        "original incomplete elseif at EOF leaves the active branch unchanged");
+    require(preprocess("if HOME selected elseif",{}) && text().empty(),
+        "original incomplete elseif at EOF leaves the inactive branch unchanged");
     require(preprocess("#define HOME #undefine HOME if HOME wrong else fallback endif", {}), err);
     require(text() == "wrong ", "original undefine is a no-op");
     require(preprocess("if MISSING start_random percent_chance 100 #define LEAK end_random endif "
@@ -611,6 +625,10 @@ int main(int argc, char **argv) {
     if (argc == 2) {
         ResourceSet resources;
         require(resources.add(argv[1], &err), err);
+        require(script.load(55012,resources,&err),"Dagobah: "+err);
+        uint32_t dagobahState=1;
+        require(script.preprocess({"TINY_MAP","RANDOM_MAP","2_PLAYERS","FIXED_POSITIONS","DEFAULT_RESOURCES"},
+            processed,&err,&dagobahState),"Dagobah malformed elseif compatibility: "+err);
         require(script.load(55014,resources,&err),"Mos Espa: "+err);
         for(bool tiny:{false,true}) {
             uint32_t state=1;

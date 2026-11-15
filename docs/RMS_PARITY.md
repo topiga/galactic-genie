@@ -1957,3 +1957,25 @@ run the actual reader cleanup. These are not complete original text-loader
 captures. Native tests additionally use the installed Mos Espa archive source.
 The malformed `elseif` in packaged55012 remains a separate unsupported case.
 EOF compatibility does not relax resource/include limits or unknown-stage checks.
+
+### Missing `elseif` argument in Dagobah
+
+The original text reader consumes whitespace-separated words. When an `elseif`
+argument resolves to another registered command, the argument decoder returns
+that command to the reader and discards the incomplete `elseif`. Native
+preprocessing now preserves this behavior using the94 command names registered
+by the original engine. EOF during that argument also leaves the branch unchanged.
+
+The shipped Dagobah script (55012) now preprocesses past its empty `elseif`.
+In a controlled equivalent, an active first branch emits land IDs20 then25;
+an inactive first branch emits26. Inferring the missing symbol or treating the
+line as `else` would produce different results. Complete Dagobah generation is
+still unsupported at later map stages.
+
+`rms-text-parser-oracle-2026-11-15.json` records four runs of the actual original
+command registration, text reader, argument decoder and conditional interpreter,
+plus the recovered command registry. CRT whitespace scanning/formatting, memory
+allocation and language callbacks are modeled; stage handlers are intercepted to
+record their decoded arguments. This verifies text/control behavior, not world
+generation. Native regressions cover both branch states, EOF recovery and loading
+the installed Dagobah script. Other parser restrictions remain in place.

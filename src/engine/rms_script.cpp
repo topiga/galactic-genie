@@ -12,6 +12,34 @@
 
 namespace swgb {
 namespace {
+bool rmsCommand(const std::string &token) {
+    // Original0x4e0ab0 command registry; opcode90 is not registered by this engine.
+    static const char *const commands[]={
+        "#define", "#undefine", "#const", "if", "elseif", "else", "endif", "start_random", "percent_chance",
+        "end_random", "#include", "<PLAYER_SETUP>", "random_placement", "grouped_by_team", "min_distance",
+        "max_distance", "set_position", "<LAND_GENERATION>", "land_percent", "base_terrain",
+        "create_player_lands", "terrain_type", "base_size", "left_border", "right_border", "top_border",
+        "bottom_border", "border_fuzziness", "zone", "set_zone_by_team", "set_zone_randomly",
+        "other_zone_avoidance_distance", "create_land", "assign_to_player", "<CLIFF_GENERATION>",
+        "min_number_of_cliffs", "max_number_of_cliffs", "min_length_of_cliff", "max_length_of_cliff",
+        "cliff_curliness", "min_distance_cliffs", "min_terrain_distance", "<TERRAIN_GENERATION>",
+        "create_terrain", "percent_of_land", "number_of_clumps", "spacing_to_other_terrain_types",
+        "<OBJECTS_GENERATION>", "create_object", "set_scaling_to_map_size", "number_of_groups",
+        "number_of_objects", "group_variance", "group_placement_radius", "set_loose_grouping",
+        "set_tight_grouping", "terrain_to_place_on", "set_gaia_object_only", "set_place_for_every_player",
+        "place_on_specific_land_id", "min_distance_to_players", "max_distance_to_players",
+        "<CONNECTION_GENERATION>", "create_connect_all_players_land", "create_connect_teams_lands",
+        "create_connect_same_land_zones", "create_connect_all_lands", "{", "}", "/*", "*/", "land_position",
+        "land_id", "clumping_factor", "number_of_tiles", "set_scale_by_groups", "set_scale_by_size",
+        "set_avoid_player_start_areas", "min_distance_group_placement", "<ELEVATION_GENERATION>",
+        "create_elevation", "spacing", "default_terrain_replacement", "replace_terrain", "terrain_cost",
+        "terrain_size", "min_placement_distance", "set_scaling_to_player_number", "height_limits",
+        "set_flat_terrain_only", "max_distance_to_other_zones", "#include_drs",
+        "temp_min_distance_group_placement", "match_player_civ",
+    };
+    for(const char *command:commands) if(token==command) return true;
+    return false;
+}
 struct Reader {
     const RmsScript::Resolver &resolve;
     const RmsScript::Limits &limits;
@@ -191,6 +219,8 @@ bool RmsScript::preprocess(const std::unordered_set<std::string> &initialDefines
                 return tokens_[++i];
             };
             if (s == "if" || s == "elseif") {
+                // Original argument decoding returns a recognized command to the reader.
+                if (s=="elseif" && (i+1==tokens_.size() || rmsCommand(tokens_[i+1].text))) continue;
                 const auto &name = argument().text;
                 if (!symbol(name)) fail(t, "invalid condition symbol");
                 if (!randomActive()) continue;
