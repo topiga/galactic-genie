@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -18,4 +19,10 @@ bool planRmsCliffs(uint32_t size, const std::vector<uint8_t> &terrain,
     const std::vector<uint8_t> &heights, const RmsCliffSettings &settings,
     const std::vector<RmsCliffProtection> &protection, uint32_t &randomState,
     std::vector<RmsCliffSegment> &segments, std::string *err=nullptr);
+struct RmsCliffArt { int unit=-1, facet=0; float offsetX=0, offsetY=0; };
+// Clone Campaigns catalog and selection 0x5caf00/0x5cb1b0, edges E/S/W/N.
+// No topology updates, object construction or game events. Unsupported edge
+// patterns return false without changing art/RNG; valid patterns use original IDs.
+bool selectRmsCliffArt(const std::array<int,4> &edges, uint32_t &randomState,
+    RmsCliffArt &art);
 } // namespace swgb

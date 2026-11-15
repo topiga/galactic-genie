@@ -1351,3 +1351,14 @@ seeds. Its successful geometry-only runs are **not original comparisons or full
 map support**. Many other resources stop at cliff generation; elevation/scenery
 and connection/forest combinations remain additional blockers. Evidence:
 `rms-geometry-only-audit-2026-11-15.json`.
+
+Cliff graphic selection now has a separate verified helper. The original map
+constructor registers 20 supported E/S/W/N edge patterns with unit IDs 264–272,
+facets and half-tile offsets. Four straight patterns have alternate facets;
+only those patterns consume a selection draw, choosing the alternate above
+16383. `selectRmsCliffArt` matches 486 original selection cases (all 81 ternary
+edge patterns × six seeds, including draws 16383, 16384 and 32767). Unsupported
+patterns leave output and RNG unchanged. The original game's Gaia construction
+and game-event calls were recorded without effects; their behavior, topology
+replacement/destruction and actual object construction still need comparison.
+Private evidence: `rms-cliff-art-oracle-2026-11-15.json`.

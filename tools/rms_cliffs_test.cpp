@@ -144,5 +144,25 @@ int main() {
     invalid.waterDistance=1024;
     assert(!planRmsCliffs(1024,terrain,heights,invalid,{},rng,segments,&err));
     assert(err=="RMS cliffs: work limit exceeded" && rng==123 && segments[0].y2==4);
+    // Original constructor + art selection, Gaia construction/event calls recorded only.
+    const uint32_t artSeeds[]={1u,12345u,4294967295u,2954622529u,3782276673u,4028364353u};
+    const uint32_t artHashes[]={3361072220u,3319043188u,3856659486u,1894212380u,2153369048u,1659686360u};
+    for (size_t k=0;k<sizeof(artSeeds)/sizeof(artSeeds[0]);++k) {
+        uint32_t hash=2166136261u;
+        auto mix=[&](uint32_t value){hash=(hash^value)*16777619u;};
+        for (int e=-1;e<=1;++e) for (int south=-1;south<=1;++south)
+            for (int w=-1;w<=1;++w) for (int n=-1;n<=1;++n) {
+                uint32_t state=artSeeds[k]; RmsCliffArt art;
+                const bool exists=selectRmsCliffArt({e,south,w,n},state,art);
+                mix(exists); mix(state);
+                if (exists) {
+                    mix(art.unit); mix(art.facet); mix(uint32_t(art.offsetX*2)); mix(uint32_t(art.offsetY*2));
+                } else assert(state==artSeeds[k] && art.unit==-1);
+            }
+        assert(hash==artHashes[k]);
+    }
+    RmsCliffArt art{123,7,1,2};
+    assert(!selectRmsCliffArt({2,0,0,0},rng,art));
+    assert(rng==123 && art.unit==123 && art.facet==7 && art.offsetX==1 && art.offsetY==2);
     std::cout << "Original cliff path fixtures passed: " << sizeof(cases)/sizeof(cases[0]) << '\n';
 }

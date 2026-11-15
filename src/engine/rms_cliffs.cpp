@@ -116,4 +116,39 @@ bool planRmsCliffs(uint32_t size, const std::vector<uint8_t> &terrain,
     segments=std::move(result); randomState=rng;
     return true;
 }
+bool selectRmsCliffArt(const std::array<int,4> &edges, uint32_t &randomState,
+    RmsCliffArt &art) {
+    if (std::any_of(edges.begin(),edges.end(),[](int v){return v < -1 || v > 1;})) return false;
+    const int index=85+64*edges[0]+16*edges[1]+4*edges[2]+edges[3];
+    struct Entry { int index,unit,facet,alternate; float x,y; };
+    static constexpr Entry entries[]={
+        {17,266,11,10,1.5f,1.5f},
+        {20,271,13,-1,2.0f,1.0f},
+        {21,266,20,-1,1.5f,1.5f},
+        {37,270,0,-1,1.5f,2.0f},
+        {65,272,9,-1,1.0f,2.0f},
+        {68,265,8,7,1.5f,1.5f},
+        {69,265,22,-1,1.5f,1.5f},
+        {81,266,21,-1,1.5f,1.5f},
+        {82,269,14,-1,1.5f,1.0f},
+        {84,265,23,-1,1.5f,1.5f},
+        {86,264,19,-1,1.5f,1.5f},
+        {88,268,6,-1,1.0f,1.5f},
+        {89,264,17,-1,1.5f,1.5f},
+        {101,264,18,-1,1.5f,1.5f},
+        {102,264,1,2,1.5f,1.5f},
+        {105,264,15,-1,1.5f,1.5f},
+        {133,267,12,-1,2.0f,1.5f},
+        {149,264,16,-1,1.5f,1.5f},
+        {150,264,3,-1,1.5f,1.5f},
+        {153,264,4,5,1.5f,1.5f},
+    };
+    for (const auto &entry:entries) if (entry.index==index) {
+        int facet=entry.facet;
+        if (entry.alternate>=0 && genieRandomDraw(randomState)>16383) facet=entry.alternate;
+        art={entry.unit,facet,entry.x,entry.y};
+        return true;
+    }
+    return false;
+}
 } // namespace swgb
