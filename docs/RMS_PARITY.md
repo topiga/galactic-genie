@@ -63,6 +63,45 @@ This is **not general 1:1 terrain generation**. Other seeds, sizes, civilization
 teams and map families still need complete comparisons. Historical checkpoints
 below describe earlier coverage, not the current result.
 
+## General object-row controller: 2026-11-15
+
+Gaia resources after owned startup now execute in source order from parsed rows,
+rather than matching an expected Forest resource sequence. The original
+`4e3850..4e3cfb` handlers establish the 60-byte row semantics; `4dddf0` scales
+its group count. Grouping directives are order-sensitive. Temporary spacing
+removes candidates from the current row; permanent spacing survives later rows.
+Terrain selection filters group centers, not every child object.
+
+Eight authored variations on the same cliff/forest geometry were executed through
+Clone Campaigns' original `4df9b0` runner, seed 1, fixed Tiny map, two Empire owners.
+Every case matched all ordered object records, terrain/elevation/slope bytes,
+owned/Gaia startup animation states and final RNG:
+
+| Variation | Objects | Final RNG |
+|---|---:|---:|
+| Reverse Gaia resource rows | 6,203 | 4194478548 |
+| Change Nova/Ore group counts | 6,206 | 4166862475 |
+| Default mode and order-sensitive grouping | 6,210 | 885130658 |
+| Temporary/permanent spacing and zone radius | 6,203 | 502114030 |
+| Terrain-filtered group centers | 6,219 | 170179477 |
+| Grouped trees with variance | 6,217 | 2876734422 |
+| Player-count scaling | 6,206 | 1396042352 |
+| Holocrons after all other resources | 6,203 | 327591995 |
+
+`tools/rms_general_object_checks.h` preserves complete record/RNG/grid regression
+fingerprints against these original captures. The parser has a separate standalone
+suite. Full animation comparisons and original runner captures remain in local
+research (`rms-general-rows-*-oracle-2026-11-15.json` and matching comparison files).
+These are executable replays with captured original assets and modeled host I/O;
+no fresh live Windows playthrough was performed for these eight cases.
+
+The production audit remains **9/138 accepted**. General Gaia row execution does
+not yet generalize owned startup, specific-land selection, global zone clearance,
+unknown unit prototypes or the terrain pipeline. Holocron modifiers retain their
+verified profile. Unsupported paths reject explicitly. The normal skirmish menu
+still uses procedural startup; these results concern RMS generation and import,
+not complete gameplay parity.
+
 ## Historical packaged-script baseline: 2026-11-14
 
 At commit `039f3e5`, the local audit ran 46 packaged RMS resources with three

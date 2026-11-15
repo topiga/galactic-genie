@@ -8,6 +8,7 @@
 
 namespace swgb {
 namespace dat { struct DatFile; }
+struct RmsObjectRow;
 // Original initial, full-map, all-eligible candidate list (0x4dded0).
 // Entries are y*width+x. This does not test placement or create objects.
 // Input is RNG state at candidate construction, not a map seed; only success advances it.
@@ -59,6 +60,9 @@ struct RmsGlobalGroupPlacement {
     std::vector<RmsPlayerStart> landCenters;
     int32_t minDistance=0, spacing=0;
 };
+// Explicit objectRow executes finalized Gaia rows for land1/-1/-2; count/range/spacing
+// fields replace legacy profiles, with terrain filtering on group centers only.
+// Global zone clearance, positive owners and civilization remapping remain unsupported.
 // Default Gaia modifiers, one grouped row. Shared original queue nodes are preserved.
 // Optional starts select the verified near-Nova row: tight7, radius3, one group/player,
 // distances12..16, spacing7, zone7 on uniformly passable terrain.
@@ -105,7 +109,8 @@ bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
     RmsResourceDistance distance=RmsResourceDistance::Near,
     std::vector<uint8_t> *rowEligibility=nullptr,
     const RmsGlobalGroupPlacement *globalPlacement=nullptr,
-    const RmsResourcePlayerRange *playerRange=nullptr);
+    const RmsResourcePlayerRange *playerRange=nullptr,
+    const RmsObjectRow *objectRow=nullptr);
 // Original stock holocron285 row: five global placements, player exclusion25,
 // temporary spacing20. Bounded to64-square grass or120-square dry/Forest21 terrain
 // with two starts;120 may retain centered411/413 trees. Slopes do not restrict it. Owned starting
@@ -116,5 +121,6 @@ bool generateRmsHolocronPlacements(uint32_t width, uint32_t height,
     const std::vector<uint8_t> &terrain, const dat::DatFile &data,
     const std::vector<RmsPlayerStart> &playerStarts, uint32_t &randomState,
     std::vector<RmsTimberPlacement> &out, std::string *err=nullptr,
-    const std::vector<uint32_t> &occupiedTiles={});
+    const std::vector<uint32_t> &occupiedTiles={},
+    const std::vector<uint8_t> *rowEligibility=nullptr);
 } // namespace swgb

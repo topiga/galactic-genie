@@ -87,7 +87,7 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     assert '6100 native objects, final RNG 146046165' in resources_cliff
     assert (work/'cliff-resources.png').stat().st_size>1000
     run(['render-rms',data,root/'tools/fixtures/cliff-resource-start.rms',120,1,work/'cliff-resources-invalid.png',
-        '--players',2,'--civilization',1,'--civilization',2],1)
+        '--players',2,'--civilization',1,'--civilization',65535],2)
     assert not (work/'cliff-resources-invalid.png').exists()
     full_cliff=run(['render-rms',data,root/'tools/fixtures/cliff-full-start.rms',120,1,work/'cliff-full.png',
         '--players',2,'--civilization',1,'--civilization',1],0)
@@ -122,7 +122,7 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
             assert not rejected.exists()
     unverified_cliff=work/'cliff-full-unverified.rms'
     unverified_cliff.write_text((root/'tools/fixtures/cliff-full-start.rms').read_text().replace(
-        'set_loose_grouping number_of_objects 4','set_loose_grouping number_of_objects 8',1))
+        'set_loose_grouping number_of_objects 4','set_loose_grouping number_of_objects -1',1))
     run(['render-rms',data,unverified_cliff,120,1,work/'cliff-full-unverified.png',
         '--players',2,'--civilization',1,'--civilization',1],1)
     assert not (work/'cliff-full-unverified.png').exists()

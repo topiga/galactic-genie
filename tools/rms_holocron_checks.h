@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+#include "../src/core/genie_random.h"
 #include "rms_holocron120_checks.h"
 static void rmsHolocronChecks(const swgb::dat::DatFile &data) {
     const struct { uint32_t entry,final;swgb::RmsPlayerStart starts[2];size_t count;float positions[5][2]; } cases[]={
@@ -20,6 +21,20 @@ static void rmsHolocronChecks(const swgb::dat::DatFile &data) {
             check(p.unitId==285 && p.x==f.positions[i][0] && p.y==f.positions[i][1] && p.facet==7 && p.headingRadians==0,
                   "Original holocron player exclusion, temporary spacing and static facing");
         }
+        std::vector<uint8_t> eligibility(terrain.size(),1);
+        rng=f.entry;
+        check(swgb::generateRmsHolocronPlacements(64,64,terrain,data,starts,rng,placements,&error,{},&eligibility) &&
+              rng==f.final && placements.size()==f.count,"all-eligible holocron row preserves fixture");
+        std::fill(eligibility.begin(),eligibility.end(),0);rng=f.entry;
+        const auto excluded=eligibility;
+        check(swgb::generateRmsHolocronPlacements(64,64,terrain,data,starts,rng,placements,&error,{},&eligibility) &&
+              placements.empty() && eligibility==excluded,"prior exclusions survive holocron row without mutation");
+        uint32_t shuffled=f.entry;
+        for(size_t tile=0;tile<1922;++tile)swgb::genieRandomDraw(shuffled);
+        check(rng==shuffled,"excluded holocrons still consume original full queue shuffle");
+        eligibility[0]=2;rng=f.entry;
+        check(!swgb::generateRmsHolocronPlacements(64,64,terrain,data,starts,rng,placements,&error,{},&eligibility) &&
+              rng==f.entry && placements.empty(),"invalid holocron eligibility rejects atomically");
         terrain[0]=10;rng=f.entry;
         check(!swgb::generateRmsHolocronPlacements(64,64,terrain,data,starts,rng,placements,&error) &&
               rng==f.entry && placements.empty(),"Unproven holocron forest terrain rejects atomically");

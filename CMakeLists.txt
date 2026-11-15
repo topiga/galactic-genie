@@ -30,6 +30,7 @@ set(SWGB_CORE_SOURCES
     src/engine/rms_early_forest.cpp
     src/engine/rms_scenery_appearance.cpp
     src/engine/rms_objects.cpp
+    src/engine/rms_object_rows.cpp
     src/engine/rms_terrain_cleanup.cpp
     src/engine/rms_terrain.cpp
     src/engine/rms_elevation.cpp
@@ -133,10 +134,11 @@ if(NOT VITA)
     if(SWGB_BUILD_ALGORITHM_TESTS)
         enable_testing()
         add_executable(swgb-rms-test tools/rms_test.cpp src/engine/rms_script.cpp src/core/drs.cpp)
+        add_executable(swgb-rms-object-rows-test tools/rms_object_rows_test.cpp src/engine/rms_object_rows.cpp)
         add_executable(swgb-rms-object-test tools/rms_object_test.cpp src/engine/rms_zones.cpp src/engine/rms_objects.cpp src/engine/rms_scenery_appearance.cpp)
         add_executable(swgb-ai-military-test tools/ai_military_test.cpp src/engine/ai_military.cpp)
         add_executable(swgb-ai-targets-test tools/ai_targets_test.cpp src/engine/ai_targets.cpp)
-        add_executable(swgb-rms-map-test tools/rms_map_test.cpp src/engine/rms_land_placement.cpp src/engine/rms_zones.cpp src/engine/rms_connections.cpp src/engine/rms_elevation.cpp src/engine/rms_cliffs.cpp src/engine/rms_slopes.cpp src/engine/rms_early_forest.cpp src/engine/rms_terrain_cleanup.cpp src/engine/rms_scenery.cpp src/engine/rms_scenery_appearance.cpp src/engine/rms_terrain.cpp src/engine/rms_map.cpp src/engine/rms_script.cpp src/engine/rms_objects.cpp src/engine/rms_player_starts.cpp src/core/drs.cpp)
+        add_executable(swgb-rms-map-test tools/rms_map_test.cpp src/engine/rms_land_placement.cpp src/engine/rms_zones.cpp src/engine/rms_connections.cpp src/engine/rms_elevation.cpp src/engine/rms_cliffs.cpp src/engine/rms_slopes.cpp src/engine/rms_early_forest.cpp src/engine/rms_terrain_cleanup.cpp src/engine/rms_scenery.cpp src/engine/rms_scenery_appearance.cpp src/engine/rms_terrain.cpp src/engine/rms_map.cpp src/engine/rms_object_rows.cpp src/engine/rms_script.cpp src/engine/rms_objects.cpp src/engine/rms_player_starts.cpp src/core/drs.cpp)
         add_executable(swgb-rms-player-starts-test tools/rms_player_starts_test.cpp src/engine/rms_player_starts.cpp)
         add_executable(swgb-rms-cliffs-test tools/rms_cliffs_test.cpp src/engine/rms_cliffs.cpp)
         add_executable(swgb-rms-elevation-test tools/rms_elevation_test.cpp src/engine/rms_elevation.cpp src/engine/rms_slopes.cpp)
@@ -150,7 +152,7 @@ if(NOT VITA)
         add_executable(swgb-rms-early-forest-test tools/rms_early_forest_test.cpp src/engine/rms_early_forest.cpp src/engine/rms_scenery.cpp src/engine/rms_scenery_appearance.cpp)
         add_executable(swgb-rms-group-test tools/rms_group_test.cpp src/engine/rms_zones.cpp src/engine/rms_objects.cpp src/engine/rms_scenery_appearance.cpp)
         add_executable(swgb-rms-zones-test tools/rms_zones_test.cpp src/engine/rms_zones.cpp)
-        foreach(test rms rms-cliffs rms-land-placement rms-connections rms-elevation rms-slopes rms-zones rms-group rms-object rms-map rms-player-starts rms-terrain rms-scenery rms-scenery-appearance rms-early-forest rms-terrain-cleanup ai-military ai-targets)
+        foreach(test rms rms-object-rows rms-cliffs rms-land-placement rms-connections rms-elevation rms-slopes rms-zones rms-group rms-object rms-map rms-player-starts rms-terrain rms-scenery rms-scenery-appearance rms-early-forest rms-terrain-cleanup ai-military ai-targets)
             target_include_directories(swgb-${test}-test PRIVATE src)
             add_test(NAME ${test} COMMAND swgb-${test}-test)
         endforeach()
