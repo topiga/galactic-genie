@@ -1397,3 +1397,13 @@ Private evidence: `rms-cliff-constructor-oracle-2026-11-15.json`,
 `rms-cliff-real-stage-expanded-oracle-2026-11-15.json` (60 additional cases).
 The expanded replay also asserts all 14,400 terrain, height and slope bytes are
 unchanged by cliff construction; object occupancy is recorded separately.
+
+The settings defaults now match the original reset routine 0x4dfdf0:
+count 3..9, length 5..9, curl 36, water distance 2 and cliff distance 2.
+Twenty-eight executed handler cases verify direct parameter writes and no RNG:
+opcodes 35..39 set count/length/curl, 40 (`min_distance_cliffs`) sets cliff
+spacing, and 41 (`min_terrain_distance`) sets water exclusion. Three additional
+real-stage default-setting fixtures bring the full-stage total to 75.
+Evidence: `rms-cliff-parameters-oracle-2026-11-15.json` and
+`rms-cliff-default-stage-oracle-2026-11-15.json`. The final Ghidra evidence bundle
+and reusable snapshot are saved locally; the analysis process is closed.

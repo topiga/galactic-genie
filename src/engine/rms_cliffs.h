@@ -7,8 +7,8 @@
 
 namespace swgb {
 struct RmsCliffSettings {
-    int minCount=0, maxCount=0, minLength=0, maxLength=0, curl=0;
-    int waterDistance=0, cliffDistance=0;
+    int minCount=3, maxCount=9, minLength=5, maxLength=9, curl=36;
+    int waterDistance=2, cliffDistance=2;
 };
 struct RmsCliffProtection { int x=0, y=0, radius=0; };
 struct RmsCliffSegment { int x1=0, y1=0, x2=0, y2=0; };
