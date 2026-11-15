@@ -1691,3 +1691,18 @@ Evidence: `rms-cliff-player-protected-terrain-cases-oracle-2026-11-15.json`,
 The configured-world original-code harness limitations still apply. Player-land
 cliffs with elevation, other forest types, extra lands, fixed positions or owned
 startup remain gated; no new packaged map is claimed.
+
+
+### Player-land cliffs with forest types 18 and 20
+
+The same two-player land/cliff composition now accepts forest18 (tree348) and
+forest20 (tree349). Thirty-six additional original runs cover both start-area
+avoidance modes, three land-size/growth profiles and three seeds. The real tree
+masters and graphics are loaded, including unit349's 11 appearance angles.
+Terrain, protection, surviving cliffs, tree placement/IDs/facets and final RNG
+are compared under both section orders and raw/normalized DAT footprints.
+
+Evidence: `rms-cliff-player-forest-types-cases-oracle-2026-11-15.json`. Native
+import and CLI rendering cover all three forest types with both avoidance modes.
+This extends the existing flat profile; player-land elevation and owned startup
+are still outside the verified cliff composition.

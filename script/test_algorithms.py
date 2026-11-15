@@ -35,4 +35,4 @@ for name, sources in cases.items():
                '-fno-sanitize-recover=all', str(root/'tools'/(name+'_test.cpp')),
                *[str(root/p) for p in sources], '-o', str(executable)]
     subprocess.run(command, cwd=build, timeout=180, check=True)
-    subprocess.run([str(executable)], cwd=build, timeout=60, check=True)
+    subprocess.run([str(executable)], cwd=build, timeout=120 if name=="rms_map" else 60, check=True)

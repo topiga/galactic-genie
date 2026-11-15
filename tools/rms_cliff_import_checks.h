@@ -67,9 +67,9 @@ static void checkRmsCliffImport(swgb::Assets &assets) {
             ++nextId;
         }
     }
-    for(bool avoid:{false,true}) {
+    for(const auto &spec:forestTypes) for(bool avoid:{false,true}) {
         const std::string players="<LAND_GENERATION> base_terrain 6 create_player_lands { terrain_type 6 base_size 3 number_of_tiles 1000 } "
-            "<CLIFF_GENERATION> <TERRAIN_GENERATION> create_terrain 21 { base_terrain 6 number_of_tiles 2000 number_of_clumps 20 spacing_to_other_terrain_types 2 clumping_factor 20 "+
+            "<CLIFF_GENERATION> <TERRAIN_GENERATION> create_terrain "+std::to_string(spec[0])+" { base_terrain 6 number_of_tiles 2000 number_of_clumps 20 spacing_to_other_terrain_types 2 clumping_factor 20 "+
             std::string(avoid?"set_avoid_player_start_areas ":"")+"}";
         check(script.load(0,[&](int32_t id,std::vector<uint8_t> &out) {
             if(id) return false;out.assign(players.begin(),players.end());return true;
@@ -87,7 +87,7 @@ static void checkRmsCliffImport(swgb::Assets &assets) {
         ++nextId;
         for(const auto &tree:map.scenery) {
             const auto p=game.objectPosition(nextId);
-            check(game.objectUnitId(nextId)==413 && game.objectPlayer(nextId)==0 && p[0]==tree.x && p[1]==tree.y,
+            check(game.objectUnitId(nextId)==spec[1] && game.objectPlayer(nextId)==0 && p[0]==tree.x && p[1]==tree.y,
                 "native player-land forest retains original tree IDs and positions");
             ++nextId;
         }
