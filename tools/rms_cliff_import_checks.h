@@ -77,7 +77,6 @@ static void checkRmsCliffImport(swgb::Assets &assets) {
         }
     }
     for(const auto &spec:forestTypes) for(bool avoid:{false,true}) for(bool fixed:{false,true}) {
-        if(fixed && spec[0]!=21) continue;
         const std::string players="<LAND_GENERATION> base_terrain 6 create_player_lands { terrain_type 6 base_size 3 number_of_tiles 1000 } "
             "<CLIFF_GENERATION> <TERRAIN_GENERATION> create_terrain "+std::to_string(spec[0])+" { base_terrain 6 number_of_tiles 2000 number_of_clumps 20 spacing_to_other_terrain_types 2 clumping_factor 20 "+
             std::string(avoid?"set_avoid_player_start_areas ":"")+"}";

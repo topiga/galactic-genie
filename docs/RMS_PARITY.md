@@ -1918,3 +1918,19 @@ checked separately, as in the earlier owned-only matrix. The shorter10-row
 resource prefix remains restricted to Empire/Empire. The new192 captures use
 default cliffs; arbitrary packaged maps, fixed owned starts, mixed hills and
 water placement remain outside this evidence.
+
+### Fixed player starts with forest18 and20 on cliff maps
+
+The flat two-player cliff profile now accepts forest18 and20 with
+`FIXED_POSITIONS`, alongside forest21. Thirty-six original configured-world runs
+cover three land sizes (radius/tile target0/0,3/1000,10/2000), both forest types,
+start-area avoidance on/off and seeds1,12345,4294967295. The original fixed-start
+finalizer supplies both cliff and terrain protection areas before the real
+land/cliff/terrain/object scheduler runs.
+
+The regression checks ordered object hashes, terrain, starts and final RNG for
+all36 cases, in both textual stage orders and both raw/normalized DAT layouts.
+Native imports and CLI rendering also exercise both new forests with and without
+start protection. Evidence is retained in
+`rms-cliff-fixed-player-forest-types-cases-oracle-2026-11-15.json`. These cases have
+no owned startup objects or hills; those compositions remain gated.

@@ -66,12 +66,13 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
             rendered=run(['render-rms',data,forest_players,120,1,output],0)
             assert f'{count} native objects, final RNG {state}' in rendered
             assert output.stat().st_size>1000
-    for avoid,count,state in [(False,2069,685587785),(True,2048,3019377153)]:
-        output=work/f'cliff-fixed-player-forest-{avoid}.png'
-        rendered=run(['render-rms',data,work/f'cliff-player-forest-21-{avoid}.rms',120,1,output,
-            '--define','FIXED_POSITIONS'],0)
-        assert f'{count} native objects, final RNG {state}' in rendered
-        assert output.stat().st_size>1000
+    for terrain_type in [18,20,21]:
+        for avoid,count,state in [(False,2069,685587785),(True,2048,3019377153)]:
+            output=work/f'cliff-fixed-player-forest-{terrain_type}-{avoid}.png'
+            rendered=run(['render-rms',data,work/f'cliff-player-forest-{terrain_type}-{avoid}.rms',120,1,output,
+                '--define','FIXED_POSITIONS'],0)
+            assert f'{count} native objects, final RNG {state}' in rendered
+            assert output.stat().st_size>1000
     cliff_owned=work/'cliff-owned.png'
     owned_cliffs=run(['render-rms',data,root/'tools/fixtures/cliff-owned-start.rms',120,1,cliff_owned,
         '--players',2,'--civilization',1,'--civilization',1],0)
