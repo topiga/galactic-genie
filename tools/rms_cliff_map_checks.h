@@ -106,7 +106,7 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
             "original cliff/grass composition objects, terrain and RNG");
         check(map.scenery.empty() && map.objects.empty(),"grass painting adds no scenery");
     }
-    struct ElevationCase { int tiles,clumps; uint32_t seed,rng,objects,heights,slopes; size_t count; };
+    struct ElevationCase { int tiles,clumps; uint32_t seed,rng,objects,heights,slopes; size_t count; int levels=1; };
     const ElevationCase elevationCases[]={
         {400,8,1u,2790043587u,291107893u,73028170u,3169292009u,29},
         {400,8,12345u,3576478055u,1991487999u,1897583699u,1760096298u,55},
@@ -117,9 +117,36 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
         {8000,30,1u,2269132341u,3231355347u,1601223514u,3045030720u,47},
         {8000,30,12345u,356477077u,1829178315u,3368565405u,202350159u,42},
         {8000,30,4294967295u,3507099122u,2453755317u,2749370310u,3751637635u,50},
+        {400,8,1u,2744178341u,3166680752u,2427225276u,4151966524u,30,2},
+        {400,8,12345u,3143903008u,3975870492u,3655599846u,4093227016u,22,2},
+        {400,8,4294967295u,2523226310u,1795454824u,1411226935u,1654172885u,47,2},
+        {1000,2,1u,3426239401u,4023666330u,581908518u,3196936021u,23,2},
+        {1000,2,12345u,3993901233u,538006811u,3093269219u,3699007432u,55,2},
+        {1000,2,4294967295u,1185834593u,3105500748u,3249137414u,2080283094u,45,2},
+        {8000,30,1u,2978000291u,3093696992u,4215580062u,301997494u,39,2},
+        {8000,30,12345u,1306408363u,2779652543u,3218675948u,2919639480u,29,2},
+        {8000,30,4294967295u,644339416u,4239108436u,3729770312u,236545581u,42,2},
+        {400,8,1u,1166557347u,2868996674u,3011256799u,704240237u,44,3},
+        {400,8,12345u,2075013762u,2179615068u,2429582657u,153959930u,25,3},
+        {400,8,4294967295u,3574253452u,3722963227u,1879595097u,1438540761u,51,3},
+        {1000,2,1u,4140240717u,644755107u,1558467066u,703627950u,46,3},
+        {1000,2,12345u,3310335381u,3191389979u,2583580881u,147187923u,46,3},
+        {1000,2,4294967295u,183039817u,405829136u,228976599u,3453017446u,34,3},
+        {8000,30,1u,1425325917u,173898735u,3503654032u,904079192u,20,3},
+        {8000,30,12345u,1395193335u,1273660848u,994739660u,4042009274u,18,3},
+        {8000,30,4294967295u,2825231775u,3400683102u,1731752944u,4131699844u,44,3},
+        {400,8,1u,1165343810u,1784602409u,1241919861u,3794864003u,38,7},
+        {400,8,12345u,14680498u,4096189495u,2429582657u,153959930u,51,7},
+        {400,8,4294967295u,2464239411u,3372067959u,1879595097u,1438540761u,38,7},
+        {1000,2,1u,1435115100u,1307305007u,3486551398u,2107840337u,37,7},
+        {1000,2,12345u,818655602u,199402233u,4049201087u,3398082362u,42,7},
+        {1000,2,4294967295u,747771640u,3880729723u,3255158590u,1042687799u,25,7},
+        {8000,30,1u,2215531909u,3523760796u,2333374578u,4221510755u,33,7},
+        {8000,30,12345u,354546605u,1620451199u,692390202u,2626351737u,21,7},
+        {8000,30,4294967295u,1598187674u,1009416997u,1909161120u,2865734476u,23,7},
     };
     for(const auto &c:elevationCases) for(bool late:{false,true}) {
-        const std::string elevation="<ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles "+
+        const std::string elevation="<ELEVATION_GENERATION> create_elevation "+std::to_string(c.levels)+" { base_terrain 6 number_of_tiles "+
             std::to_string(c.tiles)+" number_of_clumps "+std::to_string(c.clumps)+" } ";
         load(land+(late?"<CLIFF_GENERATION> "+elevation:elevation+"<CLIFF_GENERATION> "));
         uint32_t rng=c.seed;
@@ -209,7 +236,7 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
     }
     for(const char *elevation:{
         "<ELEVATION_GENERATION>",
-        "<ELEVATION_GENERATION> create_elevation 2 { base_terrain 6 number_of_tiles 400 }",
+        "<ELEVATION_GENERATION> create_elevation 2 { base_terrain 6 number_of_tiles 400 } <TERRAIN_GENERATION> create_terrain 0 { base_terrain 6 number_of_tiles 30 }",
         "<ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles 400 } create_elevation 1 { base_terrain 6 number_of_tiles 300 }"}) {
         load(land+"<CLIFF_GENERATION> "+elevation);
         check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1 && map.cliffs.empty(),

@@ -1410,10 +1410,10 @@ and reusable snapshot are saved locally; the analysis process is closed.
 
 ### First composed cliff RMS profile and native import
 
-The RMS importer now accepts one explicitly bounded cliff-only profile:
-120×120, base/land terrain 6, one neutral land at 50%/50%, zero base size and
+The initial RMS integration accepted one explicitly bounded cliff-only profile:
+120×120, base/land terrain 6 (`DIRT1`), one neutral land at 50%/50%, zero base size and
 zero requested land tiles; no elevation, connections or explicit objects.
-The later grass-painting extension below permits one bounded terrain row. Original cliff masters/graphics are checked. Other combinations remain
+The later grass-painting extension below permits one bounded terrain-0 (`GRASS1`) row. Original cliff masters/graphics are checked. Other combinations remain
 rejected, including normal packaged cliff maps. This supersedes the earlier
 statement that the stage helper had no importer caller.
 
@@ -1475,7 +1475,7 @@ map claim and does not establish runtime cliff collision or live Windows visuals
 ### Elevation before cliff placement
 
 Cliff import now also accepts one level-1 elevation row on the same neutral
-120×120 grass profile, with no terrain-painting row. The cliff stage receives
+120×120 DIRT1 profile, with no terrain-painting row. The cliff stage receives
 the generated height bytes rather than an assumed zero-height raster. Other
 levels, empty elevation sections and combined elevation/terrain painting remain
 gated pending composed comparisons.
@@ -1512,3 +1512,23 @@ height/slope arrays. The reference row layout remains explicit: terrain ID at
 +8, not +4. Local evidence is `rms-cliff-composed-cases-oracle-2026-11-15.json`.
 Forests, connections, owned starts and multiple elevation levels still require
 further composed evidence; no additional packaged map is claimed.
+
+
+### Multiple elevation levels before cliffs
+
+One terrain-6 elevation block with levels 1–7 is now accepted before cliffs on the
+same neutral-land profile. Multiple elevation blocks remain rejected. Painting a
+later grass row is currently verified only with level 1, so higher-level plus
+terrain-painting combinations remain gated.
+
+Twenty-seven additional original replays cover levels 2/3/7, all three elevation
+size/clump profiles and three seeds. The native checks retain both section orders
+and compare full height/slope hashes, surviving cliff records and final RNG.
+The level-7, 8000-tile, 30-clump seed-1 case has 33 surviving cliffs with final RNG
+2215531909: 16 at height 0, 9 at height 2 and 8 at height 7. Native import checks
+original creation IDs/positions and rendering-height hashes at these objects.
+
+Evidence: `rms-cliff-multilevel-cases-oracle-2026-11-15.json`. Original setup,
+scheduler, elevation and cliff callbacks run under the same configured-world
+boundary as the earlier fixtures. These are authored diagnostics, not packaged
+maps or proof of full engine/rendering equivalence.

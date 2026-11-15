@@ -502,9 +502,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if(cliffStage) {
         if(width!=120 || height!=120 || base!=6 || lands.size()!=1 || playerLands ||
             hasObjects || connectionStage || terrainRows.size()>1 ||
-            (elevationStage && (elevationRows.size()!=1 ||
-                elevationRows[0].elevation!=1 || elevationRows[0].baseHeight!=0 ||
-                elevationRows[0].baseTerrain!=6)) ||
+            (elevationStage && (elevationRows.empty() || elevationRows.size()>7 ||
+                (elevationRows.size()>1 && !terrainRows.empty()))) ||
             std::any_of(terrainRows.begin(),terrainRows.end(),[](const auto &row) {
                 return row.terrain!=0 || row.baseTerrain!=6 || row.avoidPlayerStarts ||
                     row.minHeight!=0 || row.maxHeight!=255;
@@ -514,6 +513,12 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             lands[0].clumpingFactor!=8 || lands[0].borderFuzziness!=20 || lands[0].separation ||
             lands[0].leftBorder || lands[0].topBorder || lands[0].rightBorder!=-1 || lands[0].bottomBorder!=-1)
             return fail("cliffs require the verified empty120 grass/centered neutral-land profile");
+        for(size_t index=0;index<elevationRows.size();++index) {
+            const auto &row=elevationRows[index];
+            if(row.elevation!=index+1 || row.baseHeight!=index || row.baseTerrain!=6 ||
+                row.targetTiles!=elevationRows[0].targetTiles || row.clumps!=elevationRows[0].clumps)
+                return fail("cliffs require one verified grass elevation block");
+        }
         if(data.civs.empty() || data.civs[0].units.size()<=273) return fail("missing original cliff units");
         for(int id=264;id<=273;++id) {
             const auto &unit=data.civs[0].units[id];
