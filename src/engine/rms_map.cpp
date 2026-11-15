@@ -20,7 +20,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     const std::vector<uint16_t> &playerCivilizations,
                     const std::vector<std::vector<uint8_t>> &diplomacy) {
     const auto isTree=[](int unit){return unit==348 || unit==349 || unit==411 || unit==413;};
-    const auto isBigHunt=[](int unit){return unit==822 || unit==1249;};
+    const auto isBigHunt=[](int unit){return unit==822 || unit==1249 || unit==1364;};
     const auto isPredator=[](int unit){return unit==126 || unit==812 || unit==1197;};
     out = {};
     if (err) err->clear();
@@ -286,16 +286,16 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             // shortcut: one initial hunt and up to two large-hunt rows; verify other sequences before accepting them.
             if(holocrons && resourceProfile==8 && prefixHunts &&
                (i==tokens.size() || (tokens[i].text!="126" && tokens[i].text!="812" && tokens[i].text!="1197" &&
-                (prefixHunts>=3 || (tokens[i].text!="822" && tokens[i].text!="1249")))))
+                (prefixHunts>=3 || (tokens[i].text!="822" && tokens[i].text!="1249" && tokens[i].text!="1364")))))
                 return fail("unsupported additional hunt row");
             if(holocrons && resourceProfile==15 && i<tokens.size() && tokens[i].text=="1585")resourceProfile=16;
             auto row=stockResources[holocrons?resourceProfile:1];
             if(holocrons && i<tokens.size()) {
                 if(resourceProfile==15 && tokens[i].text=="594")row=stockResources[6];
                 if(resourceProfile==15 && tokens[i].text=="1363")row.unit=1363;
-                if((resourceProfile==15 || resourceProfile==17) && (tokens[i].text=="822" || tokens[i].text=="1249")) {
+                if((resourceProfile==15 || resourceProfile==17) && (tokens[i].text=="822" || tokens[i].text=="1249" || tokens[i].text=="1364")) {
                     if(resourceProfile==17 && distantHunt)return fail("unsupported repeated distant hunt row");
-                    row.unit=tokens[i].text=="822"?822:1249;
+                    row.unit=tokens[i].text=="822"?822:tokens[i].text=="1249"?1249:1364;
                 }
             }
             if(row.unit==594 && i<tokens.size() && tokens[i].text=="833")row.unit=833;
@@ -303,6 +303,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(tokens[i].text=="1365") row.unit=1365;
                 else if(tokens[i].text=="822") row.unit=822;
                 else if(tokens[i].text=="1249") row.unit=1249;
+                else if(tokens[i].text=="1364") row.unit=1364;
                 else if(tokens[i].text=="126" || tokens[i].text=="812" || tokens[i].text=="1197") row={int16_t(tokens[i].text=="812"?812:tokens[i].text=="1197"?1197:126),1,3,30,40,0,RmsResourceDistance::Far,0,2};
             }
             if(row.unit==126 && i<tokens.size() && (tokens[i].text=="812" || tokens[i].text=="1197")) row.unit=int16_t(tokens[i].text=="812"?812:tokens[i].text=="1197"?1197:126);
@@ -338,7 +339,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(name=="terrain_to_place_on" && row.unit==1585 && value==22) terrainFilter=true;
                 else if(name=="number_of_objects" && isBigHunt(row.unit) && row.mode==0 && (value==1 || value==2)) { row.groups=value;count=true; }
                 else if(name=="number_of_objects" && row.mode==0 && value==int(row.groups)) count=true;
-                else if(name=="number_of_objects" && row.mode!=0 && (value==row.count || ((row.unit==1363 || row.unit==1365) && value==8) || ((row.unit==1363 || row.unit==1365) && value==2) || (row.unit==1363 && value==3) || (row.unit==1249 && (value==1 || (row.distance==RmsResourceDistance::Near && value==4) || (row.distance==RmsResourceDistance::Far && value==6))) || (row.unit==822 && ((row.distance==RmsResourceDistance::Near && (value==1 || value==2)) || (row.distance==RmsResourceDistance::Far && (value==1 || value==6)))) || (isPredator(row.unit) && row.global && value==2) || (row.unit==59 && (value==3 || value==12)) || ((row.unit==594 || row.unit==833) && (value==row.count/2 || value==row.count*2)))) { row.count=value;count=true; }
+                else if(name=="number_of_objects" && row.mode!=0 && (value==row.count || ((row.unit==1363 || row.unit==1365) && value==8) || ((row.unit==1363 || row.unit==1365) && value==2) || (row.unit==1363 && value==3) || ((row.unit==1249 || row.unit==1364) && (value==1 || (row.distance==RmsResourceDistance::Near && value==4) || (row.distance==RmsResourceDistance::Far && value==6))) || (row.unit==822 && ((row.distance==RmsResourceDistance::Near && (value==1 || value==2)) || (row.distance==RmsResourceDistance::Far && (value==1 || value==6)))) || (isPredator(row.unit) && row.global && value==2) || (row.unit==59 && (value==3 || value==12)) || ((row.unit==594 || row.unit==833) && (value==row.count/2 || value==row.count*2)))) { row.count=value;count=true; }
                 else if(name=="number_of_groups" && value==int(row.groups)) groups=true;
                 else if(name=="group_placement_radius" && value==row.radius) radius=true;
                 else if(name=="group_variance" && value==int(row.variance)) variance=true;

@@ -1001,3 +1001,28 @@ All8/16/32 Banthas respectively retain zero extra idle delay. The native fixture
 check full object counts/order/poses, RNG, every herd frame, and imported Bantha
 identity, position and animation. Evidence is `rms-controlled-forest18-bantha833{,-half,-double}-fullstage-oracle-2026-11-15.json`.
 Later optional833 rows and mixed Ronto chains require additional comparisons.
+
+## Ronto1364 placement and constructor: 2026-11-15
+
+Eight original13-row prefix replays use actual1364 master/header/graphics/sound
+records, with forage3 and both Nerf rows before the terminal Ronto row. Unlike
+822/1249, its collision radius and clearance are0.3; it does not require the
+entire surrounding3×3 tile footprint. Native placement now consults validated
+clearance for that rejection test. The prototype retains restriction19,8 frames,
+0.12-second duration,0.5-second replay delay,400 food and training sound624.
+
+| Row | Requested per group | Rontos created | Final RNG | Full Gaia pose/facet FNV |
+|---|---:|---:|---:|---:|
+| Loose near | 2 | 4 | 3957987938 | 3952837900 |
+| Loose near | 1 | 2 | 261303900 | 3832532001 |
+| Loose near | 4 | 8 | 426697310 | 2164337889 |
+| Loose far | 1 | 2 | 1126655240 | 98383283 |
+| Loose far | 3 | 5 | 3597322543 | 2006571828 |
+| Loose far | 6 | 12 | 4044577126 | 2025509104 |
+| Ungrouped near | 1 | 2 | 3550983994 | 492535568 |
+| Ungrouped near | 2 | 4 | 1585104208 | 863600152 |
+
+The fixture also verifies each Ronto's frame, extra idle delay and heading, then
+checks native game import. These are isolated terminal-row comparisons; later
+Ronto chains still need full-script/live coverage. Evidence files are
+`rms-controlled-ronto1364-{two,near-quantities,far-quantities,ungrouped}-fullstage-oracle-2026-11-15.json`.
