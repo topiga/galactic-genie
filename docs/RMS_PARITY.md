@@ -1496,3 +1496,19 @@ native rendering heights in surviving-ID order: 24 cliffs at height 1 and 23 at
 height 0. The headless render contains 47 objects with final RNG 2269132341;
 `cliff-elevated-native.png` is retained in the external build directory. This
 checks height placement, not visual equality to an original Windows frame.
+
+
+### Combined elevation, cliffs and grass painting
+
+The one-level elevation and single grass-0 terrain row can now be combined on
+the same bounded neutral-land profile. This supersedes the combination rejection
+above. Twenty-seven original replays cross all three elevation profiles with all
+three grass-painting profiles and three seeds. Both native section orders match
+the original scheduler's fixed elevation → cliff → terrain order.
+
+The checks cover terrain, height and slope arrays, surviving cliff records and
+final RNG. Original terrain painting is also asserted to preserve the preceding
+height/slope arrays. The reference row layout remains explicit: terrain ID at
++8, not +4. Local evidence is `rms-cliff-composed-cases-oracle-2026-11-15.json`.
+Forests, connections, owned starts and multiple elevation levels still require
+further composed evidence; no additional packaged map is claimed.

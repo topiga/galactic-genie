@@ -139,6 +139,62 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
         for(auto tile:map.terrain) check(tile==6,"elevated cliffs preserve grass terrain");
         check(map.scenery.empty() && map.objects.empty(),"elevated grass adds no scenery");
     }
+    const char *elevationProfiles[]={
+        "<ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles 400 number_of_clumps 8 } ",
+        "<ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles 1000 number_of_clumps 2 } ",
+        "<ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles 8000 number_of_clumps 30 } "};
+    const char *terrainProfiles[]={
+        "<TERRAIN_GENERATION> create_terrain 0 { base_terrain 6 number_of_tiles 30 number_of_clumps 3 spacing_to_other_terrain_types 1 clumping_factor 10 set_flat_terrain_only } ",
+        "<TERRAIN_GENERATION> create_terrain 0 { base_terrain 6 number_of_tiles 2000 number_of_clumps 20 spacing_to_other_terrain_types 2 clumping_factor 20 } ",
+        "<TERRAIN_GENERATION> create_terrain 0 { base_terrain 6 number_of_tiles 8000 number_of_clumps 1 spacing_to_other_terrain_types 0 clumping_factor 0 } "};
+    struct ComposedCase { int elevation,paint; uint32_t seed,rng,objects,terrain,heights,slopes; size_t count; };
+    const ComposedCase composedCases[]={
+        {0,0,1u,1669067597u,291107893u,3322776917u,73028170u,3169292009u,29},
+        {0,0,12345u,2766064017u,1991487999u,1926381653u,1897583699u,1760096298u,55},
+        {0,0,4294967295u,4219911869u,1565698685u,525050579u,3593664539u,3804388132u,20},
+        {0,1,1u,1414928774u,291107893u,179978549u,73028170u,3169292009u,29},
+        {0,1,12345u,2607552378u,1991487999u,2991465267u,1897583699u,1760096298u,55},
+        {0,1,4294967295u,2143772937u,1565698685u,1199486021u,3593664539u,3804388132u,20},
+        {0,2,1u,1151360151u,291107893u,3177634035u,73028170u,3169292009u,29},
+        {0,2,12345u,1138811651u,1991487999u,4155714179u,1897583699u,1760096298u,55},
+        {0,2,4294967295u,2516137956u,1565698685u,1747737461u,3593664539u,3804388132u,20},
+        {1,0,1u,3299953103u,1053432523u,3922290179u,2939230450u,463713662u,27},
+        {1,0,12345u,3892837138u,2160117617u,3306366643u,2456656715u,1555305034u,30},
+        {1,0,4294967295u,683634326u,1763354238u,2976045685u,92000700u,4288308406u,35},
+        {1,1,1u,284299030u,1053432523u,1104645555u,2939230450u,463713662u,27},
+        {1,1,12345u,2829043695u,2160117617u,2094912259u,2456656715u,1555305034u,30},
+        {1,1,4294967295u,1517942319u,1763354238u,3737583109u,92000700u,4288308406u,35},
+        {1,2,1u,610403274u,1053432523u,2367995939u,2939230450u,463713662u,27},
+        {1,2,12345u,2206464246u,2160117617u,3139625685u,2456656715u,1555305034u,30},
+        {1,2,4294967295u,4180202955u,1763354238u,248722979u,92000700u,4288308406u,35},
+        {2,0,1u,1697189782u,3231355347u,681091941u,1601223514u,3045030720u,47},
+        {2,0,12345u,2255696495u,1829178315u,1955985493u,3368565405u,202350159u,42},
+        {2,0,4294967295u,3018555015u,2453755317u,1124132885u,2749370310u,3751637635u,50},
+        {2,1,1u,3126289683u,3231355347u,700999331u,1601223514u,3045030720u,47},
+        {2,1,12345u,2156550556u,1829178315u,308214373u,3368565405u,202350159u,42},
+        {2,1,4294967295u,1674459729u,2453755317u,1794881765u,2749370310u,3751637635u,50},
+        {2,2,1u,3481116158u,3231355347u,4248104451u,1601223514u,3045030720u,47},
+        {2,2,12345u,4287602241u,1829178315u,921911525u,3368565405u,202350159u,42},
+        {2,2,4294967295u,4083295235u,2453755317u,2518593189u,2749370310u,3751637635u,50},
+    };
+    for(const auto &c:composedCases) for(bool late:{false,true}) {
+        load(land+(late?std::string(terrainProfiles[c.paint])+"<CLIFF_GENERATION> "+elevationProfiles[c.elevation]:
+            std::string(elevationProfiles[c.elevation])+"<CLIFF_GENERATION> "+terrainProfiles[c.paint]));
+        uint32_t rng=c.seed;
+        check(generateRmsMap(script,{},120,120,data,rng,map,&error),error.c_str());
+        uint32_t objects=2166136261u,terrain=2166136261u,heights=2166136261u,slopes=2166136261u;
+        for(const auto &o:map.cliffs)
+            for(uint32_t v:{uint32_t(o.unit),uint32_t(o.facet),uint32_t(o.x*2),uint32_t(o.y*2),o.creationOrdinal})
+                objects=(objects^v)*16777619u;
+        for(auto t:map.terrain) terrain=(terrain^t)*16777619u;
+        for(auto h:map.elevation) heights=(heights^h)*16777619u;
+        for(auto slope:map.slopes) slopes=(slopes^slope)*16777619u;
+        if(rng!=c.rng || objects!=c.objects || terrain!=c.terrain || heights!=c.heights || slopes!=c.slopes)
+            std::cerr<<"elevation/cliff/grass "<<c.elevation<<' '<<c.paint<<' '<<c.seed<<" mismatch\n";
+        check(rng==c.rng && objects==c.objects && terrain==c.terrain && heights==c.heights && slopes==c.slopes && map.cliffs.size()==c.count,
+            "original combined elevation/cliff/grass terrain, objects and RNG");
+        check(map.scenery.empty() && map.objects.empty(),"combined elevated grass adds no scenery");
+    }
     uint32_t rng=1;
     load(land+"<CLIFF_GENERATION> min_distance_cliffs 0");
     check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1 && map.cliffs.empty(),"unsupported cliff spacing is transactional");
@@ -154,7 +210,7 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
     for(const char *elevation:{
         "<ELEVATION_GENERATION>",
         "<ELEVATION_GENERATION> create_elevation 2 { base_terrain 6 number_of_tiles 400 }",
-        "<ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles 400 } <TERRAIN_GENERATION> create_terrain 0 { base_terrain 6 number_of_tiles 30 }"}) {
+        "<ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles 400 } create_elevation 1 { base_terrain 6 number_of_tiles 300 }"}) {
         load(land+"<CLIFF_GENERATION> "+elevation);
         check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1 && map.cliffs.empty(),
             "unverified cliff elevation combinations remain transactional");
