@@ -20,9 +20,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     uint32_t &randomState, RmsMap &out, std::string *err, uint32_t playerCount,
                     const std::vector<uint16_t> &playerCivilizations,
                     const std::vector<std::vector<uint8_t>> &diplomacy) {
-    const auto isTree=[](int unit){return unit==348 || unit==349 || unit==411 || unit==413;};
+    const auto isTree=[](int unit){return unit==348 || unit==349 || unit==350 || unit==411 || unit==413;};
     const auto isBigHunt=[](int unit){return unit==822 || unit==1249 || unit==1364;};
-    const auto isPredator=[](int unit){return unit==126 || unit==812 || unit==1197;};
+    const auto isPredator=[](int unit){return unit==126 || unit==812 || unit==1197 || unit==1250 || unit==1129;};
     out = {};
     if (err) err->clear();
     std::vector<RmsToken> tokens;
@@ -105,7 +105,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     size_t resourceProfile=0;
     unsigned prefixHunts=0;
     bool distantHunt=false;
-    bool lateKaadu=false;
+    bool lateHunt=false;
     constexpr int scoutIds[]={550,552,556,554,258,558,927,932};
     int workerMinDistance=1,workerMaxDistance=3;
     bool startingStalagmites = false;
@@ -328,30 +328,33 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 return fail("unsupported resource row after verified stock prefix");
             if(holocrons && resourceProfile==0 && i<tokens.size() && tokens[i].text=="66")resourceProfile=1;
             if(holocrons && resourceProfile==6 && i<tokens.size() &&
-               (tokens[i].text=="1363" || tokens[i].text=="1365" || tokens[i].text=="812" || tokens[i].text=="1197"))resourceProfile=8;
+               (tokens[i].text=="1363" || tokens[i].text=="1365" || tokens[i].text=="812" || tokens[i].text=="1197" || tokens[i].text=="1250" || tokens[i].text=="1129"))resourceProfile=8;
             // shortcut: one initial hunt and up to two large-hunt rows; verify other sequences before accepting them.
             if(holocrons && resourceProfile==8 && prefixHunts &&
-               (i==tokens.size() || (tokens[i].text!="126" && tokens[i].text!="812" && tokens[i].text!="1197" &&
+               (i==tokens.size() || (tokens[i].text!="126" && tokens[i].text!="812" && tokens[i].text!="1197" && tokens[i].text!="1250" && tokens[i].text!="1129" &&
                 (prefixHunts>=3 || (tokens[i].text!="822" && tokens[i].text!="1249" && tokens[i].text!="1364")))))
                 return fail("unsupported additional hunt row");
+            // Arid omits the bird row before its global predator.
+            if(holocrons && resourceProfile==13 && (base==14 || base==26) && i<tokens.size() &&
+                (tokens[i].text=="1250" || tokens[i].text=="1129" || tokens[i].text=="126"))resourceProfile=14;
             if(holocrons && resourceProfile==15 && i<tokens.size() && tokens[i].text=="1585")resourceProfile=16;
             auto row=stockResources[holocrons?resourceProfile:1];
             if(holocrons && i<tokens.size()) {
                 if(resourceProfile==15 && (tokens[i].text=="594" || tokens[i].text=="833"))row=stockResources[6];
                 if(resourceProfile==15 && tokens[i].text=="1363")row.unit=1363;
-                if(resourceProfile==17 && tokens[i].text=="1363") {
-                    if(lateKaadu || distantHunt) return fail("unsupported repeated late hunt");
-                    row={1363,4,3,19,-1,0,RmsResourceDistance::Far,1,1,1};
+                if(resourceProfile==17 && (tokens[i].text=="1363" || ((base==14 || base==26) && tokens[i].text=="1365"))) {
+                    if(lateHunt || distantHunt) return fail("unsupported repeated late hunt");
+                    row={int16_t(tokens[i].text=="1365"?1365:1363),4,3,19,-1,0,RmsResourceDistance::Far,1,1,1};
                 }
-                if(resourceProfile==17 && tokens[i].text=="411") {
+                if(resourceProfile==17 && (tokens[i].text=="411" || (base==26 && tokens[i].text=="350"))) {
                     for(size_t p=i+2;p+1<tokens.size() && tokens[p].text!="}";++p)
                         if(tokens[p].text=="number_of_objects" && tokens[p+1].text=="30")
-                            row={411,1,3,8,-1,0,RmsResourceDistance::Near,0,30,0,true,true};
+                            row={int16_t(tokens[i].text=="350"?350:411),1,3,8,-1,0,RmsResourceDistance::Near,0,30,0,true,true};
                 }
                 if(resourceProfile==18 && tokens[i].text=="102")
                     row={102,4,2,40,-1,9,RmsResourceDistance::Near,2,2,1,true};
                 if((resourceProfile==15 || resourceProfile==17) && (tokens[i].text=="822" || tokens[i].text=="1249" || tokens[i].text=="1364")) {
-                    if(resourceProfile==17 && (distantHunt || lateKaadu))return fail("unsupported repeated distant hunt row");
+                    if(resourceProfile==17 && (distantHunt || lateHunt))return fail("unsupported repeated distant hunt row");
                     row.unit=tokens[i].text=="822"?822:tokens[i].text=="1249"?1249:1364;
                 }
             }
@@ -361,9 +364,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 else if(tokens[i].text=="822") row.unit=822;
                 else if(tokens[i].text=="1249") row.unit=1249;
                 else if(tokens[i].text=="1364") row.unit=1364;
-                else if(tokens[i].text=="126" || tokens[i].text=="812" || tokens[i].text=="1197") row={int16_t(tokens[i].text=="812"?812:tokens[i].text=="1197"?1197:126),1,3,30,40,0,RmsResourceDistance::Far,0,2};
+                else if(tokens[i].text=="126" || tokens[i].text=="812" || tokens[i].text=="1197" || tokens[i].text=="1250" || tokens[i].text=="1129") row={int16_t(tokens[i].text=="1250"?1250:tokens[i].text=="1129"?1129:tokens[i].text=="812"?812:tokens[i].text=="1197"?1197:126),1,3,30,40,0,RmsResourceDistance::Far,0,2};
             }
-            if(row.unit==126 && i<tokens.size() && (tokens[i].text=="812" || tokens[i].text=="1197")) row.unit=int16_t(tokens[i].text=="812"?812:tokens[i].text=="1197"?1197:126);
+            if(row.unit==126 && i<tokens.size() && (tokens[i].text=="812" || tokens[i].text=="1197" || tokens[i].text=="1250" || tokens[i].text=="1129")) row.unit=int16_t(tokens[i].text=="1250"?1250:tokens[i].text=="1129"?1129:tokens[i].text=="812"?812:1197);
             if(isBigHunt(row.unit)) {
                 bool loose=false,distant=false;
                 for(size_t p=i+2;p+1<tokens.size() && tokens[p].text!="}";++p) {
@@ -378,12 +381,12 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 else if(loose)row={row.unit,row.unit==822?4:2,3,16,22,0,RmsResourceDistance::Near,1,1};
                 else row={row.unit,1,3,16,22,0,RmsResourceDistance::Near,0,1};
             }
-            if(row.unit==413 && i<tokens.size() && (tokens[i].text=="348" || tokens[i].text=="349" || tokens[i].text=="411"))
-                row.unit=tokens[i].text=="348"?348:tokens[i].text=="349"?349:411;
+            if(row.unit==413 && i<tokens.size() && (tokens[i].text=="348" || tokens[i].text=="349" || tokens[i].text=="350" || tokens[i].text=="411"))
+                row.unit=tokens[i].text=="348"?348:tokens[i].text=="349"?349:tokens[i].text=="350"?350:411;
             const bool animal=row.unit==594 || row.unit==833 || row.unit==1363 || row.unit==1365 || isPredator(row.unit) || isBigHunt(row.unit);
             if (!number(value) || value!=row.unit || i==tokens.size() || tokens[i++].text!="{")
                 return fail("expected next verified stock resource row");
-            bool each=row.global,gaia=row.global,mode=row.mode==0,count=false,inner=row.inner<0,outer=(row.global || isBigHunt(row.unit) || (row.unit==1363 && row.inner==19)) && row.outer<0;
+            bool each=row.global,gaia=row.global,mode=row.mode==0,count=false,inner=row.inner<0,outer=(row.global || isBigHunt(row.unit) || ((row.unit==1363 || row.unit==1365) && row.inner==19)) && row.outer<0;
             bool scale=!row.scaled,terrainFilter=row.unit!=1585;
             bool spacing=row.spacing==0,zone=animal || row.global || isTree(row.unit),radius=row.radius==3,groups=row.mode==0 || row.groups==1,variance=row.variance==0;
             while (i<tokens.size() && tokens[i].text!="}") {
@@ -408,11 +411,13 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             }
             if(i==tokens.size() || !each || !gaia || !mode || !count || !inner || !outer || !spacing || !zone || !radius || !groups || !variance || !scale || !terrainFilter)
                 return fail("incomplete stock per-player resource row");
+            if(row.unit==1365 && row.inner==19 && row.count!=4 && row.count!=8)
+                return fail("unverified late Eopie count");
             ++i;resourceRows.push_back(row);
             if(holocrons) {
                 if(resourceProfile==8 && !isPredator(row.unit))++prefixHunts;
                 else if(resourceProfile==17 && isBigHunt(row.unit))distantHunt=true;
-                else if(resourceProfile==17 && row.unit==1363)lateKaadu=true;
+                else if(resourceProfile==17 && (row.unit==1363 || row.unit==1365))lateHunt=true;
                 else ++resourceProfile;
             }
             if(!holocrons) nearNova=true;
@@ -525,40 +530,42 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     if(resourceRows[i].unit!=units[i] || resourceRows[i].count!=counts[i]) cliffResources=false;
             }
         }
-        // Verified packaged Reytha geometry; other cliff compositions remain gated.
-        const bool reythaGeometry=[&]() {
-            if(width!=120 || height!=120 || base!=41 || !playerLands || playerCount!=2 ||
+        // Verified packaged Reytha/Arid geometry; other cliff compositions remain gated.
+        const bool packagedCliffGeometry=[&]() {
+            const unsigned kind=base==14?1:base==26?2:0;
+            const bool arid=kind!=0;
+            if(width!=120 || height!=120 || (base!=41 && !arid) || !playerLands || playerCount!=2 ||
                 lands.size()!=2 || playerZoneOverride || !ownedObjects || !startingWorkers ||
                 !startingScouts || startingStalagmites || workerMinDistance!=6 || workerMaxDistance!=6 ||
                 playerCivilizations!=std::vector<uint16_t>{1,1} || !defines.count("FIXED_POSITIONS") ||
                 connectionStage || !elevationStage || elevationRows.size()!=7 || terrainRows.size()!=5 ||
-                cliffSettings.minCount!=30 || cliffSettings.maxCount!=60 || cliffSettings.minLength!=5 ||
-                cliffSettings.maxLength!=20 || cliffSettings.curl!=36 || cliffSettings.waterDistance!=2 ||
+                cliffSettings.minCount!=(arid?10:30) || cliffSettings.maxCount!=(arid?15:60) || cliffSettings.minLength!=(arid?3:5) ||
+                cliffSettings.maxLength!=(arid?10:20) || cliffSettings.curl!=36 || cliffSettings.waterDistance!=2 ||
                 cliffSettings.cliffDistance!=2) return false;
             for(size_t i=0;i<lands.size();++i) {
                 const auto &land=lands[i];
-                if(land.terrain!=41 || land.radius!=9 || land.targetTiles!=1800 || land.zone!=int(i+1) ||
+                if(land.terrain!=base || land.radius!=9 || land.targetTiles!=1800 || land.zone!=int(i+1) ||
                     land.clumpingFactor!=8 || land.borderFuzziness!=15 || land.separation ||
                     land.leftBorder || land.topBorder || land.rightBorder!=-1 || land.bottomBorder!=-1 ||
                     placements[i].x!=-1 || placements[i].y!=-1 || placements[i].minPlacementDistance!=-1) return false;
             }
-            const uint32_t terrain[]={10,9,6,6,44}, tiles[]={1728,2016,720,432,288};
-            const uint32_t clumps[]={28,50,8,12,10}, spacing[]={5,1,1,1,1};
+            const uint32_t terrain[3][5]={{10,9,6,6,44},{50,46,50,45,46},{19,46,19,45,14}}, tiles[3][5]={{1728,2016,720,432,288},{1728,2880,144,288,288},{1728,2880,144,288,288}};
+            const uint32_t clumps[3][5]={{28,50,8,12,10},{17,16,7,24,30},{17,16,7,24,30}}, spacing[3][5]={{5,1,1,1,1},{5,0,3,1,1},{5,0,3,1,1}};
             for(size_t i=0;i<terrainRows.size();++i) {
                 const auto &row=terrainRows[i];
-                if(row.terrain!=terrain[i] || row.baseTerrain!=41 || row.targetTiles!=tiles[i] ||
-                    row.clumps!=clumps[i] || row.spacing!=spacing[i] || row.clumping!=20 ||
-                    row.avoidPlayerStarts!=(i==0) || row.flatTerrainOnly ||
+                if(row.terrain!=terrain[kind][i] || row.baseTerrain!=base || row.targetTiles!=tiles[kind][i] ||
+                    row.clumps!=clumps[kind][i] || row.spacing!=spacing[kind][i] || row.clumping!=20 ||
+                    row.avoidPlayerStarts!=(i==0 || (arid && i==2)) || row.flatTerrainOnly ||
                     row.minHeight!=0 || row.maxHeight!=255) return false;
             }
             for(size_t i=0;i<elevationRows.size();++i) {
                 const auto &row=elevationRows[i];
-                if(row.elevation!=i+1 || row.baseHeight!=i || row.baseTerrain!=41 ||
-                    row.targetTiles!=2000 || row.clumps!=21 || row.spacing!=(i==0?2u:1u)) return false;
+                if(row.elevation!=i+1 || row.baseHeight!=i || row.baseTerrain!=base ||
+                    row.targetTiles!=(arid?6000u:2000u) || row.clumps!=(arid?28u:21u) || row.spacing!=(i==0?2u:1u)) return false;
             }
             return true;
         }();
-        if(!reythaGeometry) {
+        if(!packagedCliffGeometry) {
             const bool ownedCliff=ownedObjects && startingWorkers && startingScouts &&
                 workerMinDistance==6 && workerMaxDistance==6 && !startingStalagmites &&
                 cliffResources && playerCivilizations.size()==2 &&
@@ -621,7 +628,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if(playerZoneOverride && ownedObjects) return fail("owned startup with explicit player zones remains unverified");
     if(ownedObjects && lands.size()!=playerCount) return fail("mixed-land owned-object startup remains unverified");
     const bool ownedForest=ownedObjects && playerLands && base==41 && lands[0].terrain==9;
-    const bool ownedMixedForest=ownedObjects && playerLands && (base==6 || base==12 || base==41) && lands[0].terrain==base &&
+    const bool ownedMixedForest=ownedObjects && playerLands && (base==6 || base==12 || base==14 || base==26 || base==41) && lands[0].terrain==base &&
         width==120 && height==120 && playerCount==2 && playerCivilizations.size()==2 &&
         std::all_of(playerCivilizations.begin(),playerCivilizations.end(),[](uint16_t civ){return civ>=1 && civ<=8;}) &&
         startingWorkers && startingScouts && workerMinDistance==6 && workerMaxDistance==6 &&
@@ -869,7 +876,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     }
     if(std::any_of(generated.elevation.begin(),generated.elevation.end(),[](uint8_t h){return h!=0;})) {
         if((hasObjects && !ownedObjects) || (ownedObjects && !ownedMixedForest) || earlyForest) return fail("object startup on elevations is not verified");
-        for(uint8_t terrain:generated.terrain) if(terrain!=10 && terrain!=18 && terrain!=20 && terrain!=21 && !safeTerrain(terrain))
+        for(uint8_t terrain:generated.terrain) if(terrain!=10 && terrain!=18 && terrain!=20 && terrain!=21 && terrain!=19 && terrain!=50 && !safeTerrain(terrain))
             return fail("scenery startup on elevations is not verified");
     }
     std::vector<uint8_t> sceneryOccupied;
@@ -900,10 +907,10 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 return fail("owned forest starts require dry terrain and live411 scenery");
         } else if (ownedMixedForest) {
             for(auto tile:generated.terrain)
-                if(tile!=1 && tile!=2 && tile!=4 && tile!=5 && tile!=6 && tile!=9 && tile!=10 && tile!=12 && tile!=18 && tile!=20 && tile!=21 && tile!=22 && tile!=41 && tile!=44)
+                if(tile!=1 && tile!=2 && tile!=4 && tile!=5 && tile!=6 && tile!=9 && tile!=10 && tile!=12 && tile!=18 && tile!=20 && tile!=21 && tile!=22 && tile!=41 && tile!=44 && tile!=14 && tile!=45 && tile!=46 && tile!=50 && tile!=19 && tile!=26)
                     return fail("unsupported Forest startup terrain "+std::to_string(tile));
             for(const auto &tree:generated.scenery)
-                if(!isTree(tree.unitId) || !tree.alive) return fail("Forest startup requires live348/349/411/413 scenery");
+                if((!isTree(tree.unitId) && tree.unitId!=217) || !tree.alive) return fail("Forest startup requires live348/349/411/413 scenery");
         } else if (!generated.scenery.empty() ||
                    std::any_of(generated.terrain.begin(),generated.terrain.end(),[](uint8_t tile){return tile!=0;}))
             return fail("owned109 requires scenery-free grass");
@@ -1062,7 +1069,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     global.minDistance=row.inner;global.spacing=row.spacing;
                 }
                 const RmsResourcePlayerRange range{row.inner,row.outer};
-                const bool explicitRange=row.unit==1363 && row.inner==19 && row.outer==-1;
+                const bool explicitRange=(row.unit==1363 || row.unit==1365) && row.inner==19 && row.outer==-1;
                 if(!generateRmsGroupedResourcePlacements(width,height,generated.terrain,data,row.unit,group,rng,
                     placed,err,rowBlockers,16000000,row.global?std::vector<RmsPlayerStart>{}:generated.playerStarts,
                     row.distance,&eligibility,(row.global && row.inner>=0)?&global:nullptr,

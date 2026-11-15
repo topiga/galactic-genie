@@ -51,7 +51,7 @@ struct RmsResourceGroups {
     uint8_t mode=1; // Original0 individual,1 loose or2 tight.
     uint32_t groups=1, perGroup=1, variance=0, radius=3;
 };
-// Verified Reytha Kaadu override: minimum19, no maximum, counts4/8.
+// Verified Reytha/Arid Kaadu/Eopie override: minimum19, no maximum, counts4/8.
 struct RmsResourcePlayerRange { int32_t minimum, maximum; };
 // Original global selector-2 uses every land record, including neutral lands.
 // No terrain selector, temporary spacing or zone-clearance modifiers here.
@@ -77,13 +77,13 @@ struct RmsGlobalGroupPlacement {
 // distance16..22, no variance, clearance3x3 and no outermost tile placements.
 // Far large hunt uses loose3/variance1, min35, no maximum, spacing5 and one group/player.
 // Their constructors consume seven draws, including three action timers.
-// Predators126/812/1197 support Far ungrouped mode0: two single objects/player at30..40,
+// Predators126/812/1197/1250/1129 support Far ungrouped mode0: two single objects/player at30..40,
 // radius3, no variance/spacing; no grouped placement or variance draws.
-// Trees348/349/411/413 support Near2/player at4..5 or Far3/player at6..8, mode0,
+// Trees348/349/350/411/413 support Near2/player at4..5 or Far3/player at6..8, mode0,
 // spacing2, radius3, no variance; restriction11 and one static facet draw.
 // Global trees348/349/411/413 support100 mode0 placements, player exclusion6 and spacing2.
-// Reytha also supports43 global411 placements, exclusion8 and no spacing.
-// Global predators126/812/1197 support four scaled loose single-object groups (1197 also pairs), exclusion40,
+// Reytha/Arid also support43 global411/350 placements, exclusion8 and no spacing.
+// Global predators126/812/1197/1250/1129 support four scaled loose single-object groups (1197 also pairs), exclusion40,
 // spacing12; Forest Eopie1365 also supports three objects with variance1.
 // Tree occupancy must include all retained mobiles as well as scenery/deposits
 // and building footprints; trees block later placements on their tile.

@@ -2,10 +2,11 @@
 
 ## Current comparison coverage: 2026-11-15
 
-Packaged **Forest54204 and Reytha54220** now have complete original-runner
-comparisons for three seeds each in the fixed, Tiny, two-Empire profile. The
-production acceptance audit passes6/138 attempts (two of46 map resources).
-This is bounded startup coverage; it is not general engine or gameplay parity.
+Packaged **Forest54204, Reytha54220 and Arid54201** now have complete original-runner
+comparisons in the fixed, Tiny, two-Empire profile: three seeds each for Forest
+and Reytha, four for Arid. The standard production audit passes9/138 attempts
+(three of46 map resources). This is bounded startup coverage; it is not general
+engine or gameplay parity.
 
 Forest resource 54204 now runs directly from `gamedata_x1.drs`, including all 23
 object rows. For seed 16160, 120×120, Tiny, FIXED_POSITIONS, DEFAULT_RESOURCES and two
@@ -2203,3 +2204,48 @@ all three seeds. The remaining132 attempts still reject unsupported placement
 rules. These are local original-executable comparisons, not a fresh live Windows
 UI/settings comparison. The desktop's normal skirmish launcher still uses its
 procedural setup; RMS-backed menu integration and later simulation remain open.
+
+### Packaged Arid: Tatooine and Zaloriis
+
+Arid54201 now has complete original-runner comparisons for fixed Tiny120,
+DEFAULT_RESOURCES, two Empire players. Three cases cover the Tatooine branch;
+seed16160 covers Zaloriis, including its automatic roots and scaled explicit trees.
+
+| Seed | Branch | Live objects | Final RNG |
+|---|---|---:|---:|
+| 1 | Tatooine | 2,002 | 1324588119 |
+| 12345 | Tatooine | 2,040 | 3205565334 |
+| 16160 | Zaloriis | 2,061 | 1931636252 |
+| 4294967295 | Tatooine | 2,091 | 3111280523 |
+
+The original full runner and native generator agree on all ordered object
+ID/type/owner/facet/position records, terrain/elevation/slopes, owned foundation
+state, animated startup poses and final RNG. The fourth case specifically covers
+the unbounded late Eopie group of8; the first covers4. Count2 remains gated.
+New captured assets include automatic carbon217, explicit roots350, Jawa1250 and
+Krayt1129. Exact original DAT loader spans, master/graphic/sound/task-header data
+and executable/source hashes are retained in the private Arid provenance record.
+
+`rms_packaged_startup_checks.h` shares the Reytha and Arid regression machinery:
+seven complete-map cases and404 original owned/animated Gaia records. A native
+import failure exposed a fixed species list that discarded Jawa/Krayt animation
+state. Import now applies the pose carried by every generated resource instead
+of maintaining a second species list. Original HP, animation time and hold checks
+cover the fix, alongside object IDs/positions and flat-tile elevation.
+
+Arid geometry is gated to its compared base14/26 profiles, five terrain rows,
+seven6000-tile elevation levels, and10–15 cliffs of length3–10. Existing scenery
+validation already covered carbon217 and roots350; the resource and owned-startup
+paths now accept the verified compositions. Additional tests keep global Jawa/
+Krayt pairs and the unverified100-root profile rejected without advancing RNG or
+changing eligibility. Only43 global roots at minimum distance8 are added.
+
+Evidence: `rms-text-full-arid-1-1-*-oracle-2026-11-15.json`, matching comparison
+files, and `rms-arid-assets-provenance-2026-11-15.json`. These are configured-world
+original-executable runs, not new live Windows UI or later gameplay comparisons.
+
+
+The final Arid production audit accepts9/138 standard combinations and rejects
+129 unsupported cases. Forest/Reytha/Arid native import,19 algorithm suites,
+archive rendering and desktop smoke checks pass. The smoke check also verifies
+effects and streamed music; it does not establish original sound mixing parity.

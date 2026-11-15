@@ -42,7 +42,7 @@ static void check(bool value, const char *message) {
 #include "rms_global_predator_checks.h"
 #include "rms_forest_hunt_checks.h"
 #include "rms_packaged_forest_checks.h"
-#include "rms_packaged_reytha_checks.h"
+#include "rms_packaged_startup_checks.h"
 #include "rms_cliff_map_checks.h"
 #include "rms_coordinate_checks.h"
 #include "rms_cliff_import_checks.h"
@@ -311,7 +311,7 @@ int main(int argc, char **argv) {
         checkRmsCliffMap(assets.dat());
         checkRmsCliffImport(assets);
         rmsPackagedForestChecks(assets,argv[1]);
-        rmsPackagedReythaChecks(assets,argv[1]);
+        rmsPackagedStartupChecks(assets,argv[1]);
         rmsHuntProfileChecks(assets,argv[1]);
         rmsWaveChecks(assets.dat());
         checkRmsForest21Owned(assets);

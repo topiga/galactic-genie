@@ -172,13 +172,14 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
         assert '2065 native objects, final RNG 1567879473' in wooded
         assert (work/f'cliff-forest-{terrain_type}.png').stat().st_size>1000
 
-    reytha_settings=['--players',2,'--civilization',1,'--civilization',1]
+    packaged_settings=['--players',2,'--civilization',1,'--civilization',1]
     for label in ['TINY_MAP','RANDOM_MAP','2_PLAYERS','FIXED_POSITIONS','DEFAULT_RESOURCES']:
-        reytha_settings += ['--define',label]
-    for seed,count,rng in [(1,1981,3962920155),(12345,2013,1129739132),(16160,1940,4000893853)]:
-        output=work/f'reytha-{seed}.png'
-        rendered_reytha=run(['render-rms-resource',data,data/'gamedata_x1.drs',54220,120,seed,output,*reytha_settings],0)
-        assert f'{count} native objects, final RNG {rng}' in rendered_reytha
+        packaged_settings += ['--define',label]
+    for resource,seed,count,rng in [(54220,1,1981,3962920155),(54220,12345,2013,1129739132),(54220,16160,1940,4000893853),
+                                     (54201,1,2002,1324588119),(54201,12345,2040,3205565334),(54201,16160,2061,1931636252),(54201,4294967295,2091,3111280523)]:
+        output=work/f'packaged-{resource}-{seed}.png'
+        rendered_map=run(['render-rms-resource',data,data/'gamedata_x1.drs',resource,120,seed,output,*packaged_settings],0)
+        assert f'{count} native objects, final RNG {rng}' in rendered_map
         assert output.stat().st_size>1000
 
     rendered=run(['render-rms',data,work/'map.rms',32,1,work/'file.png'],0)
