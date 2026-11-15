@@ -22,10 +22,10 @@ The image `clone-campaigns-forest-full.png` in the external build directory is a
 native diagnostic render, not a claim of a fully configured playable match.
 Starting resources/UI map selection and later simulation remain separate work.
 
-Civilization coverage now includes all eight same-civilization pairs and both
-Empire/Gungan mixed orders in the Tiny Forest profile. Full controlled original
+Civilization coverage now includes all eight same-civilization pairs and all mixed orders among
+Empire, Gungans, Royal Naboo and Wookiees in the Tiny Forest profile. Full controlled original
 startup comparisons back these additions; live Windows coverage includes two
-Empire and two Gungan players. Other mixed orders remain gated.
+Empire, Gungan, Royal Naboo and Wookiee players. Other mixed orders remain gated.
 
 Fresh live Windows restarts independently verify fifteen more packaged Forest
 seeds with the same size, defines and civilizations:
@@ -1122,3 +1122,32 @@ Private evidence: `rms-controlled-six-civs-forest-fullstage-oracle-2026-11-14.js
 comparisons, not live Windows startup captures. All eight same-civilization pairs
 are now accepted in the verified Tiny Forest profile; mixed pairs remain limited
 to Empire/Gungans. Other sizes, settings, maps and simulation parity are not proven.
+
+The subsequent live Windows two-Wookiee seed16160 map matches all terrain,
+elevation and slope cells (1487786509/908132044/458332910), all197 static placements
+(hash163032056), and all7554 automatic tree positions/facets (hash2138192714).
+Evidence: `wookiee-live-seed16160-comparison-2026-11-15.json` and full-scenery
+companion. The seed override was restored; four moved AI owned objects and
+first-tick forage facets are treated separately from startup comparisons.
+
+### Mixed foundation/scout coverage and live Naboo check
+
+Controlled original replays now cover every two-owner order among Empire(1),
+Gungans(2), Royal Naboo(4) and Wookiees(6), plus the other four same-civilization
+pairs:20 pairings total. All match the full terrain raster, starting-object and
+Gaia creation order/poses, final RNG, and scout initial frames/hold times.
+The regression table retains per-case animation values because changing the
+first scout's sequence changes the second scout's random state. Other mixed
+civilization pairs remain outside this verified profile.
+
+Evidence adds `rms-controlled-mixed-scouts-forest-fullstage-oracle-2026-11-14.json`
+and `rms-controlled-mixed-foundations-forest-fullstage-oracle-2026-11-14.json`,
+both replayed November15. The original Empire/Empire fixture supplies the20th
+case;19 additional cases exercise native import.
+
+Live Windows two-Royal-Naboo seed16160 independently matches terrain/elevation/
+slopes (3348257725/908132044/458332910), all197 static placements (hash3153695046),
+and7554 trees including orientation (hash2138192714). This correctly differs
+from the Empire/Gungan/Wookiee static placement hash. Evidence:
+`naboo-live-seed16160-comparison-2026-11-15.json` and its full-scenery companion.
+The temporary seed override was restored after capture.

@@ -148,16 +148,26 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   check(hash==v.poses,"controlled resource all original Gaia poses/order");
   check(frames==v.frames && herds==uint32_t(v.nearHerd*2+v.farHerd*4+((v.lateHunt==1 || v.lateHunt==4)?4:0)),"controlled original Nerf animation frames/count");
   if(v.predator==812 && v.nearHerd==4 && v.farHerd==2 && v.globalPredatorSize==1 && v.forestTerrain==21) {
-   const struct {uint16_t a,b;uint32_t terrain,owned,gaia,rng;} starts[]={
-    {2,2,1056424125u,613198960u,1670957952u,278519141u},
-    {1,2,3348257725u,3019737774u,1670957952u,278519141u},
-    {2,1,1056424125u,888513054u,1670957952u,278519141u},
-    {3,3,3348257725u,1702013424u,1670957952u,278519141u},
-    {4,4,3348257725u,1822565916u,2499735454u,1059939153u},
-    {5,5,3348257725u,2911177344u,1670957952u,278519141u},
-    {6,6,1487786509u,110999744u,1670957952u,278519141u},
-    {7,7,3348257725u,2317300630u,1670957952u,278519141u},
-    {8,8,3348257725u,4270691504u,1670957952u,278519141u}};
+   const struct {uint16_t a,b;uint32_t terrain,owned,gaia,rng;uint8_t frames[2];float holds[2];} starts[]={
+    {1,2,3348257725u,3019737774u,1670957952u,278519141u,{0,7},{0.20000000298023224f,2.0397167205810547f}},
+    {1,4,3348257725u,322849871u,2764503797u,278519141u,{0,0},{0.20000000298023224f,0.f}},
+    {1,6,3348257725u,2708357880u,1670957952u,278519141u,{0,0},{0.20000000298023224f,2.3928465843200684f}},
+    {2,1,1056424125u,888513054u,1670957952u,278519141u,{7,0},{1.6274055242538452f,0.20000000298023224f}},
+    {2,2,1056424125u,613198960u,1670957952u,278519141u,{7,7},{1.6274055242538452f,2.0397167205810547f}},
+    {2,4,1056424125u,1635252389u,2764503797u,278519141u,{7,0},{1.6274055242538452f,0.f}},
+    {2,6,1056424125u,4067848006u,1670957952u,278519141u,{7,0},{1.6274055242538452f,2.3928465843200684f}},
+    {3,3,3348257725u,1702013424u,1670957952u,278519141u,{0,0},{2.1060214042663574f,2.3928465843200684f}},
+    {4,1,3348257725u,1524567696u,2764503797u,278519141u,{0,0},{0.f,0.20000000298023224f}},
+    {4,2,3348257725u,535125862u,2764503797u,278519141u,{0,7},{0.f,1.8306832313537598f}},
+    {4,4,3348257725u,1822565916u,2499735454u,1059939153u,{0,0},{0.f,0.f}},
+    {4,6,3348257725u,162884968u,2764503797u,278519141u,{0,0},{0.f,2.2474319934844971f}},
+    {5,5,3348257725u,2911177344u,1670957952u,278519141u,{0,0},{2.1060214042663574f,2.3928465843200684f}},
+    {6,1,1487786509u,158087352u,1670957952u,278519141u,{0,0},{2.1060214042663574f,0.20000000298023224f}},
+    {6,2,1487786509u,3628013846u,1670957952u,278519141u,{0,7},{2.1060214042663574f,2.0397167205810547f}},
+    {6,4,1487786509u,1999670679u,2764503797u,278519141u,{0,0},{2.1060214042663574f,0.f}},
+    {6,6,1487786509u,110999744u,1670957952u,278519141u,{0,0},{2.1060214042663574f,2.3928465843200684f}},
+    {7,7,3348257725u,2317300630u,1670957952u,278519141u,{0,0},{0.20000000298023224f,0.20000000298023224f}},
+    {8,8,3348257725u,4270691504u,1670957952u,278519141u,{0,0},{2.1060214042663574f,2.3928465843200684f}}};
    for(const auto &start:starts) {
     const std::vector<uint16_t> c{start.a,start.b};
     swgb::RmsMap civilMap;rng=1993207714u;
@@ -173,11 +183,9 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
      const auto&o=civilMap.ownedObjects[i];const uint32_t id=uint32_t(civilMap.scenery.size()+i+1);const auto pos=game.objectPosition(id);
      check(game.objectUnitId(id)==o.unitId && game.objectPlayer(id)==o.owner && pos[0]==o.x && pos[1]==o.y,"civilization native starting objects");
      if(i>=8) {
-      const auto civ=c[o.owner-1];const uint8_t frame=civ==2?7:0;
+      const uint8_t frame=start.frames[o.owner-1];
       // Original hold includes the remaining final-frame duration.
-      const float hold=civ==2?(o.owner==1?1.6274055242538452f:2.0397167205810547f):
-       (civ==1 || civ==4 || civ==7)?.2f:(o.owner==1?2.1060214042663574f:2.3928465843200684f);
-      const float delay=hold-.2f;
+      const float delay=std::max(0.f,start.holds[o.owner-1]-.2f);
       const auto animation=game.objectAnimationForTesting(id);
       check(o.animationFrame==frame && o.initialIdleDelay==delay && animation[0]==frame*.2f && animation[1]==delay,"original civilization scout animation/hold import");
      }
