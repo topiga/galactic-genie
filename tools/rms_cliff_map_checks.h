@@ -106,7 +106,7 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
             "original cliff/grass composition objects, terrain and RNG");
         check(map.scenery.empty() && map.objects.empty(),"grass painting adds no scenery");
     }
-    struct ElevationCase { int tiles,clumps; uint32_t seed,rng,objects,heights,slopes; size_t count; int levels=1; };
+    struct ElevationCase { int tiles,clumps; uint32_t seed,rng,objects,heights,slopes; size_t count; int levels=1; bool players=false; int radius=0,landTiles=0; int starts[4]={}; bool fixed=false; };
     const ElevationCase elevationCases[]={
         {400,8,1u,2790043587u,291107893u,73028170u,3169292009u,29},
         {400,8,12345u,3576478055u,1991487999u,1897583699u,1760096298u,55},
@@ -144,13 +144,85 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
         {8000,30,1u,2215531909u,3523760796u,2333374578u,4221510755u,33,7},
         {8000,30,12345u,354546605u,1620451199u,692390202u,2626351737u,21,7},
         {8000,30,4294967295u,1598187674u,1009416997u,1909161120u,2865734476u,23,7},
+    // Original player-start elevation fixtures.
+        {400,8,1u,1995058953u,3364809379u,12309844u,236994082u,56,1,true,0,0,{74,12,46,84}},
+        {400,8,12345u,4116843058u,3919801471u,2753260947u,1591046070u,50,1,true,0,0,{12,79,84,41}},
+        {400,8,4294967295u,3635463136u,303199313u,1306295804u,1693383110u,31,1,true,0,0,{84,36,12,84}},
+        {400,8,1u,210153367u,650003068u,1999539228u,721845981u,22,3,true,0,0,{74,12,46,84}},
+        {400,8,12345u,482612126u,1622478869u,2796781199u,3431789599u,57,3,true,0,0,{12,79,84,41}},
+        {400,8,4294967295u,881691909u,827758856u,2073401763u,2930724881u,26,3,true,0,0,{84,36,12,84}},
+        {400,8,1u,3840355360u,2643671894u,3209626752u,3413658336u,44,7,true,0,0,{74,12,46,84}},
+        {400,8,12345u,3306893800u,2654821246u,2796781199u,3431789599u,25,7,true,0,0,{12,79,84,41}},
+        {400,8,4294967295u,3408893495u,3300534189u,2073401763u,2930724881u,50,7,true,0,0,{84,36,12,84}},
+        {8000,30,1u,3865528380u,2082396613u,1022107935u,3187218613u,49,1,true,0,0,{74,12,46,84}},
+        {8000,30,12345u,648690130u,1150328989u,4118155315u,736111767u,43,1,true,0,0,{12,79,84,41}},
+        {8000,30,4294967295u,31631184u,1933778694u,2268685511u,2028927485u,52,1,true,0,0,{84,36,12,84}},
+        {8000,30,1u,3970890369u,3224671628u,1912191339u,3589811983u,18,3,true,0,0,{74,12,46,84}},
+        {8000,30,12345u,3421925170u,1175736917u,401406209u,3748360463u,42,3,true,0,0,{12,79,84,41}},
+        {8000,30,4294967295u,1959974914u,3635446589u,2067724609u,2537877688u,56,3,true,0,0,{84,36,12,84}},
+        {8000,30,1u,3849418268u,4135111115u,3117920766u,2112130330u,16,7,true,0,0,{74,12,46,84}},
+        {8000,30,12345u,193546924u,3028181901u,2593227541u,3077140705u,43,7,true,0,0,{12,79,84,41}},
+        {8000,30,4294967295u,2736757496u,1272547199u,2285120307u,3914706766u,54,7,true,0,0,{84,36,12,84}},
+        {400,8,1u,4006208942u,3212457071u,426350443u,662234876u,26,1,true,3,1000,{72,14,46,82}},
+        {400,8,12345u,3344981529u,118056021u,1528912526u,1897595252u,27,1,true,3,1000,{14,77,82,41}},
+        {400,8,4294967295u,1674984867u,1474064528u,2716822776u,2685437521u,22,1,true,3,1000,{82,36,14,82}},
+        {400,8,1u,1128436093u,1840274463u,2312869060u,1044734853u,35,3,true,3,1000,{72,14,46,82}},
+        {400,8,12345u,822420836u,4186990157u,2361950340u,3423919400u,40,3,true,3,1000,{14,77,82,41}},
+        {400,8,4294967295u,1673855504u,769499256u,2699085208u,3059665004u,43,3,true,3,1000,{82,36,14,82}},
+        {400,8,1u,590697170u,1929612677u,2312869060u,1044734853u,35,7,true,3,1000,{72,14,46,82}},
+        {400,8,12345u,3828657954u,1582454690u,2361950340u,3423919400u,37,7,true,3,1000,{14,77,82,41}},
+        {400,8,4294967295u,196095707u,3289567676u,2699085208u,3059665004u,41,7,true,3,1000,{82,36,14,82}},
+        {8000,30,1u,1207160766u,76987566u,389160915u,2884416204u,28,1,true,3,1000,{72,14,46,82}},
+        {8000,30,12345u,564247304u,2006983546u,286563138u,2606723533u,20,1,true,3,1000,{14,77,82,41}},
+        {8000,30,4294967295u,4016097278u,1940987282u,540938990u,1888255359u,28,1,true,3,1000,{82,36,14,82}},
+        {8000,30,1u,607458536u,3335614297u,4183680532u,1515222901u,58,3,true,3,1000,{72,14,46,82}},
+        {8000,30,12345u,3801056386u,170981321u,3323195500u,2962240089u,27,3,true,3,1000,{14,77,82,41}},
+        {8000,30,4294967295u,2834432269u,3682509440u,3196017593u,4066638470u,37,3,true,3,1000,{82,36,14,82}},
+        {8000,30,1u,3815347372u,2548773079u,3914419770u,4151614130u,27,7,true,3,1000,{72,14,46,82}},
+        {8000,30,12345u,985593129u,731366773u,4178185325u,722312589u,39,7,true,3,1000,{14,77,82,41}},
+        {8000,30,4294967295u,1370746591u,2955297168u,127487807u,2228696038u,25,7,true,3,1000,{82,36,14,82}},
+        {400,8,1u,2556414652u,853660327u,1328774902u,3114761957u,21,1,true,10,2000,{71,20,49,80}},
+        {400,8,12345u,2117498049u,2091893334u,2353545299u,1565845783u,49,1,true,10,2000,{20,76,80,44}},
+        {400,8,4294967295u,115946239u,1957178146u,3075299614u,4171274763u,23,1,true,10,2000,{80,40,20,80}},
+        {400,8,1u,2268905541u,503565579u,2122220372u,511770838u,60,3,true,10,2000,{71,20,49,80}},
+        {400,8,12345u,123309001u,3031022192u,732869678u,1993213541u,42,3,true,10,2000,{20,76,80,44}},
+        {400,8,4294967295u,3148306278u,1572996899u,3988186565u,2820615773u,50,3,true,10,2000,{80,40,20,80}},
+        {400,8,1u,1712649729u,1191365946u,2122220372u,511770838u,60,7,true,10,2000,{71,20,49,80}},
+        {400,8,12345u,2893817663u,4150501116u,2913577224u,194735940u,54,7,true,10,2000,{20,76,80,44}},
+        {400,8,4294967295u,1125367324u,3692897505u,3988186565u,2820615773u,47,7,true,10,2000,{80,40,20,80}},
+        {8000,30,1u,1076667919u,2870867279u,872455744u,2874852607u,32,1,true,10,2000,{71,20,49,80}},
+        {8000,30,12345u,3817477555u,275556157u,1901962340u,2932024294u,25,1,true,10,2000,{20,76,80,44}},
+        {8000,30,4294967295u,573163709u,2357577409u,237160106u,1108751944u,38,1,true,10,2000,{80,40,20,80}},
+        {8000,30,1u,1750642405u,2120307857u,2513016834u,1115309558u,42,3,true,10,2000,{71,20,49,80}},
+        {8000,30,12345u,2168235624u,2971537787u,1319030049u,2205916151u,52,3,true,10,2000,{20,76,80,44}},
+        {8000,30,4294967295u,2213004099u,846352594u,1812616292u,2087127224u,36,3,true,10,2000,{80,40,20,80}},
+        {8000,30,1u,36001909u,632150726u,2781584546u,2901165049u,37,7,true,10,2000,{71,20,49,80}},
+        {8000,30,12345u,1524306748u,1057504255u,900425977u,1997203228u,19,7,true,10,2000,{20,76,80,44}},
+    // End player-start elevation fixtures.
+        {8000,30,1u,2674437097u,3576805709u,2621157265u,3676420908u,23,1,true,3,1000,{104,28,32,99},true},
+        {8000,30,12345u,2027164756u,3212758713u,1920962554u,2870530120u,29,1,true,3,1000,{13,88,92,4},true},
+        {8000,30,4294967295u,1764507810u,2860174789u,3953823069u,4229648838u,49,1,true,3,1000,{105,36,35,95},true},
+        {8000,30,1u,4066850008u,2048810205u,1774812660u,968144176u,28,7,true,3,1000,{104,28,32,99},true},
+        {8000,30,12345u,3709612563u,294134643u,719385704u,3463858196u,17,7,true,3,1000,{13,88,92,4},true},
+        {8000,30,4294967295u,626529646u,812895454u,881743988u,1921272719u,42,7,true,3,1000,{105,36,35,95},true},
+        {8000,30,1u,2640444170u,4177109389u,2062872527u,671860076u,40,1,true,10,2000,{100,32,37,96},true},
+        {8000,30,12345u,597323184u,2917169455u,210350241u,4065037177u,47,1,true,10,2000,{19,86,89,11},true},
+        {8000,30,4294967295u,404548303u,3648505121u,1105671755u,2562574326u,52,1,true,10,2000,{101,40,38,92},true},
+        {8000,30,1u,3816133853u,1103430994u,1072283846u,676621472u,45,7,true,10,2000,{100,32,37,96},true},
+        {8000,30,12345u,1373331185u,947780416u,2278860584u,2076252950u,26,7,true,10,2000,{19,86,89,11},true},
+        {8000,30,4294967295u,1165992113u,515490172u,1649224106u,3527962597u,38,7,true,10,2000,{101,40,38,92},true},
     };
     for(const auto &c:elevationCases) for(bool late:{false,true}) {
+        if(c.players && late && !(c.radius==3 && c.levels==3 && c.tiles==400 && c.seed==1)) continue;
         const std::string elevation="<ELEVATION_GENERATION> create_elevation "+std::to_string(c.levels)+" { base_terrain 6 number_of_tiles "+
             std::to_string(c.tiles)+" number_of_clumps "+std::to_string(c.clumps)+" } ";
-        load(land+(late?"<CLIFF_GENERATION> "+elevation:elevation+"<CLIFF_GENERATION> "));
+        const std::string raisedLand=c.players?
+            "<LAND_GENERATION> base_terrain 6 create_player_lands { terrain_type 6 base_size "+
+                std::to_string(c.radius)+" number_of_tiles "+std::to_string(c.landTiles)+" } ":land;
+        load(raisedLand+(late?"<CLIFF_GENERATION> "+elevation:elevation+"<CLIFF_GENERATION> "));
         uint32_t rng=c.seed;
-        check(generateRmsMap(script,{},120,120,data,rng,map,&error),error.c_str());
+        const std::unordered_set<std::string> defines=c.fixed?std::unordered_set<std::string>{"FIXED_POSITIONS"}:std::unordered_set<std::string>{};
+        check(generateRmsMap(script,defines,120,120,data,rng,map,&error),error.c_str());
         uint32_t objects=2166136261u,heights=2166136261u,slopes=2166136261u;
         for(const auto &o:map.cliffs)
             for(uint32_t v:{uint32_t(o.unit),uint32_t(o.facet),uint32_t(o.x*2),uint32_t(o.y*2),o.creationOrdinal})
@@ -165,6 +237,12 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
             "original elevation/cliff composition objects, heights, slopes and RNG");
         for(auto tile:map.terrain) check(tile==6,"elevated cliffs preserve grass terrain");
         check(map.scenery.empty() && map.objects.empty(),"elevated grass adds no scenery");
+        if(c.players) {
+            check(map.playerStarts.size()==2,"two elevated player lands");
+            for(size_t i=0;i<2;++i)
+                check(map.playerStarts[i].x==c.starts[2*i] && map.playerStarts[i].y==c.starts[2*i+1],
+                    "original elevated cliff player starts");
+        }
     }
     const char *elevationProfiles[]={
         "<ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles 400 number_of_clumps 8 } ",
@@ -513,13 +591,17 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
         else check(terrainHash==c.terrainHash,"original player-land cliff terrain painting");
         check((c.terrain==18 || c.terrain==20 || c.terrain==21 || map.scenery.empty()) && map.objects.empty() && map.ownedObjects.empty(),"cliff player lands imply no starting objects");
     }
-    for(const char *stage:{"<ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles 400 }",
+    for(const char *stage:{"<ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles 400 } <TERRAIN_GENERATION> create_terrain 0 { base_terrain 6 number_of_tiles 30 }",
         "<TERRAIN_GENERATION> create_terrain 19 { base_terrain 6 number_of_tiles 2000 }"}) {
         load(playerLand+"<CLIFF_GENERATION> "+stage);
         uint32_t state=1;
         check(!generateRmsMap(script,{},120,120,data,state,map,&error) && state==1 && map.cliffs.empty(),
             "unverified player-land cliff compositions remain transactional");
     }
+    load(playerLand+"<CLIFF_GENERATION> <ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles 400 } <TERRAIN_GENERATION> create_terrain 0 { base_terrain 6 number_of_tiles 30 }");
+    uint32_t fixedRaisedRng=1;
+    check(!generateRmsMap(script,{"FIXED_POSITIONS"},120,120,data,fixedRaisedRng,map,&error) &&
+        fixedRaisedRng==1 && map.cliffs.empty(),"unverified fixed elevated terrain painting remains transactional");
     for(const char *parameters:{"base_size 11 number_of_tiles 1000","base_size 3 number_of_tiles 8001"}) {
         load("<LAND_GENERATION> base_terrain 6 create_player_lands { terrain_type 6 "+std::string(parameters)+" } <CLIFF_GENERATION>");
         uint32_t state=1;

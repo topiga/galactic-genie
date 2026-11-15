@@ -1788,3 +1788,33 @@ Evidence: `rms-research-counter99-cases-oracle-2026-11-15.json` and
 `rms-research-counter99-overflow-1-oracle-2026-11-15.json`. Original resource writes
 reach0x4c1860 through the completion return at0x5c001c. Unit cost and research
 payment/refund behavior is covered by the existing independent tests.
+
+### Hills and cliffs around player starts
+
+The two-player120 DIRT1 cliff profile now accepts one elevation block before the
+cliff stage, with randomized or fixed enemy-player positions. Existing land
+radius/target limits remain10/8000. Terrain painting, owned startup, connections
+and explicit zone overrides remain excluded from this elevated composition.
+
+Original finalizer0x4dfe90 supplies separate protection arrays: elevation uses
+radius13/weight20, while cliffs use radius15. Native generation already carried
+both arrays through the corresponding stages; this change opens the composed
+profile after comparison, without replacing either terrain algorithm.
+
+The original handler, finalizer and scheduler provide54 randomized cases across
+three land-growth profiles, sparse/dense elevation rows, levels1/3/7 and seeds
+1/12345/UINT32_MAX. Another12 cases use original fixed-position setup0x4e76a0,
+two growth profiles and levels1/7. Regression fixtures compare every height and
+slope through hashes, surviving cliff records including replacement ID gaps,
+player starts, terrain and final RNG. Representative native imports also compare
+cliff rendering heights against original object z values. Both RMS stage orders
+are exercised; redundant player-case order permutations are omitted.
+
+Evidence: `rms-cliff-player-elevation-cases-oracle-2026-11-15.json` and
+`rms-cliff-fixed-player-elevation-cases-oracle-2026-11-15.json`. These run actual
+original code in the configured-world harness; they do not execute the original
+RMS file loader or establish full packaged-map/skirmish parity.
+
+The algorithm test runner now usesO1 with ASan/UBSan retained, keeping the expanded
+map comparisons within the existing timeout. Command-line rendering and native
+Game imports are checked independently against installed Clone Campaigns assets.

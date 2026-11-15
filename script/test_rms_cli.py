@@ -101,6 +101,17 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     combined=run(['render-rms',data,cliff_composed,120,1,work/'cliff-composed.png'],0)
     assert '29 native objects, final RNG 1669067597' in combined
     assert (work/'cliff-composed.png').stat().st_size>1000
+    cliff_players_high=work/'cliff-players-high.rms'
+    cliff_players_high.write_text('<LAND_GENERATION> base_terrain 6 create_player_lands { terrain_type 6 base_size 3 number_of_tiles 1000 } '
+        '<CLIFF_GENERATION> <ELEVATION_GENERATION> create_elevation 3 { base_terrain 6 number_of_tiles 400 number_of_clumps 8 }')
+    players_high=run(['render-rms',data,cliff_players_high,120,1,work/'cliff-players-high.png'],0)
+    assert '35 native objects, final RNG 1128436093' in players_high
+    assert (work/'cliff-players-high.png').stat().st_size>1000
+    cliff_players_high.write_text(cliff_players_high.read_text().replace('create_elevation 3','create_elevation 7')
+        .replace('number_of_tiles 400 number_of_clumps 8','number_of_tiles 8000 number_of_clumps 30'))
+    fixed_high=run(['render-rms',data,cliff_players_high,120,1,work/'cliff-fixed-high.png','--define','FIXED_POSITIONS'],0)
+    assert '28 native objects, final RNG 4066850008' in fixed_high
+    assert (work/'cliff-fixed-high.png').stat().st_size>1000
     cliff_high=work/'cliff-high.rms'
     cliff_high.write_text((root/'tools/fixtures/cliff-diagnostic.rms').read_text()+
         '<ELEVATION_GENERATION> create_elevation 7 { base_terrain 6 number_of_tiles 8000 number_of_clumps 30 }')

@@ -31,7 +31,7 @@ cases = {
 for name, sources in cases.items():
     executable = build/(name+'-test')
     command = ['xcrun', 'clang++', '-std=c++17', '-I'+str(root/'src'),
-               '-Wall', '-Wextra', '-Werror', '-fsanitize=address,undefined',
+               '-O1', '-Wall', '-Wextra', '-Werror', '-fsanitize=address,undefined',
                '-fno-sanitize-recover=all', str(root/'tools'/(name+'_test.cpp')),
                *[str(root/p) for p in sources], '-o', str(executable)]
     subprocess.run(command, cwd=build, timeout=180, check=True)

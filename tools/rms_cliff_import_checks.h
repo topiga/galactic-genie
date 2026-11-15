@@ -22,16 +22,25 @@ static void checkRmsCliffImport(swgb::Assets &assets) {
         check(std::abs(std::sin(actual)-std::sin(expected))<.00001f &&
               std::abs(std::cos(actual)-std::cos(expected))<.00001f,"native cliff original facet projection");
     }
-    struct RaisedCase { int levels; uint32_t rng,heightHash; size_t count; };
-    const RaisedCase cases[]={{1,2269132341u,2088011581u,47},{7,2215531909u,4157776466u,33}};
+    struct RaisedCase { int levels; uint32_t rng,heightHash; size_t count; bool players=false,fixed=false; };
+    const RaisedCase cases[]={{1,2269132341u,2088011581u,47},{7,2215531909u,4157776466u,33},
+        {1,4006208942u,3135051511u,26,true},
+        {3,1128436093u,414766151u,35,true},
+        {7,590697170u,1056771199u,35,true},
+        {1,2674437097u,1831274670u,23,true,true},
+        {7,4066850008u,3615210790u,28,true,true},
+    };
     for(const auto &c:cases) {
-        const std::string raised=source+" <ELEVATION_GENERATION> create_elevation "+std::to_string(c.levels)+
-            " { base_terrain 6 number_of_tiles 8000 number_of_clumps 30 }";
+        const std::string raised=(c.players?
+            "<LAND_GENERATION> base_terrain 6 create_player_lands { terrain_type 6 base_size 3 number_of_tiles 1000 } <CLIFF_GENERATION>":source)+
+            " <ELEVATION_GENERATION> create_elevation "+std::to_string(c.levels)+
+            (c.players && !c.fixed?" { base_terrain 6 number_of_tiles 400 number_of_clumps 8 }":" { base_terrain 6 number_of_tiles 8000 number_of_clumps 30 }");
         check(script.load(0,[&](int32_t id,std::vector<uint8_t> &out) {
             if(id) return false;out.assign(raised.begin(),raised.end());return true;
         },{},&error),error.c_str());
-        rng=1;check(generateRmsMap(script,{},120,120,assets.dat(),rng,map,&error),error.c_str());
-        rng=1;check(game.initRms(script,{},120,rng,&error),error.c_str());
+        const std::unordered_set<std::string> defines=c.fixed?std::unordered_set<std::string>{"FIXED_POSITIONS"}:std::unordered_set<std::string>{};
+        rng=1;check(generateRmsMap(script,defines,120,120,assets.dat(),rng,map,&error),error.c_str());
+        rng=1;check(game.initRms(script,defines,120,rng,&error),error.c_str());
         check(rng==c.rng && game.activeObjectCount()==c.count,"elevated cliff native import count/RNG");
         uint32_t heightHash=2166136261u;
         for(const auto &o:map.cliffs) {
