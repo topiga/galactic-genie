@@ -52,6 +52,8 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   {4,2,1197,224,1665827321u,44224755u,513271022u,2},
   {4,2,126,220,3933298748u,278519141u,513271022u,1,348},
   {4,2,126,220,2518584576u,278519141u,513271022u,1,349},
+  {4,2,126,220,2615402066u,278519141u,513271022u,1,411,10,1802081058u,1196292149u},
+  {4,2,126,220,2615402066u,278519141u,513271022u,1,411,18,780123404u,1911528789u},
   {4,2,126,220,3933298748u,278519141u,513271022u,1,348,18,780123404u,1911528789u},
   {4,2,126,224,636226797u,44224755u,513271022u,2,348,18,780123404u,1911528789u},
   {4,2,126,220,2518584576u,278519141u,513271022u,1,349,20,4094354918u,3646470573u},
@@ -141,7 +143,8 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
    check(game.initRms(varied,defines,120,rng,&error,2,{1,1}) && rng==v.rng,"explicit tree species native import");
    if(v.forestTerrain!=21)for(size_t i=0;i<map.scenery.size();++i) {
     const auto &o=map.scenery[i];const auto pos=game.objectPosition(uint32_t(i+1));
-    check(o.unitId==v.treeUnit && game.objectUnitId(uint32_t(i+1))==v.treeUnit && pos[0]==o.x && pos[1]==o.y && game.objectResourceAmount(uint32_t(i+1))==100,"native automatic forest tree positions/carbon");
+    const int automaticTree=v.forestTerrain==10?411:v.forestTerrain==18?348:v.forestTerrain==20?349:413;
+    check(o.unitId==automaticTree && game.objectUnitId(uint32_t(i+1))==automaticTree && pos[0]==o.x && pos[1]==o.y && game.objectResourceAmount(uint32_t(i+1))==100,"native automatic forest tree positions/carbon");
    }
    if(v.terrain22) {
     const uint8_t frames[]={1,21,46,47,34,22,1,1};size_t waves=0;
@@ -181,6 +184,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  }
  // Live captures after restart verify geometry/static positions; moving units and runtime facets are separate.
  const struct {uint32_t seed,terrain,elevation,slopes,staticCount,positions,sceneryCount=0,sceneryHash=0;} liveCases[]={
+  {1409540336u,516209514u,578069889u,3086566162u,172u,3917539596u,7689u,3285574391u},
   {13,1910713631u,3966973382u,1711829304u,178,421779072u},
   {19,2994838923u,264109179u,2976087397u,186,2122276350u,7622,3968719120u},
   {16161,1490735139u,806980228u,17576837u,178,2671961992u},

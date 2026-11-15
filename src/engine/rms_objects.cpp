@@ -9,7 +9,7 @@
 
 namespace swgb {
 namespace {
-bool isTree(int unit) { return unit==348 || unit==349 || unit==413; }
+bool isTree(int unit) { return unit==348 || unit==349 || unit==411 || unit==413; }
 bool isPredator(int unit) { return unit==126 || unit==812 || unit==1197; }
 struct ResourceSpec { int id, graphic, type, cls, hp, restriction, angles, resource, amount, doppel; float height; };
 const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
@@ -21,6 +21,7 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
     static constexpr ResourceSpec specs[]={
         {348,5282,10,31,50,11,12,1,100,2,2.f},
         {349,5289,10,31,50,11,11,1,100,2,2.f},
+        {411,5292,10,31,50,4,12,1,100,2,2.f},
         {413,5301,10,31,50,11,12,1,125,2,2.f},
         {59,5192,10,27,0,8,6,0,125,1,1.f},
         {66,5134,30,29,0,8,10,3,800,1,1.f},
@@ -211,7 +212,7 @@ bool generateRmsResourcePlacements(uint32_t width, uint32_t height,
         if (err) *err = std::string("RMS resource: ") + reason;
         return false;
     };
-    if(unitId==59 || unitId==349 || unitId==413) return fail("resource requires the verified grouped row");
+    if(unitId==59 || unitId==349 || unitId==411 || unitId==413) return fail("resource requires the verified grouped row");
     if (!width || !height || width > 1024 || height > 1024 ||
         terrain.size() != static_cast<size_t>(width)*height || requested > terrain.size())
         return fail("invalid dimensions, terrain size or object count");
@@ -265,7 +266,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         return fail("unsupported dimensions or grouping parameters");
     const bool hunt=unitId==1363 || unitId==1365;
     const bool predator=isPredator(unitId);
-    if((unitId==349 || unitId==413) && group.mode!=0)return fail("tree species requires verified mode0 rows");
+    if((unitId==349 || unitId==411 || unitId==413) && group.mode!=0)return fail("tree species requires verified mode0 rows");
     const bool tree=isTree(unitId) && group.mode==0,bird=unitId==816,aquatic=unitId==69 || unitId==1585;
     const bool bigHunt=unitId==822 || unitId==1249;
     const bool herd=unitId==594 || hunt || predator || bigHunt;
@@ -317,7 +318,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
            group.groups!=expectedGroups || (group.perGroup!=expectedCount && !(forage && (group.perGroup==3 || group.perGroup==12)) && !(unitId==822 && group.mode==1 && ((!far && (group.perGroup==1 || group.perGroup==2)) || (far && (group.perGroup==1 || group.perGroup==6)))) && !(hunt && group.perGroup==8) && !(hunt && group.perGroup==3) && !(hunt && group.perGroup==2) && !(unitId==1249 && (group.perGroup==1 || (!far && group.perGroup==4) || (far && group.perGroup==6))) && !(unitId==594 && (group.perGroup==expectedCount/2 || group.perGroup==expectedCount*2))) ||
            group.variance!=((hunt || (bigHunt && far))?1u:0u) || group.radius!=(ore?2u:3u) || novaPlayerStarts.size()>8)
             return fail("unsupported per-player resource row");
-        for(auto t:terrain) if(restriction[t]!=1.f && (width!=120 || (t!=1 && t!=2 && t!=4 && t!=5 && t!=6 && t!=12 && t!=18 && t!=20 && t!=21 && t!=22)))
+        for(auto t:terrain) if(restriction[t]!=1.f && (width!=120 || (t!=1 && t!=2 && t!=4 && t!=5 && t!=6 && t!=10 && t!=12 && t!=18 && t!=20 && t!=21 && t!=22)))
             return fail("resource row has unverified nonuniform passability");
         for(const auto &start:novaPlayerStarts)
             if(start.x<0 || start.y<0 || uint32_t(start.x)>=width || uint32_t(start.y)>=height)

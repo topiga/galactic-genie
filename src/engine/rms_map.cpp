@@ -19,7 +19,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     uint32_t &randomState, RmsMap &out, std::string *err, uint32_t playerCount,
                     const std::vector<uint16_t> &playerCivilizations,
                     const std::vector<std::vector<uint8_t>> &diplomacy) {
-    const auto isTree=[](int unit){return unit==348 || unit==349 || unit==413;};
+    const auto isTree=[](int unit){return unit==348 || unit==349 || unit==411 || unit==413;};
     const auto isBigHunt=[](int unit){return unit==822 || unit==1249;};
     const auto isPredator=[](int unit){return unit==126 || unit==812 || unit==1197;};
     out = {};
@@ -319,8 +319,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 else if(loose)row={row.unit,row.unit==822?4:2,3,16,22,0,RmsResourceDistance::Near,1,1};
                 else row={row.unit,1,3,16,22,0,RmsResourceDistance::Near,0,1};
             }
-            if(row.unit==413 && i<tokens.size() && (tokens[i].text=="348" || tokens[i].text=="349"))
-                row.unit=tokens[i].text=="348"?348:349;
+            if(row.unit==413 && i<tokens.size() && (tokens[i].text=="348" || tokens[i].text=="349" || tokens[i].text=="411"))
+                row.unit=tokens[i].text=="348"?348:tokens[i].text=="349"?349:411;
             const bool animal=row.unit==594 || row.unit==1363 || row.unit==1365 || isPredator(row.unit) || isBigHunt(row.unit);
             if (!number(value) || value!=row.unit || i==tokens.size() || tokens[i++].text!="{")
                 return fail("expected next verified stock resource row");
@@ -700,10 +700,10 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 return fail("owned forest starts require dry terrain and live411 scenery");
         } else if (ownedMixedForest) {
             for(auto tile:generated.terrain)
-                if(tile!=1 && tile!=2 && tile!=4 && tile!=5 && tile!=6 && tile!=9 && tile!=12 && tile!=18 && tile!=20 && tile!=21 && tile!=22)
+                if(tile!=1 && tile!=2 && tile!=4 && tile!=5 && tile!=6 && tile!=9 && tile!=10 && tile!=12 && tile!=18 && tile!=20 && tile!=21 && tile!=22)
                     return fail("unsupported Forest startup terrain "+std::to_string(tile));
             for(const auto &tree:generated.scenery)
-                if(!isTree(tree.unitId) || !tree.alive) return fail("Forest startup requires live348/349/413 scenery");
+                if(!isTree(tree.unitId) || !tree.alive) return fail("Forest startup requires live348/349/411/413 scenery");
         } else if (!generated.scenery.empty() ||
                    std::any_of(generated.terrain.begin(),generated.terrain.end(),[](uint8_t tile){return tile!=0;}))
             return fail("owned109 requires scenery-free grass");

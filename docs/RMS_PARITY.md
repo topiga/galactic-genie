@@ -945,3 +945,24 @@ A further original21-row replay verifies1197 with both early herds omitted:
 frames/delays equal the independently checked812 no-herd sequence. Evidence is
 `rms-controlled-predator1197-no-herds-fullstage-oracle-2026-11-14.json` (template
 filename date retained; execution on November15).
+
+## Explicit411 trees and forest10: 2026-11-15
+
+Actual original411 masters/graphics verify near, distant and global explicit
+tree rows on forest18 and forest10. Each complete23-row replay creates220 Gaia
+objects, ending at RNG278519141 with Gaia pose/facet FNV2615402066. The forest10
+raster hash is1196292149; a separate original automatic-scenery capture retains
+all7554 records before starting objects. The native fixture checks its full hash
+as well as complete object placement and game import. Tree411 uses restriction4,
+graphic5292,12 angles and100 carbon, distinct from413's restriction11/125 carbon.
+
+Private evidence: `rms-controlled-forest{18,10}-explicit411-fullstage-oracle-2026-11-15.json`
+and `rms-controlled-forest10-scenery-records-2026-11-15.json`. The forest18 replay's
+extra tree-gate diagnostics use348 as a comparison prototype; only its actual411
+controller/factory output is used for the411 fixture.
+
+Distributed seed1409540336 now matches live Windows on all terrain/elevation/slope
+cells, every static resource identity/position, and all7689 automatic trees including
+facets (FNV3285574391). Its script omits both forage and early herds and uses1197
+near predators with812 global predators. This is independent live coverage of the
+combined optional-row path, beyond the controlled isolated1197 replay.
