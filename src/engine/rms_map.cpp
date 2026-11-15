@@ -337,7 +337,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(name=="terrain_to_place_on" && row.unit==1585 && value==22) terrainFilter=true;
                 else if(name=="number_of_objects" && row.unit==1249 && row.mode==0 && (value==1 || value==2)) { row.groups=value;count=true; }
                 else if(name=="number_of_objects" && row.mode==0 && value==int(row.groups)) count=true;
-                else if(name=="number_of_objects" && row.mode!=0 && (value==row.count || ((row.unit==1363 || row.unit==1365) && value==8) || (row.unit==1365 && value==2) || (row.unit==1363 && value==3) || (row.unit==1249 && value==1) || (row.unit==822 && ((row.distance==RmsResourceDistance::Near && (value==1 || value==2)) || (row.distance==RmsResourceDistance::Far && value==6))) || ((row.unit==126 || row.unit==1197) && row.global && value==2) || (row.unit==59 && (value==3 || value==12)) || (row.unit==594 && (value==row.count/2 || value==row.count*2)))) { row.count=value;count=true; }
+                else if(name=="number_of_objects" && row.mode!=0 && (value==row.count || ((row.unit==1363 || row.unit==1365) && value==8) || (row.unit==1365 && value==2) || (row.unit==1363 && value==3) || (row.unit==1249 && (value==1 || (row.distance==RmsResourceDistance::Far && value==6))) || (row.unit==822 && ((row.distance==RmsResourceDistance::Near && (value==1 || value==2)) || (row.distance==RmsResourceDistance::Far && value==6))) || ((row.unit==126 || row.unit==1197) && row.global && value==2) || (row.unit==59 && (value==3 || value==12)) || (row.unit==594 && (value==row.count/2 || value==row.count*2)))) { row.count=value;count=true; }
                 else if(name=="number_of_groups" && value==int(row.groups)) groups=true;
                 else if(name=="group_placement_radius" && value==row.radius) radius=true;
                 else if(name=="group_variance" && value==int(row.variance)) variance=true;
@@ -454,7 +454,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if(allies && ownedObjects) return fail("allied owned-object startup remains unverified");
     if(ownedObjects && lands.size()!=playerCount) return fail("mixed-land owned-object startup remains unverified");
     const bool ownedForest=ownedObjects && playerLands && base==41 && lands[0].terrain==9;
-    const bool ownedMixedForest=ownedObjects && playerLands && base==6 && lands[0].terrain==6 &&
+    const bool ownedMixedForest=ownedObjects && playerLands && (base==6 || base==12) && lands[0].terrain==base &&
         width==120 && height==120 && playerCount==2 && playerCivilizations==std::vector<uint16_t>{1,1} &&
         startingWorkers && startingScouts && workerMinDistance==6 && workerMaxDistance==6 &&
         !startingStalagmites;

@@ -1,6 +1,6 @@
 # Clone Campaigns random-map parity
 
-## Current complete-map result: 2026-11-14
+## Current comparison coverage: 2026-11-15
 
 Forest resource 54204 now runs directly from `gamedata_x1.drs`, including all 23
 object rows. For seed 16160, 120×120, Tiny, FIXED_POSITIONS, DEFAULT_RESOURCES and two
@@ -22,12 +22,23 @@ The image `clone-campaigns-forest-full.png` in the external build directory is a
 native diagnostic render, not a claim of a fully configured playable match.
 Starting resources/UI map selection and later simulation remain separate work.
 
-This proves this complete configuration, **not general 1:1 terrain generation**.
-Other seeds, sizes, civilizations, team setups and map families still need complete
-comparisons. Full map startup with terrain 22 remains guarded; this verified
-Forest seed contains no 22 tiles and the original wave row creates zero objects.
-The engine executes its candidate shuffle, preserving subsequent RNG exactly.
-Historical checkpoints below describe earlier coverage, not the current result.
+Fresh live Windows restarts independently verify three more packaged Forest
+seeds with the same size, defines and civilizations:
+
+| Seed | Terrain / elevation / slopes | Static resource identities, owners, positions and order |
+|---|---|---|
+| 2 | 14,400 / 14,400 / 14,400 cells equal | 202 / 202 equal |
+| 3 | 14,400 / 14,400 / 14,400 cells equal | 180 / 180 equal |
+| 12345 | 14,400 / 14,400 / 14,400 cells equal | 193 / 193 equal |
+
+These checks do not certify all startup animation/facets or mobile positions for
+the new seeds. Forage facets change on the original's first simulation update;
+constructor comparisons and later live appearance must remain separate. Terrain22
+startup and nonblocking waves now have controlled original object-stage coverage.
+
+This is **not general 1:1 terrain generation**. Other seeds, sizes, civilizations,
+teams and map families still need complete comparisons. Historical checkpoints
+below describe earlier coverage, not the current result.
 
 ## Historical packaged-script baseline: 2026-11-14
 
@@ -808,3 +819,18 @@ original simulation RNG initialization and update ordering; it is not claimed.
 After the Bantha quantity fix, six of the eight audited seeds generate natively
 (1,2,3,42,12345,16161). Seed32767 still rejects base12 startup;65535 rejects
 distant1249 count6. Newly accepted seeds1/42/16161 need live comparisons.
+
+### Base12 starts and distant1249 count6 (2026-11-15)
+
+An original full23-row controlled Forest18 run swaps terrain6 and12. Startup,
+resources and cleanup retain220 Gaia objects, pose hash3933298748 and final
+RNG278519141; the final raster hash is2620373331. Native mixed Forest startup
+now admits base12 with matching player-land terrain. A separate original
+prefix verifies distant1249 count6 with variance1 and spacing5:87 Gaia objects,
+pose hash2226817864 and RNG4044577126. Both retain strict existing prototype
+and other startup validation.
+
+Live seed32767 independently matches every terrain/elevation/slope cell after
+this startup change (hashes1119165674/3881025133/4054086905). Seed65535 also
+generates natively. All eight audit seeds now generate, although live proof
+remains scoped to the captured grids and static objects.
