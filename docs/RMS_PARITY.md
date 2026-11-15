@@ -751,3 +751,13 @@ poses/order, animal frames, extra idle delay and heading against those original
 records. The parser and resource validation admit these quantities, including
 the late Kaadu row. The complete ASan/UBSan skirmish suite passes. These are
 controlled object comparisons, not additional complete packaged-map proofs.
+
+### Paired global Rancors (2026-11-15)
+
+The original controlled Forest18 sequence with global126 groups of two yields
+224 Gaia objects, pose hash636226797 and final RNG44224755. Native parsing,
+placement and import now accept that verified group size; the full-stage
+fixture checks the terrain, automatic trees, object order/poses and Nerf frames.
+The eight-seed native audit now generates seeds2/3/12345; remaining rejections
+include near822 count1, distant822 count6 and base12 startup. Seed3 is not yet
+an independently verified complete original map.

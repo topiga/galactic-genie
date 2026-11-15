@@ -281,7 +281,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         return fail("unsupported stock bird row");
     if(globalPlacement) {
         if(perPlayer || (!predator && !tree && ((unitId!=66 && unitId!=102) || group.mode!=2)) ||
-           (predator && (width!=120 || height!=120 || group.mode!=1 || group.groups!=4 || (group.perGroup!=1 && !(unitId==1197 && group.perGroup==2)) || group.variance || group.radius!=3 ||
+           (predator && (width!=120 || height!=120 || group.mode!=1 || group.groups!=4 || (group.perGroup!=1 && !((unitId==126 || unitId==1197) && group.perGroup==2)) || group.variance || group.radius!=3 ||
             globalPlacement->landCenters.size()!=2 || globalPlacement->minDistance!=40 || globalPlacement->spacing!=12)) ||
            (tree && (width!=120 || height!=120 || group.mode!=0 || group.groups!=100 || group.perGroup!=1 || group.variance || group.radius!=3 ||
             globalPlacement->landCenters.size()!=2 || globalPlacement->minDistance!=6 || globalPlacement->spacing!=2)) ||
