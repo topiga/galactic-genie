@@ -67,16 +67,19 @@ static void checkRmsCliffImport(swgb::Assets &assets) {
             ++nextId;
         }
     }
-    for(const auto &spec:forestTypes) for(bool avoid:{false,true}) {
+    for(const auto &spec:forestTypes) for(bool avoid:{false,true}) for(bool fixed:{false,true}) {
+        if(fixed && spec[0]!=21) continue;
         const std::string players="<LAND_GENERATION> base_terrain 6 create_player_lands { terrain_type 6 base_size 3 number_of_tiles 1000 } "
             "<CLIFF_GENERATION> <TERRAIN_GENERATION> create_terrain "+std::to_string(spec[0])+" { base_terrain 6 number_of_tiles 2000 number_of_clumps 20 spacing_to_other_terrain_types 2 clumping_factor 20 "+
             std::string(avoid?"set_avoid_player_start_areas ":"")+"}";
         check(script.load(0,[&](int32_t id,std::vector<uint8_t> &out) {
             if(id) return false;out.assign(players.begin(),players.end());return true;
         },{},&error),error.c_str());
-        rng=1;check(generateRmsMap(script,{},120,120,assets.dat(),rng,map,&error),error.c_str());
-        rng=1;check(game.initRms(script,{},120,rng,&error),error.c_str());
-        check(rng==(avoid?2281347096u:405893282u) && game.activeObjectCount()==(avoid?2055u:2053u),
+        const std::unordered_set<std::string> defines=fixed?std::unordered_set<std::string>{"FIXED_POSITIONS"}:std::unordered_set<std::string>{};
+        rng=1;check(generateRmsMap(script,defines,120,120,assets.dat(),rng,map,&error),error.c_str());
+        rng=1;check(game.initRms(script,defines,120,rng,&error),error.c_str());
+        check(rng==(fixed?(avoid?3019377153u:685587785u):(avoid?2281347096u:405893282u)) &&
+            game.activeObjectCount()==(fixed?(avoid?2048u:2069u):(avoid?2055u:2053u)),
             "native player-land forest and cliff import count/RNG");
         uint32_t nextId=0;
         for(const auto &o:map.cliffs) {

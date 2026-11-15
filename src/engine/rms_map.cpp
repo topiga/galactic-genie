@@ -502,7 +502,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if(cliffStage) {
         if(width!=120 || height!=120 || base!=6 ||
             (playerLands ? (playerCount!=2 || lands.size()!=2 || playerZoneOverride ||
-                defines.count("FIXED_POSITIONS") || elevationStage) : lands.size()!=1) ||
+                elevationStage || (defines.count("FIXED_POSITIONS") &&
+                    std::any_of(terrainRows.begin(),terrainRows.end(),[](const auto &row){return row.terrain!=0 && row.terrain!=21;}))) : lands.size()!=1) ||
             hasObjects || connectionStage || terrainRows.size()>1 ||
             (elevationStage && (elevationRows.empty() || elevationRows.size()>7 ||
                 (elevationRows.size()>1 && !terrainRows.empty()))) ||

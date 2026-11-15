@@ -1706,3 +1706,21 @@ Evidence: `rms-cliff-player-forest-types-cases-oracle-2026-11-15.json`. Native
 import and CLI rendering cover all three forest types with both avoidance modes.
 This extends the existing flat profile; player-land elevation and owned startup
 are still outside the verified cliff composition.
+
+
+### Fixed-position player lands with cliffs
+
+Forty-five original cases now exercise finalizer 0x4dfe90 with its virtual setup
+bound to the original fixed-position implementation 0x4e76a0. They cover bare
+land growth and grass/forest21 painting, with both start-area avoidance modes,
+three land profiles and three seeds. Owners remain two mutually hostile players.
+The native fixed-position path matches the original positions, complete cliff
+and tree records, terrain raster and final RNG. The seed1 radius3/target1000
+forest case places starts at (104,28) and (32,99), creates 2069 objects without
+avoidance (RNG685587785), and 2048 with avoidance (RNG3019377153).
+
+Evidence: `rms-cliff-fixed-player-terrain-cases-oracle-2026-11-15.json` and
+`rms-cliff-fixed-player-growth-cases-oracle-2026-11-15.json`. Native import and
+CLI checks cover both avoidance modes. Fixed-position forest18/20, allied fixed
+positions, player-land elevation and owned cliff startup remain gated. The
+configured-world harness still does not execute the original RMS file loader.

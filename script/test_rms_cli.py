@@ -66,6 +66,12 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
             rendered=run(['render-rms',data,forest_players,120,1,output],0)
             assert f'{count} native objects, final RNG {state}' in rendered
             assert output.stat().st_size>1000
+    for avoid,count,state in [(False,2069,685587785),(True,2048,3019377153)]:
+        output=work/f'cliff-fixed-player-forest-{avoid}.png'
+        rendered=run(['render-rms',data,work/f'cliff-player-forest-21-{avoid}.rms',120,1,output,
+            '--define','FIXED_POSITIONS'],0)
+        assert f'{count} native objects, final RNG {state}' in rendered
+        assert output.stat().st_size>1000
     cliff_grass=work/'cliff-grass.rms'
     cliff_grass.write_text((root/'tools/fixtures/cliff-diagnostic.rms').read_text()+
         '<TERRAIN_GENERATION> create_terrain 0 { base_terrain 6 number_of_tiles 30 '
