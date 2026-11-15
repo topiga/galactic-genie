@@ -1858,3 +1858,27 @@ configured-world runs through object row10. Resource compositions remain restric
 to this two-Empire prefix. Other civilizations with resources, animals, later
 resource rows, elevations and connections remain unverified in this cliff
 composition. This is not a full packaged-map or complete gameplay parity claim.
+
+### Full23-row cliff startup and Gaia animation state
+
+The same two-Empire cliff/forest profile also accepts the authored23-row sequence
+in `tools/fixtures/cliff-full-start.rms`: the earlier resources plus herd/hunt
+animals, predators, distant Nova/ore, explicit trees, birds, waves and fish rows.
+This controlled sequence uses three food bushes per player; the earlier10-row
+fixture uses12. Its unit/count sequence is validated separately. It is not a
+claim that these two authored inputs are interchangeable or a packaged map.
+
+All six default/dense-cliff cases match the complete original object records,
+terrain and final RNG. The default seed1 case has6260 objects and RNG3558270440;
+dense seed1 has5694 objects and RNG2453120652. Separate original recaptures leave
+the baseline unchanged and verify222 animated Gaia sprite frames/holds across
+those six cases. Native import fixtures additionally check their health and
+animation timers after insertion into Game. Terrain here is dry: the authored
+water-object rows execute, but this does not verify water/cliff placement.
+
+Evidence: `rms-cliff-resource-full-cases-oracle-2026-11-15.json` and
+`rms-cliff-resource-poses-cases-oracle-2026-11-15.json`, with compressed per-case
+pose captures. Extra herd-count variants, other civilizations with resources,
+fixed owned starts, hills, connections and other map sizes remain gated for this
+composition. The original RMS text/file-loader boundary remains outside these
+configured-world comparisons.

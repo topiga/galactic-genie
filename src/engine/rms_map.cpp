@@ -500,11 +500,20 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if (base<0 || lands.empty()) return fail("explicit base terrain and at least one land required");
     // shortcut: expand after composed original cliff/terrain/startup comparisons.
     if(cliffStage) {
+        bool cliffResources=!holocrons && !nearNova && resourceRows.empty();
+        if(holocrons && playerCivilizations==std::vector<uint16_t>{1,1}) {
+            cliffResources=resourceProfile==6 && resourceRows.size()==6 && resourceRows[0].count==12;
+            if(resourceProfile==19 && resourceRows.size()==19) {
+                const int units[]={59,66,66,66,102,102,594,594,812,66,102,413,413,816,812,1365,1585,413,69};
+                const int counts[]={3,7,4,4,5,4,4,2,1,3,4,1,1,1,1,3,1,1,1};
+                cliffResources=true;
+                for(size_t i=0;i<resourceRows.size();++i)
+                    if(resourceRows[i].unit!=units[i] || resourceRows[i].count!=counts[i]) cliffResources=false;
+            }
+        }
         const bool ownedCliff=ownedObjects && startingWorkers && startingScouts &&
             workerMinDistance==6 && workerMaxDistance==6 && !startingStalagmites &&
-            ((!holocrons && !nearNova && resourceRows.empty()) ||
-             (holocrons && resourceProfile==6 && resourceRows.size()==6 && resourceRows[0].count==12 &&
-              playerCivilizations==std::vector<uint16_t>{1,1})) && playerCivilizations.size()==2 &&
+            cliffResources && playerCivilizations.size()==2 &&
             std::all_of(playerCivilizations.begin(),playerCivilizations.end(),[](auto civ){return civ>=1 && civ<=8;}) &&
             !defines.count("FIXED_POSITIONS") && terrainRows.size()==1 &&
             terrainRows[0].terrain==21 && terrainRows[0].targetTiles==6000 && terrainRows[0].clumps==60 &&
