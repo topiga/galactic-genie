@@ -40,10 +40,11 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  ground[0]=22;rng=1;const auto before=eligible;
  check(!swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),1585,{0,7,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && rng==1 && placed.empty() && eligible==before,"unsupported wave quantity rejected atomically");
  // Controlled original replays vary forage/Nerf quantities, retaining all later rows.
- const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413,forestTerrain=21;uint32_t sceneryPoses=2138192714u,terrainHash=3348257725u;bool chainedHunt=false,omitNerfs=false;unsigned explicitTrees=110;bool omitForage=false;unsigned longChain=0,lateHunt=0;bool terrain9=false,terrain22=false,base12=false;} variations[]={
+ const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413,forestTerrain=21;uint32_t sceneryPoses=2138192714u,terrainHash=3348257725u;bool chainedHunt=false,omitNerfs=false;unsigned explicitTrees=110;bool omitForage=false;unsigned longChain=0,lateHunt=0;bool terrain9=false,terrain22=false,base12=false,terrain4=false;} variations[]={
   {4,2,126,220,1662422u,278519141u,513271022u},
   {2,1,126,210,3750728331u,4161792159u,758251980u},
   {8,4,126,235,989150139u,2125502712u,2483236625u},
+  {0,0,812,203,1233270215u,1423244924u,2166136261u,1,413,21,2138192714u,3348257725u,false,true},
   {4,2,812,224,3286888937u,44224755u,513271022u,2},
   {4,2,812,220,1670957952u,278519141u,513271022u},
   {4,2,1197,220,3239039312u,278519141u,513271022u},
@@ -63,6 +64,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   {0,0,126,219,3181366234u,3194867101u,2166136261u,1,349,20,4094354918u,3646470573u,true,true,110,false,2,3},
   {4,2,126,220,3933298748u,278519141u,513271022u,1,348,18,780123404u,3296036497u,false,false,110,false,0,0,true},
   {4,2,126,220,3933298748u,278519141u,513271022u,1,348,18,780123404u,2620373331u,false,false,110,false,0,0,false,false,true},
+  {4,2,126,216,2551677122u,2887979497u,513271022u,1,348,18,780123404u,2438347840u,false,false,110,false,0,0,false,false,false,true},
   // Terrain22 oracle executes original objects on native pre-object input; it does not prove terrain generation.
   {4,2,126,228,358297336u,3038787869u,513271022u,1,348,18,780123404u,2976665734u,false,false,110,false,0,0,true,true}};
  for(const auto &v:variations) {
@@ -72,7 +74,9 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
    const auto &name=tokens[i].text;
    if(name!="create_terrain" && name!="terrain_type" && name!="base_terrain" && name!="replace_terrain" && name!="terrain_cost" && name!="terrain_size")continue;
    for(size_t j=i+1;j<=i+(name=="replace_terrain"?2:1);++j) {
-    if(v.base12 && tokens[j].text=="6")tokens[j].text="12";
+    if(v.terrain4 && tokens[j].text=="1")tokens[j].text="4";
+    else if(v.terrain4 && tokens[j].text=="4")tokens[j].text="1";
+    else if(v.base12 && tokens[j].text=="6")tokens[j].text="12";
     else if(v.base12 && tokens[j].text=="12")tokens[j].text="6";
     else if(v.terrain22 && tokens[j].text=="1")tokens[j].text="22";
     else if(v.terrain22 && tokens[j].text=="22")tokens[j].text="1";
@@ -119,6 +123,8 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   check(varied.load(0,[&](int32_t resource,std::vector<uint8_t>&bytes){if(resource)return false;bytes.assign(source.begin(),source.end());return true;},{},&error),error.c_str());
   check(swgb::generateRmsMap(varied,defines,120,120,assets.dat(),rng,map,&error,2,{1,1}),error.c_str());
   check(rng==v.rng && map.scenery.size()==7554 && map.ownedObjects.size()==10 && map.resourcesAfterOwned.size()==v.count,"controlled resource full-stage count/RNG");
+  if(bytesHash(map.terrain)!=v.terrainHash || bytesHash(map.elevation)!=908132044u)
+   std::fprintf(stderr,"Forest variation predator=%d omittedHerds=%d terrain4=%d: terrain %u/%u elevation %u/908132044\n",v.predator,v.omitNerfs,v.terrain4,bytesHash(map.terrain),v.terrainHash,bytesHash(map.elevation));
   check(bytesHash(map.terrain)==v.terrainHash && bytesHash(map.elevation)==908132044u,"controlled resource original grids");
   hash=2166136261u;for(const auto&o:map.scenery)pose(o.unitId,0,o.x,o.y,o.facet);
   check(hash==v.sceneryPoses,"controlled original automatic tree poses/order");
@@ -160,7 +166,8 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
    struct PredatorAnimation{size_t index;uint8_t frame;float delay;};
    const std::vector<PredatorAnimation> singleAnimations={{75,7,0.0239997208f},{76,7,0.686550438f},{77,7,0.903152466f},{78,7,0.289547384f},{107,2,0.f},{108,7,0.0298775807f},{109,7,0.0541031733f},{110,7,0.0439405218f}};
    const std::vector<PredatorAnimation> pairAnimations={{75,7,0.0239997208f},{76,7,0.686550438f},{77,7,0.903152466f},{78,7,0.289547384f},{107,2,0.f},{108,7,0.522244871f},{109,7,0.551139772f},{110,7,0.f},{111,7,0.282955378f},{112,6,0.f},{113,7,0.569377661f},{114,7,0.471651345f}};
-   const auto &expected=v.globalPredatorSize==2?pairAnimations:singleAnimations;
+   const std::vector<PredatorAnimation> noHerdAnimations={{59,2,0.f},{60,7,0.482418269f},{61,5,0.f},{62,4,0.f},{90,7,0.155015677f},{91,7,0.386834264f},{92,7,0.31976071f},{93,7,0.559599519f}};
+   const auto &expected=v.omitNerfs?noHerdAnimations:v.globalPredatorSize==2?pairAnimations:singleAnimations;
    for(const auto &e:expected) {
     const auto&o=map.resourcesAfterOwned[e.index];
     check(o.unitId==v.predator && o.animationFrame==e.frame && std::abs(o.initialIdleDelay-e.delay)<.000001f,"original predator startup animation");
@@ -173,6 +180,9 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  }
  // Live captures after restart verify geometry/static positions; moving units and runtime facets are separate.
  const struct {uint32_t seed,terrain,elevation,slopes,staticCount,positions;} liveCases[]={
+  {13,1910713631u,3966973382u,1711829304u,178,421779072u},
+  {19,2994838923u,264109179u,2976087397u,186,2122276350u},
+  {16161,1490735139u,806980228u,17576837u,178,2671961992u},
   {42,2001427337u,3311179382u,4121805816u,172,1396991924u},
   {1,1441896192u,2681332084u,2744061788u,188,712461888u},
   {2,4035986315u,3707759835u,3939991058u,202,582877992u},

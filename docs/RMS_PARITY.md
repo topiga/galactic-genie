@@ -22,7 +22,7 @@ The image `clone-campaigns-forest-full.png` in the external build directory is a
 native diagnostic render, not a claim of a fully configured playable match.
 Starting resources/UI map selection and later simulation remain separate work.
 
-Fresh live Windows restarts independently verify eight more packaged Forest
+Fresh live Windows restarts independently verify ten more packaged Forest
 seeds with the same size, defines and civilizations:
 
 | Seed | Terrain / elevation / slopes | Static resource identities, owners, positions and order |
@@ -30,6 +30,8 @@ seeds with the same size, defines and civilizations:
 | 1 | 14,400 / 14,400 / 14,400 cells equal | 188 / 188 equal |
 | 2 | 14,400 / 14,400 / 14,400 cells equal | 202 / 202 equal |
 | 3 | 14,400 / 14,400 / 14,400 cells equal | 180 / 180 equal |
+| 13 | 14,400 / 14,400 / 14,400 cells equal | 178 / 178 equal |
+| 19 | 14,400 / 14,400 / 14,400 cells equal | 186 / 186 equal |
 | 42 | 14,400 / 14,400 / 14,400 cells equal | 172 / 172 equal |
 | 12345 | 14,400 / 14,400 / 14,400 cells equal | 193 / 193 equal |
 | 16161 | 14,400 / 14,400 / 14,400 cells equal | 178 / 178 equal |
@@ -877,3 +879,36 @@ and `rms-controlled-far822-one-fullstage-oracle-2026-11-15.json`.
 Live seeds42 and16161 also match all terrain/elevation/slope bytes and respectively
 172 and178 static resources. The temporary in-memory map-seed override was
 restored to UINT_MAX after the eight-seed comparison; no executable was patched.
+
+## Terrain4 and omitted early herds: 2026-11-15
+
+The original controller replay accepts the Forest grid with terrain1 replaced
+by4, retaining forest18 and its348 trees. The216 Gaia objects, final
+RNG2887979497 and pose/facet FNV2551677122 differ from water1 because fish
+are no longer placed there. The fixture checks native terrain FNV2438347840,
+all object poses/order and unchanged Nerf animation FNV513271022. This
+controlled object replay alone does not establish terrain4 generation parity.
+
+A separate original21-row replay omits both early Nerf rows and goes directly
+to near812 predators. All later rows execute:203 Gaia objects, final
+RNG1423244924, pose/facet FNV1233270215. The native fixture additionally
+checks all eight predator frames/delays and their import into the game.
+The parser enables precisely the observed812 transition; other unverified
+no-herd species sequences remain rejected.
+
+Private evidence: `rms-controlled-forest18-terrain4-native-input-fullstage-oracle-2026-11-15.json`
+and `rms-controlled-predator812-no-herds-fullstage-oracle-2026-11-14.json`
+(the latter retains its template's historical date; replay performed November15).
+
+The initial synthetic terrain4 experiment relabelled an already generated water1
+grid. Four shoreline cells differ from generating the modified RMS itself; it is
+retained separately with terrain FNV85196936. The committed fixture uses a second
+original object-stage replay on the native pre-object grid (restoring the local
+Command Center's16 foundation cells to their saved original terrain). It reproduces
+the same object poses/RNG and terrain FNV2438347840. Independently, live packaged
+seed13 validates terrain4 generation against Windows, and seed19 validates the
+no-early-herd branch. Both match all three grids and their static resource records.
+
+The expanded native audit now accepts all256 seeds0–255 under the stated Tiny
+Forest/two-Empire configuration. This is a generation coverage result; only the
+independently compared seeds and controlled branches constitute parity evidence.
