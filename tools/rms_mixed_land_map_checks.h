@@ -7,8 +7,41 @@ static void checkRmsMixedLandMap() {
  dat::DatFile data;data.terrainBlock.terrains.resize(7);data.terrainBlock.terrainsUsed=7;
  for(int id:{0,3,6})data.terrainBlock.terrains[id].enabled=1;
  struct Case { const char *pattern;bool explicitPosition,fixed;uint32_t seed,rng,hash;
-   std::vector<RmsMapLand> lands; bool bordered=false;int zone=-11; };
+   std::vector<RmsMapLand> lands; bool bordered=false;int zone=-11;bool byTeam=false;uint32_t players=2;int diplomacyMode=0; };
  const Case cases[]={
+  // Actual team-zone handler, including directional diplomacy and noncontiguous representative IDs.
+  {"PL",false,false,1u,389168431u,1430324621u,{{{18,5},1,1},{{13,20},1,2},{{16,10},0,0}},false,-11,true,2,0},
+  {"LP",false,false,1u,2586468562u,3242314021u,{{{16,10},0,0},{{18,5},1,1},{{13,20},1,2}},false,-11,true,2,0},
+  {"PLL",false,false,1u,16267981u,2537930819u,{{{18,5},1,1},{{13,20},1,2},{{16,10},0,0},{{11,5},0,0}},false,-11,true,2,0},
+  {"LPL",false,false,1u,3904451283u,3139296220u,{{{16,10},0,0},{{18,5},1,1},{{13,20},1,2},{{11,5},0,0}},false,-11,true,2,0},
+  {"PL",false,false,12345u,462096214u,2759840788u,{{{5,20},1,1},{{20,11},1,2},{{8,11},0,0}},false,-11,true,2,0},
+  {"LP",false,false,12345u,1824067029u,1640800343u,{{{8,11},0,0},{{5,20},1,1},{{20,11},1,2}},false,-11,true,2,0},
+  {"PLL",false,false,12345u,3630617685u,4160332618u,{{{5,20},1,1},{{20,11},1,2},{{8,11},0,0},{{14,3},0,0}},false,-11,true,2,0},
+  {"LPL",false,false,12345u,2935540536u,2624122340u,{{{8,11},0,0},{{5,20},1,1},{{20,11},1,2},{{14,3},0,0}},false,-11,true,2,0},
+  {"PL",false,true,1u,1656068489u,2751319966u,{{{25,8},1,1},{{10,24},1,2},{{11,5},0,0}},false,-11,true,2,0},
+  {"LP",false,true,1u,3781768744u,3138516893u,{{{11,5},0,0},{{25,8},1,1},{{10,24},1,2}},false,-11,true,2,0},
+  {"PLL",false,true,1u,4094222005u,1974075738u,{{{25,8},1,1},{{10,24},1,2},{{11,5},0,0},{{14,4},0,0}},false,-11,true,2,0},
+  {"LPL",false,true,1u,476989696u,1419738028u,{{{11,5},0,0},{{25,8},1,1},{{10,24},1,2},{{14,4},0,0}},false,-11,true,2,0},
+  {"PL",false,true,12345u,1268107786u,2564229730u,{{{5,22},1,1},{{22,3},1,2},{{10,20},0,0}},false,-11,true,2,0},
+  {"LP",false,true,12345u,398432258u,884693911u,{{{10,20},0,0},{{5,22},1,1},{{22,3},1,2}},false,-11,true,2,0},
+  {"PLL",false,true,12345u,3147649256u,2939326726u,{{{5,22},1,1},{{22,3},1,2},{{10,20},0,0},{{26,20},0,0}},false,-11,true,2,0},
+  {"LPL",false,true,12345u,3147649256u,2507307720u,{{{10,20},0,0},{{5,22},1,1},{{22,3},1,2},{{26,20},0,0}},false,-11,true,2,0},
+  {"PL",false,false,1u,389168431u,1430324621u,{{{18,5},1,1},{{13,20},1,2},{{16,10},0,0}},false,-11,true,2,1},
+  {"LP",false,false,1u,2335252272u,3303420160u,{{{16,10},0,0},{{18,5},1,1},{{13,20},1,2}},false,-11,true,2,1},
+  {"PLL",false,false,1u,16267981u,2537930819u,{{{18,5},1,1},{{13,20},1,2},{{16,10},0,0},{{11,5},0,0}},false,-11,true,2,1},
+  {"LPL",false,false,1u,3730534061u,570373526u,{{{16,10},0,0},{{18,5},1,1},{{13,20},1,2},{{11,5},0,0}},false,-11,true,2,1},
+  {"PL",false,false,12345u,462096214u,2759840788u,{{{5,20},1,1},{{20,11},1,2},{{8,11},0,0}},false,-11,true,2,1},
+  {"LP",false,false,12345u,3802635594u,1800430418u,{{{8,11},0,0},{{5,20},1,1},{{20,11},1,2}},false,-11,true,2,1},
+  {"PLL",false,false,12345u,3630617685u,4160332618u,{{{5,20},1,1},{{20,11},1,2},{{8,11},0,0},{{14,3},0,0}},false,-11,true,2,1},
+  {"LPL",false,false,12345u,720179327u,3964061583u,{{{8,11},0,0},{{5,20},1,1},{{20,11},1,2},{{14,3},0,0}},false,-11,true,2,1},
+  {"PL",false,false,1u,2754168054u,1568820844u,{{{18,5},1,1},{{20,18},1,2},{{5,13},1,3},{{13,20},1,4},{{16,10},0,0}},false,-11,true,4,1},
+  {"PL",false,false,12345u,1049752472u,4133692090u,{{{11,5},1,1},{{20,11},1,2},{{5,20},1,3},{{20,20},1,4},{{8,11},0,0}},false,-11,true,4,1},
+  {"PL",false,false,1u,187595546u,2656405478u,{{{18,5},1,1},{{20,18},1,2},{{5,13},1,3},{{13,20},1,4},{{16,10},0,0}},false,-11,true,4,2},
+  {"PL",false,false,12345u,555216469u,2493983587u,{{{11,5},1,1},{{20,11},1,2},{{5,20},1,3},{{20,20},1,4},{{8,11},0,0}},false,-11,true,4,2},
+  {"PL",false,false,1u,2973999687u,1969100661u,{{{18,5},1,1},{{20,18},1,2},{{5,13},1,3},{{13,20},1,4},{{16,10},0,0}},false,-11,true,4,3},
+  {"PL",false,false,12345u,555216469u,2493983587u,{{{11,5},1,1},{{20,11},1,2},{{5,20},1,3},{{20,20},1,4},{{8,11},0,0}},false,-11,true,4,3},
+  {"PL",false,false,1u,2454226827u,2915084592u,{{{18,5},1,1},{{20,18},1,2},{{5,13},1,3},{{13,20},1,4},{{16,10},0,0}},false,-11,true,4,4},
+  {"PL",false,false,12345u,1164991866u,3287865918u,{{{11,5},1,1},{{20,11},1,2},{{5,20},1,3},{{20,20},1,4},{{8,11},0,0}},false,-11,true,4,4},
   // Explicit zone-10 maps to zero and must not be replaced by the owner ID.
   {"PL",false,false,1u,2959624633u,4046777395u,{{{18,5},1,1},{{13,20},1,2},{{16,10},0,0}},false,-10},
   {"PL",false,true,1u,1656068489u,2751319966u,{{{25,8},1,1},{{10,24},1,2},{{11,5},0,0}},false,-10},
@@ -74,7 +107,8 @@ static void checkRmsMixedLandMap() {
   std::string source="<LAND_GENERATION> base_terrain 0 ";
   const std::string player="create_player_lands { terrain_type 6 base_size 3 number_of_tiles 60 "+
    std::string(c.bordered?"left_border 20 right_border 5 top_border 30 bottom_border 10 ":"")+
-   (c.zone>=-10?"zone "+std::to_string(c.zone)+" ":"")+"} ";
+   (c.zone>=-10?"zone "+std::to_string(c.zone)+" ":"")+
+   (c.byTeam?"set_zone_by_team ":"")+"} ";
   const std::string neutral="create_land { terrain_type 3 base_size 1 number_of_tiles 40 "+
     std::string(c.explicitPosition?"land_position 50 50 ":"")+"} ";
   for(const char *p=c.pattern;*p;++p)source+=*p=='P'?player:neutral;
@@ -84,10 +118,17 @@ static void checkRmsMixedLandMap() {
    if(id)return false;bytes.assign(source.begin(),source.end());return true;
   },{},&error),error);
   std::unordered_set<std::string> defines;if(c.fixed)defines.insert("FIXED_POSITIONS");
-  uint32_t rng=c.seed;check(generateRmsMap(script,defines,32,32,data,rng,map,&error),error);
+  std::vector<std::vector<uint8_t>> diplomacy;
+  if(c.diplomacyMode) {
+   diplomacy.assign(c.players+1,std::vector<uint8_t>(c.players+1,3));
+   for(uint32_t a=1;a<=c.players;++a)for(uint32_t b=1;b<=c.players;++b)
+    if(a==b || c.diplomacyMode==1 || (c.diplomacyMode==2 && (a-1)/2==(b-1)/2) ||
+       (c.diplomacyMode==3 && b==a+1) || (c.diplomacyMode==4 && b+1==a))diplomacy[a][b]=0;
+  }
+  uint32_t rng=c.seed;check(generateRmsMap(script,defines,32,32,data,rng,map,&error,c.players,{},diplomacy),error);
   uint32_t hash=2166136261u;for(auto v:map.terrain)hash=(hash^v)*16777619u;
   check(hash==c.hash && rng==c.rng,"original mixed-land geometry/RNG");
-  check(map.lands.size()==c.lands.size() && map.playerStarts.size()==2,"mixed land ownership count");
+  check(map.lands.size()==c.lands.size() && map.playerStarts.size()==c.players,"mixed land ownership count");
   size_t playerIndex=0;
   for(size_t i=0;i<c.lands.size();++i) {
    const auto &expected=c.lands[i];const auto &actual=map.lands[i];

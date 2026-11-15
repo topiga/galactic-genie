@@ -1188,3 +1188,25 @@ centers and ownership metadata match. Out-of-range zones fail atomically.
 Owned-object startup with explicit player zones remains gated pending its own
 comparison. Evidence: `rms-zoned-mixed-geometry-oracle-2026-11-15.json` and
 `rms-zerozone-mixed-geometry-oracle-2026-11-15.json`.
+
+### Team-based player-land zones
+
+`set_zone_by_team` now uses the original directional rule: for each player, find
+the first earlier player whose relation to that player is allied; use that earlier
+player's index plus one, or the current player's index plus one if none qualifies.
+It neither compacts the zone numbers nor inherits an earlier player's assigned
+zone. The existing connection-team numbering therefore cannot be reused.
+
+Evidence combines 32 original parser cases over 1..8 players with 32 original full
+geometry cases, including four-player allied pairs and both directions of
+asymmetric diplomacy. Native terrain, final RNG, centers and land ownership match.
+The directive takes no argument and consumes no RNG. Explicit numeric zones and
+team zones obey their source order. Owned startup with either override remains
+gated; random-zone directives still need their parser RNG timing verified.
+
+Private evidence: `rms-teamzone-parser-oracle-2026-11-15.json`,
+`rms-teamzone-mixed-geometry-oracle-2026-11-15.json`,
+`rms-teamzone-four-geometry-oracle-2026-11-15.json`. Ghidra handler0x4e2c40
+case0x1d corroborates the rule, retained as
+`rms-player-zone-handler-ghidra-2026-11-15.json`, evidence
+`ev_830e5a531f99f1c3a87bb24ae20dfbb38ab2742af75b931276cce6f6a139a2e1`.

@@ -131,10 +131,11 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             land.radius=3;
             land.targetTiles=width*height;
             land.borderFuzziness=20;
-            bool terrain=false,position=false,zoneSpecified=false;
+            bool terrain=false,position=false,zoneSpecified=false,teamZone=false;
             int landId=players?1:0,minPlacementDistance=-1;
             while (i < tokens.size() && tokens[i].text != "}") {
                 const auto name = tokens[i++].text;
+                if(name=="set_zone_by_team" && players) { teamZone=true;zoneSpecified=true;continue; }
                 if (!number(value)) return fail(name + " requires an integer");
                 if (name == "terrain_type" && value>=0 && value<=255) { land.terrain=static_cast<uint8_t>(value); terrain=true; }
                 else if (name == "land_position" && !players) {
@@ -162,7 +163,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 } else if (name == "clumping_factor" && value>=0 && value<=100) land.clumpingFactor=value;
                 else if (name == "border_fuzziness" && value>=0 && value<=255) land.borderFuzziness=value;
                 else if (name == "other_zone_avoidance_distance" && value>=0 && value<=1024) land.separation=value;
-                else if (name == "zone" && value>=-10 && value<=53) { land.zone=value+10;zoneSpecified=true; }
+                else if (name == "zone" && value>=-10 && value<=53) { land.zone=value+10;zoneSpecified=true;teamZone=false; }
                 else return fail("unsupported land parameter/value " + name);
             }
             if (i == tokens.size()) return fail("unterminated land block");
@@ -173,7 +174,11 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if (players) {
                 playerLands=true;playerLandBegin=lands.size();playerZoneOverride=zoneSpecified;
                 for (uint32_t owner=1;owner<=playerCount;++owner) {
-                    if(!zoneSpecified)land.zone=owner;
+                    if(teamZone) {
+                        uint32_t earlier=1;
+                        while(earlier<owner && (diplomacy.empty() || diplomacy[earlier][owner]!=0)) ++earlier;
+                        land.zone=earlier+1;
+                    } else if(!zoneSpecified)land.zone=owner;
                     lands.push_back(land);placements.push_back(placement);
                     landMetadata.push_back({{},landId,int(owner)});
                 }
