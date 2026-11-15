@@ -11,6 +11,8 @@
 static void require(bool ok, const std::string &message) {
     if (!ok) { std::cerr << message << '\n'; std::exit(1); }
 }
+#include "rms_packaged_parser_checks.h"
+
 int main(int argc, char **argv) {
     using namespace swgb;
     std::unordered_map<int32_t, std::string> files;
@@ -625,6 +627,7 @@ int main(int argc, char **argv) {
     if (argc == 2) {
         ResourceSet resources;
         require(resources.add(argv[1], &err), err);
+        rmsPackagedParserChecks(resources);
         require(script.load(55012,resources,&err),"Dagobah: "+err);
         uint32_t dagobahState=1;
         require(script.preprocess({"TINY_MAP","RANDOM_MAP","2_PLAYERS","FIXED_POSITIONS","DEFAULT_RESOURCES"},

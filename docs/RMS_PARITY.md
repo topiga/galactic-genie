@@ -1979,3 +1979,35 @@ allocation and language callbacks are modeled; stage handlers are intercepted to
 record their decoded arguments. This verifies text/control behavior, not world
 generation. Native regressions cover both branch states, EOF recovery and loading
 the installed Dagobah script. Other parser restrictions remain in place.
+
+### Packaged text/control corpus comparison
+
+A separate parser audit covers46 packaged scripts × Tiny/Small × three seeds
+(1,12345,4294967295):276 cases. Both sides receive the same explicit
+`RANDOM_MAP`, `2_PLAYERS`, `FIXED_POSITIONS`, `DEFAULT_RESOURCES` and size labels.
+The original executes command registration, text reading, include recursion,
+argument decoding and branch/RNG handling. Active tokens are captured immediately
+before dispatch at `0x4e26d0`. CRT I/O, allocation, resource extraction and language
+lookups are modeled; generation handlers are intercepted. This is a preprocessing
+comparison, not a complete map or live startup-settings comparison.
+
+261 cases match the full active token/argument stream and final RNG. Their
+original token hashes/counts and RNG states are checked against installed archives
+by `tools/rms_packaged_parser_checks.h`. The remaining15 are recorded separately:
+
+| Resource | Cases | Difference |
+|---|---:|---|
+| 55014 (Small) | 3 | Undefined `ANIMAL_SAARLAC`; the original discards that `create_object` command |
+| 55016 (Tiny/Small) | 6 | Original ignores unrecognized `set_avoid_player_start_area` |
+| 55019 (Tiny/Small) | 6 | Undefined `ANIMAL_SAARLAC`; the original discards that `create_object` command |
+
+The defined label is `ANIMAL_SARLAAC`. Native preprocessing retains those unknown
+words; interpreting the resulting generation rows still needs separate work.
+Do not silently replace the typo with a valid unit: that would add an object that
+the original does not create. Discarded object commands may leave subsequent
+parameters acting on the previous row, so full row interpretation matters.
+
+Evidence: `rms-packaged-token-parser-matrix-2026-11-15.json` and per-case captures;
+`rms-parser-corpus-2026-11-15/provenance.json` records archive/resource hashes.
+The earlier decoded-command matrix matches the same261 cases; its15 adapter
+errors are superseded by the complete token captures, not treated as passing.
