@@ -514,10 +514,11 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         for(size_t index=0;index<lands.size();++index) {
             const auto &land=lands[index];
             if(land.terrain!=6 || (!playerLands && (placements[index].x<0 || placements[index].y<0)) ||
-                land.radius || land.targetTiles || land.zone!=(playerLands?int(index+1):0) ||
+                (playerLands ? (land.radius>10 || land.targetTiles>8000) : (land.radius || land.targetTiles)) ||
+                land.zone!=(playerLands?int(index+1):0) ||
                 land.clumpingFactor!=8 || land.borderFuzziness!=20 || land.separation ||
                 land.leftBorder || land.topBorder || land.rightBorder!=-1 || land.bottomBorder!=-1)
-                return fail("cliffs require verified zero-growth land defaults");
+                return fail("cliffs require verified land size and growth defaults");
         }
         for(size_t index=0;index<elevationRows.size();++index) {
             const auto &row=elevationRows[index];

@@ -346,7 +346,7 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
             "original land-position cliff protection, composition and RNG");
     }
     const std::string playerLand="<LAND_GENERATION> base_terrain 6 create_player_lands { terrain_type 6 base_size 0 number_of_tiles 0 } ";
-    struct PlayerCliffCase { int settings; uint32_t seed,rng,hash; size_t count; int starts[4]; };
+    struct PlayerCliffCase { int settings; uint32_t seed,rng,hash; size_t count; int starts[4]; int radius=0,tiles=0; };
     const PlayerCliffCase playerCases[]={
         {0,1u,1152740336u,2017768301u,44,{74,12,46,84}},
         {0,12345u,2690460253u,3186643419u,59,{12,79,84,41}},
@@ -357,10 +357,21 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
         {2,1u,2650171262u,2166136261u,0,{74,12,46,84}},
         {2,12345u,1339939592u,2166136261u,0,{12,79,84,41}},
         {2,4294967295u,2952239670u,2166136261u,0,{84,36,12,84}},
+        {0,1u,1003445079u,2619903990u,63,{72,14,46,82},3,1000},
+        {0,12345u,182360986u,3442638069u,39,{14,77,82,41},3,1000},
+        {0,4294967295u,992564139u,3626055600u,43,{82,36,14,82},3,1000},
+        {0,1u,3087756617u,455463861u,54,{71,20,49,80},10,2000},
+        {0,12345u,3833562541u,2728107736u,43,{20,76,80,44},10,2000},
+        {0,4294967295u,1260596611u,249111388u,37,{80,40,20,80},10,2000},
+        {0,1u,3293037729u,4232931309u,43,{74,12,46,84},0,8000},
+        {0,12345u,4162111261u,4023500210u,59,{12,79,84,41},0,8000},
+        {0,4294967295u,3951742847u,2131392925u,44,{84,36,12,84},0,8000},
     };
     for(const auto &c:playerCases) for(bool late:{false,true}) {
         const std::string cliff="<CLIFF_GENERATION> "+std::string(settings[c.settings]);
-        load(playerLand+(late?"<TERRAIN_GENERATION> <OBJECTS_GENERATION> "+cliff:cliff+"<TERRAIN_GENERATION> <OBJECTS_GENERATION> "));
+        const std::string growingLand="<LAND_GENERATION> base_terrain 6 create_player_lands { terrain_type 6 base_size "+
+            std::to_string(c.radius)+" number_of_tiles "+std::to_string(c.tiles)+" } ";
+        load(growingLand+(late?"<TERRAIN_GENERATION> <OBJECTS_GENERATION> "+cliff:cliff+"<TERRAIN_GENERATION> <OBJECTS_GENERATION> "));
         uint32_t state=c.seed;
         check(generateRmsMap(script,{},120,120,data,state,map,&error),error.c_str());
         uint32_t hash=2166136261u;
@@ -383,6 +394,12 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
         uint32_t state=1;
         check(!generateRmsMap(script,{},120,120,data,state,map,&error) && state==1 && map.cliffs.empty(),
             "unverified player-land cliff compositions remain transactional");
+    }
+    for(const char *parameters:{"base_size 11 number_of_tiles 1000","base_size 3 number_of_tiles 8001"}) {
+        load("<LAND_GENERATION> base_terrain 6 create_player_lands { terrain_type 6 "+std::string(parameters)+" } <CLIFF_GENERATION>");
+        uint32_t state=1;
+        check(!generateRmsMap(script,{},120,120,data,state,map,&error) && state==1 && map.cliffs.empty(),
+            "unverified player-land cliff sizes remain transactional");
     }
     uint32_t rng=1;
     load(land+"<CLIFF_GENERATION> min_distance_cliffs 0");

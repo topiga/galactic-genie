@@ -1646,3 +1646,20 @@ allocation/time/log boundaries are modeled and original RMS file loading is
 not exercised. Fixed positions, extra lands, nonzero land growth, terrain or
 elevation composition with these player lands, and owned startup remain gated.
 This is diagnostic coverage, not a newly verified packaged map.
+
+
+### Player-land growth before cliffs
+
+Nine more original scheduler runs extend the two-player DIRT1 profile to nonzero
+land size and growth: radius/target pairs (3,1000), (10,2000), and (0,8000), each
+at seeds 1, 12345 and UINT32_MAX. Both lands retain their original separate zones.
+Although these lands paint the same terrain as the base, the land module consumes
+random numbers during growth and changes subsequent cliff placement.
+
+All player starts, surviving cliff objects and final RNG match. The native bound
+is radius <=10 and target <=8000 per player, still without subsequent painting or
+owned objects. Seed 1 at radius 3/target 1000 creates 63 cliffs and finishes at
+RNG 1003445079. Evidence: `rms-cliff-player-growth-cases-oracle-2026-11-15.json`,
+using the same original handler/finalizer/scheduler harness and limitations as
+above. This does not establish terrain transitions, full packaged maps or live
+startup callback parity.
