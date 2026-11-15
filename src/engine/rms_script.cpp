@@ -112,11 +112,14 @@ struct Reader {
             } else if (s == "percent_chance") {
                 if (blocks.empty() || blocks.back().kind != "start_random") bad();
             } else if (s.front() == '<') {
-                if (!blocks.empty() || std::find(stages.begin(), stages.end(), s) == stages.end())
+                if (std::any_of(blocks.begin(), blocks.end(), [](const auto &b) { return b.kind == "{"; }) ||
+                    std::find(stages.begin(), stages.end(), s) == stages.end())
                     fail(t.resourceId, t.line, "invalid stage " + s);
             }
         }
-        if (!blocks.empty()) throw std::runtime_error("RMS: unterminated control or brace");
+        // Original file-reader EOF leaves condition depth intact (including shipped Mos Espa).
+        if (std::any_of(blocks.begin(), blocks.end(), [](const auto &b) { return b.kind != "if"; }))
+            throw std::runtime_error("RMS: unterminated control or brace");
     }
 };
 } // namespace
@@ -263,7 +266,6 @@ bool RmsScript::preprocess(const std::unordered_set<std::string> &initialDefines
                 result.push_back(std::move(token));
             }
         }
-        if (!branches.empty()) throw std::runtime_error("RMS: unterminated condition");
         out = std::move(result);
         if (randomState) *randomState = rng;
         return true;

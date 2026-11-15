@@ -1934,3 +1934,26 @@ Native imports and CLI rendering also exercise both new forests with and without
 start protection. Evidence is retained in
 `rms-cliff-fixed-player-forest-types-cases-oracle-2026-11-15.json`. These cases have
 no owned startup objects or hills; those compositions remain gated.
+
+### Conditional stage headers and unfinished conditions
+
+The original command interpreter (`0x4e1fa0`) permits stage headers in active
+conditional/random branches. Its file-reader EOF path (`0x4e16f0`) retains the
+condition stack instead of rejecting an unfinished `if`. Native loading now
+accepts those cases while preserving validation of braces, random blocks and
+unknown stage names. Inactive branches still contribute no stage directives.
+
+The packaged Mos Espa script (55014) has `else if SMALL_MAP` and only one matching
+`endif`, leaving the outer Tiny condition open. It now loads and preprocesses;
+Tiny excludes the trailing elevation/cliff stages, while Small retains them.
+This preserves the shipped control flow rather than adding an inferred `endif`.
+It does not yet make Mos Espa a supported complete generated map.
+
+Evidence: `rms-conditional-parser-ghidra-evidence-2026-11-15.json` and
+`rms-conditional-stage-oracle-2026-11-15.json`: four original nested-condition
+cases, two random-stage cases and two EOF cases. Command cases supply decoded
+condition arguments; EOF cases model CRT file operations with immediate EOF and
+run the actual reader cleanup. These are not complete original text-loader
+captures. Native tests additionally use the installed Mos Espa archive source.
+The malformed `elseif` in packaged55012 remains a separate unsupported case.
+EOF compatibility does not relax resource/include limits or unknown-stage checks.

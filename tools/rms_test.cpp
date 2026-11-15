@@ -51,6 +51,7 @@ int main(int argc, char **argv) {
     reject("if HOME else elseif AWAY endif", "unbalanced");
     reject("start_random endif", "unbalanced");
     reject("<FAKE_GENERATION>", "stage");
+    reject("create_land { if HOME <LAND_GENERATION> endif }", "stage");
     reject(std::string("abc\0def", 7), "NUL");
     files[1] = "#include_drs constants.def 2";
     limits.maxDepth = 1;
@@ -83,6 +84,20 @@ int main(int argc, char **argv) {
         "elseif PRESENT #define PICK else wrong endif "
         "if LEAK wrong elseif PICK selected else wrong endif", {"PRESENT"}), err);
     require(text() == "selected ", "nested inactive condition or elseif side effects");
+    for(bool outer:{false,true}) for(bool inner:{false,true}) {
+        std::unordered_set<std::string> defines;
+        if(outer) defines.insert("OUTER");
+        if(inner) defines.insert("INNER");
+        require(preprocess("if OUTER <LAND_GENERATION> if INNER <ELEVATION_GENERATION> "
+            "else <CLIFF_GENERATION> endif else <OBJECTS_GENERATION> endif",defines),err);
+        require(text()==(outer?(inner?"<LAND_GENERATION> <ELEVATION_GENERATION> ":
+            "<LAND_GENERATION> <CLIFF_GENERATION> "):"<OBJECTS_GENERATION> "),
+            "original conditional stage dispatch");
+    }
+    require(preprocess("if HOME <ELEVATION_GENERATION>",{"HOME"}) &&
+        text()=="<ELEVATION_GENERATION> ","original EOF retains an active unfinished condition");
+    require(preprocess("if HOME <ELEVATION_GENERATION>",{}) && text().empty(),
+        "original EOF retains an inactive unfinished condition");
     require(preprocess("#define HOME #undefine HOME if HOME wrong else fallback endif", {}), err);
     require(text() == "wrong ", "original undefine is a no-op");
     require(preprocess("if MISSING start_random percent_chance 100 #define LEAK end_random endif "
@@ -108,6 +123,14 @@ int main(int argc, char **argv) {
     require(preprocess("#include_drs constants.def 2\nif HOME terrain_type GRASS endif", {}), err);
     require(text() == "terrain_type 0 " && processed[1].resourceId == 1, "included definitions");
     require(script.preprocess({}, processed, &err) && text() == "terrain_type 0 ", "repeat preprocessing changed source");
+    files[1]="start_random percent_chance 50 <LAND_GENERATION> percent_chance 50 <ELEVATION_GENERATION> end_random";
+    require(script.load(1,resolve,limits,&err),err);
+    for(uint32_t seed:{1u,30091u}) {
+        uint32_t state=seed;
+        require(script.preprocess({},processed,&err,&state),err);
+        require(text()==(seed==1?"<LAND_GENERATION> ":"<ELEVATION_GENERATION> ") &&
+            state==seed*214013u+2531011u,"original random stage dispatch and RNG");
+    }
     files[1] = "start_random percent_chance 10 first percent_chance 90 second end_random";
     require(script.load(1, resolve, limits, &err), err);
     uint32_t rng = 992;
@@ -588,6 +611,18 @@ int main(int argc, char **argv) {
     if (argc == 2) {
         ResourceSet resources;
         require(resources.add(argv[1], &err), err);
+        require(script.load(55014,resources,&err),"Mos Espa: "+err);
+        for(bool tiny:{false,true}) {
+            uint32_t state=1;
+            std::unordered_set<std::string> defines={"RANDOM_MAP","2_PLAYERS","FIXED_POSITIONS","DEFAULT_RESOURCES"};
+            defines.insert(tiny?"TINY_MAP":"SMALL_MAP");
+            require(script.preprocess(defines,processed,&err,&state),"Mos Espa preprocessing: "+err);
+            const auto hasStage=[&](const char *stage) {
+                return std::any_of(processed.begin(),processed.end(),[&](const auto &t) {return t.text==stage;});
+            };
+            require(hasStage("<ELEVATION_GENERATION>")==!tiny && hasStage("<CLIFF_GENERATION>")==!tiny,
+                "Mos Espa unfinished outer condition suppresses trailing hills and cliffs only on Tiny");
+        }
         require(script.load(54205, resources, &err), "Shoreline: " + err);
         size_t stages = 0, includes = 0;
         bool worker = false, constant = false, resourceInclude = false;
