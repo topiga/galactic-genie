@@ -670,6 +670,6 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
     load("<LAND_GENERATION> base_terrain 6 create_land { terrain_type 6 base_size 0 number_of_tiles 0 } <CLIFF_GENERATION>");
     check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1 && map.cliffs.empty(),
         "cliffs with randomly placed neutral land remain unverified");
-    load(land+"<CLIFF_GENERATION> cliff_curliness nope");
-    check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1,"malformed cliff integer");
+    load(land+"<CLIFF_GENERATION> cliff_curliness 2147483648");
+    check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1,"overflowing cliff integer");
 }

@@ -77,15 +77,40 @@ int main(int argc, char **argv) {
         for (const auto &t : processed) joined += t.text + " ";
         return joined;
     };
+    const std::pair<const char *,const char *> recoveryCases[]={
+        {"<PLAYER_SETUP> ignored_word random_placement ignored_word 7 grouped_by_team","<PLAYER_SETUP> random_placement grouped_by_team "},
+        {"#const WOMPRAT 1475 <OBJECTS_GENERATION> create_object WOMPRAT { number_of_objects 6 group_variance 2 } create_object MISSING { number_of_objects 1 }","<OBJECTS_GENERATION> create_object 1475 { number_of_objects 6 group_variance 2 } { number_of_objects 1 } "},
+        {"<LAND_GENERATION> base_terrain MISSING land_percent 50","<LAND_GENERATION> land_percent 50 "},
+        {"#const GRASS 0 <LAND_GENERATION> land_percent base_terrain GRASS","<LAND_GENERATION> base_terrain 0 "},
+        {"<OBJECTS_GENERATION> create_object","<OBJECTS_GENERATION> "},
+        {"#define GRASS <LAND_GENERATION> base_terrain GRASS","<LAND_GENERATION> base_terrain 0 "},
+        {"<LAND_GENERATION> land_percent +7 base_size 7junk zone nope","<LAND_GENERATION> land_percent 7 base_size 7 zone 0 "},
+        {"#const COUNT 7 <LAND_GENERATION> land_percent COUNT","<LAND_GENERATION> land_percent 0 "},
+        {"<LAND_GENERATION> land_percent + base_size +-7 zone --7","<LAND_GENERATION> land_percent 0 base_size 0 zone 0 "},
+        {"<LAND_GENERATION> land_percent ignored_word base_size 7","<LAND_GENERATION> land_percent 0 base_size 7 "},
+    };
+    for(const auto &c:recoveryCases) {
+        require(preprocess(c.first,{}),err);
+        require(text()==c.second,"original command lookup and argument recovery: "+std::string(c.first));
+    }
+    files[1]="<LAND_GENERATION> base_terrain MISSING random_placement";
+    require(script.load(1,resolve,limits,&err),err);
+    std::vector<std::string> observed;
+    uint32_t observerState=1;
+    require(script.preprocess({},processed,&err,&observerState,[&](const RmsToken &token,uint32_t &) {
+        observed.push_back(token.text);
+    }),err);
+    require(observed==std::vector<std::string>{"<LAND_GENERATION>","random_placement"} && observerState==1,
+            "generation callbacks only observe complete decoded commands");
     require(preprocess("#const GRASS 0\n#define HOME\n"
         "<LAND_GENERATION> create_land { if HOME terrain_type GRASS "
         "elseif OTHER terrain_type 2 else terrain_type 3 endif }", {}), err);
     require(text() == "<LAND_GENERATION> create_land { terrain_type 0 } ", "first matching branch and constant");
     require(processed[4].resourceId == 1 && processed[4].line == 3, "constant use source location");
-    require(preprocess("if MISSING #define LEAK if PRESENT wrong else wrong endif "
-        "elseif PRESENT #define PICK else wrong endif "
-        "if LEAK wrong elseif PICK selected else wrong endif", {"PRESENT"}), err);
-    require(text() == "selected ", "nested inactive condition or elseif side effects");
+    require(preprocess("if MISSING #define LEAK if PRESENT grouped_by_team else grouped_by_team endif "
+        "elseif PRESENT #define PICK else grouped_by_team endif "
+        "if LEAK grouped_by_team elseif PICK random_placement else grouped_by_team endif", {"PRESENT"}), err);
+    require(text() == "random_placement ", "nested inactive condition or elseif side effects");
     for(bool outer:{false,true}) for(bool inner:{false,true}) {
         std::unordered_set<std::string> defines;
         if(outer) defines.insert("OUTER");
@@ -127,30 +152,31 @@ int main(int argc, char **argv) {
             "original random weight accepts a following line");
         require(state==2745024u,"multiline random branch consumes one original draw");
     }
-    require(preprocess("if HOME selected elseif",{"HOME"}) && text()=="selected ",
+    require(preprocess("if HOME random_placement elseif",{"HOME"}) && text()=="random_placement ",
         "original incomplete elseif at EOF leaves the active branch unchanged");
-    require(preprocess("if HOME selected elseif",{}) && text().empty(),
+    require(preprocess("if HOME random_placement elseif",{}) && text().empty(),
         "original incomplete elseif at EOF leaves the inactive branch unchanged");
-    require(preprocess("#define HOME #undefine HOME if HOME wrong else fallback endif", {}), err);
-    require(text() == "wrong ", "original undefine is a no-op");
+    require(preprocess("#define HOME #undefine HOME if HOME grouped_by_team else set_loose_grouping endif", {}), err);
+    require(text() == "grouped_by_team ", "original undefine is a no-op");
     require(preprocess("if MISSING start_random percent_chance 100 #define LEAK end_random endif "
-        "if LEAK wrong else safe endif", {}), err);
-    require(text() == "safe ", "inactive random leaked definitions");
-    require(preprocess("#const NEG -7 amount NEG", {}), err);
-    require(text() == "amount -7 ", "negative integer constant");
+        "if LEAK grouped_by_team else set_tight_grouping endif", {}), err);
+    require(text() == "set_tight_grouping ", "inactive random leaked definitions");
+    require(preprocess("#const NEG -7 terrain_type NEG", {}), err);
+    require(text() == "terrain_type -7 ", "negative integer constant");
     auto rejectPreprocess = [&](const std::string &source, const std::string &reason) {
         require(!preprocess(source, {}), "accepted unsupported preprocessing: " + source);
         require(err.find(reason) != std::string::npos, "unexpected preprocess error: " + err);
         require(processed.empty(), "failed preprocessing retained partial output");
     };
-    rejectPreprocess("prefix start_random percent_chance 100 selected end_random", "random");
+    rejectPreprocess("set_flat_terrain_only start_random percent_chance 100 random_placement end_random", "random");
     rejectPreprocess("#const BAD 2147483648", "32-bit");
     rejectPreprocess("#const BAD OTHER", "integer");
     rejectPreprocess("#const BAD", "missing");
+    rejectPreprocess("land_percent 2147483648", "signed32");
     rejectPreprocess("#define 12", "symbol");
     rejectPreprocess("if\nendif", "missing");
-    require(preprocess("#const X 0 if X selected endif", {}), err);
-    require(text() == "selected ", "zero constant condition tests existence");
+    require(preprocess("#const X 0 if X random_placement endif", {}), err);
+    require(text() == "random_placement ", "zero constant condition tests existence");
     rejectPreprocess("#const X 1 #const X 2", "conflicting");
     files[2] = "#const GRASS 0\n#define HOME";
     require(preprocess("#include_drs constants.def 2\nif HOME terrain_type GRASS endif", {}), err);
@@ -167,40 +193,40 @@ int main(int argc, char **argv) {
         require(text()==(seed==1?"<LAND_GENERATION> ":"<ELEVATION_GENERATION> ") &&
             state==seed*214013u+2531011u,"original random stage dispatch and RNG");
     }
-    files[1] = "start_random percent_chance 10 first percent_chance 90 second end_random";
+    files[1] = "start_random percent_chance 10 random_placement percent_chance 90 grouped_by_team end_random";
     require(script.load(1, resolve, limits, &err), err);
     uint32_t rng = 992;
     require(script.preprocess({}, processed, &err, &rng), err);
-    require(text() == "first " && rng == 0x0cce1323u, "inclusive equality branch and CRT state");
+    require(text() == "random_placement " && rng == 0x0cce1323u, "inclusive equality branch and CRT state");
     rng = 1093;
     require(script.preprocess({}, processed, &err, &rng), err);
-    require(text() == "second " && rng == 0x0e17e5f4u, "subtract chance before next branch");
+    require(text() == "grouped_by_team " && rng == 0x0e17e5f4u, "subtract chance before next branch");
     rng = 30091;
     require(script.preprocess({}, processed, &err, &rng), err);
-    require(text() == "second " && rng == 0x7fff2a22u, "inclusive100 roll");
-    files[1] = "start_random percent_chance 0 zero percent_chance 100 other end_random";
+    require(text() == "grouped_by_team " && rng == 0x7fff2a22u, "inclusive100 roll");
+    files[1] = "start_random percent_chance 0 set_loose_grouping percent_chance 100 set_tight_grouping end_random";
     require(script.load(1, resolve, limits, &err), err);
     rng = 0;
     require(script.preprocess({}, processed, &err, &rng), err);
-    require(text() == "zero " && rng == 2531011u, "original zero-weight branch can win at roll zero");
-    files[1] = "start_random percent_chance 10 first percent_chance 10 second end_random after";
+    require(text() == "set_loose_grouping " && rng == 2531011u, "original zero-weight branch can win at roll zero");
+    files[1] = "start_random percent_chance 10 random_placement percent_chance 10 grouped_by_team end_random set_gaia_object_only";
     require(script.load(1, resolve, limits, &err), err);
     rng = 30091;
     require(script.preprocess({}, processed, &err, &rng), err);
-    require(text() == "after ", "underweight random can select nothing");
-    files[1] = "if MISSING start_random percent_chance 100 bad end_random endif "
-        "start_random percent_chance 100 #define HOME end_random if HOME good endif";
+    require(text() == "set_gaia_object_only ", "underweight random can select nothing");
+    files[1] = "if MISSING start_random percent_chance 100 set_scale_by_groups end_random endif "
+        "start_random percent_chance 100 #define HOME end_random if HOME set_scale_by_size endif";
     require(script.load(1, resolve, limits, &err), err);
     rng = 0;
     require(script.preprocess({}, processed, &err, &rng), err);
-    require(text() == "good " && rng == 2531011u, "inactive condition consumes no RNG");
-    files[1] = "start_random percent_chance 0 if MISSING bad else bad endif "
-        "percent_chance 100 if HOME selected else fallback endif end_random";
+    require(text() == "set_scale_by_size " && rng == 2531011u, "inactive condition consumes no RNG");
+    files[1] = "start_random percent_chance 0 if MISSING set_scale_by_groups else set_scale_by_groups endif "
+        "percent_chance 100 if HOME random_placement else set_loose_grouping endif end_random";
     require(script.load(1, resolve, limits, &err), err);
     rng = 1093;
     require(script.preprocess({"HOME"}, processed, &err, &rng), err);
-    require(text() == "selected ", "unselected random conditions cannot affect selected branch");
-    files[1] = "start_random percent_chance 101 bad end_random";
+    require(text() == "random_placement ", "unselected random conditions cannot affect selected branch");
+    files[1] = "start_random percent_chance 101 set_scale_by_groups end_random";
     require(script.load(1, resolve, limits, &err), err);
     rng = 123;
     require(!script.preprocess({}, processed, &err, &rng) && rng == 123 && processed.empty(),

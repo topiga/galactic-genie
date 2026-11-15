@@ -32,8 +32,10 @@ public:
     bool load(int32_t resourceId, const Resolver &resolver,
               const Limits &limits, std::string *err = nullptr);
     const std::vector<RmsToken> &tokens() const { return tokens_; }
-    // Resolve integer constants and defined-symbol branches without modifying
-    // the loaded source. Optional RNG state enables original nonnested random
+    // Decode registered commands, constants and defined-symbol branches without
+    // modifying the loaded source. Unknown words and unresolved required labels
+    // are discarded as in the original reader; literal IDs remain a native extension.
+    // Optional RNG state enables original nonnested random
     // blocks; it is advanced only on success. This is shared CRT state at script
     // entry, not a promise that a map seed reproduces a generated map.
     // onToken observes active, resolved tokens in source order and may consume

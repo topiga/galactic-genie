@@ -2092,3 +2092,29 @@ explicit identical labels and intercepted generation handlers, not828 complete
 map generations. Evidence: `rms-packaged-token-parser-large-matrix-2026-11-15.json`,
 per-case captures and the prior Tiny/Small matrix. The native baseline is frozen
 at4ca5212 for the additional sizes; source and binary hashes are recorded.
+
+### Original command lookup and argument recovery
+
+The shared preprocessor now decodes the original94-command registry and its
+argument kinds. Unknown words are ignored. Commands with missing required labels
+are discarded; a following recognized command remains available to the reader.
+Only complete decoded commands reach the generation/RNG visitor. Defined labels
+resolve to zero when used as required value labels. Numeric parameters use the
+original `atoi` behavior: numeric prefixes are accepted and nonnumeric words become
+zero, without substituting constant labels into numeric-only fields.
+
+All828 installed packaged-script cases now match their captured original active
+token streams and final RNG, including the51 previously different cases. This is
+a preprocessing milestone, not complete generation of828 maps. The unknown
+Sarlacc command is discarded without replacing it with another unit; following
+braces/parameters remain. The generation layer still needs original row-update
+semantics and unsupported unit/resource profiles before those complete maps work.
+
+`rms-command-recovery-oracle-2026-11-15.json` contains11 authored original reader
+comparisons, including unknown words/labels, pending commands, EOF, define values,
+numeric prefixes and invalid signs. Native tests use ten matching cases. The
+remaining case explicitly demonstrates an existing native extension: authored
+numeric IDs are accepted where original scripts require named labels. Signed32
+overflow, include/resource bounds, unknown stages and other unverified parser
+paths remain guarded. Generation tests separately verify that unknown terrain
+words are harmless while registered but unsupported commands still reject the map.

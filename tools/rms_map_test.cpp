@@ -236,13 +236,19 @@ int main() {
     for (uint8_t tile:map.terrain) hash=(hash^tile)*16777619u;
     check(hash==3452956004u && state==uint32_t(1656093246u*214013u+2531011u),
           "original fixed-radius player protection and terrain pipeline mismatch");
+    const auto protectedGrid=map.terrain;
+    const auto protectedState=state;
+    protectedTerrain.insert(protectedTerrain.rfind("}"),"unsupported_flag ");
+    load(players+protectedTerrain);state=1;
+    check(generateRmsMap(script,{},32,32,data,state,map,&error) && map.terrain==protectedGrid && state==protectedState,
+          "original unregistered terrain words do not change generation or RNG");
     for (const auto &invalid:{"create_terrain 3 { number_of_tiles 2 }",
                             "create_terrain 256 { base_terrain 3 }",
                             "create_terrain -253 { base_terrain 0 }",
                             "create_terrain 3 { base_terrain 256 }",
                             "create_terrain 3 { base_terrain -256 }",
                             "create_terrain 3 { base_terrain 3 }",
-                            "create_terrain 3 { base_terrain 0 unsupported_flag }",
+                            "create_terrain 3 { base_terrain 0 height_limits 0 1 }",
                             "create_terrain 3 { base_terrain 0 number_of_clumps -1 }"}) {
         load(players+" <TERRAIN_GENERATION> "+invalid); state=1;
         check(!generateRmsMap(script,{},32,32,data,state,map,&error) && state==1 && map.terrain.empty(),
