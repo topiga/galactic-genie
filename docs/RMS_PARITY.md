@@ -1362,3 +1362,38 @@ patterns leave output and RNG unchanged. The original game's Gaia construction
 and game-event calls were recorded without effects; their behavior, topology
 replacement/destruction and actual object construction still need comparison.
 Private evidence: `rms-cliff-art-oracle-2026-11-15.json`.
+
+### Cliff objects and interleaved RNG: complete stage boundary
+
+`generateRmsCliffs` now matches 72 executions of the original cliff stage,
+including real Gaia factories, type-10 constructors, destructors, map object
+registration and game events. Checks cover surviving unit IDs, facets, positions,
+creation ordinals (including gaps from replaced pieces), order and final RNG.
+Inputs span flat/water/split-height/protected maps, eight seeds and three
+count/length/curl/spacing profiles on 120×120 empty worlds. Zero spacing is
+rejected: intersecting paths and pre-existing objects are outside this helper's
+verified domain. It is not yet called by the packaged RMS importer.
+
+The earlier inert-callback and graphic helpers remain independent tests. Thirty
+real constructor cases for units 264–273 show no constructor draws, a static
+sprite pointer, and original Gaia registration. Twelve simple connected-path
+cases then match synthetic topology replays with real constructors/destructors
+and events. The complete-stage comparison exposed additional behavior that those
+simple paths missed: when extending an endpoint, 0x5cb340 runs for all three
+non-incoming directions, even absent edges. A path that bends back near itself
+can destroy/recreate neighboring straight pieces and consume extra selection
+draws. The native implementation preserves that order. Seed 1 diverged at the
+38th segment call before this correction; the corrected full-stage fixtures pass.
+
+No source executable was patched. The replay configures world state directly and
+models external allocation/time boundaries; it does not run the RMS file parser,
+scheduler, later terrain/connection stages, or a complete live match. Native-world
+import, DAT compatibility validation at integration, zero-spacing topology, and
+later stages interacting with existing cliffs remain work before playable support.
+
+Private evidence: `rms-cliff-constructor-oracle-2026-11-15.json`,
+`rms-cliff-real-topology-comparison-2026-11-15.json`, the twelve
+`rms-cliff-real-stage-{profile}-{seed}-oracle-2026-11-15.json` baselines, and
+`rms-cliff-real-stage-expanded-oracle-2026-11-15.json` (60 additional cases).
+The expanded replay also asserts all 14,400 terrain, height and slope bytes are
+unchanged by cliff construction; object occupancy is recorded separately.

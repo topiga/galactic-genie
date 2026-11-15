@@ -5,10 +5,10 @@
 #include <array>
 
 namespace swgb {
-bool planRmsCliffs(uint32_t size, const std::vector<uint8_t> &terrain,
+static bool walkRmsCliffs(uint32_t size, const std::vector<uint8_t> &terrain,
     const std::vector<uint8_t> &heights, const RmsCliffSettings &s,
     const std::vector<RmsCliffProtection> &protection, uint32_t &randomState,
-    std::vector<RmsCliffSegment> &segments, std::string *err) {
+    std::vector<RmsCliffSegment> &segments, std::vector<RmsCliffObject> *objects, std::string *err) {
     if (err) err->clear();
     auto fail=[&](const char *message) {
         if (err) *err=std::string("RMS cliffs: ")+message;
@@ -25,6 +25,7 @@ bool planRmsCliffs(uint32_t size, const std::vector<uint8_t> &terrain,
     for (const auto &p:protection)
         if (p.x<0 || p.y<0 || uint32_t(p.x)>=size || uint32_t(p.y)>=size || p.radius<0 || p.radius>2048)
             return fail("unsupported protected start");
+    if (objects && s.cliffDistance<1) return fail("intersecting cliffs are not verified");
     const int n=int(size)/3, width=int(size);
     std::vector<uint8_t> mask(n*n,1);
     uint64_t work=0;
@@ -78,6 +79,54 @@ bool planRmsCliffs(uint32_t size, const std::vector<uint8_t> &terrain,
     }
     auto draw=[&](int low,int high) {return low+int(genieRandomDraw(rng)*uint32_t(high-low)/32767u);};
     std::vector<RmsCliffSegment> result;
+    std::vector<RmsCliffObject> created;
+    std::vector<bool> alive;
+    std::vector<int> cellObject(objects?n*n:0,-1);
+    std::vector<std::array<int,4>> edges(objects?n*n:0);
+    auto create=[&](int cell,const RmsCliffArt &art) {
+        if (cellObject[cell]>=0) alive[cellObject[cell]]=false;
+        cellObject[cell]=int(created.size());
+        created.push_back({art.unit,art.facet,float(cell%n*3)+art.offsetX,
+            float(cell/n*3)+art.offsetY,uint32_t(created.size())});
+        alive.push_back(true);
+    };
+    auto removeNeighbor=[&](int cell,int direction) {
+        int x=cell%n,y=cell/n;
+        if (direction==0) ++x; else if(direction==1) ++y; else if(direction==2) --x; else --y;
+        if (x<0 || y<0 || x>=n || y>=n) return;
+        const int neighbor=y*n+x;
+        if (cellObject[neighbor]<0) return;
+        alive[cellObject[neighbor]]=false; cellObject[neighbor]=-1;
+        edges[neighbor][(direction+2)%4]=0;
+        RmsCliffArt art;
+        if (selectRmsCliffArt(edges[neighbor],rng,art)) create(neighbor,art);
+    };
+    int incoming=-1;
+    auto join=[&](int from,int to) {
+        if (from==to) return true;
+        // Spaced, self-avoiding paths only extend their current endpoint.
+        if (cellObject[to]>=0) return false;
+        const int direction=to%n>from%n?0:to%n<from%n?2:to/n>from/n?1:3;
+        auto pattern=cellObject[from]>=0?edges[from]:std::array<int,4>{};
+        if (cellObject[from]>=0) { alive[cellObject[from]]=false; cellObject[from]=-1; }
+        // 0x5cb340 runs even for absent edges, recreating nearby pieces and drawing RNG.
+        if (incoming>=0 && incoming!=direction)
+            for (int d=0;d<4;++d) if (d!=incoming) {
+                removeNeighbor(from,d); pattern[d]=0;
+            }
+        pattern[direction]=1;
+        RmsCliffArt art;
+        int sign=1;
+        if (!selectRmsCliffArt(pattern,rng,art)) {
+            sign=-1; pattern[direction]=-1;
+            if (!selectRmsCliffArt(pattern,rng,art)) return false;
+        }
+        edges[from]=pattern; create(from,art);
+        edges[to][(direction+2)%4]=sign;
+        if (!selectRmsCliffArt(edges[to],rng,art)) return false;
+        create(to,art); incoming=(direction+2)%4;
+        return true;
+    };
     size_t next=0;
     const int count=draw(s.minCount,s.maxCount);
     for (int cliff=0;cliff<count;++cliff) {
@@ -106,15 +155,34 @@ bool planRmsCliffs(uint32_t size, const std::vector<uint8_t> &terrain,
                 (step || !move(direction-2))) break;
             path.push_back(y*n+x); mask[y*n+x]=0;
         }
-        int previous=path.back();
+        int previous=path.back(); incoming=-1;
         for (auto it=path.rbegin();it!=path.rend();++it) {
+            if (objects && !join(previous,*it)) return fail("unsupported cliff topology");
             result.push_back({previous%n*3+1,previous/n*3+1,*it%n*3+1,*it/n*3+1});
             previous=*it;
             if (!clear(*it%n,*it/n,s.cliffDistance)) return fail("work limit exceeded");
         }
     }
+    if (objects) {
+        std::vector<RmsCliffObject> survivors;
+        for (size_t i=0;i<created.size();++i) if (alive[i]) survivors.push_back(created[i]);
+        *objects=std::move(survivors);
+    }
     segments=std::move(result); randomState=rng;
     return true;
+}
+bool planRmsCliffs(uint32_t size, const std::vector<uint8_t> &terrain,
+    const std::vector<uint8_t> &heights, const RmsCliffSettings &settings,
+    const std::vector<RmsCliffProtection> &protection, uint32_t &randomState,
+    std::vector<RmsCliffSegment> &segments, std::string *err) {
+    return walkRmsCliffs(size,terrain,heights,settings,protection,randomState,segments,nullptr,err);
+}
+bool generateRmsCliffs(uint32_t size, const std::vector<uint8_t> &terrain,
+    const std::vector<uint8_t> &heights, const RmsCliffSettings &settings,
+    const std::vector<RmsCliffProtection> &protection, uint32_t &randomState,
+    std::vector<RmsCliffObject> &objects, std::string *err) {
+    std::vector<RmsCliffSegment> segments;
+    return walkRmsCliffs(size,terrain,heights,settings,protection,randomState,segments,&objects,err);
 }
 bool selectRmsCliffArt(const std::array<int,4> &edges, uint32_t &randomState,
     RmsCliffArt &art) {

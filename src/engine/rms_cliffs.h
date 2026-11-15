@@ -19,6 +19,19 @@ bool planRmsCliffs(uint32_t size, const std::vector<uint8_t> &terrain,
     const std::vector<uint8_t> &heights, const RmsCliffSettings &settings,
     const std::vector<RmsCliffProtection> &protection, uint32_t &randomState,
     std::vector<RmsCliffSegment> &segments, std::string *err=nullptr);
+struct RmsCliffObject {
+    int unit=-1, facet=0; float x=0, y=0;
+    uint32_t creationOrdinal=0;
+};
+// Original path + topology/art stage on an empty world, spacing >= 1 coarse cell.
+// Original type10 cliff masters264..273 and graphics5256..5265 only. Produces
+// surviving objects in creation order; ordinals include replaced pieces.
+// No RMS parsing/scheduler, native-world registration or later terrain stages.
+// Failure leaves objects and RNG unchanged.
+bool generateRmsCliffs(uint32_t size, const std::vector<uint8_t> &terrain,
+    const std::vector<uint8_t> &heights, const RmsCliffSettings &settings,
+    const std::vector<RmsCliffProtection> &protection, uint32_t &randomState,
+    std::vector<RmsCliffObject> &objects, std::string *err=nullptr);
 struct RmsCliffArt { int unit=-1, facet=0; float offsetX=0, offsetY=0; };
 // Clone Campaigns catalog and selection 0x5caf00/0x5cb1b0, edges E/S/W/N.
 // No topology updates, object construction or game events. Unsupported edge
