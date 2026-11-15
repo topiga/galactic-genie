@@ -2011,3 +2011,23 @@ Evidence: `rms-packaged-token-parser-matrix-2026-11-15.json` and per-case captur
 `rms-parser-corpus-2026-11-15/provenance.json` records archive/resource hashes.
 The earlier decoded-command matrix matches the same261 cases; its15 adapter
 errors are superseded by the complete token captures, not treated as passing.
+
+### Full resource startup at fixed cliff starts
+
+The authored23-row cliff/resource profile now accepts `FIXED_POSITIONS` for
+Empire/Empire. Six original comparisons cover default and dense cliff settings
+with seeds1,12345,4294967295. Complete ordered object records, terrain rasters,
+final RNG, pending foundations and animated owned/Gaia poses match. Native
+regressions also check import coordinates and resource/population state.
+
+Evidence: `rms-cliff-fixed-full-cases-oracle-2026-11-15.json` and its compressed
+per-case captures. The original fixed-start finalizer and generation callbacks
+execute in the configured-world harness; the RMS file loader and full civilization
+bonus pass are outside that capture. Other fixed-start civilizations remain gated
+pending comparison. This does not establish complete packaged-map parity.
+
+The original object handler also confirms the undefined `ANIMAL_SAARLAC` behavior
+in55014/55019: the following `number_of_objects 1` modifies the preceding Womprat
+row, retaining its variance2. Object-row captures are saved as
+`rms-packaged-object-rows-*-2026-11-15.json`. Native generic row interpretation
+still needs to reproduce that behavior before these maps can be enabled.

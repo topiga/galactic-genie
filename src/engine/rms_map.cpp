@@ -516,7 +516,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             workerMinDistance==6 && workerMaxDistance==6 && !startingStalagmites &&
             cliffResources && playerCivilizations.size()==2 &&
             std::all_of(playerCivilizations.begin(),playerCivilizations.end(),[](auto civ){return civ>=1 && civ<=8;}) &&
-            !defines.count("FIXED_POSITIONS") && terrainRows.size()==1 &&
+            (!defines.count("FIXED_POSITIONS") || (playerCivilizations==std::vector<uint16_t>{1,1} && resourceProfile==19)) &&
+            terrainRows.size()==1 &&
             terrainRows[0].terrain==21 && terrainRows[0].targetTiles==6000 && terrainRows[0].clumps==60 &&
             terrainRows[0].spacing==2 && terrainRows[0].clumping==20 && terrainRows[0].avoidPlayerStarts &&
             !terrainRows[0].flatTerrainOnly;
