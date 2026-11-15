@@ -346,7 +346,7 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
             "original land-position cliff protection, composition and RNG");
     }
     const std::string playerLand="<LAND_GENERATION> base_terrain 6 create_player_lands { terrain_type 6 base_size 0 number_of_tiles 0 } ";
-    struct PlayerCliffCase { int settings; uint32_t seed,rng,hash; size_t count; int starts[4]; int radius=0,tiles=0; };
+    struct PlayerCliffCase { int settings; uint32_t seed,rng,hash; size_t count; int starts[4]; int radius=0,tiles=0,terrain=-1; uint32_t terrainHash=0; bool avoid=false; };
     const PlayerCliffCase playerCases[]={
         {0,1u,1152740336u,2017768301u,44,{74,12,46,84}},
         {0,12345u,2690460253u,3186643419u,59,{12,79,84,41}},
@@ -366,30 +366,73 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
         {0,1u,3293037729u,4232931309u,43,{74,12,46,84},0,8000},
         {0,12345u,4162111261u,4023500210u,59,{12,79,84,41},0,8000},
         {0,4294967295u,3951742847u,2131392925u,44,{84,36,12,84},0,8000},
+        {0,1u,4152948138u,2017768301u,44,{74,12,46,84},0,0,0,188518405u},
+        {0,12345u,2480538885u,3186643419u,59,{12,79,84,41},0,0,0,531955827u},
+        {0,4294967295u,1740280934u,2706656024u,48,{84,36,12,84},0,0,0,2102344771u},
+        {0,1u,1443741453u,1522498477u,2069,{74,12,46,84},0,0,21,2215424281u},
+        {0,12345u,1591679402u,2149077088u,2042,{12,79,84,41},0,0,21,4168035080u},
+        {0,4294967295u,1664064343u,2115634118u,2055,{84,36,12,84},0,0,21,2580829008u},
+        {0,1u,1213600036u,2619903990u,63,{72,14,46,82},3,1000,0,2027666005u},
+        {0,12345u,31766244u,3442638069u,39,{14,77,82,41},3,1000,0,2324343635u},
+        {0,4294967295u,3191885255u,3626055600u,43,{82,36,14,82},3,1000,0,4202677285u},
+        {0,1u,405893282u,844241075u,2053,{72,14,46,82},3,1000,21,2532306835u},
+        {0,12345u,2188808205u,1283477720u,2078,{14,77,82,41},3,1000,21,1454294088u},
+        {0,4294967295u,3434029358u,410909770u,2028,{82,36,14,82},3,1000,21,310295079u},
+        {0,1u,4193257045u,455463861u,54,{71,20,49,80},10,2000,0,2048940035u},
+        {0,12345u,1349579420u,2728107736u,43,{20,76,80,44},10,2000,0,1461021667u},
+        {0,4294967295u,3609843621u,249111388u,37,{80,40,20,80},10,2000,0,2981063379u},
+        {0,1u,3538274515u,204127149u,2052,{71,20,49,80},10,2000,21,2027068824u},
+        {0,12345u,3054933990u,2616080202u,2077,{20,76,80,44},10,2000,21,320288952u},
+        {0,4294967295u,1419233999u,241760370u,2063,{80,40,20,80},10,2000,21,762817966u},
+        {0,1u,1721990103u,2017768301u,44,{74,12,46,84},0,0,0,889833443u,true},
+        {0,12345u,30862206u,3186643419u,59,{12,79,84,41},0,0,0,4006789717u,true},
+        {0,4294967295u,3511738797u,2706656024u,48,{84,36,12,84},0,0,0,1916798691u,true},
+        {0,1u,2718820820u,883075635u,2011,{74,12,46,84},0,0,21,161259388u,true},
+        {0,12345u,1755922927u,1539462727u,2098,{12,79,84,41},0,0,21,1249312809u,true},
+        {0,4294967295u,492326509u,174818381u,2032,{84,36,12,84},0,0,21,4065029198u,true},
+        {0,1u,3077030288u,2619903990u,63,{72,14,46,82},3,1000,0,847092901u,true},
+        {0,12345u,9214133u,3442638069u,39,{14,77,82,41},3,1000,0,303706389u,true},
+        {0,4294967295u,2188604217u,3626055600u,43,{82,36,14,82},3,1000,0,2907341827u,true},
+        {0,1u,2281347096u,2116353144u,2055,{72,14,46,82},3,1000,21,459859241u,true},
+        {0,12345u,4286372938u,76799251u,2070,{14,77,82,41},3,1000,21,891484783u,true},
+        {0,4294967295u,3320408648u,4205153232u,2012,{82,36,14,82},3,1000,21,4229424896u,true},
+        {0,1u,412506u,455463861u,54,{71,20,49,80},10,2000,0,2137811957u,true},
+        {0,12345u,1997591378u,2728107736u,43,{20,76,80,44},10,2000,0,3520223331u,true},
+        {0,4294967295u,2920508933u,249111388u,37,{80,40,20,80},10,2000,0,345214099u,true},
+        {0,1u,2531097193u,1232709288u,2075,{71,20,49,80},10,2000,21,2634118633u,true},
+        {0,12345u,2056567578u,2261193262u,2035,{20,76,80,44},10,2000,21,1017910930u,true},
+        {0,4294967295u,919433396u,1410480440u,2086,{80,40,20,80},10,2000,21,1804893542u,true},
     };
     for(const auto &c:playerCases) for(bool late:{false,true}) {
         const std::string cliff="<CLIFF_GENERATION> "+std::string(settings[c.settings]);
         const std::string growingLand="<LAND_GENERATION> base_terrain 6 create_player_lands { terrain_type 6 base_size "+
             std::to_string(c.radius)+" number_of_tiles "+std::to_string(c.tiles)+" } ";
-        load(growingLand+(late?"<TERRAIN_GENERATION> <OBJECTS_GENERATION> "+cliff:cliff+"<TERRAIN_GENERATION> <OBJECTS_GENERATION> "));
+        const std::string painting="<TERRAIN_GENERATION> "+(c.terrain<0?std::string{}:
+            "create_terrain "+std::to_string(c.terrain)+" { base_terrain 6 number_of_tiles 2000 number_of_clumps 20 spacing_to_other_terrain_types 2 clumping_factor 20 "+
+            (c.avoid?"set_avoid_player_start_areas ":"")+"} ")+"<OBJECTS_GENERATION> ";
+        load(growingLand+(late?painting+cliff:cliff+painting));
         uint32_t state=c.seed;
         check(generateRmsMap(script,{},120,120,data,state,map,&error),error.c_str());
-        uint32_t hash=2166136261u;
-        for(const auto &o:map.cliffs)
-            for(uint32_t v:{uint32_t(o.unit),uint32_t(o.facet),uint32_t(o.x*2),uint32_t(o.y*2),o.creationOrdinal})
-                hash=(hash^v)*16777619u;
+        uint32_t hash=2166136261u,nextId=0,terrainHash=2166136261u;
+        auto mix=[&](int unit,int facet,float x,float y,uint32_t id) {
+            for(uint32_t v:{uint32_t(unit),uint32_t(facet),uint32_t(x*2),uint32_t(y*2),id}) hash=(hash^v)*16777619u;
+        };
+        for(const auto &o:map.cliffs) {mix(o.unit,o.facet,o.x,o.y,o.creationOrdinal);nextId=o.creationOrdinal+1;}
+        for(const auto &o:map.scenery) mix(o.unitId,o.facet,o.x,o.y,nextId++);
+        for(auto tile:map.terrain) terrainHash=(terrainHash^tile)*16777619u;
         if(state!=c.rng || hash!=c.hash) std::cerr<<"player cliffs "<<c.seed<<" settings "<<c.settings<<" rng "<<state<<'/'<<c.rng<<" hash "<<hash<<'/'<<c.hash<<'\n';
-        check(state==c.rng && hash==c.hash && map.cliffs.size()==c.count,"original player-land cliffs and RNG");
+        check(state==c.rng && hash==c.hash && map.cliffs.size()+map.scenery.size()==c.count,"original player-land cliffs, scenery and RNG");
         check(map.playerStarts.size()==2 && map.lands.size()==2,"two finalized player lands");
         for(size_t i=0;i<2;++i)
             check(map.playerStarts[i].x==c.starts[2*i] && map.playerStarts[i].y==c.starts[2*i+1] &&
                 map.lands[i].center.x==c.starts[2*i] && map.lands[i].center.y==c.starts[2*i+1] &&
                 map.lands[i].owner==int(i+1),"original cliff player-start coordinates and ownership");
-        for(auto tile:map.terrain) check(tile==6,"player cliff lands preserve DIRT1");
-        check(map.scenery.empty() && map.objects.empty() && map.ownedObjects.empty(),"cliff player lands imply no starting objects");
+        if(c.terrain<0) for(auto tile:map.terrain) check(tile==6,"player cliff lands preserve DIRT1");
+        else check(terrainHash==c.terrainHash,"original player-land cliff terrain painting");
+        check((c.terrain==21 || map.scenery.empty()) && map.objects.empty() && map.ownedObjects.empty(),"cliff player lands imply no starting objects");
     }
     for(const char *stage:{"<ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles 400 }",
-        "<TERRAIN_GENERATION> create_terrain 21 { base_terrain 6 number_of_tiles 2000 }"}) {
+        "<TERRAIN_GENERATION> create_terrain 18 { base_terrain 6 number_of_tiles 2000 }"}) {
         load(playerLand+"<CLIFF_GENERATION> "+stage);
         uint32_t state=1;
         check(!generateRmsMap(script,{},120,120,data,state,map,&error) && state==1 && map.cliffs.empty(),

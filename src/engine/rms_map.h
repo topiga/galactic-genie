@@ -45,7 +45,8 @@ struct RmsMap {
 // Gaia row/column0; allies currently require randomized starts and no owned rows.
 // Cliffs support bounded120-square DIRT1 profiles: one explicit zero-growth
 // neutral land with verified elevation/terrain combinations, or two randomized
-// player lands (radius<=10, target<=8000) without later painting. No owned objects.
+// player lands (radius<=10, target<=8000) with grass/forest21 painting and optional
+// start-area avoidance. No connections or owned objects in these cliff profiles.
 // Rejects other stages/commands; not a complete packaged random-map generator.
 // Also supports one to eight owned109 starts on bare grass0 with explicit
 // civilizations and zero placement distances. Enemy foundation remains deferred.

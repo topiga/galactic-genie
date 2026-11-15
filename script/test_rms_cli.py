@@ -55,6 +55,16 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     growing=run(['render-rms',data,player_cliffs,120,1,work/'cliff-player-growth.png'],0)
     assert '63 native objects, final RNG 1003445079' in growing
     assert (work/'cliff-player-growth.png').stat().st_size>1000
+    for avoid,count,state in [(False,2053,405893282),(True,2055,2281347096)]:
+        forest_players=work/f'cliff-player-forest-{avoid}.rms'
+        forest_players.write_text(player_cliffs.read_text()+
+            ' <TERRAIN_GENERATION> create_terrain 21 { base_terrain 6 number_of_tiles 2000 '
+            'number_of_clumps 20 spacing_to_other_terrain_types 2 clumping_factor 20 '+
+            ('set_avoid_player_start_areas ' if avoid else '')+'}')
+        output=work/f'cliff-player-forest-{avoid}.png'
+        rendered=run(['render-rms',data,forest_players,120,1,output],0)
+        assert f'{count} native objects, final RNG {state}' in rendered
+        assert output.stat().st_size>1000
     cliff_grass=work/'cliff-grass.rms'
     cliff_grass.write_text((root/'tools/fixtures/cliff-diagnostic.rms').read_text()+
         '<TERRAIN_GENERATION> create_terrain 0 { base_terrain 6 number_of_tiles 30 '

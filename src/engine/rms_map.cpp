@@ -502,12 +502,13 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if(cliffStage) {
         if(width!=120 || height!=120 || base!=6 ||
             (playerLands ? (playerCount!=2 || lands.size()!=2 || playerZoneOverride ||
-                defines.count("FIXED_POSITIONS") || elevationStage || !terrainRows.empty()) : lands.size()!=1) ||
+                defines.count("FIXED_POSITIONS") || elevationStage ||
+                std::any_of(terrainRows.begin(),terrainRows.end(),[](const auto &row){ return row.terrain!=0 && row.terrain!=21; })) : lands.size()!=1) ||
             hasObjects || connectionStage || terrainRows.size()>1 ||
             (elevationStage && (elevationRows.empty() || elevationRows.size()>7 ||
                 (elevationRows.size()>1 && !terrainRows.empty()))) ||
             std::any_of(terrainRows.begin(),terrainRows.end(),[&](const auto &row) {
-                return (row.terrain!=0 && ((row.terrain!=18 && row.terrain!=20 && row.terrain!=21) || elevationStage)) || row.baseTerrain!=6 || row.avoidPlayerStarts ||
+                return (row.terrain!=0 && ((row.terrain!=18 && row.terrain!=20 && row.terrain!=21) || elevationStage)) || row.baseTerrain!=6 || (row.avoidPlayerStarts && !playerLands) ||
                     row.minHeight!=0 || row.maxHeight!=255;
             }))
             return fail("cliffs require a verified120 DIRT1 land profile");

@@ -1663,3 +1663,31 @@ RNG 1003445079. Evidence: `rms-cliff-player-growth-cases-oracle-2026-11-15.json`
 using the same original handler/finalizer/scheduler harness and limitations as
 above. This does not establish terrain transitions, full packaged maps or live
 startup callback parity.
+
+
+### Player-land cliffs followed by grass and forest placement
+
+Thirty-six additional original composed cases cover grass0/forest21 painting
+with and without `set_avoid_player_start_areas`, three seeds, and zero-growth,
+radius3/target1000, and radius10/target2000 player lands. The finalizer's two
+terrain-protection rows (radius13/weight20) are copied into the original terrain
+module, alongside the separate radius15 cliff protection. Static inspection of
+0x4e69e0 confirms terrain rows at module+0x1140 and count at +0x1770.
+
+Native fixtures match every terrain tile, player position, cliff/tree unit,
+facet, coordinate, creation ID and final RNG. Both RMS section orders and both
+DAT footprint representations are exercised. All eighteen non-avoiding cases
+also match a control run without terrain protection, confirming that the flag
+selects the protection behavior rather than changing unrelated placement.
+
+The seed1, radius3/target1000 forest case creates 2053 objects without avoidance
+(final RNG405893282) and 2055 with avoidance (RNG2281347096). Native import and
+CLI rendering fixtures cover both. Counts are outcomes of the original placement
+algorithm, not a guarantee that protection always reduces total tree count.
+
+Evidence: `rms-cliff-player-protected-terrain-cases-oracle-2026-11-15.json`,
+`rms-cliff-player-avoiding-terrain-cases-oracle-2026-11-15.json`, and
+`rms-cliff-player-terrain-protection-disassembly-2026-11-15.json`.
+The configured-world original-code harness limitations still apply. Player-land
+cliffs with elevation, other forest types, extra lands, fixed positions or owned
+startup remain gated; no new packaged map is claimed.
