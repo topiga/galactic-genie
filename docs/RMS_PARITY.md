@@ -1899,3 +1899,22 @@ queries without changing their original reference values. This checks coordinate
 consistency, not exact original pathfinding. The desktop short skirmish still uses
 its procedural `initSkirmish` layout; these RMS imports are currently exercised by
 the diagnostic renderer and tests, not the default menu game.
+
+### Full cliff startup across all eight civilizations
+
+The authored23-row cliff/resource profile now accepts all64 ordered pairs of the
+original eight civilizations. Each pair matches the configured original engine
+at seeds1,12345 and4294967295:192 comparisons of complete object records, terrain,
+final RNG, owned animation/foundation state and animated Gaia state. Original
+captures are retained compressed with SHA256 identities in
+`rms-cliff-full-civ-matrix-2026-11-15.json`.
+
+Native regression fixtures add26 representative full startups, covering each
+civilization in both owner slots and all seven distinct seed/wildlife animation
+outcomes. They check imported positions, population, health and animation after
+native initialization. The original captures still precede the full civilization
+bonus pass; native Trade Federation population and Confederacy worker HP are
+checked separately, as in the earlier owned-only matrix. The shorter10-row
+resource prefix remains restricted to Empire/Empire. The new192 captures use
+default cliffs; arbitrary packaged maps, fixed owned starts, mixed hills and
+water placement remain outside this evidence.

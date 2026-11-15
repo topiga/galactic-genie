@@ -501,8 +501,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     // shortcut: expand after composed original cliff/terrain/startup comparisons.
     if(cliffStage) {
         bool cliffResources=!holocrons && !nearNova && resourceRows.empty();
-        if(holocrons && playerCivilizations==std::vector<uint16_t>{1,1}) {
-            cliffResources=resourceProfile==6 && resourceRows.size()==6 && resourceRows[0].count==12;
+        if(holocrons) {
+            cliffResources=playerCivilizations==std::vector<uint16_t>{1,1} &&
+                resourceProfile==6 && resourceRows.size()==6 && resourceRows[0].count==12;
             if(resourceProfile==19 && resourceRows.size()==19) {
                 const int units[]={59,66,66,66,102,102,594,594,812,66,102,413,413,816,812,1365,1585,413,69};
                 const int counts[]={3,7,4,4,5,4,4,2,1,3,4,1,1,1,1,3,1,1,1};

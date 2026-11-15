@@ -92,6 +92,10 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
         '--players',2,'--civilization',1,'--civilization',1],0)
     assert '6260 native objects, final RNG 3558270440' in full_cliff
     assert (work/'cliff-full.png').stat().st_size>1000
+    mixed_full=run(['render-rms',data,root/'tools/fixtures/cliff-full-start.rms',120,1,work/'cliff-full-mixed.png',
+        '--players',2,'--civilization',4,'--civilization',8],0)
+    assert '6261 native objects, final RNG 1121268031' in mixed_full
+    assert (work/'cliff-full-mixed.png').stat().st_size>1000
     unverified_cliff=work/'cliff-full-unverified.rms'
     unverified_cliff.write_text((root/'tools/fixtures/cliff-full-start.rms').read_text().replace(
         'set_loose_grouping number_of_objects 4','set_loose_grouping number_of_objects 8',1))
