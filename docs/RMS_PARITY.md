@@ -1239,3 +1239,33 @@ Private evidence: `rms-randomzone-dispatch-oracle-2026-11-15.json`,
 `randomzone2` / `randomzone3` files, and
 `rms-randomzone-branch-geometry-oracle-2026-11-15.json`.
 Owned player starts with zone overrides remain gated until object-stage comparison.
+
+
+### Live Forest comparison for every original civilization
+
+The seed-16160 Tiny/FIXED/DEFAULT Forest case now has live Windows comparisons
+for all eight same-civilization pairs. The additional Rebel Alliance, Trade
+Federation, Republic and Confederacy runs match every terrain, elevation and
+slope byte, all 7,554 automatic tree positions/facets, and all 197 stationary
+resource positions/order. Their terrain/elevation/slope hashes are
+3348257725 / 908132044 / 458332910; automatic tree pose hash is 2138192714.
+Earlier Gungan and Wookiee comparisons retain their different local foundation
+terrain hashes; Naboo retains its different later resource placement.
+
+Captures occur after simulation begins. The AI's three workers and scout have
+already changed position/activity, and forage facets change on the first update.
+These live runs therefore corroborate raster/static placement, not moving-unit
+startup poses or post-startup simulation RNG. Controlled original startup replays
+cover initial worker/scout placement and animation separately. The temporary
+Windows seed override was restored to 4294967295 after capture.
+
+Private evidence uses the `rebel`, `trade`, `republic` and `confederacy` prefixes:
+`<prefix>-live-seed16160-comparison-2026-11-15.json` and
+`<prefix>-live-seed16160-full-scenery-comparison-2026-11-15.json`.
+
+A fresh production-CLI audit evaluates raw packaged RMS, including zone/branch
+RNG interleaving, over 46 resources and three seeds. Only Forest passes (3/138).
+Zone and border parsing now advance affected resources to later unsupported
+resource-row/startup cases; this does not establish additional playable maps.
+Input settings remain independently confirmed only for Forest. Results:
+`rms-packaged-zone-integration-audit-2026-11-15.json`.
