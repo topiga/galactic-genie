@@ -761,3 +761,18 @@ fixture checks the terrain, automatic trees, object order/poses and Nerf frames.
 The eight-seed native audit now generates seeds2/3/12345; remaining rejections
 include near822 count1, distant822 count6 and base12 startup. Seed3 is not yet
 an independently verified complete original map.
+
+### Live Windows seed2 raster and static placement (2026-11-15)
+
+The unmodified reference executable restarted with map seed2, set through its
+configured-map-seed field at app+0x48; that field was restored to UINT_MAX after
+generation. All14,400 terrain, elevation and slope cells match the native map
+exactly. FNV hashes are4035986315/3707759835/3939991058. Command Centers are at
+47,17 and17,81. All202 checked static resource IDs/types/owners/positions match
+the native sequence; the corresponding position hash is582877992. The new
+regression passes the full ASan/UBSan skirmish suite.
+
+This does not certify the full seed: animals had already started moving.
+A separate appearance comparison found19 facet differences (18 forage59, one
+tree348); startup versus later runtime changes remain under investigation.
+The old seed16160 save remains available; no executable on disk was patched.
