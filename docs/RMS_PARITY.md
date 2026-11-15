@@ -2075,3 +2075,20 @@ land/elevation/cliff/terrain/object scheduler in a configured world. The RMS fil
 loader and complete gameplay are outside this comparison. Elevated startup with
 other civilizations, random positions, other hill density profiles, connections,
 water placement and arbitrary packaged maps remain unverified and gated.
+
+### Packaged parser coverage across all six map-size labels
+
+The text/control audit now covers46 packaged scripts, six explicit size labels
+(Tiny through Gigantic) and three seeds:828 cases. The additional552 runs contain
+516 exact token-stream/RNG matches and36 differences. Together with the earlier
+Tiny/Small audit,777 cases match and51 remain different. All777 matching originals
+are retained in the native installed-archive regression test.
+
+The remaining differences are unchanged in kind:55014 discards the undefined
+Sarlacc command on every size except Tiny (15 cases);55019 does so on all sizes
+(18 cases);55016 ignores the singular unknown terrain command on all sizes
+(18 cases). There were no harness errors. These are parser comparisons with
+explicit identical labels and intercepted generation handlers, not828 complete
+map generations. Evidence: `rms-packaged-token-parser-large-matrix-2026-11-15.json`,
+per-case captures and the prior Tiny/Small matrix. The native baseline is frozen
+at4ca5212 for the additional sizes; source and binary hashes are recorded.
