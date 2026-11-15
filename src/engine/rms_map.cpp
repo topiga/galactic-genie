@@ -458,7 +458,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     const bool ownedForest=ownedObjects && playerLands && base==41 && lands[0].terrain==9;
     const bool ownedMixedForest=ownedObjects && playerLands && (base==6 || base==12 || base==41) && lands[0].terrain==base &&
         width==120 && height==120 && playerCount==2 && playerCivilizations.size()==2 &&
-        std::all_of(playerCivilizations.begin(),playerCivilizations.end(),[](uint16_t civ){return civ==1 || civ==2;}) &&
+        std::all_of(playerCivilizations.begin(),playerCivilizations.end(),[](uint16_t civ){return civ>=1 && civ<=8;}) &&
+        (playerCivilizations[0]==playerCivilizations[1] || (playerCivilizations[0]<=2 && playerCivilizations[1]<=2)) &&
         startingWorkers && startingScouts && workerMinDistance==6 && workerMaxDistance==6 &&
         !startingStalagmites;
     if (startingStalagmites) {
@@ -524,7 +525,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if(holocrons && ((!ownedMixedForest && defines.count("FIXED_POSITIONS")) || (width!=64 && width!=120) || height!=width ||
         playerCount!=2 || (!ownedMixedForest && playerCivilizations!=std::vector<uint16_t>{1,1}) || startingStalagmites ||
         (ownedForest && width!=120)))
-        return fail("holocrons require verified two-civilization1 randomized grass/dry-forest starts");
+        return fail("holocrons require a verified two-player grass or Forest startup profile");
     if(holocrons && !resourceRows.empty() && width!=120)
         return fail("stock resource sequence requires verified120-square starts");
     if (startingWorkers) {

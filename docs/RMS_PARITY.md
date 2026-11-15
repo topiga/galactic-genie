@@ -22,6 +22,11 @@ The image `clone-campaigns-forest-full.png` in the external build directory is a
 native diagnostic render, not a claim of a fully configured playable match.
 Starting resources/UI map selection and later simulation remain separate work.
 
+Civilization coverage now includes all eight same-civilization pairs and both
+Empire/Gungan mixed orders in the Tiny Forest profile. Full controlled original
+startup comparisons back these additions; live Windows coverage includes two
+Empire and two Gungan players. Other mixed orders remain gated.
+
 Fresh live Windows restarts independently verify fifteen more packaged Forest
 seeds with the same size, defines and civilizations:
 
@@ -1078,8 +1083,8 @@ Native import also checks all10 starting identities, owners and positions.
 
 Private evidence: `rms-controlled-gungan2-forest-fullstage-oracle-2026-11-14.json`
 (replayed November15; filename inherited from its harness). This first replay is controlled object-stage evidence.
-Other civilization pairs beyond Empire/Gungans and other map sizes remain outside
-this Forest profile. The512-seed acceptance audit and15 live comparisons above
+At that checkpoint, civilization pairs beyond Empire/Gungans and other map sizes
+remained outside this Forest profile; later same-civilization coverage is recorded below. The512-seed acceptance audit and15 live comparisons above
 used two Empire owners.
 
 A subsequent live Windows two-Gungan startup at seed16160 also matches all14400
@@ -1096,3 +1101,24 @@ and888513054 respectively. Both retain220 Gaia objects, Gaia-pose FNV1670957952
 and final RNG278519141. Fixtures also verify Gungan scout animation frame7 and
 normalized initial hold times, including native import. Private evidence:
 `rms-controlled-mixed-gungan-forest-fullstage-oracle-2026-11-14.json` (replayed15th).
+
+The same512 native-generation seed cases also complete for two Gungan owners
+(`forest-combined512seed-gungan-2026-11-15.json`). This is an acceptance audit,
+not512 independent original-engine comparisons.
+
+### Remaining same-civilization Forest pairs
+
+Original23-row object-controller replays also match each same-civilization pair
+for civilizations3 through8. Every case matches the complete terrain raster,
+all10 owned poses and all220 Gaia poses, including creation order and facets.
+Civilization4 changes the scout RNG consumption: final state1059939153 and Gaia
+pose hash2499735454; the others retain278519141 and1670957952. Civilization6
+uses foundation terrain6 (terrain hash1487786509). The remaining foundations
+retain terrain hash3348257725. Regression fixtures verify scout animation and
+hold normalization plus native import for each pair.
+
+Private evidence: `rms-controlled-six-civs-forest-fullstage-oracle-2026-11-14.json`
+(replayed November15). These six cases are controlled original-executable
+comparisons, not live Windows startup captures. All eight same-civilization pairs
+are now accepted in the verified Tiny Forest profile; mixed pairs remain limited
+to Empire/Gungans. Other sizes, settings, maps and simulation parity are not proven.

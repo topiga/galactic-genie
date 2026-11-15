@@ -148,27 +148,41 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   check(hash==v.poses,"controlled resource all original Gaia poses/order");
   check(frames==v.frames && herds==uint32_t(v.nearHerd*2+v.farHerd*4+((v.lateHunt==1 || v.lateHunt==4)?4:0)),"controlled original Nerf animation frames/count");
   if(v.predator==812 && v.nearHerd==4 && v.farHerd==2 && v.globalPredatorSize==1 && v.forestTerrain==21) {
-   for(const auto &c:std::vector<std::vector<uint16_t>>{{2,2},{1,2},{2,1}}) {
-   swgb::RmsMap gungan;rng=1993207714u;
-   check(swgb::generateRmsMap(varied,defines,120,120,assets.dat(),rng,gungan,&error,2,c),error.c_str());
-   check(rng==278519141u && gungan.scenery.size()==7554 && gungan.ownedObjects.size()==10 && gungan.resourcesAfterOwned.size()==220,"original Gungan Forest counts/RNG");
-   check(bytesHash(gungan.terrain)==(c[0]==2?1056424125u:3348257725u) && bytesHash(gungan.elevation)==908132044u,"original Gungan Forest foundation/terrain");
-   hash=2166136261u;for(const auto&o:gungan.ownedObjects)pose(o.unitId,o.owner,o.x,o.y,o.facet);
-   check(hash==(c[0]==1?3019737774u:c[1]==1?888513054u:613198960u),"original Gungan worker/scout poses/order");
-   hash=2166136261u;for(const auto&o:gungan.resourcesAfterOwned)pose(o.unitId,0,o.x,o.y,o.facet);
-   check(hash==1670957952u,"original Gungan complete Gaia placement");
-   rng=1993207714u;check(game.initRms(varied,defines,120,rng,&error,2,c) && rng==278519141u,"Gungan Forest native import");
-   for(size_t i=0;i<gungan.ownedObjects.size();++i) {
-    const auto&o=gungan.ownedObjects[i];const uint32_t id=uint32_t(gungan.scenery.size()+i+1);const auto pos=game.objectPosition(id);
-    check(game.objectUnitId(id)==o.unitId && game.objectPlayer(id)==o.owner && pos[0]==o.x && pos[1]==o.y,"Gungan native starting objects");
-    if(o.unitId==552) {
-     // Original hold includes the remaining final-frame duration.
-     const float delay=(o.owner==1?1.6274055242538452f:2.0397167205810547f)-.2f;
-     const auto animation=game.objectAnimationForTesting(id);
-     check(o.animationFrame==7 && o.initialIdleDelay==delay && animation[0]==7*.2f && animation[1]==delay,"original Gungan scout animation/hold import");
+   const struct {uint16_t a,b;uint32_t terrain,owned,gaia,rng;} starts[]={
+    {2,2,1056424125u,613198960u,1670957952u,278519141u},
+    {1,2,3348257725u,3019737774u,1670957952u,278519141u},
+    {2,1,1056424125u,888513054u,1670957952u,278519141u},
+    {3,3,3348257725u,1702013424u,1670957952u,278519141u},
+    {4,4,3348257725u,1822565916u,2499735454u,1059939153u},
+    {5,5,3348257725u,2911177344u,1670957952u,278519141u},
+    {6,6,1487786509u,110999744u,1670957952u,278519141u},
+    {7,7,3348257725u,2317300630u,1670957952u,278519141u},
+    {8,8,3348257725u,4270691504u,1670957952u,278519141u}};
+   for(const auto &start:starts) {
+    const std::vector<uint16_t> c{start.a,start.b};
+    swgb::RmsMap civilMap;rng=1993207714u;
+    check(swgb::generateRmsMap(varied,defines,120,120,assets.dat(),rng,civilMap,&error,2,c),error.c_str());
+    check(rng==start.rng && civilMap.scenery.size()==7554 && civilMap.ownedObjects.size()==10 && civilMap.resourcesAfterOwned.size()==220,"original civilization Forest counts/RNG");
+    check(bytesHash(civilMap.terrain)==start.terrain && bytesHash(civilMap.elevation)==908132044u,"original civilization Forest foundation/terrain");
+    hash=2166136261u;for(const auto&o:civilMap.ownedObjects)pose(o.unitId,o.owner,o.x,o.y,o.facet);
+    check(hash==start.owned,"original civilization worker/scout poses/order");
+    hash=2166136261u;for(const auto&o:civilMap.resourcesAfterOwned)pose(o.unitId,0,o.x,o.y,o.facet);
+    check(hash==start.gaia,"original civilization complete Gaia placement");
+    rng=1993207714u;check(game.initRms(varied,defines,120,rng,&error,2,c) && rng==start.rng,"civilization Forest native import");
+    for(size_t i=0;i<civilMap.ownedObjects.size();++i) {
+     const auto&o=civilMap.ownedObjects[i];const uint32_t id=uint32_t(civilMap.scenery.size()+i+1);const auto pos=game.objectPosition(id);
+     check(game.objectUnitId(id)==o.unitId && game.objectPlayer(id)==o.owner && pos[0]==o.x && pos[1]==o.y,"civilization native starting objects");
+     if(i>=8) {
+      const auto civ=c[o.owner-1];const uint8_t frame=civ==2?7:0;
+      // Original hold includes the remaining final-frame duration.
+      const float hold=civ==2?(o.owner==1?1.6274055242538452f:2.0397167205810547f):
+       (civ==1 || civ==4 || civ==7)?.2f:(o.owner==1?2.1060214042663574f:2.3928465843200684f);
+      const float delay=hold-.2f;
+      const auto animation=game.objectAnimationForTesting(id);
+      check(o.animationFrame==frame && o.initialIdleDelay==delay && animation[0]==frame*.2f && animation[1]==delay,"original civilization scout animation/hold import");
+     }
     }
    }
-  }
   }
   if(v.treeUnit!=413) {
    rng=1993207714u;
