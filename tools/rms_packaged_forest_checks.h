@@ -147,6 +147,27 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   }
   check(hash==v.poses,"controlled resource all original Gaia poses/order");
   check(frames==v.frames && herds==uint32_t(v.nearHerd*2+v.farHerd*4+((v.lateHunt==1 || v.lateHunt==4)?4:0)),"controlled original Nerf animation frames/count");
+  if(v.predator==812 && v.nearHerd==4 && v.farHerd==2 && v.globalPredatorSize==1 && v.forestTerrain==21) {
+   swgb::RmsMap gungan;rng=1993207714u;
+   check(swgb::generateRmsMap(varied,defines,120,120,assets.dat(),rng,gungan,&error,2,{2,2}),error.c_str());
+   check(rng==278519141u && gungan.scenery.size()==7554 && gungan.ownedObjects.size()==10 && gungan.resourcesAfterOwned.size()==220,"original Gungan Forest counts/RNG");
+   check(bytesHash(gungan.terrain)==1056424125u && bytesHash(gungan.elevation)==908132044u,"original Gungan Forest foundation/terrain");
+   hash=2166136261u;for(const auto&o:gungan.ownedObjects)pose(o.unitId,o.owner,o.x,o.y,o.facet);
+   check(hash==613198960u,"original Gungan worker/scout poses/order");
+   hash=2166136261u;for(const auto&o:gungan.resourcesAfterOwned)pose(o.unitId,0,o.x,o.y,o.facet);
+   check(hash==1670957952u,"original Gungan complete Gaia placement");
+   rng=1993207714u;check(game.initRms(varied,defines,120,rng,&error,2,{2,2}) && rng==278519141u,"Gungan Forest native import");
+   for(size_t i=0;i<gungan.ownedObjects.size();++i) {
+    const auto&o=gungan.ownedObjects[i];const uint32_t id=uint32_t(gungan.scenery.size()+i+1);const auto pos=game.objectPosition(id);
+    check(game.objectUnitId(id)==o.unitId && game.objectPlayer(id)==o.owner && pos[0]==o.x && pos[1]==o.y,"Gungan native starting objects");
+    if(o.unitId==552) {
+     // Original hold includes the remaining final-frame duration.
+     const float delay=(o.owner==1?1.6274055242538452f:2.0397167205810547f)-.2f;
+     const auto animation=game.objectAnimationForTesting(id);
+     check(o.animationFrame==7 && o.initialIdleDelay==delay && animation[0]==7*.2f && animation[1]==delay,"original Gungan scout animation/hold import");
+    }
+   }
+  }
   if(v.treeUnit!=413) {
    rng=1993207714u;
    check(game.initRms(varied,defines,120,rng,&error,2,{1,1}) && rng==v.rng,"explicit tree species native import");

@@ -1064,3 +1064,21 @@ These full-script comparisons include forest10/ground41 and retain the same
 mobile-AI limitation as earlier live captures. Evidence is the matching
 `live-seed*-comparison-2026-11-15.json`, `*-full-scenery-comparison-*` and raw
 Windows object/raster snapshots in the private reference directory.
+
+### Two Gungan Forest owners (2026-11-15)
+
+A controlled original-executable replay now covers both owners using civilization2,
+including Gungan scout552 and foundation terrain4. On the existing seed16160
+Forest geometry with forage3 and predator812 substitutions, all10 owned objects
+and220 Gaia objects match creation order, coordinates and facets. Final RNG is
+278519141; terrain FNV is1056424125, owned-pose FNV613198960 and Gaia-pose
+FNV1670957952. The existing generator needed only its verified-profile guard
+extended to the two-Gungan case; shared placement logic already matched.
+Native import also checks all10 starting identities, owners and positions.
+
+Private evidence: `rms-controlled-gungan2-forest-fullstage-oracle-2026-11-14.json`
+(replayed November15; filename inherited from its harness). This is controlled
+object-stage evidence, not a live Windows comparison of Gungan map startup.
+Mixed civilizations, other civilization pairs and other map sizes remain outside
+this Forest profile. The512-seed acceptance audit and15 live comparisons above
+used two Empire owners.
