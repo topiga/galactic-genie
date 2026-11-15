@@ -97,7 +97,7 @@ struct Reader {
         for (size_t i = 0; i < ts.size(); ++i) {
             const auto &t = ts[i];
             if (t.text == "#include_drs") {
-                if (i + 2 >= ts.size() || ts[i + 1].line != t.line || ts[i + 2].line != t.line)
+                if (i + 2 >= ts.size())
                     fail(id, t.line, "include requires filename and resource ID");
                 const auto &name = ts[i + 1].text;
                 if (name.empty() || name == "." || name.find("..") != std::string::npos ||
@@ -214,7 +214,7 @@ bool RmsScript::preprocess(const std::unordered_set<std::string> &initialDefines
             const auto &s = t.text;
             auto argument = [&]() -> const RmsToken & {
                 if (i + 1 >= tokens_.size() || tokens_[i + 1].resourceId != t.resourceId ||
-                    tokens_[i + 1].line != t.line)
+                    rmsCommand(tokens_[i + 1].text))
                     fail(t, "missing argument for " + s);
                 return tokens_[++i];
             };

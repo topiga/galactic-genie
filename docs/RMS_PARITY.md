@@ -2031,3 +2031,20 @@ in55014/55019: the following `number_of_objects 1` modifies the preceding Wompra
 row, retaining its variance2. Object-row captures are saved as
 `rms-packaged-object-rows-*-2026-11-15.json`. Native generic row interpretation
 still needs to reproduce that behavior before these maps can be enabled.
+
+### Whitespace-separated directive arguments
+
+Directive arguments and DRS include arguments now accept line breaks, matching
+the original whitespace scanner. Required preprocessor arguments still reject a
+following registered command rather than consuming it as a symbol; the separately
+verified incomplete-`elseif` recovery remains unchanged. Include filename, ID,
+recursion and resource limits are retained, as is the unverified cross-resource
+argument restriction.
+
+Four original text-reader cases and four random-wrapped variants verify split
+`#define`, `#const`, `if` and numeric arguments. A separate original Dagobah include
+with its directive/name/ID on separate lines retains all641 active tokens and
+final RNG196285776. Evidence: `rms-multiline-parser-oracle-2026-11-15.json`,
+`rms-multiline-random-parser-oracle-2026-11-15.json` and
+`rms-multiline-include-parser-55012-TINY_MAP-1-2026-11-15.json`.
+Native regression checks cover expansion, branch output, RNG and source locations.

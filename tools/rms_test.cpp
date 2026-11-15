@@ -110,6 +110,23 @@ int main(int argc, char **argv) {
             "<OBJECTS_GENERATION> create_object 109 { place_on_specific_land_id 26 } "),
             "original missing elseif argument leaves the next recognized command unread");
     }
+    for(bool chosen:{false,true}) {
+        const std::string source=(chosen?std::string("#define\nCHOSEN\n"):std::string{})+
+            "#const\nCC\n109\n<OBJECTS_GENERATION> create_object CC { if\nCHOSEN "
+            "place_on_specific_land_id\n20 elseif\n place_on_specific_land_id 25 "
+            "else place_on_specific_land_id 26 endif }";
+        require(preprocess(source,{}),err);
+        const std::string expected=chosen?
+            "<OBJECTS_GENERATION> create_object 109 { place_on_specific_land_id 20 place_on_specific_land_id 25 } ":
+            "<OBJECTS_GENERATION> create_object 109 { place_on_specific_land_id 26 } ";
+        require(text()==expected,"original directive arguments cross line boundaries");
+        files[1]="start_random percent_chance\n100\n"+source+"\nend_random";
+        require(script.load(1,resolve,limits,&err),err);
+        uint32_t state=1;
+        require(script.preprocess({},processed,&err,&state) && text()==expected,
+            "original random weight accepts a following line");
+        require(state==2745024u,"multiline random branch consumes one original draw");
+    }
     require(preprocess("if HOME selected elseif",{"HOME"}) && text()=="selected ",
         "original incomplete elseif at EOF leaves the active branch unchanged");
     require(preprocess("if HOME selected elseif",{}) && text().empty(),
@@ -139,6 +156,9 @@ int main(int argc, char **argv) {
     require(preprocess("#include_drs constants.def 2\nif HOME terrain_type GRASS endif", {}), err);
     require(text() == "terrain_type 0 " && processed[1].resourceId == 1, "included definitions");
     require(script.preprocess({}, processed, &err) && text() == "terrain_type 0 ", "repeat preprocessing changed source");
+    require(preprocess("#include_drs\nconstants.def\n2\nif\nHOME terrain_type GRASS endif", {}),err);
+    require(text()=="terrain_type 0 " && processed[0].line==5 && processed[0].resourceId==1,
+            "original multiline include preserves expanded definitions and source locations");
     files[1]="start_random percent_chance 50 <LAND_GENERATION> percent_chance 50 <ELEVATION_GENERATION> end_random";
     require(script.load(1,resolve,limits,&err),err);
     for(uint32_t seed:{1u,30091u}) {
