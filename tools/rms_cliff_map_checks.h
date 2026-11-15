@@ -345,6 +345,45 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
         check(rng==c.rng && objects==c.objects && terrain==c.terrain && heights==c.heights && slopes==c.slopes && map.cliffs.size()+map.scenery.size()==c.count,
             "original land-position cliff protection, composition and RNG");
     }
+    const std::string playerLand="<LAND_GENERATION> base_terrain 6 create_player_lands { terrain_type 6 base_size 0 number_of_tiles 0 } ";
+    struct PlayerCliffCase { int settings; uint32_t seed,rng,hash; size_t count; int starts[4]; };
+    const PlayerCliffCase playerCases[]={
+        {0,1u,1152740336u,2017768301u,44,{74,12,46,84}},
+        {0,12345u,2690460253u,3186643419u,59,{12,79,84,41}},
+        {0,4294967295u,467720497u,2706656024u,48,{84,36,12,84}},
+        {1,1u,3791774962u,1277912413u,52,{74,12,46,84}},
+        {1,12345u,2227754372u,2858416769u,74,{12,79,84,41}},
+        {1,4294967295u,2656191654u,2396337780u,68,{84,36,12,84}},
+        {2,1u,2650171262u,2166136261u,0,{74,12,46,84}},
+        {2,12345u,1339939592u,2166136261u,0,{12,79,84,41}},
+        {2,4294967295u,2952239670u,2166136261u,0,{84,36,12,84}},
+    };
+    for(const auto &c:playerCases) for(bool late:{false,true}) {
+        const std::string cliff="<CLIFF_GENERATION> "+std::string(settings[c.settings]);
+        load(playerLand+(late?"<TERRAIN_GENERATION> <OBJECTS_GENERATION> "+cliff:cliff+"<TERRAIN_GENERATION> <OBJECTS_GENERATION> "));
+        uint32_t state=c.seed;
+        check(generateRmsMap(script,{},120,120,data,state,map,&error),error.c_str());
+        uint32_t hash=2166136261u;
+        for(const auto &o:map.cliffs)
+            for(uint32_t v:{uint32_t(o.unit),uint32_t(o.facet),uint32_t(o.x*2),uint32_t(o.y*2),o.creationOrdinal})
+                hash=(hash^v)*16777619u;
+        if(state!=c.rng || hash!=c.hash) std::cerr<<"player cliffs "<<c.seed<<" settings "<<c.settings<<" rng "<<state<<'/'<<c.rng<<" hash "<<hash<<'/'<<c.hash<<'\n';
+        check(state==c.rng && hash==c.hash && map.cliffs.size()==c.count,"original player-land cliffs and RNG");
+        check(map.playerStarts.size()==2 && map.lands.size()==2,"two finalized player lands");
+        for(size_t i=0;i<2;++i)
+            check(map.playerStarts[i].x==c.starts[2*i] && map.playerStarts[i].y==c.starts[2*i+1] &&
+                map.lands[i].center.x==c.starts[2*i] && map.lands[i].center.y==c.starts[2*i+1] &&
+                map.lands[i].owner==int(i+1),"original cliff player-start coordinates and ownership");
+        for(auto tile:map.terrain) check(tile==6,"player cliff lands preserve DIRT1");
+        check(map.scenery.empty() && map.objects.empty() && map.ownedObjects.empty(),"cliff player lands imply no starting objects");
+    }
+    for(const char *stage:{"<ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles 400 }",
+        "<TERRAIN_GENERATION> create_terrain 21 { base_terrain 6 number_of_tiles 2000 }"}) {
+        load(playerLand+"<CLIFF_GENERATION> "+stage);
+        uint32_t state=1;
+        check(!generateRmsMap(script,{},120,120,data,state,map,&error) && state==1 && map.cliffs.empty(),
+            "unverified player-land cliff compositions remain transactional");
+    }
     uint32_t rng=1;
     load(land+"<CLIFF_GENERATION> min_distance_cliffs 0");
     check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1 && map.cliffs.empty(),"unsupported cliff spacing is transactional");

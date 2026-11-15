@@ -43,8 +43,9 @@ struct RmsMap {
 // CC/worker/scout startup, with terrain connectivity and final placement gates.
 // Player/team-land connections execute after terrain. Optional diplomacy includes
 // Gaia row/column0; allies currently require randomized starts and no owned rows.
-// Cliffs support the compared120-square bare grass6/centered neutral land with
-// zero land tiles/radius, no elevation/terrain rows/connections/other objects.
+// Cliffs support bounded120-square DIRT1 profiles with zero land tiles/radius:
+// one explicit neutral land with verified elevation/terrain combinations, or
+// two randomized player lands without later painting. No connections/owned objects.
 // Rejects other stages/commands; not a complete packaged random-map generator.
 // Also supports one to eight owned109 starts on bare grass0 with explicit
 // civilizations and zero placement distances. Enemy foundation remains deferred.

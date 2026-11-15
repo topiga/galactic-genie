@@ -500,19 +500,25 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if (base<0 || lands.empty()) return fail("explicit base terrain and at least one land required");
     // shortcut: expand after composed original cliff/terrain/startup comparisons.
     if(cliffStage) {
-        if(width!=120 || height!=120 || base!=6 || lands.size()!=1 || playerLands ||
+        if(width!=120 || height!=120 || base!=6 ||
+            (playerLands ? (playerCount!=2 || lands.size()!=2 || playerZoneOverride ||
+                defines.count("FIXED_POSITIONS") || elevationStage || !terrainRows.empty()) : lands.size()!=1) ||
             hasObjects || connectionStage || terrainRows.size()>1 ||
             (elevationStage && (elevationRows.empty() || elevationRows.size()>7 ||
                 (elevationRows.size()>1 && !terrainRows.empty()))) ||
             std::any_of(terrainRows.begin(),terrainRows.end(),[&](const auto &row) {
                 return (row.terrain!=0 && ((row.terrain!=18 && row.terrain!=20 && row.terrain!=21) || elevationStage)) || row.baseTerrain!=6 || row.avoidPlayerStarts ||
                     row.minHeight!=0 || row.maxHeight!=255;
-            }) ||
-            lands[0].terrain!=6 || placements[0].x<0 || placements[0].y<0 ||
-            lands[0].radius || lands[0].targetTiles || lands[0].zone ||
-            lands[0].clumpingFactor!=8 || lands[0].borderFuzziness!=20 || lands[0].separation ||
-            lands[0].leftBorder || lands[0].topBorder || lands[0].rightBorder!=-1 || lands[0].bottomBorder!=-1)
-            return fail("cliffs require the verified120 DIRT1/explicit neutral-land profile");
+            }))
+            return fail("cliffs require a verified120 DIRT1 land profile");
+        for(size_t index=0;index<lands.size();++index) {
+            const auto &land=lands[index];
+            if(land.terrain!=6 || (!playerLands && (placements[index].x<0 || placements[index].y<0)) ||
+                land.radius || land.targetTiles || land.zone!=(playerLands?int(index+1):0) ||
+                land.clumpingFactor!=8 || land.borderFuzziness!=20 || land.separation ||
+                land.leftBorder || land.topBorder || land.rightBorder!=-1 || land.bottomBorder!=-1)
+                return fail("cliffs require verified zero-growth land defaults");
+        }
         for(size_t index=0;index<elevationRows.size();++index) {
             const auto &row=elevationRows[index];
             if(row.elevation!=index+1 || row.baseHeight!=index || row.baseTerrain!=6 ||
@@ -765,8 +771,10 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     }
     if(cliffStage) {
         const auto heights=generated.elevation.empty()?std::vector<uint8_t>(generated.terrain.size(),0):generated.elevation;
+        std::vector<RmsCliffProtection> cliffProtection;
+        for(const auto &land:lands) cliffProtection.push_back({int(land.centerX),int(land.centerY),15});
         if(!generateRmsCliffs(width,generated.terrain,heights,cliffSettings,
-            {{int(lands[0].centerX),int(lands[0].centerY),15}},rng,generated.cliffs,err))
+            cliffProtection,rng,generated.cliffs,err))
             return false;
         genieRandomDraw(rng);
     }

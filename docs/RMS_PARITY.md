@@ -1624,3 +1624,25 @@ Evidence: `rms-cliff-center-cases-oracle-2026-11-15.json`,
 `rms-cliff-finalizer-center-cases-oracle-2026-11-15.json`. The seed-1 origin-corner
 case imports 19 cliffs with final RNG 958887679. Multiple lands, player lands,
 nonzero land growth and packaged-map startup remain separate boundaries.
+
+
+### Cliffs around two randomized player lands
+
+The bounded DIRT1 cliff profile now accepts two randomized player lands with
+zero base size and target tiles. Protection follows both finalized positions
+with radius 15. This creates land ownership metadata, not starting units.
+
+Nine original runs use the create-player-lands handler 0x4e2c40 and land
+initializer 0x4e33c0, finalizer 0x4dfe90 (including player setup 0x4e0740), then
+the real land/cliff/empty-terrain/automatic-scenery scheduler. Three seeds cover
+default cliffs, custom settings and zero cliffs. Native fixtures compare both
+player positions, surviving unit/facet/position/creation IDs, terrain and final
+RNG, with early/late section order and raw/normalized DAT footprints. Seed 1
+with default settings produces 44 cliffs and final RNG 1152740336.
+
+Evidence: `rms-cliff-player-lands-cases-oracle-2026-11-15.json`. The harness runs
+original executable code in a synthetic world with resolved module inputs;
+allocation/time/log boundaries are modeled and original RMS file loading is
+not exercised. Fixed positions, extra lands, nonzero land growth, terrain or
+elevation composition with these player lands, and owned startup remain gated.
+This is diagnostic coverage, not a newly verified packaged map.
