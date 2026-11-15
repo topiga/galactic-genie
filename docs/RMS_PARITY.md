@@ -1598,3 +1598,29 @@ facet-to-facing projection and IDs after rejected placements. Evidence is retain
 in `rms-cliff-forest-types-cases-oracle-2026-11-15.json`. This extends the bounded
 cliff diagnostic profile; it does not claim new packaged-map or live pathfinding
 parity. Forests combined with elevation remain gated.
+
+
+### Cliff protection follows explicit neutral land positions
+
+The bounded cliff profile now permits any explicit neutral land position, still
+with one terrain-6 land, zero base size/target tiles and the existing stage gates.
+The cliff exclusion follows that resolved position with radius 15 rather than
+using a fixed map center. Randomly placed neutral lands remain rejected.
+
+Forty-eight original composed runs cover all four corners, off-center positions,
+plain DIRT1, grass painting, forest types 18/20/21 and level-3 elevation. They
+compare all objects, terrain, heights, slopes and final RNG under both native
+section orders and both raw/normalized DAT representations.
+
+Six additional runs execute original finalizer 0x4dfe90, including its virtual
+0x4e0740 setup call, before the scheduler. They confirm the resolved protection
+triples and identical outputs to the configured-module cases. The finalizer's
+team grouping requires valid player diplomacy arrays (+0xe0); the harness now
+supplies two mutually hostile players rather than permitting null-array reads.
+The declaration remains neutral and creates no player-owned objects.
+
+Evidence: `rms-cliff-center-cases-oracle-2026-11-15.json`,
+`rms-cliff-center-composed-oracle-2026-11-15.json` and
+`rms-cliff-finalizer-center-cases-oracle-2026-11-15.json`. The seed-1 origin-corner
+case imports 19 cliffs with final RNG 958887679. Multiple lands, player lands,
+nonzero land growth and packaged-map startup remain separate boundaries.

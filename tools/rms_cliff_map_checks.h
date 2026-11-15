@@ -265,6 +265,86 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
             "original cliff/forest composition terrain, all objects and RNG");
         check(forestTiles-map.scenery.size()==c.blocked,"original cliff collision rejects centered trees without a draw");
     }
+    const char *centerStages[]={"",
+        "<TERRAIN_GENERATION> create_terrain 0 { base_terrain 6 number_of_tiles 2000 number_of_clumps 20 spacing_to_other_terrain_types 2 clumping_factor 20 } ",
+        "<TERRAIN_GENERATION> create_terrain 18 { base_terrain 6 number_of_tiles 2000 number_of_clumps 20 spacing_to_other_terrain_types 2 clumping_factor 20 } ",
+        "<TERRAIN_GENERATION> create_terrain 20 { base_terrain 6 number_of_tiles 2000 number_of_clumps 20 spacing_to_other_terrain_types 2 clumping_factor 20 } ",
+        "<TERRAIN_GENERATION> create_terrain 21 { base_terrain 6 number_of_tiles 2000 number_of_clumps 20 spacing_to_other_terrain_types 2 clumping_factor 20 } ",
+        "<ELEVATION_GENERATION> create_elevation 3 { base_terrain 6 number_of_tiles 8000 number_of_clumps 30 } "};
+    struct CenterCase { int x,y,stage; uint32_t seed,rng,objects,terrain,heights,slopes; size_t count; };
+    const CenterCase centerCases[]={
+        {0,0,0,1u,958887679u,2892238716u,2736574149u,1017236165u,1017236165u,19},
+        {0,0,0,12345u,1057779985u,1484396439u,2736574149u,1017236165u,1017236165u,20},
+        {0,0,0,4294967295u,2142547864u,493507092u,2736574149u,1017236165u,1017236165u,49},
+        {0,99,0,1u,958887679u,1563714726u,2736574149u,1017236165u,1017236165u,19},
+        {0,99,0,12345u,4030079865u,1234926283u,2736574149u,1017236165u,1017236165u,22},
+        {0,99,0,4294967295u,3494186659u,2139548678u,2736574149u,1017236165u,1017236165u,54},
+        {99,0,0,1u,958887679u,2128969292u,2736574149u,1017236165u,1017236165u,19},
+        {99,0,0,12345u,1057779985u,1484396439u,2736574149u,1017236165u,1017236165u,20},
+        {99,0,0,4294967295u,321109722u,1660527627u,2736574149u,1017236165u,1017236165u,55},
+        {99,99,0,1u,958887679u,1563714726u,2736574149u,1017236165u,1017236165u,19},
+        {99,99,0,12345u,4030079865u,1234926283u,2736574149u,1017236165u,1017236165u,22},
+        {99,99,0,4294967295u,3494186659u,3519820470u,2736574149u,1017236165u,1017236165u,54},
+        {25,75,0,1u,3024936072u,2026548085u,2736574149u,1017236165u,1017236165u,34},
+        {25,75,0,12345u,359641895u,3695282908u,2736574149u,1017236165u,1017236165u,45},
+        {25,75,0,4294967295u,1695180386u,69635541u,2736574149u,1017236165u,1017236165u,22},
+        {10,90,0,1u,164685784u,458080199u,2736574149u,1017236165u,1017236165u,48},
+        {10,90,0,12345u,2829185419u,74125009u,2736574149u,1017236165u,1017236165u,39},
+        {10,90,0,4294967295u,1534096359u,3034170892u,2736574149u,1017236165u,1017236165u,31},
+        {0,0,2,1u,2856842116u,3594875341u,1218766021u,1017236165u,1017236165u,2061},
+        {0,0,2,12345u,680095670u,15835905u,776767093u,1017236165u,1017236165u,2048},
+        {0,0,3,1u,2856842116u,3685957767u,1805553301u,1017236165u,1017236165u,2061},
+        {0,0,3,12345u,680095670u,3337948012u,1624742005u,1017236165u,1017236165u,2048},
+        {0,0,4,1u,2856842116u,2071870919u,437704653u,1017236165u,1017236165u,2061},
+        {0,0,4,12345u,680095670u,3249313513u,2739559489u,1017236165u,1017236165u,2048},
+        {0,0,5,1u,2142864666u,1937344243u,2736574149u,3503654032u,904079192u,52},
+        {0,0,5,12345u,2480161993u,3429309772u,2736574149u,994739660u,4042009274u,52},
+        {99,99,2,1u,2856842116u,1511111591u,1218766021u,1017236165u,1017236165u,2061},
+        {99,99,2,12345u,146210911u,901480770u,3489319301u,1017236165u,1017236165u,2048},
+        {99,99,3,1u,2856842116u,2630832029u,1805553301u,1017236165u,1017236165u,2061},
+        {99,99,3,12345u,146210911u,3888948564u,2083981221u,1017236165u,1017236165u,2048},
+        {99,99,4,1u,2856842116u,2507402057u,437704653u,1017236165u,1017236165u,2061},
+        {99,99,4,12345u,146210911u,2456507208u,1507891181u,1017236165u,1017236165u,2048},
+        {99,99,5,1u,897748544u,1498033484u,2736574149u,3503654032u,904079192u,23},
+        {99,99,5,12345u,3706374906u,3582843644u,2736574149u,994739660u,4042009274u,57},
+        {25,75,2,1u,3704569038u,351469256u,3897783153u,1017236165u,1017236165u,2039},
+        {25,75,2,12345u,2849074184u,1099627322u,3353255649u,1017236165u,1017236165u,1980},
+        {25,75,3,1u,3704569038u,1379643965u,2735422039u,1017236165u,1017236165u,2039},
+        {25,75,3,12345u,2849074184u,1643756671u,4009009687u,1017236165u,1017236165u,1980},
+        {25,75,4,1u,3704569038u,699927899u,4082602038u,1017236165u,1017236165u,2039},
+        {25,75,4,12345u,2849074184u,2385709371u,2360170338u,1017236165u,1017236165u,1980},
+        {25,75,5,1u,288154613u,3676574710u,2736574149u,3503654032u,904079192u,19},
+        {25,75,5,12345u,2907542172u,795436380u,2736574149u,994739660u,4042009274u,42},
+        {0,0,1,1u,4142211138u,2892238716u,79417397u,1017236165u,1017236165u,19},
+        {0,0,1,12345u,3846340714u,1484396439u,3768992485u,1017236165u,1017236165u,20},
+        {99,99,1,1u,4142211138u,1563714726u,79417397u,1017236165u,1017236165u,19},
+        {99,99,1,12345u,731058869u,1234926283u,842772325u,1017236165u,1017236165u,22},
+        {25,75,1,1u,2649483491u,2026548085u,2107407075u,1017236165u,1017236165u,34},
+        {25,75,1,12345u,1141075675u,3695282908u,1663737619u,1017236165u,1017236165u,45},
+    };
+    for(const auto &c:centerCases) for(bool late:{false,true}) {
+        const std::string movedLand="<LAND_GENERATION> base_terrain 6 create_land { terrain_type 6 land_position "+
+            std::to_string(c.x)+" "+std::to_string(c.y)+" base_size 0 number_of_tiles 0 } ";
+        load(movedLand+(late?std::string(centerStages[c.stage])+"<CLIFF_GENERATION> ":
+            "<CLIFF_GENERATION> "+std::string(centerStages[c.stage])));
+        uint32_t rng=c.seed;
+        check(generateRmsMap(script,{},120,120,data,rng,map,&error),error.c_str());
+        uint32_t objects=2166136261u,terrain=2166136261u,heights=2166136261u,slopes=2166136261u,nextId=0;
+        auto mixObject=[&](int unit,int facet,float x,float y,uint32_t id) {
+            for(uint32_t v:{uint32_t(unit),uint32_t(facet),uint32_t(x*2),uint32_t(y*2),id}) objects=(objects^v)*16777619u;
+        };
+        for(const auto &o:map.cliffs) {mixObject(o.unit,o.facet,o.x,o.y,o.creationOrdinal);nextId=o.creationOrdinal+1;}
+        for(const auto &o:map.scenery) mixObject(o.unitId,o.facet,o.x,o.y,nextId++);
+        for(size_t i=0;i<map.terrain.size();++i) {
+            terrain=(terrain^map.terrain[i])*16777619u;
+            heights=(heights^(map.elevation.empty()?0:map.elevation[i]))*16777619u;
+            slopes=(slopes^(map.slopes.empty()?0:map.slopes[i]))*16777619u;
+        }
+        if(rng!=c.rng || objects!=c.objects || terrain!=c.terrain || heights!=c.heights || slopes!=c.slopes)
+            std::cerr<<"cliff land position "<<c.x<<','<<c.y<<" stage "<<c.stage<<" seed "<<c.seed<<" mismatch\n";
+        check(rng==c.rng && objects==c.objects && terrain==c.terrain && heights==c.heights && slopes==c.slopes && map.cliffs.size()+map.scenery.size()==c.count,
+            "original land-position cliff protection, composition and RNG");
+    }
     uint32_t rng=1;
     load(land+"<CLIFF_GENERATION> min_distance_cliffs 0");
     check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1 && map.cliffs.empty(),"unsupported cliff spacing is transactional");
@@ -288,6 +368,9 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
     load(land+"<CLIFF_GENERATION> <ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles 400 } <TERRAIN_GENERATION> create_terrain 21 { base_terrain 6 number_of_tiles 2000 }");
     check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1 && map.cliffs.empty(),
         "elevated cliff forest composition remains unverified");
+    load("<LAND_GENERATION> base_terrain 6 create_land { terrain_type 6 base_size 0 number_of_tiles 0 } <CLIFF_GENERATION>");
+    check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1 && map.cliffs.empty(),
+        "cliffs with randomly placed neutral land remain unverified");
     load(land+"<CLIFF_GENERATION> cliff_curliness nope");
     check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1,"malformed cliff integer");
 }

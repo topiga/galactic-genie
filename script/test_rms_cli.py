@@ -39,6 +39,11 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     cliffs=run(['render-rms',data,root/'tools/fixtures/cliff-diagnostic.rms',120,1,work/'cliffs.png'],0)
     assert '29 native objects, final RNG 1150416911' in cliffs
     assert (work/'cliffs.png').stat().st_size>1000
+    corner_cliffs=work/'cliff-corner.rms'
+    corner_cliffs.write_text((root/'tools/fixtures/cliff-diagnostic.rms').read_text().replace('land_position 50 50','land_position 0 0'))
+    corner=run(['render-rms',data,corner_cliffs,120,1,work/'cliff-corner.png'],0)
+    assert '19 native objects, final RNG 958887679' in corner
+    assert (work/'cliff-corner.png').stat().st_size>1000
     cliff_grass=work/'cliff-grass.rms'
     cliff_grass.write_text((root/'tools/fixtures/cliff-diagnostic.rms').read_text()+
         '<TERRAIN_GENERATION> create_terrain 0 { base_terrain 6 number_of_tiles 30 '
