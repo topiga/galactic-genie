@@ -89,6 +89,41 @@ static void automaticTechnologyChecks(swgb::Assets &assets) {
         data.techs=savedTechs;
     }
     {
+        struct CounterCase { swgb::dat::Tech::Cost costs[3]; float expected; bool overflow=false; };
+        const CounterCase cases[]={
+            {{{0,100,1},{1,50,1},{3,25,1}},175},
+            {{{0,100,1},{1,50,0},{3,25,1}},125},
+            {{{-1,100,1},{1,-5,1},{3,25,1}},20},
+            {{{0,100,1},{1,50,1},{3,25,1}},-32594,true},
+        };
+        for(const auto &c:cases) {
+            data.techs=savedTechs;data.effects=savedEffects;
+            for(size_t i=0;i<3;++i) data.techs[486].costs[i]=c.costs[i];
+            const int manual=int(data.techs.size());
+            auto technology=data.techs[486];technology.researchTime=10;technology.effectId=-1;
+            for(auto &required:technology.requiredTechs) required=-1;
+            technology.requiredTechCount=0;data.techs.push_back(technology);
+            if(c.overflow) {
+                auto &commands=data.effects[size_t(data.civs[1].techTreeId)].commands;
+                commands.push_back({101,486,0,1,32767});
+                commands.push_back({101,int16_t(manual),0,1,32767});
+                commands.push_back({1,85,0,0,0});
+            }
+            swgb::Scenario scenario;scenario.map.width=scenario.map.height=24;scenario.map.tiles.resize(24*24);
+            scenario.players[0].active=scenario.players[0].human=true;
+            scenario.players[0].civilization=scenario.civilizations[0]=1;
+            swgb::Game game(assets);std::string error;
+            check(game.initScenario(scenario,&error),error.c_str());
+            check(game.resource(1,21)==1 && game.resource(1,99)==c.expected,
+                  "Original automatic research statistic ignores disabled/invalid slots and narrows signed cost words");
+            check(game.researchTechnology(1,manual) && game.resource(1,21)==2 && game.resource(1,99)==2*c.expected,
+                  "Explicit research uses the same original completion accounting");
+            check(game.researchTechnology(1,manual) && game.resource(1,99)==2*c.expected,
+                  "Repeated completion does not add research cost twice");
+        }
+        data.techs=savedTechs;data.effects=savedEffects;
+    }
+    {
         const int dependent=int(data.techs.size());
         swgb::dat::Tech afterBuilding,initial;
         for(auto &required:afterBuilding.requiredTechs) required=-1;

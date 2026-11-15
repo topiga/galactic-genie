@@ -1765,3 +1765,26 @@ engine derives that value rather than maintaining original resource4 verbatim.
 Evidence: `rms-cliff-owned-accounting-1-oracle-2026-11-15.json` and
 `rms-research-counter21-disassembly-2026-11-15.json`. Counter values are verified;
 this does not establish parity of intermediate UI/event callback ordering.
+
+
+### Completed-research cost statistics
+
+The same original completion branch accumulates resource99 from the three cost
+slots returned by0x5c0285. Controlled original-code probes on technology486
+confirm totals175 for three enabled slots,125 when the50-cost slot is disabled,
+and20 when an invalid resource slot is ignored but a signed negative cost remains.
+An unscaled100+32767 modifier is narrowed to a signed16-bit value for this
+statistic: with the other50/25 slots, the original total is-32594. This narrowing
+is specific to the statistic; the wider unscaled cost-query result is unchanged.
+
+Native explicit and automatic completions now share this accounting. Costs are
+summed as signed integers and added once to the float counter. Automatic cascade
+statistics are recorded in reverse completion order, after the dependent effects,
+matching the original recursive refresh structure. Repeated completion adds
+neither the research count nor its cost again. These controlled-input tests do
+not represent normal shipped technology prices.
+
+Evidence: `rms-research-counter99-cases-oracle-2026-11-15.json` and
+`rms-research-counter99-overflow-1-oracle-2026-11-15.json`. Original resource writes
+reach0x4c1860 through the completion return at0x5c001c. Unit cost and research
+payment/refund behavior is covered by the existing independent tests.

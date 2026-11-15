@@ -2072,9 +2072,17 @@ bool Game::researchTechnology(int player, int technologyId) {
     applyTechnologyDisables(player,assets_.dat().techs[size_t(technologyId)].effectId);
     techGeneration_++;
     refreshAutomaticTechnologies(player);
-    const auto &technology=assets_.dat().techs[size_t(technologyId)];
-    if(technology.locationId>=0 && technology.buttonId) resources_[size_t(player)][21]+=1;
+    recordResearchStatistics(player,assets_.dat().techs[size_t(technologyId)]);
     return true;
+}
+
+void Game::recordResearchStatistics(int player,const dat::Tech &technology) {
+    if(technology.locationId<0 || !technology.buttonId) return;
+    resources_[size_t(player)][21]+=1;
+    int total=0;
+    for(const auto &cost:researchCosts(player,technology))
+        if(cost.flag && cost.type>=0) total+=truncateShort(cost.amount);
+    resources_[size_t(player)][99]+=total;
 }
 
 size_t Game::activeObjectCount() const {
@@ -3903,6 +3911,7 @@ void Game::refreshAutomaticTechnologies(int player) {
         if (object.unit->type==dat::UT_Building && !object.underConstruction && object.unit->techId>=0)
             buildingTechnologies.insert(object.unit->techId);
     }
+    std::vector<int> completed;
     bool changed = true;
     while (changed) {
         changed = false;
@@ -3925,8 +3934,7 @@ void Game::refreshAutomaticTechnologies(int player) {
             }
             researchedTechs_[(size_t)player].insert((int)id);
             researchedTechOrder_[(size_t)player].push_back((int)id);
-            // Original completion counts technologies with a location and button, including automatic ones.
-            if(technology.locationId>=0 && technology.buttonId) resources_[size_t(player)][21]+=1;
+            completed.push_back(int(id));
             techGeneration_++;
             if (technology.effectId>=0 && size_t(technology.effectId)<assets_.dat().effects.size())
                 effects.push_back(technology.effectId);
@@ -3935,6 +3943,9 @@ void Game::refreshAutomaticTechnologies(int player) {
             break; // Original completion recursively refreshes from the first technology.
         }
     }
+    // Original recursive refresh records statistics after dependent technologies finish.
+    for(auto it=completed.rbegin();it!=completed.rend();++it)
+        recordResearchStatistics(player,assets_.dat().techs[size_t(*it)]);
     applyUnitUpgrades(player);
 }
 

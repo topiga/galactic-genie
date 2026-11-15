@@ -988,6 +988,7 @@ private:
     bool technologyCommandApplies(
         const dat::EffectCommand &command,
         const Object &object) const;
+    void recordResearchStatistics(int player,const dat::Tech &technology);
     std::array<ResearchCost,3> researchCosts(int player,const dat::Tech &technology) const;
     int16_t researchTimeDelta(int player,const dat::Tech &technology) const;
     float researchDuration(int player,const dat::Tech &technology) const;
