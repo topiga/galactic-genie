@@ -22,14 +22,17 @@ The image `clone-campaigns-forest-full.png` in the external build directory is a
 native diagnostic render, not a claim of a fully configured playable match.
 Starting resources/UI map selection and later simulation remain separate work.
 
-Fresh live Windows restarts independently verify three more packaged Forest
+Fresh live Windows restarts independently verify six more packaged Forest
 seeds with the same size, defines and civilizations:
 
 | Seed | Terrain / elevation / slopes | Static resource identities, owners, positions and order |
 |---|---|---|
+| 1 | 14,400 / 14,400 / 14,400 cells equal | 188 / 188 equal |
 | 2 | 14,400 / 14,400 / 14,400 cells equal | 202 / 202 equal |
 | 3 | 14,400 / 14,400 / 14,400 cells equal | 180 / 180 equal |
 | 12345 | 14,400 / 14,400 / 14,400 cells equal | 193 / 193 equal |
+| 32767 | 14,400 / 14,400 / 14,400 cells equal | 174 / 174 equal |
+| 65535 | 14,400 / 14,400 / 14,400 cells equal | 190 / 190 equal |
 
 These checks do not certify all startup animation/facets or mobile positions for
 the new seeds. Forage facets change on the original's first simulation update;
@@ -834,3 +837,25 @@ Live seed32767 independently matches every terrain/elevation/slope cell after
 this startup change (hashes1119165674/3881025133/4054086905). Seed65535 also
 generates natively. All eight audit seeds now generate, although live proof
 remains scoped to the captured grids and static objects.
+
+## Additional Forest quantities and live seeds: 2026-11-15
+
+Controlled original 13-row prefixes independently verify ungrouped Bantha822
+count2, loose hunt1249 count4, and Kaadu1363 count2. Each uses the original
+16160 geometry, forage3, both Nerf rows, and actual executable factories.
+The fixtures compare all preceding Gaia positions/facets/order, final RNG,
+and terminal animal frames, idle delays and headings through native import.
+
+| Terminal row | Final RNG | Gaia pose/facet FNV | Terminal animals |
+|---|---:|---:|---:|
+| Ungrouped822 count2 | 1585104208 | 3911607922 | 4 |
+| Loose1249 count4 | 1427887360 | 99082249 | 8 |
+| Kaadu1363 count2 | 891822066 | 1187128642 | 4 |
+
+Private evidence is `rms-controlled-{bantha-ungrouped-two,near1249-four,kaadu-two}-fullstage-oracle-2026-11-15.json`.
+Live Windows evidence additionally covers seeds1,32767,65535, using the same
+read-only raster/object readers and seed guards as the earlier comparisons.
+No later live facet is treated as a constructor reference. The broader seeds0–31
+audit found 18 supported seeds before these quantity fixes; that audit is coverage
+of native generation, not independent parity evidence. Remaining rejections include
+predator quantities, terrain4 and other hunting-row combinations.

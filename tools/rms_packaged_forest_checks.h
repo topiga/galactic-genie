@@ -172,9 +172,12 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  }
  // Live captures after restart verify geometry/static positions; moving units and runtime facets are separate.
  const struct {uint32_t seed,terrain,elevation,slopes,staticCount,positions;} liveCases[]={
+  {1,1441896192u,2681332084u,2744061788u,188,712461888u},
   {2,4035986315u,3707759835u,3939991058u,202,582877992u},
   {3,1730168867u,94274854u,3441657481u,180,195710362u},
-  {12345,519134464u,169086623u,2102275482u,193,4181115470u}};
+  {12345,519134464u,169086623u,2102275482u,193,4181115470u},
+  {32767,1119165674u,3881025133u,4054086905u,174,2295777464u},
+  {65535,3846652479u,2050240623u,913491704u,190,1188849762u}};
  for(const auto &live:liveCases) {
   rng=live.seed;
   check(swgb::generateRmsMap(script,defines,120,120,assets.dat(),rng,map,&error,2,{1,1}),error.c_str());
