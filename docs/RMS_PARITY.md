@@ -22,7 +22,7 @@ The image `clone-campaigns-forest-full.png` in the external build directory is a
 native diagnostic render, not a claim of a fully configured playable match.
 Starting resources/UI map selection and later simulation remain separate work.
 
-Fresh live Windows restarts independently verify twelve more packaged Forest
+Fresh live Windows restarts independently verify fifteen more packaged Forest
 seeds with the same size, defines and civilizations:
 
 | Seed | Terrain / elevation / slopes | Static resource identities, owners, positions and order |
@@ -39,6 +39,9 @@ seeds with the same size, defines and civilizations:
 | 65535 | 14,400 / 14,400 / 14,400 cells equal | 190 / 190 equal |
 | 1409540336 | 14,400 / 14,400 / 14,400 cells equal | 172 / 172 equal |
 | 2912922832 | 14,400 / 14,400 / 14,400 cells equal | 172 / 172 equal |
+| 2666028048 | 14,400 / 14,400 / 14,400 cells equal | 192 / 192 equal |
+| 2766341764 | 14,400 / 14,400 / 14,400 cells equal | 187 / 187 equal |
+| 3878309407 | 14,400 / 14,400 / 14,400 cells equal | 193 / 193 equal |
 
 These checks do not certify all startup animation/facets or mobile positions for
 the new seeds. Forage facets change on the original's first simulation update;
@@ -1026,3 +1029,38 @@ The fixture also verifies each Ronto's frame, extra idle delay and heading, then
 checks native game import. These are isolated terminal-row comparisons; later
 Ronto chains still need full-script/live coverage. Evidence files are
 `rms-controlled-ronto1364-{two,near-quantities,far-quantities,ungrouped}-fullstage-oracle-2026-11-15.json`.
+
+## Late domesticated Bantha row: 2026-11-15
+
+The original23-row controller replay also replaces the late Eopie row with
+833 count2 near each player, after global predators and before waves/trees/fish.
+With both early833 rows retained it creates219 Gaia objects, including20 Banthas,
+ending at RNG3202634963. Full Gaia pose/facet FNV is3606605597 and all20 herd
+frames hash to210905748. The fixture preserves subsequent placement and verifies
+native import. Evidence: `rms-controlled-forest18-bantha833-late-fullstage-oracle-2026-11-15.json`.
+
+Before enabling this row, the same distributed256-seed audit improved from189
+to211 after Bantha support and239 after Ronto support. Its remaining17 failures
+were late833 rows, retained in `forest-spread256seed-after-ronto1364-2026-11-15.json`.
+These counts measure accepted generation; independent comparisons are listed above.
+
+## Combined512-seed audit and mixed live branches: 2026-11-15
+
+All512 inputs (consecutive0–255 plus the fixed distributed256-seed sample) now
+generate successfully using the current native exporter. This is acceptance
+coverage, not512 independent original comparisons. The retained audit is
+`forest-combined512seed-after-late-bantha833-2026-11-15.json`.
+
+Three additional live Windows maps independently match all terrain/elevation/slope
+bytes, all static resources, and every automatic tree including facets:
+
+| Seed | Combination | Automatic trees | Tree pose/facet FNV |
+|---|---|---:|---:|
+| 2666028048 | Early833 herds, Kaadu/Ronto chain, far822 | 7353 | 520122316 |
+| 2766341764 | No early herds, late833 | 7551 | 1939473913 |
+| 3878309407 | Kaadu/Ronto chain and distant Ronto | 7690 | 608848445 |
+
+These full-script comparisons include forest10/ground41 and retain the same
+mobile-AI limitation as earlier live captures. Evidence is the matching
+`live-seed*-comparison-2026-11-15.json`, `*-full-scenery-comparison-*` and raw
+Windows object/raster snapshots in the private reference directory.

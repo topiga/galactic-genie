@@ -291,7 +291,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             if(holocrons && resourceProfile==15 && i<tokens.size() && tokens[i].text=="1585")resourceProfile=16;
             auto row=stockResources[holocrons?resourceProfile:1];
             if(holocrons && i<tokens.size()) {
-                if(resourceProfile==15 && tokens[i].text=="594")row=stockResources[6];
+                if(resourceProfile==15 && (tokens[i].text=="594" || tokens[i].text=="833"))row=stockResources[6];
                 if(resourceProfile==15 && tokens[i].text=="1363")row.unit=1363;
                 if((resourceProfile==15 || resourceProfile==17) && (tokens[i].text=="822" || tokens[i].text=="1249" || tokens[i].text=="1364")) {
                     if(resourceProfile==17 && distantHunt)return fail("unsupported repeated distant hunt row");

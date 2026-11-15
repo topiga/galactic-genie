@@ -41,6 +41,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  check(!swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),1585,{0,7,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && rng==1 && placed.empty() && eligible==before,"unsupported wave quantity rejected atomically");
  // Controlled original replays vary forage/Nerf quantities, retaining all later rows.
  const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413,forestTerrain=21;uint32_t sceneryPoses=2138192714u,terrainHash=3348257725u;bool chainedHunt=false,omitNerfs=false;unsigned explicitTrees=110;bool omitForage=false;unsigned longChain=0,lateHunt=0;bool terrain9=false,terrain22=false,base12=false,terrain4=false,base41=false;int herdUnit=594;} variations[]={
+  {4,2,126,219,3606605597u,3202634963u,210905748u,1,348,18,780123404u,1911528789u,false,false,110,false,0,4,false,false,false,false,false,833},
   {4,2,126,220,2149940932u,278519141u,1248656011u,1,348,18,780123404u,1911528789u,false,false,110,false,0,0,false,false,false,false,false,833},
   {2,1,126,210,2122489821u,4161792159u,1095685733u,1,348,18,780123404u,1911528789u,false,false,110,false,0,0,false,false,false,false,false,833},
   {8,4,126,235,2865837869u,2125502712u,3128446147u,1,348,18,780123404u,1911528789u,false,false,110,false,0,0,false,false,false,false,false,833},
@@ -103,9 +104,10 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
      while(i<tokens.size() && tokens[i].text!="}")++i;
      if(v.lateHunt==1)source+="create_object 594 { number_of_objects 2 set_loose_grouping set_gaia_object_only set_place_for_every_player min_distance_to_players 10 max_distance_to_players 12 } ";
      else if(v.lateHunt==2)source+="create_object 822 { number_of_objects 1 set_gaia_object_only set_place_for_every_player min_distance_to_players 16 max_distance_to_players 22 } ";
+     else if(v.lateHunt==4)source+="create_object 833 { number_of_objects 2 set_loose_grouping set_gaia_object_only set_place_for_every_player min_distance_to_players 10 max_distance_to_players 12 } ";
      continue;
     }
-    if(unit=="413" && treeRows==2 && v.lateHunt)source+="create_object "+std::to_string(v.lateHunt==1?1249:822)+" { number_of_objects 3 group_variance 1 set_loose_grouping set_gaia_object_only set_place_for_every_player min_distance_to_players 35 min_distance_group_placement 5 } ";
+    if(unit=="413" && treeRows==2 && v.lateHunt && v.lateHunt<=3)source+="create_object "+std::to_string(v.lateHunt==1?1249:822)+" { number_of_objects 3 group_variance 1 set_loose_grouping set_gaia_object_only set_place_for_every_player min_distance_to_players 35 min_distance_group_placement 5 } ";
     if((unit=="594" && v.omitNerfs) || (unit=="59" && v.omitForage)){while(i<tokens.size() && tokens[i].text!="}")++i;continue;}
     if(unit=="126" && predatorRow==0 && v.chainedHunt)source+="create_object 1365 { number_of_objects 4 group_variance 1 set_loose_grouping set_gaia_object_only set_place_for_every_player min_distance_to_players 14 max_distance_to_players 30 } ";
     if(unit=="126" && predatorRow==0 && v.longChain) {
@@ -144,7 +146,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
    if(o.unitId==v.herdUnit){frames=(frames^o.animationFrame)*16777619u;++herds;check(o.initialIdleDelay==0,"original Nerf extra idle delay");}
   }
   check(hash==v.poses,"controlled resource all original Gaia poses/order");
-  check(frames==v.frames && herds==uint32_t(v.nearHerd*2+v.farHerd*4+(v.lateHunt==1?4:0)),"controlled original Nerf animation frames/count");
+  check(frames==v.frames && herds==uint32_t(v.nearHerd*2+v.farHerd*4+((v.lateHunt==1 || v.lateHunt==4)?4:0)),"controlled original Nerf animation frames/count");
   if(v.treeUnit!=413) {
    rng=1993207714u;
    check(game.initRms(varied,defines,120,rng,&error,2,{1,1}) && rng==v.rng,"explicit tree species native import");
@@ -196,6 +198,9 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  }
  // Live captures after restart verify geometry/static positions; moving units and runtime facets are separate.
  const struct {uint32_t seed,terrain,elevation,slopes,staticCount,positions,sceneryCount=0,sceneryHash=0;} liveCases[]={
+  {3878309407u,1631865508u,3797842515u,2049829621u,193u,1770541698u,7690u,608848445u},
+  {2766341764u,790955770u,3503438805u,3802966765u,187u,27830036u,7551u,1939473913u},
+  {2666028048u,427705247u,1211504708u,3715336632u,192u,3537397154u,7353u,520122316u},
   {2912922832u,2583369440u,970490211u,624065033u,172,777902448u,7691,3170254571u},
   {1409540336u,516209514u,578069889u,3086566162u,172u,3917539596u,7689u,3285574391u},
   {13,1910713631u,3966973382u,1711829304u,178,421779072u},
