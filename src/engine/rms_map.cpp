@@ -501,7 +501,11 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     // shortcut: expand after composed original cliff/terrain/startup comparisons.
     if(cliffStage) {
         if(width!=120 || height!=120 || base!=6 || lands.size()!=1 || playerLands ||
-            hasObjects || elevationStage || connectionStage || !terrainRows.empty() ||
+            hasObjects || elevationStage || connectionStage || terrainRows.size()>1 ||
+            std::any_of(terrainRows.begin(),terrainRows.end(),[](const auto &row) {
+                return row.terrain!=0 || row.baseTerrain!=6 || row.avoidPlayerStarts ||
+                    row.minHeight!=0 || row.maxHeight!=255;
+            }) ||
             lands[0].terrain!=6 || lands[0].centerX!=60 || lands[0].centerY!=60 ||
             lands[0].radius || lands[0].targetTiles || lands[0].zone ||
             lands[0].clumpingFactor!=8 || lands[0].borderFuzziness!=20 || lands[0].separation ||

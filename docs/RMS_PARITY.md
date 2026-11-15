@@ -1412,8 +1412,8 @@ and reusable snapshot are saved locally; the analysis process is closed.
 
 The RMS importer now accepts one explicitly bounded cliff-only profile:
 120×120, base/land terrain 6, one neutral land at 50%/50%, zero base size and
-zero requested land tiles; no elevation, terrain rows, connections or explicit
-objects. Original cliff masters/graphics are checked. Other combinations remain
+zero requested land tiles; no elevation, connections or explicit objects.
+The later grass-painting extension below permits one bounded terrain row. Original cliff masters/graphics are checked. Other combinations remain
 rejected, including normal packaged cliff maps. This supersedes the earlier
 statement that the stage helper had no importer caller.
 
@@ -1443,3 +1443,30 @@ and RMS CLI tests pass. The new integration evidence is
 are land/elevation variations, cliff interactions with later terrain/scenery and
 connections, starting objects, and native collision/UI comparisons. Empty-world
 stage success must not be counted as packaged-map or full-game parity.
+
+
+### Cliff boundary settings and later grass painting
+
+The composed cliff fixtures now include 24 additional original replays: path
+lengths 0/1/2/3, dense cliffs with curl 0/100, spacing 39, and 999 short attempts.
+Each runs under three seeds, with both ordinary and late native section order.
+This gives 33 original composed inputs and 66 native parser-order checks.
+Even attempts producing no objects retain the original random draws.
+
+The importer additionally permits one terrain-0 row painted over base 6 after
+cliffs, without player-start avoidance or custom height bounds. Nine composed
+original replays cover 30/2000/8000 requested tiles, 1/3/20 clumps, spacing 0/1/2,
+clumping 0/10/20 and flat-only on/off. Checks compare every terrain tile via an
+ordered hash, surviving cliff unit/facet/coordinates/creation IDs, final RNG and
+absence of later scenery. Other terrain types, multiple rows, elevation,
+connections and owned starts remain gated for cliff maps.
+
+The first exploratory reference row accidentally selected terrain 3: resolved
+row offset +8 is the terrain ID, not offset +4. Those expectations were discarded;
+the corrected oracle asserts that only terrain 0/6 is present. This illustrates
+why matching RNG and object counts alone does not establish map equivalence.
+
+Private evidence: `rms-cliff-scheduler-boundaries-oracle-2026-11-15.json` and
+`rms-cliff-terrain-cases-oracle-2026-11-15.json`, from the same original executable
+and configured-world/scheduler boundary as above. This is no additional packaged
+map claim and does not establish runtime cliff collision or live Windows visuals.

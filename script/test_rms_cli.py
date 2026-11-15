@@ -39,6 +39,13 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     cliffs=run(['render-rms',data,root/'tools/fixtures/cliff-diagnostic.rms',120,1,work/'cliffs.png'],0)
     assert '29 native objects, final RNG 1150416911' in cliffs
     assert (work/'cliffs.png').stat().st_size>1000
+    cliff_grass=work/'cliff-grass.rms'
+    cliff_grass.write_text((root/'tools/fixtures/cliff-diagnostic.rms').read_text()+
+        '<TERRAIN_GENERATION> create_terrain 0 { base_terrain 6 number_of_tiles 30 '
+        'number_of_clumps 3 spacing_to_other_terrain_types 1 clumping_factor 10 set_flat_terrain_only }')
+    painted=run(['render-rms',data,cliff_grass,120,1,work/'cliff-grass.png'],0)
+    assert '29 native objects, final RNG 646082904' in painted
+    assert (work/'cliff-grass.png').stat().st_size>1000
 
     rendered=run(['render-rms',data,work/'map.rms',32,1,work/'file.png'],0)
     assert 'randomized-position mode' in rendered
