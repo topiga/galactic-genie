@@ -501,7 +501,10 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     // shortcut: expand after composed original cliff/terrain/startup comparisons.
     if(cliffStage) {
         if(width!=120 || height!=120 || base!=6 || lands.size()!=1 || playerLands ||
-            hasObjects || elevationStage || connectionStage || terrainRows.size()>1 ||
+            hasObjects || connectionStage || terrainRows.size()>1 ||
+            (elevationStage && (elevationRows.size()!=1 || !terrainRows.empty() ||
+                elevationRows[0].elevation!=1 || elevationRows[0].baseHeight!=0 ||
+                elevationRows[0].baseTerrain!=6)) ||
             std::any_of(terrainRows.begin(),terrainRows.end(),[](const auto &row) {
                 return row.terrain!=0 || row.baseTerrain!=6 || row.avoidPlayerStarts ||
                     row.minHeight!=0 || row.maxHeight!=255;
@@ -751,7 +754,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         genieRandomDraw(rng);
     }
     if(cliffStage) {
-        std::vector<uint8_t> heights(generated.terrain.size(),0);
+        const auto heights=generated.elevation.empty()?std::vector<uint8_t>(generated.terrain.size(),0):generated.elevation;
         if(!generateRmsCliffs(width,generated.terrain,heights,cliffSettings,{{60,60,15}},rng,generated.cliffs,err))
             return false;
         genieRandomDraw(rng);

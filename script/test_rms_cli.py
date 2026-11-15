@@ -46,6 +46,12 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     painted=run(['render-rms',data,cliff_grass,120,1,work/'cliff-grass.png'],0)
     assert '29 native objects, final RNG 646082904' in painted
     assert (work/'cliff-grass.png').stat().st_size>1000
+    cliff_elevation=work/'cliff-elevation.rms'
+    cliff_elevation.write_text((root/'tools/fixtures/cliff-diagnostic.rms').read_text()+
+        '<ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles 400 number_of_clumps 8 }')
+    raised=run(['render-rms',data,cliff_elevation,120,1,work/'cliff-elevation.png'],0)
+    assert '29 native objects, final RNG 2790043587' in raised
+    assert (work/'cliff-elevation.png').stat().st_size>1000
 
     rendered=run(['render-rms',data,work/'map.rms',32,1,work/'file.png'],0)
     assert 'randomized-position mode' in rendered

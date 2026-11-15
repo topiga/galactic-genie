@@ -106,6 +106,39 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
             "original cliff/grass composition objects, terrain and RNG");
         check(map.scenery.empty() && map.objects.empty(),"grass painting adds no scenery");
     }
+    struct ElevationCase { int tiles,clumps; uint32_t seed,rng,objects,heights,slopes; size_t count; };
+    const ElevationCase elevationCases[]={
+        {400,8,1u,2790043587u,291107893u,73028170u,3169292009u,29},
+        {400,8,12345u,3576478055u,1991487999u,1897583699u,1760096298u,55},
+        {400,8,4294967295u,875337137u,1565698685u,3593664539u,3804388132u,20},
+        {1000,2,1u,506459290u,1053432523u,2939230450u,463713662u,27},
+        {1000,2,12345u,3863891629u,2160117617u,2456656715u,1555305034u,30},
+        {1000,2,4294967295u,178198308u,1763354238u,92000700u,4288308406u,35},
+        {8000,30,1u,2269132341u,3231355347u,1601223514u,3045030720u,47},
+        {8000,30,12345u,356477077u,1829178315u,3368565405u,202350159u,42},
+        {8000,30,4294967295u,3507099122u,2453755317u,2749370310u,3751637635u,50},
+    };
+    for(const auto &c:elevationCases) for(bool late:{false,true}) {
+        const std::string elevation="<ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles "+
+            std::to_string(c.tiles)+" number_of_clumps "+std::to_string(c.clumps)+" } ";
+        load(land+(late?"<CLIFF_GENERATION> "+elevation:elevation+"<CLIFF_GENERATION> "));
+        uint32_t rng=c.seed;
+        check(generateRmsMap(script,{},120,120,data,rng,map,&error),error.c_str());
+        uint32_t objects=2166136261u,heights=2166136261u,slopes=2166136261u;
+        for(const auto &o:map.cliffs)
+            for(uint32_t v:{uint32_t(o.unit),uint32_t(o.facet),uint32_t(o.x*2),uint32_t(o.y*2),o.creationOrdinal})
+                objects=(objects^v)*16777619u;
+        for(auto h:map.elevation) heights=(heights^h)*16777619u;
+        for(auto slope:map.slopes) slopes=(slopes^slope)*16777619u;
+        if(rng!=c.rng || objects!=c.objects || heights!=c.heights || slopes!=c.slopes)
+            std::cerr<<"cliff/elevation "<<c.tiles<<' '<<c.seed<<" rng "<<rng<<'/'<<c.rng
+                <<" objects "<<objects<<'/'<<c.objects<<" heights "<<heights<<'/'<<c.heights
+                <<" slopes "<<slopes<<'/'<<c.slopes<<'\n';
+        check(rng==c.rng && objects==c.objects && heights==c.heights && slopes==c.slopes && map.cliffs.size()==c.count,
+            "original elevation/cliff composition objects, heights, slopes and RNG");
+        for(auto tile:map.terrain) check(tile==6,"elevated cliffs preserve grass terrain");
+        check(map.scenery.empty() && map.objects.empty(),"elevated grass adds no scenery");
+    }
     uint32_t rng=1;
     load(land+"<CLIFF_GENERATION> min_distance_cliffs 0");
     check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1 && map.cliffs.empty(),"unsupported cliff spacing is transactional");
@@ -117,6 +150,14 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
         load(land+"<CLIFF_GENERATION> <TERRAIN_GENERATION> "+rows);
         check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1 && map.cliffs.empty(),
             "unverified cliff terrain-row combinations remain transactional");
+    }
+    for(const char *elevation:{
+        "<ELEVATION_GENERATION>",
+        "<ELEVATION_GENERATION> create_elevation 2 { base_terrain 6 number_of_tiles 400 }",
+        "<ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles 400 } <TERRAIN_GENERATION> create_terrain 0 { base_terrain 6 number_of_tiles 30 }"}) {
+        load(land+"<CLIFF_GENERATION> "+elevation);
+        check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1 && map.cliffs.empty(),
+            "unverified cliff elevation combinations remain transactional");
     }
     load(land+"<CLIFF_GENERATION> cliff_curliness nope");
     check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1,"malformed cliff integer");

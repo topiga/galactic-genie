@@ -1470,3 +1470,29 @@ Private evidence: `rms-cliff-scheduler-boundaries-oracle-2026-11-15.json` and
 `rms-cliff-terrain-cases-oracle-2026-11-15.json`, from the same original executable
 and configured-world/scheduler boundary as above. This is no additional packaged
 map claim and does not establish runtime cliff collision or live Windows visuals.
+
+
+### Elevation before cliff placement
+
+Cliff import now also accepts one level-1 elevation row on the same neutral
+120×120 grass profile, with no terrain-painting row. The cliff stage receives
+the generated height bytes rather than an assumed zero-height raster. Other
+levels, empty elevation sections and combined elevation/terrain painting remain
+gated pending composed comparisons.
+
+Nine original configured-world replays run setup, land, elevation 0x4d9950,
+cliffs, empty terrain and empty objects through the actual scheduler. They cover
+400/1000/8000 requested elevation tiles and 8/2/30 clumps under three seeds.
+Native tests compare every height and slope byte via ordered hashes, all surviving
+cliff records and final RNG. Both section orders are tested, since writing the
+cliff section first must not move its execution before elevation.
+
+Private evidence: `rms-cliff-elevation-cases-oracle-2026-11-15.json`. The boundary
+remains configured original modules with original constructors and modeled CRT
+allocation/time, not original RMS file loading or a live Windows screenshot.
+
+The 8000-tile/30-clump seed-1 import checks the original object-Z values against
+native rendering heights in surviving-ID order: 24 cliffs at height 1 and 23 at
+height 0. The headless render contains 47 objects with final RNG 2269132341;
+`cliff-elevated-native.png` is retained in the external build directory. This
+checks height placement, not visual equality to an original Windows frame.
