@@ -776,3 +776,12 @@ This does not certify the full seed: animals had already started moving.
 A separate appearance comparison found19 facet differences (18 forage59, one
 tree348); startup versus later runtime changes remain under investigation.
 The old seed16160 save remains available; no executable on disk was patched.
+
+### Single near and six-animal distant Bantha groups (2026-11-15)
+
+Original controlled prefixes verify near822 loose count1 and distant822 count6
+with variance1, minimum distance35 and group spacing5. They yield77/87 Gaia
+objects and final RNG1885517358/4044577126, with pose hashes880263998/660531056.
+Native admission is limited to those verified near/far quantities. Regression
+fixtures compare all poses, startup frames/delays/headings and native import;
+the full sanitizer suite passes.
