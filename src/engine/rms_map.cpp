@@ -120,7 +120,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     size_t playerLandBegin=0;
     std::vector<RmsTerrainRow> terrainRows;
     std::vector<RmsElevationRow> elevationRows;
-    bool elevationStage=false;
+    bool elevationStage=false, cliffStage=false;
+    RmsCliffSettings cliffSettings;
     std::vector<RmsConnectionCommand> connectionCommands;
     bool connectionStage=false;
     while (i < tokens.size()) {
@@ -133,8 +134,20 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         if (command == "<OBJECTS_GENERATION>" && stage>0) { stage = 3; continue; }
         if (command == "<ELEVATION_GENERATION>" && stage>0) { stage=4; elevationStage=true; continue; }
         if (command == "<CONNECTION_GENERATION>" && stage>0) { stage=5; connectionStage=true; continue; }
+        if (command == "<CLIFF_GENERATION>" && stage>0) { stage=6; cliffStage=true; continue; }
         int32_t value = 0;
-        if (stage == 1 && command == "base_terrain") {
+        if (stage==6) {
+            int *setting=nullptr;
+            if(command=="min_number_of_cliffs") setting=&cliffSettings.minCount;
+            else if(command=="max_number_of_cliffs") setting=&cliffSettings.maxCount;
+            else if(command=="min_length_of_cliff") setting=&cliffSettings.minLength;
+            else if(command=="max_length_of_cliff") setting=&cliffSettings.maxLength;
+            else if(command=="cliff_curliness") setting=&cliffSettings.curl;
+            else if(command=="min_distance_cliffs") setting=&cliffSettings.cliffDistance;
+            else if(command=="min_terrain_distance") setting=&cliffSettings.waterDistance;
+            if(!setting || !number(value)) return fail("unsupported cliff command or integer");
+            *setting=value;
+        } else if (stage == 1 && command == "base_terrain") {
             if (!number(value) || value<0 || value>255) return fail("base_terrain requires an integer in0..255");
             base = static_cast<uint8_t>(value);
         } else if (stage == 1 && (command == "create_land" || command == "create_player_lands")) {
@@ -485,6 +498,26 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         } else return fail("unsupported directive " + command);
     }
     if (base<0 || lands.empty()) return fail("explicit base terrain and at least one land required");
+    // shortcut: expand after composed original cliff/terrain/startup comparisons.
+    if(cliffStage) {
+        if(width!=120 || height!=120 || base!=6 || lands.size()!=1 || playerLands ||
+            hasObjects || elevationStage || connectionStage || !terrainRows.empty() ||
+            lands[0].terrain!=6 || lands[0].centerX!=60 || lands[0].centerY!=60 ||
+            lands[0].radius || lands[0].targetTiles || lands[0].zone ||
+            lands[0].clumpingFactor!=8 || lands[0].borderFuzziness!=20 || lands[0].separation ||
+            lands[0].leftBorder || lands[0].topBorder || lands[0].rightBorder!=-1 || lands[0].bottomBorder!=-1)
+            return fail("cliffs require the verified empty120 grass/centered neutral-land profile");
+        if(data.civs.empty() || data.civs[0].units.size()<=273) return fail("missing original cliff units");
+        for(int id=264;id<=273;++id) {
+            const auto &unit=data.civs[0].units[id];
+            const auto *graphic=data.graphic(5256+id-264);
+            if(!unit.exists || unit.id!=id || unit.type!=10 || unit.standingGraphic[0]!=5256+id-264 ||
+                unit.trainSound!=-1 || unit.deadUnitId!=-1 || !graphic || graphic->sequenceType ||
+                graphic->frameCount!=1 || graphic->angleCount!=25 || graphic->soundId!=-1 ||
+                !graphic->deltas.empty() || !graphic->angleSounds.empty())
+                return fail("unsupported original cliff master or graphic");
+        }
+    }
     if(allies && ownedObjects) return fail("allied owned-object startup remains unverified");
     // shortcut: explicit player zones need an original owned-object replay before enabling their startup.
     if(playerZoneOverride && ownedObjects) return fail("owned startup with explicit player zones remains unverified");
@@ -711,6 +744,12 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         for(const auto &p:protection) elevationProtection.push_back({p.x,p.y,p.radius,p.weight});
         if(!generateRmsElevation(width,height,elevationRows,generated.terrain,rng,
             generated.elevation,generated.slopes,mask,elevationProtection,err)) return false;
+        genieRandomDraw(rng);
+    }
+    if(cliffStage) {
+        std::vector<uint8_t> heights(generated.terrain.size(),0);
+        if(!generateRmsCliffs(width,generated.terrain,heights,cliffSettings,{{60,60,15}},rng,generated.cliffs,err))
+            return false;
         genieRandomDraw(rng);
     }
     if (!generateRmsTerrain(width,height,terrainRows,rng,generated.terrain,err,protection,

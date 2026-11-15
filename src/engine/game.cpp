@@ -1184,6 +1184,10 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     };
     // Native ID0 is reserved; retain original creation order and deleted gaps at offset1.
     uint32_t nextId=1;
+    for(const auto &placement:generated.cliffs) {
+        placeResource(placement.unit,placement.x,placement.y,uint8_t(placement.facet),placement.creationOrdinal+1);
+        nextId=placement.creationOrdinal+2;
+    }
     for (const auto &placement:generated.scenery) {
         if (placement.alive) placeResource(placement.unitId,placement.x,placement.y,placement.facet,nextId);
         ++nextId;

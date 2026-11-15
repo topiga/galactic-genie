@@ -1407,3 +1407,39 @@ real-stage default-setting fixtures bring the full-stage total to 75.
 Evidence: `rms-cliff-parameters-oracle-2026-11-15.json` and
 `rms-cliff-default-stage-oracle-2026-11-15.json`. The final Ghidra evidence bundle
 and reusable snapshot are saved locally; the analysis process is closed.
+
+### First composed cliff RMS profile and native import
+
+The RMS importer now accepts one explicitly bounded cliff-only profile:
+120×120, base/land terrain 6, one neutral land at 50%/50%, zero base size and
+zero requested land tiles; no elevation, terrain rows, connections or explicit
+objects. Original cliff masters/graphics are checked. Other combinations remain
+rejected, including normal packaged cliff maps. This supersedes the earlier
+statement that the stage helper had no importer caller.
+
+Nine original composed runs include the actual no-player-land setup routine
+0x4e0740, scheduler 0x4d6660, land, cliff, empty terrain and empty object stages.
+They cover three seeds with original defaults, explicit settings and zero cliff
+counts. The native parser also tests equivalent late-section placement. It must
+retain setup's permutation/offset draws even without player lands; the original
+scheduler-only replay starts at a different RNG boundary. The committed fixtures
+compare from script-entry RNG after accounting for actual original setup.
+Source tokenization remains native; the original comparison uses resolved module
+inputs rather than the original file loader.
+
+`RmsMap::cliffs` preserves surviving creation ordinals. Native import puts these
+objects before later scenery, offsets IDs by one for native ID0 reservation, and
+retains replacement gaps. Asset-backed checks cover IDs, unit/player identity,
+positions and the facet-facing projection. With the authored
+`tools/fixtures/cliff-diagnostic.rms`, seed1 produces 29 surviving objects and
+final RNG 1150416911. `swgbtool render-rms` renders those original game assets;
+the private image is `cliff-diagnostic-native.png` in the external build directory.
+This is a generated diagnostic scene, not a playable skirmish or visual Windows
+comparison.
+
+The 19 algorithm suites, asset-backed skirmish lifecycle/AI/player-victory tests,
+and RMS CLI tests pass. The new integration evidence is
+`rms-cliff-scheduler-cases-oracle-2026-11-15.json`. Next integration boundaries
+are land/elevation variations, cliff interactions with later terrain/scenery and
+connections, starting objects, and native collision/UI comparisons. Empty-world
+stage success must not be counted as packaged-map or full-game parity.

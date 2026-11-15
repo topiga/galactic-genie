@@ -36,6 +36,10 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
             raise RuntimeError(result.stdout)
         return result.stdout
 
+    cliffs=run(['render-rms',data,root/'tools/fixtures/cliff-diagnostic.rms',120,1,work/'cliffs.png'],0)
+    assert '29 native objects, final RNG 1150416911' in cliffs
+    assert (work/'cliffs.png').stat().st_size>1000
+
     rendered=run(['render-rms',data,work/'map.rms',32,1,work/'file.png'],0)
     assert 'randomized-position mode' in rendered
     base = ['render-rms-resource',data,work/'test.drs',60000,32,1,work/'archive.png']

@@ -13,6 +13,7 @@ static void check(bool ok,const std::string &message) {
 #include "rms_elevation_map_checks.h"
 #include "rms_connections_map_checks.h"
 #include "rms_mixed_land_map_checks.h"
+#include "rms_cliff_map_checks.h"
 
 int main() {
     checkRmsElevationPipeline();
@@ -20,6 +21,15 @@ int main() {
     checkRmsConnectionsMap();
     checkRmsMixedLandMap();
     using namespace swgb;
+    dat::DatFile cliffData;
+    cliffData.terrainBlock.terrains.resize(7);cliffData.terrainBlock.terrainsUsed=7;
+    cliffData.terrainBlock.terrains[6].enabled=1;
+    cliffData.civs.resize(1);cliffData.civs[0].units.resize(274);cliffData.graphics.resize(5266);
+    for(int id=264;id<=273;++id) {
+        auto &u=cliffData.civs[0].units[id];u.exists=true;u.id=id;u.type=10;u.standingGraphic[0]=5256+id-264;
+        auto &g=cliffData.graphics[u.standingGraphic[0]];g.exists=true;g.frameCount=1;g.angleCount=25;
+    }
+    checkRmsCliffMap(cliffData);
     dat::DatFile data;
     data.terrainBlock.terrains.resize(4);
     data.terrainBlock.terrainsUsed=4;

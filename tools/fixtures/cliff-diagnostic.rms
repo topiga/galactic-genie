@@ -1,0 +1,10 @@
+/* Authored diagnostic: verified Clone Campaigns cliff-only integration profile. */
+<LAND_GENERATION>
+base_terrain 6
+create_land {
+    terrain_type 6
+    land_position 50 50
+    base_size 0
+    number_of_tiles 0
+}
+<CLIFF_GENERATION>

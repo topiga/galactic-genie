@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "rms_script.h"
+#include "rms_cliffs.h"
 #include "rms_objects.h"
 #include "rms_scenery.h"
 #include "rms_player_starts.h"
@@ -22,6 +23,7 @@ struct RmsMap {
     uint32_t width = 0, height = 0;
     std::vector<uint8_t> terrain;
     std::vector<uint8_t> elevation, slopes; // Original tile+6/+4 bytes; empty without an elevation stage.
+    std::vector<RmsCliffObject> cliffs; // Before terrain/scenery; creation ordinals retain replacement gaps.
     std::vector<RmsTimberPlacement> objects;
     std::vector<RmsSceneryPlacement> scenery; // Creation order, including removed scenery.
     std::vector<RmsMapLand> lands; // Original source order, land ID and owner preserved.
@@ -41,6 +43,8 @@ struct RmsMap {
 // CC/worker/scout startup, with terrain connectivity and final placement gates.
 // Player/team-land connections execute after terrain. Optional diplomacy includes
 // Gaia row/column0; allies currently require randomized starts and no owned rows.
+// Cliffs support the compared120-square bare grass6/centered neutral land with
+// zero land tiles/radius, no elevation/terrain rows/connections/other objects.
 // Rejects other stages/commands; not a complete packaged random-map generator.
 // Also supports one to eight owned109 starts on bare grass0 with explicit
 // civilizations and zero placement distances. Enemy foundation remains deferred.

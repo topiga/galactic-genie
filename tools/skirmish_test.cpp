@@ -42,6 +42,8 @@ static void check(bool value, const char *message) {
 #include "rms_global_predator_checks.h"
 #include "rms_forest_hunt_checks.h"
 #include "rms_packaged_forest_checks.h"
+#include "rms_cliff_map_checks.h"
+#include "rms_cliff_import_checks.h"
 #include "rms_wave_checks.h"
 #include "rms_hunt_profile_checks.h"
 #include "rms_forest21_owned_checks.h"
@@ -303,6 +305,8 @@ int main(int argc, char **argv) {
         rmsBirdChecks(assets.dat());
         rmsGlobalPredatorChecks(assets.dat());
         rmsForestHuntChecks(assets.dat());
+        checkRmsCliffMap(assets.dat());
+        checkRmsCliffImport(assets);
         rmsPackagedForestChecks(assets,argv[1]);
         rmsHuntProfileChecks(assets,argv[1]);
         rmsWaveChecks(assets.dat());
