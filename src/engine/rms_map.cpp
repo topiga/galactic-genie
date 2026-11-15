@@ -454,7 +454,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if(allies && ownedObjects) return fail("allied owned-object startup remains unverified");
     if(ownedObjects && lands.size()!=playerCount) return fail("mixed-land owned-object startup remains unverified");
     const bool ownedForest=ownedObjects && playerLands && base==41 && lands[0].terrain==9;
-    const bool ownedMixedForest=ownedObjects && playerLands && (base==6 || base==12) && lands[0].terrain==base &&
+    const bool ownedMixedForest=ownedObjects && playerLands && (base==6 || base==12 || base==41) && lands[0].terrain==base &&
         width==120 && height==120 && playerCount==2 && playerCivilizations==std::vector<uint16_t>{1,1} &&
         startingWorkers && startingScouts && workerMinDistance==6 && workerMaxDistance==6 &&
         !startingStalagmites;
@@ -700,7 +700,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 return fail("owned forest starts require dry terrain and live411 scenery");
         } else if (ownedMixedForest) {
             for(auto tile:generated.terrain)
-                if(tile!=1 && tile!=2 && tile!=4 && tile!=5 && tile!=6 && tile!=9 && tile!=10 && tile!=12 && tile!=18 && tile!=20 && tile!=21 && tile!=22)
+                if(tile!=1 && tile!=2 && tile!=4 && tile!=5 && tile!=6 && tile!=9 && tile!=10 && tile!=12 && tile!=18 && tile!=20 && tile!=21 && tile!=22 && tile!=41)
                     return fail("unsupported Forest startup terrain "+std::to_string(tile));
             for(const auto &tree:generated.scenery)
                 if(!isTree(tree.unitId) || !tree.alive) return fail("Forest startup requires live348/349/411/413 scenery");

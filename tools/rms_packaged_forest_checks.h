@@ -40,7 +40,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  ground[0]=22;rng=1;const auto before=eligible;
  check(!swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),1585,{0,7,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && rng==1 && placed.empty() && eligible==before,"unsupported wave quantity rejected atomically");
  // Controlled original replays vary forage/Nerf quantities, retaining all later rows.
- const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413,forestTerrain=21;uint32_t sceneryPoses=2138192714u,terrainHash=3348257725u;bool chainedHunt=false,omitNerfs=false;unsigned explicitTrees=110;bool omitForage=false;unsigned longChain=0,lateHunt=0;bool terrain9=false,terrain22=false,base12=false,terrain4=false;} variations[]={
+ const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413,forestTerrain=21;uint32_t sceneryPoses=2138192714u,terrainHash=3348257725u;bool chainedHunt=false,omitNerfs=false;unsigned explicitTrees=110;bool omitForage=false;unsigned longChain=0,lateHunt=0;bool terrain9=false,terrain22=false,base12=false,terrain4=false,base41=false;} variations[]={
   {4,2,126,220,1662422u,278519141u,513271022u},
   {2,1,126,210,3750728331u,4161792159u,758251980u},
   {8,4,126,235,989150139u,2125502712u,2483236625u},
@@ -52,6 +52,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   {4,2,1197,224,1665827321u,44224755u,513271022u,2},
   {4,2,126,220,3933298748u,278519141u,513271022u,1,348},
   {4,2,126,220,2518584576u,278519141u,513271022u,1,349},
+  {4,2,126,220,2615402066u,278519141u,513271022u,1,411,10,1802081058u,415015038u,false,false,110,false,0,0,false,false,false,false,true},
   {4,2,126,220,2615402066u,278519141u,513271022u,1,411,10,1802081058u,1196292149u},
   {4,2,126,220,2615402066u,278519141u,513271022u,1,411,18,780123404u,1911528789u},
   {4,2,126,220,3933298748u,278519141u,513271022u,1,348,18,780123404u,1911528789u},
@@ -77,7 +78,9 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
    const auto &name=tokens[i].text;
    if(name!="create_terrain" && name!="terrain_type" && name!="base_terrain" && name!="replace_terrain" && name!="terrain_cost" && name!="terrain_size")continue;
    for(size_t j=i+1;j<=i+(name=="replace_terrain"?2:1);++j) {
-    if(v.terrain4 && tokens[j].text=="1")tokens[j].text="4";
+    if(v.base41 && tokens[j].text=="6")tokens[j].text="41";
+    else if(v.base41 && tokens[j].text=="41")tokens[j].text="6";
+    else if(v.terrain4 && tokens[j].text=="1")tokens[j].text="4";
     else if(v.terrain4 && tokens[j].text=="4")tokens[j].text="1";
     else if(v.base12 && tokens[j].text=="6")tokens[j].text="12";
     else if(v.base12 && tokens[j].text=="12")tokens[j].text="6";
@@ -184,6 +187,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  }
  // Live captures after restart verify geometry/static positions; moving units and runtime facets are separate.
  const struct {uint32_t seed,terrain,elevation,slopes,staticCount,positions,sceneryCount=0,sceneryHash=0;} liveCases[]={
+  {2912922832u,2583369440u,970490211u,624065033u,172,777902448u,7691,3170254571u},
   {1409540336u,516209514u,578069889u,3086566162u,172u,3917539596u,7689u,3285574391u},
   {13,1910713631u,3966973382u,1711829304u,178,421779072u},
   {19,2994838923u,264109179u,2976087397u,186,2122276350u,7622,3968719120u},
@@ -205,7 +209,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   }
   hash=2166136261u;unsigned staticCount=0;
   for(const auto &o:map.resourcesAfterOwned) {
-   if(o.unitId!=285 && o.unitId!=59 && o.unitId!=66 && o.unitId!=102 && o.unitId!=348 && o.unitId!=349 && o.unitId!=413 && o.unitId!=1585)continue;
+   if(o.unitId!=285 && o.unitId!=59 && o.unitId!=66 && o.unitId!=102 && o.unitId!=348 && o.unitId!=349 && o.unitId!=411 && o.unitId!=413 && o.unitId!=1585)continue;
    for(auto v:{uint32_t(o.unitId),0u,uint32_t(o.x*2),uint32_t(o.y*2)})hash=(hash^v)*16777619u;
    ++staticCount;
   }

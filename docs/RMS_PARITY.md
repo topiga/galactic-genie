@@ -22,7 +22,7 @@ The image `clone-campaigns-forest-full.png` in the external build directory is a
 native diagnostic render, not a claim of a fully configured playable match.
 Starting resources/UI map selection and later simulation remain separate work.
 
-Fresh live Windows restarts independently verify ten more packaged Forest
+Fresh live Windows restarts independently verify twelve more packaged Forest
 seeds with the same size, defines and civilizations:
 
 | Seed | Terrain / elevation / slopes | Static resource identities, owners, positions and order |
@@ -37,6 +37,8 @@ seeds with the same size, defines and civilizations:
 | 16161 | 14,400 / 14,400 / 14,400 cells equal | 178 / 178 equal |
 | 32767 | 14,400 / 14,400 / 14,400 cells equal | 174 / 174 equal |
 | 65535 | 14,400 / 14,400 / 14,400 cells equal | 190 / 190 equal |
+| 1409540336 | 14,400 / 14,400 / 14,400 cells equal | 172 / 172 equal |
+| 2912922832 | 14,400 / 14,400 / 14,400 cells equal | 172 / 172 equal |
 
 These checks do not certify all startup animation/facets or mobile positions for
 the new seeds. Forage facets change on the original's first simulation update;
@@ -966,3 +968,18 @@ cells, every static resource identity/position, and all7689 automatic trees incl
 facets (FNV3285574391). Its script omits both forage and early herds and uses1197
 near predators with812 global predators. This is independent live coverage of the
 combined optional-row path, beyond the controlled isolated1197 replay.
+
+## Ground41 startup and a live forest10 map: 2026-11-15
+
+The original controlled23-row replay with ground41/player lands41 and forest10
+retains220 Gaia objects, RNG278519141 and pose/facet FNV2615402066; its terrain
+FNV is415015038. Native admission is limited to the same verified120-square,
+two-Empire worker/scout profile. Other startup configurations remain guarded.
+Evidence: `rms-controlled-forest10-base41-fullstage-oracle-2026-11-15.json`.
+
+Fresh live packaged seed2912922832 independently matches all14400 terrain,
+elevation and slope cells,172 static resources including explicit411 trees,
+and all7691 automatic411 trees including facets (FNV3170254571). The helper
+and fixture static-resource filters now include411. The live script omits
+forage and early herds; later optional hunts are absent too. This validates
+its full generated geometry/static placement, not the AI's later unit movements.
