@@ -1074,7 +1074,7 @@ Windows object/raster snapshots in the private reference directory.
 
 A controlled original-executable replay now covers both owners using civilization2,
 including Gungan scout552 and foundation terrain4. On the existing seed16160
-Forest geometry with forage3 and predator812 substitutions, all10 owned objects
+Forest geometry with forage3 and predator 812 substitutions, all10 owned objects
 and220 Gaia objects match creation order, coordinates and facets. Final RNG is
 278519141; terrain FNV is1056424125, owned-pose FNV613198960 and Gaia-pose
 FNV1670957952. The existing generator needed only its verified-profile guard
@@ -1269,3 +1269,46 @@ Zone and border parsing now advance affected resources to later unsupported
 resource-row/startup cases; this does not establish additional playable maps.
 Input settings remain independently confirmed only for Forest. Results:
 `rms-packaged-zone-integration-audit-2026-11-15.json`.
+
+
+Four live mixed-civilization runs also match at seed 16160: Empire/Naboo,
+Naboo/Empire, Republic/Confederacy and Confederacy/Republic. All three grids,
+7,554 tree poses/facets and 197 stationary resource records match. The two Naboo
+mixtures have stationary-resource pose hash 2934879652; the Clone Campaigns
+Republic/Confederacy mixtures have 163032056. This checks actual poses rather
+than inferring equivalence from a converged final RNG state. The same moving-unit
+and first-update forage-facet limitations apply. Private capture filenames use
+`empire-naboo`, `naboo-empire`, `republic-confederacy` and
+`confederacy-republic` with the comparison suffixes above. The reference game was
+left paused and its default seed setting restored; remote sessions were closed.
+
+
+### All 64 ordered civilization pairs on controlled Forest startup
+
+The remaining 44 ordered pairs pass original-executable replay, extending the
+previous 20-pair coverage to the complete 8×8 matrix. The importer no longer
+rejects an otherwise supported two-player Forest start because its civilizations
+are mixed. The original 1..8 civilization bounds and other map/startup gates remain.
+
+The controlled input is seed-16160 Forest geometry with three forage objects per
+player and predator 812 substitutions. Each comparison checks all terrain bytes,
+7,554 automatic tree poses/facets, ten owned objects, all 220 later Gaia objects,
+final RNG, and both scouts' initial frames/holds. Static Naboo scout sprites have
+no dynamic hold field; their native extra delay is zero. These are object-stage
+replays on previously verified geometry, not 64 executions of the original RMS
+file loader or 64 full gameplay comparisons. Stock live-map comparisons above
+provide separate evidence for all eight same-civilization pairs and four mixtures.
+
+The new regression fixtures retain independent original terrain/pose hashes,
+RNG states and scout animation values, and exercise native game import. Private
+per-pair originals are `rms-pair-A-B-forest-fullstage-oracle-2026-11-15.json`;
+`rms-remaining-pairs-native-comparison-2026-11-15.json` records all 44 successful
+full-array/object comparisons. The replay's inherited method string describes
+an older 17-row boundary; these runs execute all 23 controller rows, as recorded
+in their row snapshots and creation logs.
+
+The trace harness now hooks specific entries and observed return addresses
+instead of every controller instruction. Complete evidence for baseline pair 1/3
+is identical before and after that change; subsequent runs take about 19–24 seconds
+instead of roughly 90 seconds. Original instructions and emulated behavior are unchanged.
+Evidence: `rms-pair-tracing-optimization-2026-11-15.json`.
