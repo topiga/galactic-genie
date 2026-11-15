@@ -6,6 +6,29 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  swgb::ResourceSet resources;swgb::RmsScript script;std::string error;
  check(resources.add(dataDir+"/gamedata_x1.drs",&error) && script.load(54204,resources,&error),error.c_str());
  const std::unordered_set<std::string> defines{"TINY_MAP","FIXED_POSITIONS","DEFAULT_RESOURCES"};
+ // Original 4df9b0 runner reads the packaged script, finalizes rows and schedules every stage.
+ const struct {uint32_t seed,count,rng,objects,terrain,elevation,slopes;} fullRunnerCases[]={
+  {1,7802,2591164073u,3816317493u,1441896192u,2681332084u,2744061788u},
+  {12345,7982,3553717540u,1875667655u,519134464u,169086623u,2102275482u},
+  {16160,7802,3740942338u,354724343u,3348257725u,908132044u,458332910u},
+ };
+ auto runnerDefines=defines;runnerDefines.insert("RANDOM_MAP");runnerDefines.insert("2_PLAYERS");
+ for(const auto &expected:fullRunnerCases) {
+  uint32_t state=expected.seed;swgb::RmsMap generated;
+  check(swgb::generateRmsMap(script,runnerDefines,120,120,assets.dat(),state,generated,&error,2,{1,1}),error.c_str());
+  check(generated.cliffs.empty() && generated.objects.empty(),"original Forest runner has no cliff/pre-owned records");
+  uint32_t ordinal=0,count=0,records=2166136261u;
+  auto record=[&](int unit,int owner,uint8_t facet,float x,float y) {
+   for(uint32_t v:{ordinal,uint32_t(owner),uint32_t(unit),uint32_t(facet),uint32_t(x*2),uint32_t(y*2)})records=(records^v)*16777619u;
+   ++count;
+  };
+  for(const auto &o:generated.scenery){if(o.alive)record(o.unitId,0,o.facet,o.x,o.y);++ordinal;}
+  for(const auto &o:generated.ownedObjects){record(o.unitId,o.owner,o.facet,o.x,o.y);++ordinal;}
+  for(const auto &o:generated.resourcesAfterOwned){record(o.unitId,0,o.facet,o.x,o.y);++ordinal;}
+  auto gridHash=[](const auto &grid){uint32_t value=2166136261u;for(auto cell:grid)value=(value^cell)*16777619u;return value;};
+  check(count==expected.count && state==expected.rng && records==expected.objects,"original full RMS runner ordered records and RNG");
+  check(gridHash(generated.terrain)==expected.terrain && gridHash(generated.elevation)==expected.elevation && gridHash(generated.slopes)==expected.slopes,"original full RMS runner terrain, elevation and slopes");
+ }
  uint32_t rng=16160;swgb::RmsMap map;
  check(swgb::generateRmsMap(script,defines,120,120,assets.dat(),rng,map,&error,2,{1,1}),error.c_str());
  check(rng==3740942338u && map.scenery.size()==7554 && map.ownedObjects.size()==10 && map.resourcesAfterOwned.size()==238,"full original Forest count/RNG");

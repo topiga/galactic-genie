@@ -2118,3 +2118,38 @@ numeric IDs are accepted where original scripts require named labels. Signed32
 overflow, include/resource bounds, unknown stages and other unverified parser
 paths remain guarded. Generation tests separately verify that unknown terrain
 words are harmless while registered but unsupported commands still reject the map.
+
+### Complete original RMS runner: packaged Forest
+
+The local original-executable harness now calls the actual `4df810` constructor
+and `4df9b0` runner. This executes command registration, nested resource reading,
+all stage handlers, row finalization, module construction and stage scheduling.
+It no longer relies on manually constructing the module rows for this comparison.
+The first authored cliff case reproduced all 6,202 ordered records, HP, terrain,
+startup poses and final RNG from the earlier controlled original replay.
+
+Packaged Forest54204 then passed at 120×120, two Empire players, with explicit
+TINY_MAP/RANDOM_MAP/2_PLAYERS/FIXED_POSITIONS/DEFAULT_RESOURCES labels:
+
+| Seed | Live objects | Final RNG |
+|---|---:|---:|
+| 1 | 7,802 | 2591164073 |
+| 12345 | 7,982 | 3553717540 |
+| 16160 | 7,802 | 3740942338 |
+
+Every ordered ID/owner/unit/facet/position, terrain/elevation/slope byte, owned
+foundation state and animated owned/Gaia startup pose matched the production
+native generator. `rms_packaged_forest_checks.h` retains the original ordered
+record and three-grid hashes for all three seeds. The private full-array and
+animation comparisons are saved as `rms-text-full-forest-*-comparison-2026-11-15.json`.
+Original executable, helper, asset capture and native exporter hashes accompany
+the local evidence. Game scripts and executable bytes remain outside the repo.
+
+This remains a configured-world harness: language, CRT I/O/allocation/time and
+diagnostic logging boundaries are modeled; original gameplay callbacks execute.
+The fixed-placement virtual method and five settings labels are explicit, not
+supplied through the original game UI. This does not certify full game startup,
+later simulation, all maps or every seed. The updated 46-script/three-seed native
+audit still accepts only Forest (3/138); the other 135 attempts reject unsupported
+object/resource sequences or attributes. Parser coverage remains a separate
+828-case result, not 828 complete generated maps.
