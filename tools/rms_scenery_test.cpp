@@ -37,6 +37,14 @@ int main() {
     std::string error;
     std::vector<RmsSceneryPlacement> out;
     {
+        uint32_t rng=1;
+        assert(generateRmsScenery(3,1,{10,10,10},data,rng,out,&error,{0,1,0}));
+        assert(rng==3357800067u && out.size()==2 && out[0].x==.5f && out[1].x==2.5f);
+        assert(out[0].facet==0 && out[1].facet==6);
+        assert(!generateRmsScenery(3,1,{10,10,10},data,rng,out,&error,{0,1}));
+        assert(rng==3357800067u && out.empty());
+    }
+    {
         uint32_t rng=1u;
         const std::vector<uint8_t> terrain={10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10};
         assert(generateRmsScenery(5,6,terrain,data,rng,out,&error));

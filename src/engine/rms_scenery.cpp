@@ -9,7 +9,8 @@
 namespace swgb {
 bool generateRmsScenery(uint32_t width, uint32_t height,
     const std::vector<uint8_t> &terrain, const dat::DatFile &data,
-    uint32_t &randomState, std::vector<RmsSceneryPlacement> &out, std::string *err) {
+    uint32_t &randomState, std::vector<RmsSceneryPlacement> &out, std::string *err,
+    const std::vector<uint8_t> &occupiedTiles) {
     out.clear();
     if (err) err->clear();
     auto fail = [&](const char *reason) {
@@ -17,7 +18,8 @@ bool generateRmsScenery(uint32_t width, uint32_t height,
         return false;
     };
     if (!width || !height || width>1024 || height>1024 ||
-        terrain.size()!=static_cast<size_t>(width)*height)
+        terrain.size()!=static_cast<size_t>(width)*height ||
+        (!occupiedTiles.empty() && occupiedTiles.size()!=terrain.size()))
         return fail("invalid dimensions or terrain size");
     struct TreeSpec { int terrain, alias, unit, graphic, restriction, angles, carbon; int type=10, hitPoints=50; };
     static constexpr TreeSpec trees[]={
@@ -98,7 +100,7 @@ bool generateRmsScenery(uint32_t width, uint32_t height,
     uint32_t rng=randomState;
     for (size_t tile=0;tile<terrain.size();++tile) {
         const int id=unitIds[terrain[tile]], angles=angleCounts[terrain[tile]];
-        if (id<0) continue;
+        if (id<0 || (!occupiedTiles.empty() && occupiedTiles[tile])) continue;
         const float x=float(tile%width)+.5f, y=float(tile/width)+.5f;
         if (data.civs[0].units[id].type==30) {
             const auto appearance=drawRmsCarbonAppearance(rng);

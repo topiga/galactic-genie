@@ -286,6 +286,7 @@ struct Tech {
 };
 
 struct DatFile {
+    bool footprintAxesSwapped = false; // Asset normalization; RMS still uses original axes.
     std::string version;
     int32_t waypointSprite = -1, moveToSprite = -1, garrisonSound = -1, ungarrisonSound = -1;
     int16_t terrainsUsed = 0;

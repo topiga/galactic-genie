@@ -1532,3 +1532,52 @@ Evidence: `rms-cliff-multilevel-cases-oracle-2026-11-15.json`. Original setup,
 scheduler, elevation and cliff callbacks run under the same configured-world
 boundary as the earlier fixtures. These are authored diagnostics, not packaged
 maps or proof of full engine/rendering equivalence.
+
+
+### Cliff collision during automatic forest placement
+
+A flat terrain-21 (`TIMBERG`, unit 413) row is now accepted after cliffs on the
+bounded neutral DIRT1 profile. Elevation plus this forest row remains rejected.
+Six original runs cover 2000/8000 requested forest tiles and three seeds. The
+native pipeline matches terrain, every surviving cliff/tree record, creation
+IDs and final RNG under ordinary and late section ordering.
+
+The original rejects 16/67/50 centered trees in the smaller cases and 104/145/115
+in the larger cases. Those rejected placements consume no appearance draw and
+allocate no object ID. The native pipeline previously ignored existing cliffs
+when generating automatic scenery. It now supplies an occupied-tile mask to the
+shared scenery pass, rasterized from verified original cliff collision sizes.
+Touching edges do not overlap. Clearance sizes are not interchangeable: that
+model rejects up to 57 extra trees in these fixtures.
+
+REA/Ghidra analysis of original 0x48e180 confirms strict X/Y collision-box overlap
+and return code 6. The cliff masters are class 22, collision height 0.1, with
+positive X/Y sizes and no can-be-built-on flag. Native metadata guards now check
+those properties and the original obstruction fields before using the mask.
+The shared scenery pass validates mask dimensions and skips occupied cells
+before drawing a facet. Calls without a mask retain their previous behavior.
+
+The configured object module must have auto-scenery byte +0x1ddf set to 1;
+without it, original 0x4ddd40 intentionally skips the forest scan. The first
+exploratory forest run exposed that missing harness setting. Earlier dirt-only
+cliff fixtures had this scan disabled; three new original runs with it enabled
+confirm unchanged objects and RNG on DIRT1. This distinction remains part of the
+reference boundary, rather than treating configured modules as original file loading.
+
+Private evidence: `rms-cliff-forest-cases-oracle-2026-11-15.json`,
+`rms-cliff-forest-collision-comparison-2026-11-15.json`,
+`rms-cliff-auto-empty-cases-oracle-2026-11-15.json` and
+`rms-cliff-collision-ghidra-evidence-2026-11-15.json`. The seed-1 smaller forest
+imports 29 cliffs and 2036 trees, final RNG 1567879473, with original replacement
+ID gaps preserved. No packaged-map, live Windows visual or runtime pathfinding
+parity claim follows from this startup comparison.
+
+
+App integration exposed an existing coordinate normalization: `Assets::init`
+swaps footprint X/Y for native world axes, whereas RMS retains the original
+raster axes. `DatFile::footprintAxesSwapped` now records that conversion and resets
+on a successful raw reload. RMS cliff validation and the occupancy mask read the
+original axes explicitly. The algorithm fixtures exercise both raw and normalized
+DAT representations; accepting either shape without recording its orientation
+would silently transpose narrow cliff footprints. Runtime movement/collision
+orientation remains a separate comparison boundary from this startup mask.

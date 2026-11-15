@@ -504,15 +504,15 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             hasObjects || connectionStage || terrainRows.size()>1 ||
             (elevationStage && (elevationRows.empty() || elevationRows.size()>7 ||
                 (elevationRows.size()>1 && !terrainRows.empty()))) ||
-            std::any_of(terrainRows.begin(),terrainRows.end(),[](const auto &row) {
-                return row.terrain!=0 || row.baseTerrain!=6 || row.avoidPlayerStarts ||
+            std::any_of(terrainRows.begin(),terrainRows.end(),[&](const auto &row) {
+                return (row.terrain!=0 && (row.terrain!=21 || elevationStage)) || row.baseTerrain!=6 || row.avoidPlayerStarts ||
                     row.minHeight!=0 || row.maxHeight!=255;
             }) ||
             lands[0].terrain!=6 || lands[0].centerX!=60 || lands[0].centerY!=60 ||
             lands[0].radius || lands[0].targetTiles || lands[0].zone ||
             lands[0].clumpingFactor!=8 || lands[0].borderFuzziness!=20 || lands[0].separation ||
             lands[0].leftBorder || lands[0].topBorder || lands[0].rightBorder!=-1 || lands[0].bottomBorder!=-1)
-            return fail("cliffs require the verified empty120 grass/centered neutral-land profile");
+            return fail("cliffs require the verified120 DIRT1/centered neutral-land profile");
         for(size_t index=0;index<elevationRows.size();++index) {
             const auto &row=elevationRows[index];
             if(row.elevation!=index+1 || row.baseHeight!=index || row.baseTerrain!=6 ||
@@ -520,10 +520,15 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 return fail("cliffs require one verified grass elevation block");
         }
         if(data.civs.empty() || data.civs[0].units.size()<=273) return fail("missing original cliff units");
+        static constexpr float cliffSizes[10][2]={{1.5f,1.5f},{.5f,1.5f},{1.5f,.5f},{1,1.5f},{1,1.5f},
+            {1.5f,1},{1.5f,1},{1,1},{1,1},{1.5f,1.5f}};
         for(int id=264;id<=273;++id) {
             const auto &unit=data.civs[0].units[id];
             const auto *graphic=data.graphic(5256+id-264);
             if(!unit.exists || unit.id!=id || unit.type!=10 || unit.standingGraphic[0]!=5256+id-264 ||
+                unit.cls!=22 || unit.collisionSize[data.footprintAxesSwapped?1:0]!=cliffSizes[id-264][0] ||
+                unit.collisionSize[data.footprintAxesSwapped?0:1]!=cliffSizes[id-264][1] || unit.collisionSize[2]!=.1f ||
+                unit.canBeBuiltOn || unit.obstructionType!=2 || unit.obstructionClass!=6 ||
                 unit.trainSound!=-1 || unit.deadUnitId!=-1 || !graphic || graphic->sequenceType ||
                 graphic->frameCount!=1 || graphic->angleCount!=25 || graphic->soundId!=-1 ||
                 !graphic->deltas.empty() || !graphic->angleSounds.empty())
@@ -783,9 +788,21 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         for(uint8_t terrain:generated.terrain) if(terrain!=10 && terrain!=18 && terrain!=20 && terrain!=21 && !safeTerrain(terrain))
             return fail("scenery startup on elevations is not verified");
     }
+    std::vector<uint8_t> sceneryOccupied;
+    if(!generated.cliffs.empty()) {
+        sceneryOccupied.resize(generated.terrain.size(),0);
+        for(const auto &cliff:generated.cliffs) {
+            const auto &size=data.civs[0].units[cliff.unit].collisionSize;
+            const float halfX=size[data.footprintAxesSwapped?1:0],halfY=size[data.footprintAxesSwapped?0:1];
+            // Original48e180 uses strict collision-box overlap, not clearance dimensions.
+            const int x0=std::max(0,int(std::floor(cliff.x-halfX))),x1=std::min(int(width),int(std::ceil(cliff.x+halfX)));
+            const int y0=std::max(0,int(std::floor(cliff.y-halfY))),y1=std::min(int(height),int(std::ceil(cliff.y+halfY)));
+            for(int y=y0;y<y1;++y) for(int x=x0;x<x1;++x) sceneryOccupied[size_t(y)*width+x]=1;
+        }
+    }
     if (earlyForest) {
         if (!finishRmsEarlyForest(width,height,generated.terrain,data,early,rng,generated.scenery,err,static_cast<uint8_t>(base))) return false;
-    } else if (!generateRmsScenery(width,height,generated.terrain,data,rng,generated.scenery,err)) return false;
+    } else if (!generateRmsScenery(width,height,generated.terrain,data,rng,generated.scenery,err,sceneryOccupied)) return false;
     std::vector<uint32_t> occupied;
     for (const auto &tree:generated.scenery) if (tree.alive)
         occupied.push_back(static_cast<uint32_t>(tree.y)*width+static_cast<uint32_t>(tree.x));

@@ -676,6 +676,7 @@ bool DatFile::loadFromRaw(const std::vector<uint8_t> &raw, std::string *err) {
         if (err) *err = std::string("dat parse error: ") + e.what();
         return false;
     }
+    footprintAxesSwapped = false;
     return true;
 }
 

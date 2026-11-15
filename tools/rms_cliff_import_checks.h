@@ -45,4 +45,18 @@ static void checkRmsCliffImport(swgb::Assets &assets) {
         }
         check(heightHash==c.heightHash,"native cliff rendering heights match original object z values");
     }
+    const std::string forest=source+" <TERRAIN_GENERATION> create_terrain 21 { base_terrain 6 number_of_tiles 2000 number_of_clumps 20 spacing_to_other_terrain_types 2 clumping_factor 20 }";
+    check(script.load(0,[&](int32_t id,std::vector<uint8_t> &out) {
+        if(id) return false;out.assign(forest.begin(),forest.end());return true;
+    },{},&error),error.c_str());
+    rng=1;check(generateRmsMap(script,{},120,120,assets.dat(),rng,map,&error),error.c_str());
+    rng=1;check(game.initRms(script,{},120,rng,&error),error.c_str());
+    check(rng==1567879473u && game.activeObjectCount()==2065,"cliff/forest native import count/RNG");
+    uint32_t nextId=map.cliffs.back().creationOrdinal+2;
+    for(const auto &tree:map.scenery) {
+        const auto p=game.objectPosition(nextId);
+        check(game.objectUnitId(nextId)==413 && game.objectPlayer(nextId)==0 && p[0]==tree.x && p[1]==tree.y,
+            "native trees preserve original IDs after cliff replacements and rejected overlaps");
+        ++nextId;
+    }
 }

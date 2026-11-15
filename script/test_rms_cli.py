@@ -65,6 +65,13 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     high=run(['render-rms',data,cliff_high,120,1,work/'cliff-high.png'],0)
     assert '33 native objects, final RNG 2215531909' in high
     assert (work/'cliff-high.png').stat().st_size>1000
+    cliff_forest=work/'cliff-forest.rms'
+    cliff_forest.write_text((root/'tools/fixtures/cliff-diagnostic.rms').read_text()+
+        '<TERRAIN_GENERATION> create_terrain 21 { base_terrain 6 number_of_tiles 2000 '
+        'number_of_clumps 20 spacing_to_other_terrain_types 2 clumping_factor 20 }')
+    wooded=run(['render-rms',data,cliff_forest,120,1,work/'cliff-forest.png'],0)
+    assert '2065 native objects, final RNG 1567879473' in wooded
+    assert (work/'cliff-forest.png').stat().st_size>1000
 
     rendered=run(['render-rms',data,work/'map.rms',32,1,work/'file.png'],0)
     assert 'randomized-position mode' in rendered

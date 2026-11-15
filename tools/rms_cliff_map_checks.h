@@ -222,6 +222,37 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
             "original combined elevation/cliff/grass terrain, objects and RNG");
         check(map.scenery.empty() && map.objects.empty(),"combined elevated grass adds no scenery");
     }
+    struct ForestCase { int tiles,clumps,spacing; uint32_t seed,rng,objects,terrain; size_t count,blocked; };
+    const ForestCase forestCases[]={
+        {2000,20,2,1u,1567879473u,3602929036u,3238789567u,2065,16},
+        {2000,20,2,12345u,2603646791u,3248902699u,3671891854u,2035,67},
+        {2000,20,2,4294967295u,1747975995u,3510501071u,4171639027u,2013,50},
+        {8000,40,0,1u,3214010955u,2637590139u,1269346813u,8007,104},
+        {8000,40,0,12345u,3846171459u,1918157620u,1588475975u,8008,145},
+        {8000,40,0,4294967295u,3982945277u,256632634u,3738121163u,7996,115},
+    };
+    for(const auto &c:forestCases) for(bool late:{false,true}) {
+        const std::string forest="<TERRAIN_GENERATION> create_terrain 21 { base_terrain 6 number_of_tiles "+
+            std::to_string(c.tiles)+" number_of_clumps "+std::to_string(c.clumps)+
+            " spacing_to_other_terrain_types "+std::to_string(c.spacing)+" clumping_factor 20 } ";
+        load(land+(late?forest+"<CLIFF_GENERATION> ":"<CLIFF_GENERATION> "+forest));
+        uint32_t rng=c.seed;
+        check(generateRmsMap(script,{},120,120,data,rng,map,&error),error.c_str());
+        uint32_t objects=2166136261u,terrain=2166136261u,nextId=0;
+        auto mixObject=[&](int unit,int facet,float x,float y,uint32_t id) {
+            for(uint32_t v:{uint32_t(unit),uint32_t(facet),uint32_t(x*2),uint32_t(y*2),id}) objects=(objects^v)*16777619u;
+        };
+        for(const auto &o:map.cliffs) { mixObject(o.unit,o.facet,o.x,o.y,o.creationOrdinal);nextId=o.creationOrdinal+1; }
+        for(const auto &o:map.scenery) {check(o.alive,"forest tree survives startup");mixObject(o.unitId,o.facet,o.x,o.y,nextId++);}
+        size_t forestTiles=0;
+        for(auto t:map.terrain) {terrain=(terrain^t)*16777619u;forestTiles+=t==21;}
+        if(rng!=c.rng || objects!=c.objects || terrain!=c.terrain)
+            std::cerr<<"cliff/forest "<<c.tiles<<' '<<c.seed<<" rng "<<rng<<'/'<<c.rng
+                <<" objects "<<objects<<'/'<<c.objects<<" terrain "<<terrain<<'/'<<c.terrain<<'\n';
+        check(rng==c.rng && objects==c.objects && terrain==c.terrain && map.cliffs.size()+map.scenery.size()==c.count,
+            "original cliff/forest composition terrain, all objects and RNG");
+        check(forestTiles-map.scenery.size()==c.blocked,"original cliff collision rejects centered trees without a draw");
+    }
     uint32_t rng=1;
     load(land+"<CLIFF_GENERATION> min_distance_cliffs 0");
     check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1 && map.cliffs.empty(),"unsupported cliff spacing is transactional");
@@ -242,6 +273,9 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
         check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1 && map.cliffs.empty(),
             "unverified cliff elevation combinations remain transactional");
     }
+    load(land+"<CLIFF_GENERATION> <ELEVATION_GENERATION> create_elevation 1 { base_terrain 6 number_of_tiles 400 } <TERRAIN_GENERATION> create_terrain 21 { base_terrain 6 number_of_tiles 2000 }");
+    check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1 && map.cliffs.empty(),
+        "elevated cliff forest composition remains unverified");
     load(land+"<CLIFF_GENERATION> cliff_curliness nope");
     check(!generateRmsMap(script,{},120,120,data,rng,map,&error) && rng==1,"malformed cliff integer");
 }

@@ -22,13 +22,36 @@ int main() {
     checkRmsMixedLandMap();
     using namespace swgb;
     dat::DatFile cliffData;
-    cliffData.terrainBlock.terrains.resize(7);cliffData.terrainBlock.terrainsUsed=7;
-    cliffData.terrainBlock.terrains[0].enabled=cliffData.terrainBlock.terrains[0].enabled=cliffData.terrainBlock.terrains[6].enabled=1;
-    cliffData.civs.resize(1);cliffData.civs[0].units.resize(274);cliffData.graphics.resize(5266);
+    cliffData.terrainBlock.terrains.resize(22);cliffData.terrainBlock.terrainsUsed=22;
+    cliffData.terrainBlock.terrains[0].enabled=cliffData.terrainBlock.terrains[6].enabled=1;
+    cliffData.civs.resize(1);cliffData.civs[0].units.resize(414);cliffData.graphics.resize(5302);
+    const float cliffSizes[10][2]={{1.5f,1.5f},{.5f,1.5f},{1.5f,.5f},{1,1.5f},{1,1.5f},{1.5f,1},{1.5f,1},{1,1},{1,1},{1.5f,1.5f}};
     for(int id=264;id<=273;++id) {
         auto &u=cliffData.civs[0].units[id];u.exists=true;u.id=id;u.type=10;u.standingGraphic[0]=5256+id-264;
+        u.cls=22;u.collisionSize[0]=cliffSizes[id-264][0];u.collisionSize[1]=cliffSizes[id-264][1];u.collisionSize[2]=.1f;u.obstructionType=2;u.obstructionClass=6;
         auto &g=cliffData.graphics[u.standingGraphic[0]];g.exists=true;g.frameCount=1;g.angleCount=25;
     }
+    cliffData.terrainBlock.terrains[10].enabled=cliffData.terrainBlock.terrains[21].enabled=1;
+    auto &cliffForest=cliffData.terrainBlock.terrains[21];
+    cliffForest.terrainToDraw=10;cliffForest.numTerrainUnitsUsed=1;cliffForest.terrainUnitId[0]=413;
+    cliffForest.terrainUnitDensity[0]=1000;cliffForest.terrainUnitCentering[0]=1;
+    auto &cliffTree=cliffData.civs[0].units[413];
+    cliffTree.exists=true;cliffTree.id=413;cliffTree.type=10;cliffTree.cls=31;cliffTree.hitPoints=50;
+    cliffTree.standingGraphic[0]=5301;cliffTree.collisionSize[0]=cliffTree.collisionSize[1]=.5f;
+    cliffTree.collisionSize[2]=2;cliffTree.clearanceSize[0]=cliffTree.clearanceSize[1]=.5f;
+    cliffTree.placementSideTerrain[0]=cliffTree.placementSideTerrain[1]=cliffTree.placementTerrain[0]=cliffTree.placementTerrain[1]=-1;
+    cliffTree.terrainRestriction=11;cliffTree.obstructionType=2;cliffTree.obstructionClass=1;cliffTree.enableAutoGather=1;
+    for(auto &storage:cliffTree.resourceStorages) storage={-1,0,0};
+    cliffTree.resourceStorages[0]={1,125,0};
+    auto &cliffTreeGraphic=cliffData.graphics[5301];cliffTreeGraphic.exists=true;cliffTreeGraphic.sequenceType=6;cliffTreeGraphic.angleCount=12;
+    cliffData.terrainRestrictions.resize(12);cliffData.terrainRestrictions[11].passableBuildableDmgMultiplier.assign(22,1);
+    checkRmsCliffMap(cliffData);
+    for(auto &unit:cliffData.civs[0].units) {
+        std::swap(unit.collisionSize[0],unit.collisionSize[1]);
+        std::swap(unit.outlineSize[0],unit.outlineSize[1]);
+        std::swap(unit.clearanceSize[0],unit.clearanceSize[1]);
+    }
+    cliffData.footprintAxesSwapped=true;
     checkRmsCliffMap(cliffData);
     dat::DatFile data;
     data.terrainBlock.terrains.resize(4);

@@ -199,6 +199,7 @@ bool Assets::init(const std::string &dataDir, std::string *err) {
             std::swap(unit.outlineSize[0], unit.outlineSize[1]);
             std::swap(unit.clearanceSize[0], unit.clearanceSize[1]);
         }
+    dat_.footprintAxesSwapped = true;
     log("loaded " + datPath + ": " + std::to_string(dat_.graphics.size()) + " graphics, " +
         std::to_string(dat_.civs.size()) + " civs");
 
