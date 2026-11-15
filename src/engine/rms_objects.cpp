@@ -307,8 +307,6 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             objectRow->zoneDistance<0 || objectRow->zoneDistance>1024 ||
             objectRow->terrain < -1 || objectRow->terrain>255)
             return fail("object row placement parameters exceed supported bounds");
-        if(!perPlayer && objectRow->zoneDistance)
-            return fail("global object zone clearance is not implemented");
     } else {
         // Reytha uses an unbounded outer queue for its late Kaadu groups.
         if(playerRange && ((unitId!=1363 && unitId!=1365) || !perPlayer || globalPlacement || width!=120 || height!=120 ||
@@ -489,11 +487,13 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         if(!build(outer,perPlayer && playerMax>=0?startX:-1,perPlayer && playerMax>=0?startY:-1,perPlayer?playerMax:-1)) return fail("work limit exceeded");
         const RmsZones *zones=nullptr;
         uint8_t centerZone=0;
-        if(perPlayer) {
-            auto connectivity=restriction;connectivity[terrain[startY*width+startX]]=1;
+        if(perPlayer || (objectRow && zoneDistance>0)) {
+            auto connectivity=restriction;
+            if(perPlayer)connectivity[terrain[startY*width+startX]]=1;
             uint32_t index;
             if(!resourceZones.lookup(width,terrain,connectivity,index,err)) return false;
-            zones=&resourceZones.entry(index)->zones;centerZone=zones->tiles[startY*width+startX];
+            zones=&resourceZones.entry(index)->zones;
+            if(perPlayer)centerZone=zones->tiles[startY*width+startX];
         }
         auto sameZone=[&](int x,int y) {
             x=std::max(0,std::min(int(width)-1,x));y=std::max(0,std::min(int(height)-1,y));
@@ -507,8 +507,10 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             if((perPlayer || globalPlacement) && std::any_of(exclusionCenters.begin(),exclusionCenters.end(),[&](const auto &start) {
                 return std::abs(x-start.x)<playerMin && std::abs(y-start.y)<playerMin;
             })) continue;
-            if(perPlayer) {
-                if(!sameZone(x,y)) continue;
+            if(perPlayer && !sameZone(x,y)) continue;
+            if(zones) {
+                // Global rows compare neighbors to the candidate's own zone.
+                if(!perPlayer)centerZone=zones->tiles[center];
                 // Original4df2f0 samples cardinal A and diagonal trunc(A*10/14).
                 const int diagonal=zoneDistance*10/14;
                 if(zoneDistance>0 && (!sameZone(x,y-zoneDistance) || !sameZone(x+diagonal,y-diagonal) ||

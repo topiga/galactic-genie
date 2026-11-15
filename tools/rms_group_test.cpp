@@ -20,6 +20,31 @@ static swgb::dat::DatFile fixtureData() {
 return d;
 }
 #include "rms_global_group_checks.h"
+#include "engine/rms_object_rows.h"
+#include <algorithm>
+static void checkGeneralObjectRows() {
+ auto data=fixtureData();std::string error;std::vector<swgb::RmsTimberPlacement> out;
+ std::vector<uint8_t> terrain(64,0),eligibility;
+ swgb::RmsObjectRow row;row.unitId=66;row.groups=2;row.temporarySpacing=2;
+ auto run=[&](uint32_t &rng,const std::vector<uint32_t>&occupied=std::vector<uint32_t>{},size_t work=16000000,const std::vector<swgb::RmsPlayerStart>&starts=std::vector<swgb::RmsPlayerStart>{}) {
+  swgb::RmsResourceGroups group{row.mode,uint32_t(row.groups),uint32_t(row.perGroup),uint32_t(row.variance),uint32_t(row.radius)};
+  return swgb::generateRmsGroupedResourcePlacements(8,8,terrain,data,66,group,rng,out,&error,occupied,work,starts,swgb::RmsResourceDistance::Near,&eligibility,nullptr,nullptr,&row);
+ };
+ uint32_t rng=1;assert(run(rng));assert(out.size()==2);
+ assert(std::abs(out[0].x-out[1].x)>2 || std::abs(out[0].y-out[1].y)>2);
+ assert(std::all_of(eligibility.begin(),eligibility.end(),[](auto v){return v==1;}));
+ auto before=eligibility;rng=1;assert(!run(rng,{},1));assert(rng==1 && out.empty() && eligibility==before);
+ row.zoneDistance=1025;assert(!run(rng));assert(rng==1 && eligibility==before);row.zoneDistance=0;
+ std::vector<uint32_t> occupied;for(uint32_t i=0;i<64;++i)occupied.push_back(i);
+ assert(run(rng,occupied));assert(out.empty());
+ row.landId=1;row.owner=0;row.temporarySpacing=0;rng=1;
+ assert(run(rng,occupied,16000000,{{3,3}}));assert(out.size()==1);
+ row.landId=-1;row.owner=-1;row.mode=1;row.groups=1;row.perGroup=8;row.radius=1;row.terrain=6;
+ terrain[27]=6;eligibility.clear();rng=1;assert(run(rng));assert(out.size()==8);
+ assert(std::any_of(out.begin(),out.end(),[&](const auto &p){return terrain[int(p.y)*8+int(p.x)]==0;}));
+ std::cout<<"general executor checks passed\n";
+}
+
 int main(){auto data=fixtureData();std::string error;std::vector<swgb::RmsTimberPlacement> out;
 { uint32_t rng=1u; swgb::RmsResourceGroups cfg{2,2,5,0,2};
 assert(swgb::generateRmsGroupedResourcePlacements(7,7,{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},data,348,cfg,rng,out,&error,{}));
@@ -237,4 +262,5 @@ assert(rng==1255958651u && out.size()==0);
  assert(out.empty() && rng==1);
 }
 checkRmsGlobalGroups(data);
+checkGeneralObjectRows();
 std::cout<<"Original grouped resource fixtures passed\n";}

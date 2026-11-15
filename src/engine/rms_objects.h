@@ -62,7 +62,7 @@ struct RmsGlobalGroupPlacement {
 };
 // Explicit objectRow executes finalized Gaia rows for land1/-1/-2; count/range/spacing
 // fields replace legacy profiles, with terrain filtering on group centers only.
-// Global zone clearance, positive owners and civilization remapping remain unsupported.
+// Positive owners and civilization remapping remain unsupported.
 // Default Gaia modifiers, one grouped row. Shared original queue nodes are preserved.
 // Optional starts select the verified near-Nova row: tight7, radius3, one group/player,
 // distances12..16, spacing7, zone7 on uniformly passable terrain.

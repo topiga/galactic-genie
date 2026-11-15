@@ -24,12 +24,15 @@ static void rmsGeneralObjectChecks(const swgb::dat::DatFile &data) {
         {6210,885130658u,1156138209u}, {6203,502114030u,4034934607u},
         {6219,170179477u,316708715u}, {6217,2876734422u,1883431379u},
         {6206,1396042352u,2825504220u}, {6203,327591995u,467029569u},
+        {6205,1003759820u,2218478092u},
+        {6213,1186593183u,3238364985u},
+        {6221,707435866u,2827731819u},
     };
     auto replace=[](std::string &text,const std::string &from,const std::string &to) {
         const auto at=text.find(from);check(at!=std::string::npos,"authored variation finds directive");
         text.replace(at,from.size(),to);
     };
-    for(size_t variant=0;variant<8;++variant) {
+    for(size_t variant=0;variant<11;++variant) {
         auto changed=rows;
         switch(variant) {
         case 0: std::reverse(changed.begin()+4,changed.end());break;
@@ -46,6 +49,9 @@ static void rmsGeneralObjectChecks(const swgb::dat::DatFile &data) {
         case 5: changed.insert(changed.begin()+4,"create_object 413 { number_of_objects 3 set_loose_grouping group_variance 2 group_placement_radius 2 number_of_groups 5 min_distance_to_players 8 }");break;
         case 6: changed.insert(changed.begin()+4,"create_object 126 { number_of_objects 2 set_scaling_to_player_number }");break;
         case 7: changed.erase(changed.begin()+3);changed.push_back(rows[3]);break;
+        case 8: changed.insert(changed.begin()+4,"create_object 66 { number_of_objects 5 max_distance_to_other_zones 7 }");break;
+        case 9: changed.insert(changed.begin()+4,"create_object 66 { number_of_objects 4 set_tight_grouping number_of_groups 3 min_distance_to_players 20 max_distance_to_other_zones 7 }");break;
+        case 10: changed.insert(changed.begin()+4,"create_object 413 { number_of_objects 20 max_distance_to_other_zones 15 }");break;
         }
         std::string text=source.substr(0,first);
         for(const auto &row:changed)text+=row+'\n';
@@ -75,5 +81,5 @@ static void rmsGeneralObjectChecks(const swgb::dat::DatFile &data) {
         check(gridHash(map.terrain)==742396127u && gridHash(map.elevation)==1017236165u && gridHash(map.slopes)==1017236165u,
             "general rows preserve original terrain/elevation/slopes");
     }
-    std::puts("PASS: eight general object-row variations match complete original runner");
+    std::puts("PASS: eleven general object-row variations match complete original runner");
 }

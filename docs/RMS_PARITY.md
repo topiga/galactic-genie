@@ -70,9 +70,12 @@ rather than matching an expected Forest resource sequence. The original
 `4e3850..4e3cfb` handlers establish the 60-byte row semantics; `4dddf0` scales
 its group count. Grouping directives are order-sensitive. Temporary spacing
 removes candidates from the current row; permanent spacing survives later rows.
-Terrain selection filters group centers, not every child object.
+Terrain selection filters group centers, not every child object. Global clearance
+uses each candidate's terrain-connectivity zone; per-player rows additionally
+require the player's start zone. Both use the original eight clamped samples from
+`4df2f0`, with diagonal distance truncated from `radius*10/14`.
 
-Eight authored variations on the same cliff/forest geometry were executed through
+Eleven authored variations on the same cliff/forest geometry were executed through
 Clone Campaigns' original `4df9b0` runner, seed 1, fixed Tiny map, two Empire owners.
 Every case matched all ordered object records, terrain/elevation/slope bytes,
 owned/Gaia startup animation states and final RNG:
@@ -87,16 +90,19 @@ owned/Gaia startup animation states and final RNG:
 | Grouped trees with variance | 6,217 | 2876734422 |
 | Player-count scaling | 6,206 | 1396042352 |
 | Holocrons after all other resources | 6,203 | 327591995 |
+| Global zone clearance | 6,205 | 1003759820 |
+| Avoid-player groups with zone clearance | 6,213 | 1186593183 |
+| Large global zone clearance near edges | 6,221 | 707435866 |
 
 `tools/rms_general_object_checks.h` preserves complete record/RNG/grid regression
 fingerprints against these original captures. The parser has a separate standalone
 suite. Full animation comparisons and original runner captures remain in local
 research (`rms-general-rows-*-oracle-2026-11-15.json` and matching comparison files).
 These are executable replays with captured original assets and modeled host I/O;
-no fresh live Windows playthrough was performed for these eight cases.
+no fresh live Windows playthrough was performed for these eleven cases.
 
 The production audit remains **9/138 accepted**. General Gaia row execution does
-not yet generalize owned startup, specific-land selection, global zone clearance,
+not yet generalize owned startup, specific-land selection,
 unknown unit prototypes or the terrain pipeline. Holocron modifiers retain their
 verified profile. Unsupported paths reject explicitly. The normal skirmish menu
 still uses procedural startup; these results concern RMS generation and import,
