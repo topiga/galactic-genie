@@ -7,8 +7,28 @@ static void checkRmsMixedLandMap() {
  dat::DatFile data;data.terrainBlock.terrains.resize(7);data.terrainBlock.terrainsUsed=7;
  for(int id:{0,3,6})data.terrainBlock.terrains[id].enabled=1;
  struct Case { const char *pattern;bool explicitPosition,fixed;uint32_t seed,rng,hash;
-   std::vector<RmsMapLand> lands; bool bordered=false; };
+   std::vector<RmsMapLand> lands; bool bordered=false;int zone=-11; };
  const Case cases[]={
+  // Explicit zone-10 maps to zero and must not be replaced by the owner ID.
+  {"PL",false,false,1u,2959624633u,4046777395u,{{{18,5},1,1},{{13,20},1,2},{{16,10},0,0}},false,-10},
+  {"PL",false,true,1u,1656068489u,2751319966u,{{{25,8},1,1},{{10,24},1,2},{{11,5},0,0}},false,-10},
+  // Original explicit zone2 on every player land; owner and land ID remain unchanged.
+  {"PL",false,false,1u,389168431u,1430324621u,{{{18,5},1,1},{{13,20},1,2},{{16,10},0,0}},false,2},
+  {"LP",false,false,1u,1658932731u,97722936u,{{{16,10},0,0},{{18,5},1,1},{{13,20},1,2}},false,2},
+  {"PLL",false,false,1u,16267981u,2537930819u,{{{18,5},1,1},{{13,20},1,2},{{16,10},0,0},{{11,5},0,0}},false,2},
+  {"LPL",false,false,1u,3904451283u,3139296220u,{{{16,10},0,0},{{18,5},1,1},{{13,20},1,2},{{11,5},0,0}},false,2},
+  {"PL",false,false,12345u,462096214u,2759840788u,{{{5,20},1,1},{{20,11},1,2},{{8,11},0,0}},false,2},
+  {"LP",false,false,12345u,1824067029u,1640800343u,{{{8,11},0,0},{{5,20},1,1},{{20,11},1,2}},false,2},
+  {"PLL",false,false,12345u,3630617685u,4160332618u,{{{5,20},1,1},{{20,11},1,2},{{8,11},0,0},{{14,3},0,0}},false,2},
+  {"LPL",false,false,12345u,2935540536u,2624122340u,{{{8,11},0,0},{{5,20},1,1},{{20,11},1,2},{{14,3},0,0}},false,2},
+  {"PL",false,true,1u,1656068489u,2751319966u,{{{25,8},1,1},{{10,24},1,2},{{11,5},0,0}},false,2},
+  {"LP",false,true,1u,3781768744u,3138516893u,{{{11,5},0,0},{{25,8},1,1},{{10,24},1,2}},false,2},
+  {"PLL",false,true,1u,4094222005u,1974075738u,{{{25,8},1,1},{{10,24},1,2},{{11,5},0,0},{{14,4},0,0}},false,2},
+  {"LPL",false,true,1u,476989696u,1419738028u,{{{11,5},0,0},{{25,8},1,1},{{10,24},1,2},{{14,4},0,0}},false,2},
+  {"PL",false,true,12345u,1268107786u,2564229730u,{{{5,22},1,1},{{22,3},1,2},{{10,20},0,0}},false,2},
+  {"LP",false,true,12345u,398432258u,884693911u,{{{10,20},0,0},{{5,22},1,1},{{22,3},1,2}},false,2},
+  {"PLL",false,true,12345u,3147649256u,2939326726u,{{{5,22},1,1},{{22,3},1,2},{{10,20},0,0},{{26,20},0,0}},false,2},
+  {"LPL",false,true,12345u,3147649256u,2507307720u,{{{10,20},0,0},{{5,22},1,1},{{22,3},1,2},{{26,20},0,0}},false,2},
   // Original parser/finalizer and full geometry scheduler with asymmetric player borders.
   {"PL",false,false,1u,3730534061u,2002963911u,{{{18,13},1,1},{{17,21},1,2},{{11,5},0,0}},true},
   {"LP",false,false,1u,2446670145u,194102839u,{{{11,5},0,0},{{18,13},1,1},{{17,21},1,2}},true},
@@ -53,7 +73,8 @@ static void checkRmsMixedLandMap() {
  for(const auto &c:cases) {
   std::string source="<LAND_GENERATION> base_terrain 0 ";
   const std::string player="create_player_lands { terrain_type 6 base_size 3 number_of_tiles 60 "+
-   std::string(c.bordered?"left_border 20 right_border 5 top_border 30 bottom_border 10 ":"")+"} ";
+   std::string(c.bordered?"left_border 20 right_border 5 top_border 30 bottom_border 10 ":"")+
+   (c.zone>=-10?"zone "+std::to_string(c.zone)+" ":"")+"} ";
   const std::string neutral="create_land { terrain_type 3 base_size 1 number_of_tiles 40 "+
     std::string(c.explicitPosition?"land_position 50 50 ":"")+"} ";
   for(const char *p=c.pattern;*p;++p)source+=*p=='P'?player:neutral;
@@ -79,14 +100,14 @@ static void checkRmsMixedLandMap() {
   }
  }
  for(const char *bounds:{"left_border -1","right_border 101","left_border 100",
-     "left_border 60 right_border 60","left_border 25 right_border 25 base_size 13","bottom_border 100"}) {
+     "left_border 60 right_border 60","left_border 25 right_border 25 base_size 13","bottom_border 100","zone -11","zone 54"}) {
   const std::string source="<LAND_GENERATION> base_terrain 0 create_player_lands { terrain_type 6 base_size 3 number_of_tiles 60 "+std::string(bounds)+" }";
   RmsScript script;RmsMap map;std::string error;
   check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes){if(id)return false;bytes.assign(source.begin(),source.end());return true;},{},&error),error);
   for(bool fixed:{false,true}) {
    std::unordered_set<std::string> defines;if(fixed)defines.insert("FIXED_POSITIONS");
    uint32_t rng=123;map.terrain={1};
-   check(!generateRmsMap(script,defines,32,32,data,rng,map,&error) && rng==123 && map.terrain.empty() && !error.empty(),"invalid player borders must fail atomically");
+   check(!generateRmsMap(script,defines,32,32,data,rng,map,&error) && rng==123 && map.terrain.empty() && !error.empty(),"invalid player land parameters must fail atomically");
   }
  }
 }

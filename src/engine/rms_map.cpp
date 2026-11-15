@@ -93,6 +93,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     int workerMinDistance=1,workerMaxDistance=3;
     bool startingStalagmites = false;
     bool playerLands = false;
+    bool playerZoneOverride = false;
     bool playerSetup = false;
     RmsResourceGroups grouping;
     grouping.mode=0;
@@ -130,7 +131,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             land.radius=3;
             land.targetTiles=width*height;
             land.borderFuzziness=20;
-            bool terrain=false,position=false;
+            bool terrain=false,position=false,zoneSpecified=false;
             int landId=players?1:0,minPlacementDistance=-1;
             while (i < tokens.size() && tokens[i].text != "}") {
                 const auto name = tokens[i++].text;
@@ -161,7 +162,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 } else if (name == "clumping_factor" && value>=0 && value<=100) land.clumpingFactor=value;
                 else if (name == "border_fuzziness" && value>=0 && value<=255) land.borderFuzziness=value;
                 else if (name == "other_zone_avoidance_distance" && value>=0 && value<=1024) land.separation=value;
-                else if (name == "zone" && !players && value>=-10 && value<=53) land.zone=value+10;
+                else if (name == "zone" && value>=-10 && value<=53) { land.zone=value+10;zoneSpecified=true; }
                 else return fail("unsupported land parameter/value " + name);
             }
             if (i == tokens.size()) return fail("unterminated land block");
@@ -170,9 +171,10 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             const RmsLandPlacement placement{position?int(land.centerX):-1,position?int(land.centerY):-1,
                 int(land.radius),int(land.separation),land.leftBorder,land.topBorder,land.rightBorder,land.bottomBorder,minPlacementDistance};
             if (players) {
-                playerLands=true;playerLandBegin=lands.size();
+                playerLands=true;playerLandBegin=lands.size();playerZoneOverride=zoneSpecified;
                 for (uint32_t owner=1;owner<=playerCount;++owner) {
-                    land.zone=owner;lands.push_back(land);placements.push_back(placement);
+                    if(!zoneSpecified)land.zone=owner;
+                    lands.push_back(land);placements.push_back(placement);
                     landMetadata.push_back({{},landId,int(owner)});
                 }
             } else {
@@ -454,6 +456,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     }
     if (base<0 || lands.empty()) return fail("explicit base terrain and at least one land required");
     if(allies && ownedObjects) return fail("allied owned-object startup remains unverified");
+    // shortcut: explicit player zones need an original owned-object replay before enabling their startup.
+    if(playerZoneOverride && ownedObjects) return fail("owned startup with explicit player zones remains unverified");
     if(ownedObjects && lands.size()!=playerCount) return fail("mixed-land owned-object startup remains unverified");
     const bool ownedForest=ownedObjects && playerLands && base==41 && lands[0].terrain==9;
     const bool ownedMixedForest=ownedObjects && playerLands && (base==6 || base==12 || base==41) && lands[0].terrain==base &&

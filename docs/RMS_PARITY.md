@@ -1177,3 +1177,14 @@ resource rows, mixed owned-land startup and parser branches. This is native
 acceptance evidence, not original-map parity; the input defines are independently
 confirmed for Forest only. Results remain in
 `rms-packaged-fixed-default-audit-2026-11-15.json` (before this border change).
+
+### Explicit player-land zones
+
+The importer now preserves explicit `zone` values on player lands instead of
+rejecting them or overwriting them with owner IDs. Eighteen original full geometry
+comparisons cover zone2 and zone-10 (internal zero), player/neutral land order,
+fixed/random starts, terrain painting and connections. Terrain bytes, final RNG,
+centers and ownership metadata match. Out-of-range zones fail atomically.
+Owned-object startup with explicit player zones remains gated pending its own
+comparison. Evidence: `rms-zoned-mixed-geometry-oracle-2026-11-15.json` and
+`rms-zerozone-mixed-geometry-oracle-2026-11-15.json`.
