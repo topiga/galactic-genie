@@ -505,7 +505,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             (elevationStage && (elevationRows.empty() || elevationRows.size()>7 ||
                 (elevationRows.size()>1 && !terrainRows.empty()))) ||
             std::any_of(terrainRows.begin(),terrainRows.end(),[&](const auto &row) {
-                return (row.terrain!=0 && (row.terrain!=21 || elevationStage)) || row.baseTerrain!=6 || row.avoidPlayerStarts ||
+                return (row.terrain!=0 && ((row.terrain!=18 && row.terrain!=20 && row.terrain!=21) || elevationStage)) || row.baseTerrain!=6 || row.avoidPlayerStarts ||
                     row.minHeight!=0 || row.maxHeight!=255;
             }) ||
             lands[0].terrain!=6 || lands[0].centerX!=60 || lands[0].centerY!=60 ||

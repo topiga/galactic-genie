@@ -45,18 +45,26 @@ static void checkRmsCliffImport(swgb::Assets &assets) {
         }
         check(heightHash==c.heightHash,"native cliff rendering heights match original object z values");
     }
-    const std::string forest=source+" <TERRAIN_GENERATION> create_terrain 21 { base_terrain 6 number_of_tiles 2000 number_of_clumps 20 spacing_to_other_terrain_types 2 clumping_factor 20 }";
-    check(script.load(0,[&](int32_t id,std::vector<uint8_t> &out) {
-        if(id) return false;out.assign(forest.begin(),forest.end());return true;
-    },{},&error),error.c_str());
-    rng=1;check(generateRmsMap(script,{},120,120,assets.dat(),rng,map,&error),error.c_str());
-    rng=1;check(game.initRms(script,{},120,rng,&error),error.c_str());
-    check(rng==1567879473u && game.activeObjectCount()==2065,"cliff/forest native import count/RNG");
-    uint32_t nextId=map.cliffs.back().creationOrdinal+2;
-    for(const auto &tree:map.scenery) {
-        const auto p=game.objectPosition(nextId);
-        check(game.objectUnitId(nextId)==413 && game.objectPlayer(nextId)==0 && p[0]==tree.x && p[1]==tree.y,
-            "native trees preserve original IDs after cliff replacements and rejected overlaps");
-        ++nextId;
+    const int forestTypes[][3]={{21,413,12},{18,348,12},{20,349,11}};
+    for(const auto &spec:forestTypes) {
+        const std::string forest=source+" <TERRAIN_GENERATION> create_terrain "+std::to_string(spec[0])+" { base_terrain 6 number_of_tiles 2000 number_of_clumps 20 spacing_to_other_terrain_types 2 clumping_factor 20 }";
+        check(script.load(0,[&](int32_t id,std::vector<uint8_t> &out) {
+            if(id) return false;out.assign(forest.begin(),forest.end());return true;
+        },{},&error),error.c_str());
+        rng=1;check(generateRmsMap(script,{},120,120,assets.dat(),rng,map,&error),error.c_str());
+        rng=1;check(game.initRms(script,{},120,rng,&error),error.c_str());
+        check(rng==1567879473u && game.activeObjectCount()==2065,"cliff/forest native import count/RNG");
+        uint32_t nextId=map.cliffs.back().creationOrdinal+2;
+        for(const auto &tree:map.scenery) {
+            const auto p=game.objectPosition(nextId);
+            check(game.objectUnitId(nextId)==spec[1] && game.objectPlayer(nextId)==0 && p[0]==tree.x && p[1]==tree.y,
+                "native trees preserve original IDs after cliff replacements and rejected overlaps");
+            const float pi=3.14159265358979323846f,theta=pi*.5f+tree.facet*(2*pi/spec[2]);
+            const float sx=std::cos(theta)*.5f,sy=std::sin(theta),expected=std::atan2(sy-sx,sy+sx);
+            const float actual=game.objectFacing(nextId);
+            check(std::abs(std::sin(actual)-std::sin(expected))<.00001f &&
+                std::abs(std::cos(actual)-std::cos(expected))<.00001f,"native forest import preserves original11/12-angle facets");
+            ++nextId;
+        }
     }
 }

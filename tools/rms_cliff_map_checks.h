@@ -222,7 +222,7 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
             "original combined elevation/cliff/grass terrain, objects and RNG");
         check(map.scenery.empty() && map.objects.empty(),"combined elevated grass adds no scenery");
     }
-    struct ForestCase { int tiles,clumps,spacing; uint32_t seed,rng,objects,terrain; size_t count,blocked; };
+    struct ForestCase { int tiles,clumps,spacing; uint32_t seed,rng,objects,terrain; size_t count,blocked; int terrainType=21; };
     const ForestCase forestCases[]={
         {2000,20,2,1u,1567879473u,3602929036u,3238789567u,2065,16},
         {2000,20,2,12345u,2603646791u,3248902699u,3671891854u,2035,67},
@@ -230,9 +230,21 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
         {8000,40,0,1u,3214010955u,2637590139u,1269346813u,8007,104},
         {8000,40,0,12345u,3846171459u,1918157620u,1588475975u,8008,145},
         {8000,40,0,4294967295u,3982945277u,256632634u,3738121163u,7996,115},
+        {2000,20,2,1u,1567879473u,2602113488u,3363920733u,2065,16,18},
+        {2000,20,2,12345u,2603646791u,404381693u,3490096497u,2035,67,18},
+        {2000,20,2,4294967295u,1747975995u,2114254583u,1344200397u,2013,50,18},
+        {8000,40,0,1u,3214010955u,1698228665u,2773107205u,8007,104,18},
+        {8000,40,0,12345u,3846171459u,2354153889u,2669345853u,8008,145,18},
+        {8000,40,0,4294967295u,3982945277u,1834129471u,1690993965u,7996,115,18},
+        {2000,20,2,1u,1567879473u,2264503250u,3251077261u,2065,16,20},
+        {2000,20,2,12345u,2603646791u,3165698723u,4082327271u,2035,67,20},
+        {2000,20,2,4294967295u,1747975995u,2849488543u,1214617645u,2013,50,20},
+        {8000,40,0,1u,3214010955u,4254848801u,390932597u,8007,104,20},
+        {8000,40,0,12345u,3846171459u,3669998891u,2325653181u,8008,145,20},
+        {8000,40,0,4294967295u,3982945277u,14491839u,913097181u,7996,115,20},
     };
     for(const auto &c:forestCases) for(bool late:{false,true}) {
-        const std::string forest="<TERRAIN_GENERATION> create_terrain 21 { base_terrain 6 number_of_tiles "+
+        const std::string forest="<TERRAIN_GENERATION> create_terrain "+std::to_string(c.terrainType)+" { base_terrain 6 number_of_tiles "+
             std::to_string(c.tiles)+" number_of_clumps "+std::to_string(c.clumps)+
             " spacing_to_other_terrain_types "+std::to_string(c.spacing)+" clumping_factor 20 } ";
         load(land+(late?forest+"<CLIFF_GENERATION> ":"<CLIFF_GENERATION> "+forest));
@@ -245,7 +257,7 @@ static void checkRmsCliffMap(const swgb::dat::DatFile &data) {
         for(const auto &o:map.cliffs) { mixObject(o.unit,o.facet,o.x,o.y,o.creationOrdinal);nextId=o.creationOrdinal+1; }
         for(const auto &o:map.scenery) {check(o.alive,"forest tree survives startup");mixObject(o.unitId,o.facet,o.x,o.y,nextId++);}
         size_t forestTiles=0;
-        for(auto t:map.terrain) {terrain=(terrain^t)*16777619u;forestTiles+=t==21;}
+        for(auto t:map.terrain) {terrain=(terrain^t)*16777619u;forestTiles+=t==c.terrainType;}
         if(rng!=c.rng || objects!=c.objects || terrain!=c.terrain)
             std::cerr<<"cliff/forest "<<c.tiles<<' '<<c.seed<<" rng "<<rng<<'/'<<c.rng
                 <<" objects "<<objects<<'/'<<c.objects<<" terrain "<<terrain<<'/'<<c.terrain<<'\n';

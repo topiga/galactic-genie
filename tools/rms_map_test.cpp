@@ -45,6 +45,12 @@ int main() {
     cliffTree.resourceStorages[0]={1,125,0};
     auto &cliffTreeGraphic=cliffData.graphics[5301];cliffTreeGraphic.exists=true;cliffTreeGraphic.sequenceType=6;cliffTreeGraphic.angleCount=12;
     cliffData.terrainRestrictions.resize(12);cliffData.terrainRestrictions[11].passableBuildableDmgMultiplier.assign(22,1);
+    const int forestTypes[][4]={{18,348,5282,12},{20,349,5289,11}};
+    for(const auto &spec:forestTypes) {
+        auto &terrain=cliffData.terrainBlock.terrains[spec[0]];terrain=cliffForest;terrain.terrainUnitId[0]=spec[1];
+        auto &unit=cliffData.civs[0].units[spec[1]];unit=cliffTree;unit.id=spec[1];unit.standingGraphic[0]=spec[2];unit.resourceStorages[0].amount=100;
+        auto &graphic=cliffData.graphics[spec[2]];graphic=cliffTreeGraphic;graphic.angleCount=spec[3];
+    }
     checkRmsCliffMap(cliffData);
     for(auto &unit:cliffData.civs[0].units) {
         std::swap(unit.collisionSize[0],unit.collisionSize[1]);

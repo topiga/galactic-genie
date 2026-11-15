@@ -1581,3 +1581,20 @@ original axes explicitly. The algorithm fixtures exercise both raw and normalize
 DAT representations; accepting either shape without recording its orientation
 would silently transpose narrow cliff footprints. Runtime movement/collision
 orientation remains a separate comparison boundary from this startup mask.
+
+
+### Cliff collisions with automatic forest types 18 and 20
+
+The same flat cliff/forest profile now accepts terrain 18 (unit 348) and terrain
+20 (unit 349). Twelve additional original configured-world runs cover both forest
+sizes and three seeds for each type, with real loaded masters and graphics.
+Their collision exclusions, creation IDs and RNG agree with terrain 21, while
+unit 349 uses 11 appearance angles rather than 12. Fixtures compare the original
+unit IDs and facet values independently for each terrain type, under both native
+section orders and both raw/normalized footprint representations.
+
+Native import tests cover all three tree types, including the original 11/12-angle
+facet-to-facing projection and IDs after rejected placements. Evidence is retained
+in `rms-cliff-forest-types-cases-oracle-2026-11-15.json`. This extends the bounded
+cliff diagnostic profile; it does not claim new packaged-map or live pathfinding
+parity. Forests combined with elevation remain gated.
