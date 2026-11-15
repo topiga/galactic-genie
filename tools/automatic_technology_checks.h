@@ -40,6 +40,8 @@ static void automaticTechnologyChecks(swgb::Assets &assets) {
             }
             check(game.technologyOrderForTesting(1)==expectedOrder,
                   "Original player startup research precedes Command Center completion cascade");
+            check(game.resource(1,21)==(civ==2?2.f:1.f)+(withCenter && civ!=5?1.f:0.f),
+                  "Original visible automatic research counter excludes hidden technologies");
             // Trade Federation tree effect8 sets250 AFTER buildings; do not add the starting5 again.
             check(game.populationCapacityForTesting(1)==(civ==5?250.f:withCenter?5.f:0.f) &&
                   game.populationUsedForTesting(1)==0,
@@ -63,6 +65,29 @@ static void automaticTechnologyChecks(swgb::Assets &assets) {
         const std::vector<swgb::dat::Effect> &effects;
         ~Restore() { data.techs=techs; data.effects=effects; }
     } restore{data,savedTechs,savedEffects};
+    {
+        const int first=int(data.techs.size());
+        for(int location:{-1,109}) for(int button:{0,1}) {
+            swgb::dat::Tech technology;
+            for(auto &required:technology.requiredTechs) required=-1;
+            technology.researchTime=10;technology.locationId=int16_t(location);technology.buttonId=uint8_t(button);
+            data.techs.push_back(technology);
+        }
+        swgb::Scenario scenario;scenario.map.width=scenario.map.height=24;scenario.map.tiles.resize(24*24);
+        scenario.players[0].active=scenario.players[0].human=true;
+        scenario.players[0].civilization=scenario.civilizations[0]=1;
+        swgb::Game game(assets);std::string error;
+        check(game.initScenario(scenario,&error),error.c_str());
+        for(int offset=0;offset<4;++offset) {
+            const auto before=game.resource(1,21);
+            check(game.researchTechnology(1,first+offset) && game.resource(1,21)==before+(offset==3?1.f:0.f),
+                  "Original research counter requires both location and button, not an icon");
+            const auto completed=game.resource(1,21);
+            check(game.researchTechnology(1,first+offset) && game.resource(1,21)==completed,
+                  "Repeated research completion does not count twice");
+        }
+        data.techs=savedTechs;
+    }
     {
         const int dependent=int(data.techs.size());
         swgb::dat::Tech afterBuilding,initial;

@@ -72,6 +72,15 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
             '--define','FIXED_POSITIONS'],0)
         assert f'{count} native objects, final RNG {state}' in rendered
         assert output.stat().st_size>1000
+    cliff_owned=work/'cliff-owned.png'
+    owned_cliffs=run(['render-rms',data,root/'tools/fixtures/cliff-owned-start.rms',120,1,cliff_owned,
+        '--players',2,'--civilization',1,'--civilization',1],0)
+    assert '6045 native objects, final RNG 2896867181' in owned_cliffs
+    assert cliff_owned.stat().st_size>1000
+    invalid_cliff_owned=work/'invalid-cliff-owned.png'
+    run(['render-rms',data,root/'tools/fixtures/cliff-owned-start.rms',120,1,invalid_cliff_owned,
+        '--players',2,'--civilization',1,'--civilization',2],1)
+    assert not invalid_cliff_owned.exists(), 'Unverified owned cliff civilization created an image'
     cliff_grass=work/'cliff-grass.rms'
     cliff_grass.write_text((root/'tools/fixtures/cliff-diagnostic.rms').read_text()+
         '<TERRAIN_GENERATION> create_terrain 0 { base_terrain 6 number_of_tiles 30 '

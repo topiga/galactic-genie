@@ -500,11 +500,18 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if (base<0 || lands.empty()) return fail("explicit base terrain and at least one land required");
     // shortcut: expand after composed original cliff/terrain/startup comparisons.
     if(cliffStage) {
+        const bool ownedCliff=ownedObjects && startingWorkers && startingScouts &&
+            workerMinDistance==6 && workerMaxDistance==6 && !startingStalagmites && !holocrons && !nearNova &&
+            resourceRows.empty() && playerCivilizations==std::vector<uint16_t>{1,1} &&
+            !defines.count("FIXED_POSITIONS") && terrainRows.size()==1 &&
+            terrainRows[0].terrain==21 && terrainRows[0].targetTiles==6000 && terrainRows[0].clumps==60 &&
+            terrainRows[0].spacing==2 && terrainRows[0].clumping==20 && terrainRows[0].avoidPlayerStarts &&
+            !terrainRows[0].flatTerrainOnly;
         if(width!=120 || height!=120 || base!=6 ||
             (playerLands ? (playerCount!=2 || lands.size()!=2 || playerZoneOverride ||
                 elevationStage || (defines.count("FIXED_POSITIONS") &&
                     std::any_of(terrainRows.begin(),terrainRows.end(),[](const auto &row){return row.terrain!=0 && row.terrain!=21;}))) : lands.size()!=1) ||
-            hasObjects || connectionStage || terrainRows.size()>1 ||
+            (hasObjects && !ownedCliff) || connectionStage || terrainRows.size()>1 ||
             (elevationStage && (elevationRows.empty() || elevationRows.size()>7 ||
                 (elevationRows.size()>1 && !terrainRows.empty()))) ||
             std::any_of(terrainRows.begin(),terrainRows.end(),[&](const auto &row) {
@@ -515,7 +522,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         for(size_t index=0;index<lands.size();++index) {
             const auto &land=lands[index];
             if(land.terrain!=6 || (!playerLands && (placements[index].x<0 || placements[index].y<0)) ||
-                (playerLands ? (land.radius>10 || land.targetTiles>8000) : (land.radius || land.targetTiles)) ||
+                (ownedCliff ? (land.radius!=13 || land.targetTiles!=7200) :
+                    playerLands ? (land.radius>10 || land.targetTiles>8000) : (land.radius || land.targetTiles)) ||
                 land.zone!=(playerLands?int(index+1):0) ||
                 land.clumpingFactor!=8 || land.borderFuzziness!=20 || land.separation ||
                 land.leftBorder || land.topBorder || land.rightBorder!=-1 || land.bottomBorder!=-1)

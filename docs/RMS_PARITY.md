@@ -1724,3 +1724,44 @@ Evidence: `rms-cliff-fixed-player-terrain-cases-oracle-2026-11-15.json` and
 CLI checks cover both avoidance modes. Fixed-position forest18/20, allied fixed
 positions, player-land elevation and owned cliff startup remain gated. The
 configured-world harness still does not execute the original RMS file loader.
+
+
+### Owned startup after cliffs and forests
+
+A bounded two-Empire profile now runs land growth, cliffs, forest21 scattering,
+and Command Center/worker/scout startup together. Each land has radius13 and
+7200 target tiles; the forest row uses 6000 tiles, 60 clumps, spacing2, clumping20
+and player-start avoidance. Owned rows are the stock109,83,550 sequence with
+0/0,6/6,7/9 placement distances. Additional resource rows, fixed positions and
+other civilization pairs remain gated for this composition.
+
+At seeds 1,12345,UINT32_MAX, the actual original handler/finalizer/scheduler and
+owned-object callbacks match every cliff/tree/starting-unit record, replacement
+ID gap, terrain tile and final RNG. The native import additionally checks health,
+initial animation frame/delay, deferred foundations, population and cost counters.
+The seed1 case creates6045 surviving objects, with the final original allocation
+ID6065 and RNG2896867181. Source fixture: `tools/fixtures/cliff-owned-start.rms`.
+Evidence: `rms-cliff-owned-startup-cases-oracle-2026-11-15.json`.
+
+These remain configured-world original-code comparisons, without the original
+RMS file loader or a new live Windows screenshot comparison. The authored map
+has forest and starting units, but lacks the stock food/ore/Nova resource rows;
+it is not a claim of a complete balanced skirmish or a new packaged map.
+
+### Research-completion counter discovered during startup comparison
+
+Original resource21 increases only when the completed technology has location
+>=0 and button>0. Runtime writes at0x4c1860 originate from the completion branch
+ending at0x5bffc5; the definition fields are location+0x34 and button+0x32, not the
+icon field. Hidden automatic technologies and repeated completion do not add to
+this counter. Native explicit and automatic completion now maintain resource21.
+
+The startup graph normally yields1 counted completion before a Command Center
+and2 after its unlock cascade. Civilization2 starts at2 and reaches3; Trade
+Federation remains1. Tests exercise all
+civilizations, both missing-field cases and duplicate explicit completion. Free
+population is compared through native capacity minus usage, since the native
+engine derives that value rather than maintaining original resource4 verbatim.
+Evidence: `rms-cliff-owned-accounting-1-oracle-2026-11-15.json` and
+`rms-research-counter21-disassembly-2026-11-15.json`. Counter values are verified;
+this does not establish parity of intermediate UI/event callback ordering.

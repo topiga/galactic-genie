@@ -47,7 +47,8 @@ struct RmsMap {
 // neutral land with verified elevation/terrain combinations, or two randomized
 // player lands (radius<=10, target<=8000) with grass/forest18/20/21 painting and optional
 // start-area avoidance. Fixed positions support grass/forest21. No connections
-// or owned objects in these cliff profiles.
+// in these cliff profiles. One randomized Empire/Empire forest21 profile also
+// supports original radius13/7200-tile lands and CC/worker/scout startup.
 // Rejects other stages/commands; not a complete packaged random-map generator.
 // Also supports one to eight owned109 starts on bare grass0 with explicit
 // civilizations and zero placement distances. Enemy foundation remains deferred.

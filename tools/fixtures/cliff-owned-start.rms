@@ -1,0 +1,41 @@
+/* Authored two-player startup diagnostic; no resource rows beyond forest. */
+<LAND_GENERATION>
+base_terrain 6
+create_player_lands {
+  terrain_type 6
+  base_size 13
+  number_of_tiles 7200
+}
+<CLIFF_GENERATION>
+<TERRAIN_GENERATION>
+create_terrain 21 {
+  base_terrain 6
+  number_of_tiles 6000
+  number_of_clumps 60
+  spacing_to_other_terrain_types 2
+  clumping_factor 20
+  set_avoid_player_start_areas
+}
+<OBJECTS_GENERATION>
+create_object 109 {
+  set_place_for_every_player
+  number_of_objects 1
+  min_distance_to_players 0
+  max_distance_to_players 0
+  group_placement_radius 18
+}
+create_object 83 {
+  set_place_for_every_player
+  number_of_objects 1
+  min_distance_to_players 6
+  max_distance_to_players 6
+  group_placement_radius 3
+}
+create_object 550 {
+  set_place_for_every_player
+  match_player_civ
+  number_of_objects 1
+  min_distance_to_players 7
+  max_distance_to_players 9
+  group_placement_radius 3
+}
