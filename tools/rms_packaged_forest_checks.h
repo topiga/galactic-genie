@@ -40,7 +40,10 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
  ground[0]=22;rng=1;const auto before=eligible;
  check(!swgb::generateRmsGroupedResourcePlacements(120,120,ground,assets.dat(),1585,{0,7,1,0,3},rng,placed,&error,{},16000000,{},swgb::RmsResourceDistance::Near,&eligible) && rng==1 && placed.empty() && eligible==before,"unsupported wave quantity rejected atomically");
  // Controlled original replays vary forage/Nerf quantities, retaining all later rows.
- const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413,forestTerrain=21;uint32_t sceneryPoses=2138192714u,terrainHash=3348257725u;bool chainedHunt=false,omitNerfs=false;unsigned explicitTrees=110;bool omitForage=false;unsigned longChain=0,lateHunt=0;bool terrain9=false,terrain22=false,base12=false,terrain4=false,base41=false;} variations[]={
+ const struct{int nearHerd,farHerd,predator;uint32_t count,poses,rng,frames;int globalPredatorSize=1,treeUnit=413,forestTerrain=21;uint32_t sceneryPoses=2138192714u,terrainHash=3348257725u;bool chainedHunt=false,omitNerfs=false;unsigned explicitTrees=110;bool omitForage=false;unsigned longChain=0,lateHunt=0;bool terrain9=false,terrain22=false,base12=false,terrain4=false,base41=false;int herdUnit=594;} variations[]={
+  {4,2,126,220,2149940932u,278519141u,1248656011u,1,348,18,780123404u,1911528789u,false,false,110,false,0,0,false,false,false,false,false,833},
+  {2,1,126,210,2122489821u,4161792159u,1095685733u,1,348,18,780123404u,1911528789u,false,false,110,false,0,0,false,false,false,false,false,833},
+  {8,4,126,235,2865837869u,2125502712u,3128446147u,1,348,18,780123404u,1911528789u,false,false,110,false,0,0,false,false,false,false,false,833},
   {4,2,126,220,1662422u,278519141u,513271022u},
   {2,1,126,210,3750728331u,4161792159u,758251980u},
   {8,4,126,235,989150139u,2125502712u,2483236625u},
@@ -110,6 +113,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
       "create_object 822 { number_of_objects 4 set_loose_grouping set_gaia_object_only set_place_for_every_player min_distance_to_players 16 max_distance_to_players 22 } create_object 1249 { number_of_objects 2 set_gaia_object_only set_place_for_every_player min_distance_to_players 16 max_distance_to_players 22 } ":
       "create_object 1249 { number_of_objects 2 set_loose_grouping set_gaia_object_only set_place_for_every_player min_distance_to_players 16 max_distance_to_players 22 } create_object 822 { number_of_objects 1 set_gaia_object_only set_place_for_every_player min_distance_to_players 16 max_distance_to_players 22 } ";
     }
+    if(unit=="594")tokens[i+1].text=std::to_string(v.herdUnit);
     if(unit=="413"){tokens[i+1].text=std::to_string(v.treeUnit);++treeRows;}
     if(unit=="126"){tokens[i+1].text=std::to_string(v.predator);++predatorRow;}
    }
@@ -137,7 +141,7 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   hash=2166136261u;uint32_t frames=2166136261u,herds=0;
   for(const auto&o:map.resourcesAfterOwned) {
    pose(o.unitId,0,o.x,o.y,o.facet);
-   if(o.unitId==594){frames=(frames^o.animationFrame)*16777619u;++herds;check(o.initialIdleDelay==0,"original Nerf extra idle delay");}
+   if(o.unitId==v.herdUnit){frames=(frames^o.animationFrame)*16777619u;++herds;check(o.initialIdleDelay==0,"original Nerf extra idle delay");}
   }
   check(hash==v.poses,"controlled resource all original Gaia poses/order");
   check(frames==v.frames && herds==uint32_t(v.nearHerd*2+v.farHerd*4+(v.lateHunt==1?4:0)),"controlled original Nerf animation frames/count");
@@ -158,6 +162,11 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
      check(a[0]==frames[waves]*.13f && a[1]==0,"native original wave animation import");++waves;
     }
     check(waves==8,"original full Forest wave count");
+   }
+   if(v.herdUnit==833)for(size_t i=0;i<map.resourcesAfterOwned.size();++i) {
+    const auto&o=map.resourcesAfterOwned[i];if(o.unitId!=833)continue;
+    const uint32_t id=uint32_t(map.scenery.size()+map.ownedObjects.size()+i+1);const auto animation=game.objectAnimationForTesting(id);const auto pos=game.objectPosition(id);
+    check(game.objectUnitId(id)==833 && pos[0]==o.x && pos[1]==o.y && animation[0]==o.animationFrame*.275f && animation[1]==0,"native Bantha herd identity, position and initial animation");
    }
    unsigned trees=0;
    for(size_t i=0;i<map.resourcesAfterOwned.size();++i) {

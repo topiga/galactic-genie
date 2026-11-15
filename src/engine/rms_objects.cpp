@@ -66,6 +66,7 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
 }
 const ResourceSpec *validateHerd(const dat::DatFile &data,int16_t unitId,const std::vector<uint8_t> &terrain,std::string *err) {
     static constexpr ResourceSpec nerf{594,61,70,1,7,7,8,0,200,0,2.f};
+    static constexpr ResourceSpec bantha{833,1,70,1,7,19,8,0,200,0,2.f};
     static constexpr ResourceSpec kaadu{1363,46,70,4,5,1,8,0,100,0,2.f};
     static constexpr ResourceSpec eopie{1365,22,70,4,5,1,8,0,140,0,2.f};
     static constexpr ResourceSpec rancor{126,70,70,5,150,26,8,-1,0,0,2.f};
@@ -75,17 +76,17 @@ const ResourceSpec *validateHerd(const dat::DatFile &data,int16_t unitId,const s
     static constexpr ResourceSpec predator1197{1197,36,70,5,75,1,8,-1,0,0,2.f};
     static constexpr ResourceSpec hunt822{822,31,70,60,50,1,8,0,300,0,2.f};
     static constexpr ResourceSpec hunt1249{1249,17,70,60,75,26,8,0,340,0,2.f};
-    const auto &spec=unitId==822?hunt822:unitId==1249?hunt1249:unitId==812?predator812:unitId==1197?predator1197:predator?rancor:unitId==1363?kaadu:unitId==1365?eopie:nerf;
+    const auto &spec=unitId==833?bantha:unitId==822?hunt822:unitId==1249?hunt1249:unitId==812?predator812:unitId==1197?predator1197:predator?rancor:unitId==1363?kaadu:unitId==1365?eopie:nerf;
     const bool hunt=unitId==1363 || unitId==1365;
     auto fail=[&]()->const ResourceSpec* {if(err)*err="RMS herd: unsupported original animal metadata";return nullptr;};
     if(data.civs.empty() || data.civs[0].units.size()<=size_t(unitId) || data.terrainRestrictions.size()<=size_t(spec.restriction)) return fail();
     const auto &u=data.civs[0].units[unitId];const auto *g=data.graphic(spec.graphic);
     if(!u.exists || u.id!=unitId || u.type!=70 || u.cls!=spec.cls || u.hitPoints!=spec.hp || u.standingGraphic[0]!=spec.graphic || u.standingGraphic[1]!=-1 ||
-       u.collisionSize[0]!=(bigHunt?.5f:predator?.25f:.3f) || u.collisionSize[1]!=(bigHunt?.5f:predator?.25f:.3f) || u.collisionSize[2]!=2.f || u.clearanceSize[0]!=(bigHunt?1.f:predator?.5f:.3f) || u.clearanceSize[1]!=(bigHunt?1.f:predator?.5f:.3f) ||
+       u.collisionSize[0]!=(unitId==833?.35f:bigHunt?.5f:predator?.25f:.3f) || u.collisionSize[1]!=(unitId==833?.35f:bigHunt?.5f:predator?.25f:.3f) || u.collisionSize[2]!=2.f || u.clearanceSize[0]!=(unitId==833?.35f:bigHunt?1.f:predator?.5f:.3f) || u.clearanceSize[1]!=(unitId==833?.35f:bigHunt?1.f:predator?.5f:.3f) ||
        u.lineOfSight!=(bigHunt?4.f:unitId==812?6.f:unitId==1197?10.f:predator?7.f:2.f) || u.speed!=(bigHunt?.9f:unitId==812?.9f:unitId==1197?.85f:hunt?.74f:.7f) || u.terrainRestriction!=spec.restriction || u.obstructionType!=5 || u.obstructionClass!=2 ||
        u.hillMode || u.flyMode || u.canBeBuiltOn || u.recyclable || u.civilization || u.enableAutoGather || u.createDoppelgangerOnDeath ||
        u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 || u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
-       u.trainSound!=(unitId==822?612:unitId==1249?562:unitId==812?642:unitId==1197?639:predator?37:unitId==1363?421:unitId==1365?609:630) || !g || g->sequenceType!=7 || g->frameCount!=(bigHunt?10:unitId==1363?11:unitId==1365?12:8) || g->angleCount!=8 || g->frameDuration!=((unitId==812 || unitId==1197)?.1f:(hunt || predator || bigHunt)?.12f:.275f) ||
+       u.trainSound!=(unitId==833?615:unitId==822?612:unitId==1249?562:unitId==812?642:unitId==1197?639:predator?37:unitId==1363?421:unitId==1365?609:630) || !g || g->sequenceType!=7 || g->frameCount!=(unitId==833?11:bigHunt?10:unitId==1363?11:unitId==1365?12:8) || g->angleCount!=8 || g->frameDuration!=((unitId==812 || unitId==1197)?.1f:(hunt || predator || bigHunt)?.12f:.275f) ||
        g->replayDelay!=((unitId==812 || unitId==1197)?1.f:(hunt || predator || bigHunt)?.5f:0.f) || g->soundId!=-1 || !g->angleSounds.empty()) return fail();
     int stores=0;for(const auto &storage:u.resourceStorages) {
         if(storage.flag || (storage.type>=0 && (predator || storage.type!=0 || storage.amount!=spec.amount))) return fail();
@@ -269,7 +270,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     if((unitId==349 || unitId==411 || unitId==413) && group.mode!=0)return fail("tree species requires verified mode0 rows");
     const bool tree=isTree(unitId) && group.mode==0,bird=unitId==816,aquatic=unitId==69 || unitId==1585;
     const bool bigHunt=unitId==822 || unitId==1249;
-    const bool herd=unitId==594 || hunt || predator || bigHunt;
+    const bool herd=unitId==594 || unitId==833 || hunt || predator || bigHunt;
     const auto *spec=aquatic?validateAquatic(data,unitId,terrain,err):bird?validateBird(data,terrain,err):herd?validateHerd(data,unitId,terrain,err):validateResource(data,unitId,terrain,err);
     if(!spec) return false;
     const auto &restriction=data.terrainRestrictions[spec->restriction].passableBuildableDmgMultiplier;
@@ -315,7 +316,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         const uint32_t expectedGroups=bigHunt?(group.mode==0?group.groups:1u):tree?(far?3u:2u):herd && far && !hunt?2u:1u;
         const uint32_t expectedCount=bigHunt?(far?3u:group.mode==0?1u:unitId==822?4u:2u):(tree || predator)?1u:hunt?4u:herd?(far?2u:4u):forage?6u:ore?(far?4u:5u):(medium || far)?4u:7u;
         if((unitId!=66 && !forage && !ore && !herd && !tree) || (!bigHunt && group.mode!=((tree || predator)?0:herd?1:2)) ||
-           group.groups!=expectedGroups || (group.perGroup!=expectedCount && !(forage && (group.perGroup==3 || group.perGroup==12)) && !(unitId==822 && group.mode==1 && ((!far && (group.perGroup==1 || group.perGroup==2)) || (far && (group.perGroup==1 || group.perGroup==6)))) && !(hunt && group.perGroup==8) && !(hunt && group.perGroup==3) && !(hunt && group.perGroup==2) && !(unitId==1249 && (group.perGroup==1 || (!far && group.perGroup==4) || (far && group.perGroup==6))) && !(unitId==594 && (group.perGroup==expectedCount/2 || group.perGroup==expectedCount*2))) ||
+           group.groups!=expectedGroups || (group.perGroup!=expectedCount && !(forage && (group.perGroup==3 || group.perGroup==12)) && !(unitId==822 && group.mode==1 && ((!far && (group.perGroup==1 || group.perGroup==2)) || (far && (group.perGroup==1 || group.perGroup==6)))) && !(hunt && group.perGroup==8) && !(hunt && group.perGroup==3) && !(hunt && group.perGroup==2) && !(unitId==1249 && (group.perGroup==1 || (!far && group.perGroup==4) || (far && group.perGroup==6))) && !((unitId==594 || unitId==833) && (group.perGroup==expectedCount/2 || group.perGroup==expectedCount*2))) ||
            group.variance!=((hunt || (bigHunt && far))?1u:0u) || group.radius!=(ore?2u:3u) || novaPlayerStarts.size()>8)
             return fail("unsupported per-player resource row");
         for(auto t:terrain) if(restriction[t]!=1.f && (width!=120 || (t!=1 && t!=2 && t!=4 && t!=5 && t!=6 && t!=10 && t!=12 && t!=18 && t!=20 && t!=21 && t!=22)))

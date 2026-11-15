@@ -983,3 +983,21 @@ and all7691 automatic411 trees including facets (FNV3170254571). The helper
 and fixture static-resource filters now include411. The live script omits
 forage and early herds; later optional hunts are absent too. This validates
 its full generated geometry/static placement, not the AI's later unit movements.
+
+## Domesticated Bantha833 herds: 2026-11-15
+
+Original full23-row controller replays replace both early Nerf rows with833,
+using its actual original master, unit header, graphics and sounds. This species
+has radius/clearance0.35, restriction19,11 animation frames and training sound615;
+the native validator retains those distinctions. All following rows execute.
+
+| Near/far quantity | Gaia objects | Final RNG | Pose/facet FNV | Herd-frame FNV |
+|---|---:|---:|---:|---:|
+| 2/1 | 210 | 4161792159 | 2122489821 | 1095685733 |
+| 4/2 | 220 | 278519141 | 2149940932 | 1248656011 |
+| 8/4 | 235 | 2125502712 | 2865837869 | 3128446147 |
+
+All8/16/32 Banthas respectively retain zero extra idle delay. The native fixtures
+check full object counts/order/poses, RNG, every herd frame, and imported Bantha
+identity, position and animation. Evidence is `rms-controlled-forest18-bantha833{,-half,-double}-fullstage-oracle-2026-11-15.json`.
+Later optional833 rows and mixed Ronto chains require additional comparisons.

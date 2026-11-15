@@ -298,6 +298,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     row.unit=tokens[i].text=="822"?822:1249;
                 }
             }
+            if(row.unit==594 && i<tokens.size() && tokens[i].text=="833")row.unit=833;
             if(row.unit==1363 && i<tokens.size()) {
                 if(tokens[i].text=="1365") row.unit=1365;
                 else if(tokens[i].text=="822") row.unit=822;
@@ -321,7 +322,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             }
             if(row.unit==413 && i<tokens.size() && (tokens[i].text=="348" || tokens[i].text=="349" || tokens[i].text=="411"))
                 row.unit=tokens[i].text=="348"?348:tokens[i].text=="349"?349:411;
-            const bool animal=row.unit==594 || row.unit==1363 || row.unit==1365 || isPredator(row.unit) || isBigHunt(row.unit);
+            const bool animal=row.unit==594 || row.unit==833 || row.unit==1363 || row.unit==1365 || isPredator(row.unit) || isBigHunt(row.unit);
             if (!number(value) || value!=row.unit || i==tokens.size() || tokens[i++].text!="{")
                 return fail("expected next verified stock resource row");
             bool each=row.global,gaia=row.global,mode=row.mode==0,count=false,inner=row.inner<0,outer=(row.global || isBigHunt(row.unit)) && row.outer<0;
@@ -337,7 +338,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(name=="terrain_to_place_on" && row.unit==1585 && value==22) terrainFilter=true;
                 else if(name=="number_of_objects" && isBigHunt(row.unit) && row.mode==0 && (value==1 || value==2)) { row.groups=value;count=true; }
                 else if(name=="number_of_objects" && row.mode==0 && value==int(row.groups)) count=true;
-                else if(name=="number_of_objects" && row.mode!=0 && (value==row.count || ((row.unit==1363 || row.unit==1365) && value==8) || ((row.unit==1363 || row.unit==1365) && value==2) || (row.unit==1363 && value==3) || (row.unit==1249 && (value==1 || (row.distance==RmsResourceDistance::Near && value==4) || (row.distance==RmsResourceDistance::Far && value==6))) || (row.unit==822 && ((row.distance==RmsResourceDistance::Near && (value==1 || value==2)) || (row.distance==RmsResourceDistance::Far && (value==1 || value==6)))) || (isPredator(row.unit) && row.global && value==2) || (row.unit==59 && (value==3 || value==12)) || (row.unit==594 && (value==row.count/2 || value==row.count*2)))) { row.count=value;count=true; }
+                else if(name=="number_of_objects" && row.mode!=0 && (value==row.count || ((row.unit==1363 || row.unit==1365) && value==8) || ((row.unit==1363 || row.unit==1365) && value==2) || (row.unit==1363 && value==3) || (row.unit==1249 && (value==1 || (row.distance==RmsResourceDistance::Near && value==4) || (row.distance==RmsResourceDistance::Far && value==6))) || (row.unit==822 && ((row.distance==RmsResourceDistance::Near && (value==1 || value==2)) || (row.distance==RmsResourceDistance::Far && (value==1 || value==6)))) || (isPredator(row.unit) && row.global && value==2) || (row.unit==59 && (value==3 || value==12)) || ((row.unit==594 || row.unit==833) && (value==row.count/2 || value==row.count*2)))) { row.count=value;count=true; }
                 else if(name=="number_of_groups" && value==int(row.groups)) groups=true;
                 else if(name=="group_placement_radius" && value==row.radius) radius=true;
                 else if(name=="group_variance" && value==int(row.variance)) variance=true;
@@ -845,7 +846,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             for(const auto &row:resourceRows) {
                 RmsResourceGroups group{row.mode,row.scaled?std::max(1u,row.groups*width*height/10000u):row.groups,uint32_t(row.count),row.variance,uint32_t(row.radius)};
                 auto rowBlockers=blockers;
-                if(row.unit==594 || row.unit==1363 || row.unit==1365 || isPredator(row.unit) || isBigHunt(row.unit)) {
+                if(row.unit==594 || row.unit==833 || row.unit==1363 || row.unit==1365 || isPredator(row.unit) || isBigHunt(row.unit)) {
                     rowBlockers=occupied;
                     for(const auto &object:generated.ownedObjects) if(object.unitId==109)
                         for(int y=int(object.y)-2;y<int(object.y)+2;++y)
