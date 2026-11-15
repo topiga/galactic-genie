@@ -167,17 +167,23 @@ static void rmsPackagedForestChecks(swgb::Assets &assets,const std::string &data
   }
 
  }
- // Live Windows seed2 raster captured after restart; mobile startup poses remain unverified.
- rng=2;
- check(swgb::generateRmsMap(script,defines,120,120,assets.dat(),rng,map,&error,2,{1,1}),error.c_str());
- check(bytesHash(map.terrain)==4035986315u && bytesHash(map.elevation)==3707759835u && bytesHash(map.slopes)==3939991058u,"live Windows seed2 complete terrain/elevation/slopes");
- hash=2166136261u;unsigned staticCount=0;
- for(const auto &o:map.resourcesAfterOwned) {
-  if(o.unitId!=285 && o.unitId!=59 && o.unitId!=66 && o.unitId!=102 && o.unitId!=348 && o.unitId!=349 && o.unitId!=413 && o.unitId!=1585)continue;
-  for(auto v:{uint32_t(o.unitId),0u,uint32_t(o.x*2),uint32_t(o.y*2)})hash=(hash^v)*16777619u;
-  ++staticCount;
+ // Live captures after restart verify geometry/static positions; moving units and runtime facets are separate.
+ const struct {uint32_t seed,terrain,elevation,slopes,staticCount,positions;} liveCases[]={
+  {2,4035986315u,3707759835u,3939991058u,202,582877992u},
+  {3,1730168867u,94274854u,3441657481u,180,195710362u},
+  {12345,519134464u,169086623u,2102275482u,193,4181115470u}};
+ for(const auto &live:liveCases) {
+  rng=live.seed;
+  check(swgb::generateRmsMap(script,defines,120,120,assets.dat(),rng,map,&error,2,{1,1}),error.c_str());
+  check(bytesHash(map.terrain)==live.terrain && bytesHash(map.elevation)==live.elevation && bytesHash(map.slopes)==live.slopes,"live Windows complete terrain/elevation/slopes");
+  hash=2166136261u;unsigned staticCount=0;
+  for(const auto &o:map.resourcesAfterOwned) {
+   if(o.unitId!=285 && o.unitId!=59 && o.unitId!=66 && o.unitId!=102 && o.unitId!=348 && o.unitId!=349 && o.unitId!=413 && o.unitId!=1585)continue;
+   for(auto v:{uint32_t(o.unitId),0u,uint32_t(o.x*2),uint32_t(o.y*2)})hash=(hash^v)*16777619u;
+   ++staticCount;
+  }
+  check(staticCount==live.staticCount && hash==live.positions,"live Windows static resource positions/order");
  }
- check(staticCount==202 && hash==582877992u,"live Windows seed2 static resource positions/order");
  std::puts("PASS: controlled forage, herds, predators and tree variants through all Forest rows");
  std::puts("PASS: full packaged Forest23 rows,7802 objects, original grids/RNG and native import");
 }

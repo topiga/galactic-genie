@@ -785,3 +785,26 @@ objects and final RNG1885517358/4044577126, with pose hashes880263998/660531056.
 Native admission is limited to those verified near/far quantities. Regression
 fixtures compare all poses, startup frames/delays/headings and native import;
 the full sanitizer suite passes.
+
+### Live Windows seeds3/12345 and simulation appearance boundary (2026-11-15)
+
+Both additional live Windows restarts match all14,400 terrain/elevation/slope
+cells. Seed3 hashes are1730168867/94274854/3441657481; seed12345 hashes are
+519134464/169086623/2102275482. Their180/193 static resource identities, owners
+and positions match in creation order (hashes195710362/4181115470). The native
+regression now covers seeds2/3/12345 and passes ASan/UBSan. Each temporary
+configured map seed was restored to UINT_MAX after generation.
+
+The forage appearance discrepancy is a simulation boundary, not evidence of
+a mismatched generation draw: original0054ef00 changes zero-HP forage59 from
+state2 to3 on its first update and draws a fresh random facet, even when the
+graphic stays unchanged. An original-code replay verifies this on six bushes;
+a fresh Windows seed2 capture confirms state3/HP0. The controlled constructor
+facets remain unchanged through the end of object placement. Do not replace
+those generation fixtures with later live facets or consume the simulation
+draws inside map generation. Matching later appearance still requires the
+original simulation RNG initialization and update ordering; it is not claimed.
+
+After the Bantha quantity fix, six of the eight audited seeds generate natively
+(1,2,3,42,12345,16161). Seed32767 still rejects base12 startup;65535 rejects
+distant1249 count6. Newly accepted seeds1/42/16161 need live comparisons.
