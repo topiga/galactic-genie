@@ -1151,3 +1151,29 @@ and7554 trees including orientation (hash2138192714). This correctly differs
 from the Empire/Gungan/Wookiee static placement hash. Evidence:
 `naboo-live-seed16160-comparison-2026-11-15.json` and its full-scenery companion.
 The temporary seed override was restored after capture.
+
+### Player-land borders
+
+The integrated importer now accepts bounded left/right/top/bottom borders on
+`create_player_lands`. Original player-placement results match translating the
+existing routine into the border rectangle:190 original fixed/random fixtures
+match centers and final RNG. Another42 degenerate fixtures have insufficient
+room for the base radius and remain rejected by the native bounded helper.
+
+Sixteen original full geometry runs combine asymmetric20/5/30/10-percent player
+borders with PL/LP/PLL/LPL land ordering, both placement modes, two seeds, terrain
+painting and connections. Native terrain bytes, final RNG, all land centers and
+ownership metadata match. Invalid/empty rectangles fail without changing RNG or
+leaving partial output. Bordered owned-object startup remains explicitly gated;
+this change does not make another packaged map fully supported.
+
+Private evidence: `rms-bordered-fixed-player-starts-oracle-2026-11-15.json`,
+`rms-bordered-random-player-starts-oracle-2026-11-15.json` and
+`rms-bordered-mixed-geometry-oracle-2026-11-15.json`.
+
+A fresh46-resource/three-seed audit with Tiny/FIXED/DEFAULT inputs accepts only
+Forest (3/138 attempts). Remaining failures include player zones, additional
+resource rows, mixed owned-land startup and parser branches. This is native
+acceptance evidence, not original-map parity; the input defines are independently
+confirmed for Forest only. Results remain in
+`rms-packaged-fixed-default-audit-2026-11-15.json` (before this border change).

@@ -145,7 +145,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 } else if (name == "base_size" && value>=0 && value<=1024) land.radius=value;
                 else if(name=="land_id" && !players && value>=0 && value<=32767) landId=value;
                 else if(name=="min_placement_distance" && !players && value>=0 && value<=4096) minPlacementDistance=value;
-                else if (!players && value>=0 && value<=100 &&
+                else if (value>=0 && value<=100 &&
                          (name=="left_border" || name=="right_border" ||
                           name=="top_border" || name=="bottom_border")) {
                     // Right/bottom subtract a truncated margin, not round the remaining percentage.
@@ -628,9 +628,18 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     generated.width=width; generated.height=height;
     if (playerLands) {
         std::vector<RmsPlayerStart> starts;
+        const auto &land=lands[playerLandBegin];
+        const int right=land.rightBorder<0?int(width):land.rightBorder;
+        const int bottom=land.bottomBorder<0?int(height):land.bottomBorder;
+        if(right<=land.leftBorder || bottom<=land.topBorder) return fail("empty player-land border rectangle");
+        // shortcut: bordered owned startup needs an original object-stage comparison before enabling it.
+        if(ownedObjects && (land.leftBorder || land.topBorder || right!=int(width) || bottom!=int(height)))
+            return fail("owned startup on bordered player lands remains unverified");
         const auto placeStarts=defines.count("FIXED_POSITIONS")?generateRmsFixedPlayerStarts:generateRmsPlayerStarts;
-        if (!placeStarts(width,height,static_cast<int32_t>(lands[playerLandBegin].radius),playerCount,rng,starts,err)) return false;
+        if (!placeStarts(uint32_t(right-land.leftBorder),uint32_t(bottom-land.topBorder),
+                         static_cast<int32_t>(land.radius),playerCount,rng,starts,err)) return false;
         for (size_t owner=0;owner<starts.size();++owner) {
+            starts[owner].x+=land.leftBorder;starts[owner].y+=land.topBorder;
             placements[playerLandBegin+owner].x=starts[owner].x;
             placements[playerLandBegin+owner].y=starts[owner].y;
             generated.playerStarts.push_back(starts[owner]);
