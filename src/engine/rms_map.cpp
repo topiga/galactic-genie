@@ -501,8 +501,11 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     // shortcut: expand after composed original cliff/terrain/startup comparisons.
     if(cliffStage) {
         const bool ownedCliff=ownedObjects && startingWorkers && startingScouts &&
-            workerMinDistance==6 && workerMaxDistance==6 && !startingStalagmites && !holocrons && !nearNova &&
-            resourceRows.empty() && playerCivilizations==std::vector<uint16_t>{1,1} &&
+            workerMinDistance==6 && workerMaxDistance==6 && !startingStalagmites &&
+            ((!holocrons && !nearNova && resourceRows.empty()) ||
+             (holocrons && resourceProfile==6 && resourceRows.size()==6 && resourceRows[0].count==12 &&
+              playerCivilizations==std::vector<uint16_t>{1,1})) && playerCivilizations.size()==2 &&
+            std::all_of(playerCivilizations.begin(),playerCivilizations.end(),[](auto civ){return civ>=1 && civ<=8;}) &&
             !defines.count("FIXED_POSITIONS") && terrainRows.size()==1 &&
             terrainRows[0].terrain==21 && terrainRows[0].targetTiles==6000 && terrainRows[0].clumps==60 &&
             terrainRows[0].spacing==2 && terrainRows[0].clumping==20 && terrainRows[0].avoidPlayerStarts &&
@@ -825,6 +828,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     std::vector<uint32_t> occupied;
     for (const auto &tree:generated.scenery) if (tree.alive)
         occupied.push_back(static_cast<uint32_t>(tree.y)*width+static_cast<uint32_t>(tree.x));
+    for(size_t tile=0;tile<sceneryOccupied.size();++tile)
+        if(sceneryOccupied[tile]) occupied.push_back(static_cast<uint32_t>(tile));
     if (ownedObjects) {
         if (generated.playerStarts.size()!=playerCount) return fail("owned109 requires player starts");
         if (ownedForest) {

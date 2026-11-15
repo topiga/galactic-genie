@@ -1,0 +1,49 @@
+/* Authored two-player cliff startup with holocrons, food, Nova and ore. */
+<LAND_GENERATION>
+base_terrain 6
+create_player_lands {
+  terrain_type 6
+  base_size 13
+  number_of_tiles 7200
+}
+<CLIFF_GENERATION>
+<TERRAIN_GENERATION>
+create_terrain 21 {
+  base_terrain 6
+  number_of_tiles 6000
+  number_of_clumps 60
+  spacing_to_other_terrain_types 2
+  clumping_factor 20
+  set_avoid_player_start_areas
+}
+<OBJECTS_GENERATION>
+create_object 109 {
+  set_place_for_every_player
+  number_of_objects 1
+  min_distance_to_players 0
+  max_distance_to_players 0
+  group_placement_radius 18
+}
+create_object 83 {
+  set_place_for_every_player
+  number_of_objects 1
+  min_distance_to_players 6
+  max_distance_to_players 6
+  group_placement_radius 3
+}
+create_object 550 {
+  set_place_for_every_player
+  match_player_civ
+  number_of_objects 1
+  min_distance_to_players 7
+  max_distance_to_players 9
+  group_placement_radius 3
+}
+
+create_object 285 { number_of_objects 5 min_distance_to_players 25 temp_min_distance_group_placement 20 }
+create_object 59 { set_place_for_every_player set_gaia_object_only set_tight_grouping number_of_objects 12 group_placement_radius 3 min_distance_to_players 10 max_distance_to_players 12 min_distance_group_placement 6 max_distance_to_other_zones 7 }
+create_object 66 { set_place_for_every_player set_gaia_object_only set_tight_grouping number_of_objects 7 group_placement_radius 3 min_distance_to_players 12 max_distance_to_players 16 min_distance_group_placement 7 max_distance_to_other_zones 7 }
+create_object 66 { set_place_for_every_player set_gaia_object_only set_tight_grouping number_of_objects 4 group_placement_radius 3 min_distance_to_players 18 max_distance_to_players 26 min_distance_group_placement 7 max_distance_to_other_zones 7 }
+create_object 66 { set_place_for_every_player set_gaia_object_only set_tight_grouping number_of_objects 4 group_placement_radius 3 min_distance_to_players 25 max_distance_to_players 35 min_distance_group_placement 7 max_distance_to_other_zones 7 }
+create_object 102 { set_place_for_every_player set_gaia_object_only set_tight_grouping number_of_objects 5 group_placement_radius 2 min_distance_to_players 14 max_distance_to_players 18 min_distance_group_placement 7 max_distance_to_other_zones 7 }
+create_object 102 { set_place_for_every_player set_gaia_object_only set_tight_grouping number_of_objects 4 group_placement_radius 2 min_distance_to_players 20 max_distance_to_players 26 min_distance_group_placement 7 max_distance_to_other_zones 7 }

@@ -1818,3 +1818,43 @@ RMS file loader or establish full packaged-map/skirmish parity.
 The algorithm test runner now usesO1 with ASan/UBSan retained, keeping the expanded
 map comparisons within the existing timeout. Command-line rendering and native
 Game imports are checked independently against installed Clone Campaigns assets.
+
+### Civilization startup with cliffs
+
+The bounded cliff/forest109/83/550 startup now accepts all64 ordered Clone
+Campaigns civilization pairs. All192 original comparisons at three seeds match
+every object record, terrain tile, final RNG, deferred foundation and animated
+sprite phase. Raw static-sprite offsets are not interpreted as animation timers.
+Evidence: `rms-cliff-owned-civ-matrix-2026-11-15.json`, with losslessly compressed
+per-case originals and source hashes. The configured original
+world runs research restrictions/automatic unlocks before RMS, but not the later
+full civilization-bonus pass. Function0x5c5dc0 handles research-effect types
+101/102/103; it does not apply ordinary resource or unit-stat bonuses.
+Consequently, its raw free-population value1 is not the final native Trade
+Federation capacity, and its raw Confederacy worker HP40 precedes the class58
++15HP bonus. Native import tests retain the independently verified200 population
+cap and55 worker HP. Those differences are capture boundaries, not engine fixes.
+
+
+### Cliff blockers during resource startup
+
+Holocron and grouped-resource placement now receive the same cliff collision
+footprints that already excluded automatic trees. Previously, later rows only
+received tree blockers. This changed holocron candidates at seedUINT32_MAX and
+Nova placement/RNG at seed12345, despite identical earlier terrain and objects.
+Reusing the existing occupied-cell mask fixes those differences without changing
+candidate ordering or random draws in the shared placement helpers.
+
+The authored `tools/fixtures/cliff-resource-start.rms` profile extends the verified
+two-Empire startup with five holocrons,12 food bushes per player, near/medium/far
+Nova groups and near/far ore groups. Three seeds with default cliffs and the same
+three with dense20-cliff settings match the complete original object lists,
+terrain and final RNG. The default seed12345 case has6100 objects and final RNG
+146046165; dense seed1 has5556 objects and RNG2424374048. Native import checks also
+cover IDs after cliff replacements, resource positions and subsequent allocation.
+
+Evidence: `rms-cliff-resource-prefix-cases-oracle-2026-11-15.json`; six original
+configured-world runs through object row10. Resource compositions remain restricted
+to this two-Empire prefix. Other civilizations with resources, animals, later
+resource rows, elevations and connections remain unverified in this cliff
+composition. This is not a full packaged-map or complete gameplay parity claim.

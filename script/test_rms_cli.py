@@ -77,10 +77,17 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
         '--players',2,'--civilization',1,'--civilization',1],0)
     assert '6045 native objects, final RNG 2896867181' in owned_cliffs
     assert cliff_owned.stat().st_size>1000
-    invalid_cliff_owned=work/'invalid-cliff-owned.png'
-    run(['render-rms',data,root/'tools/fixtures/cliff-owned-start.rms',120,1,invalid_cliff_owned,
+    mixed_cliffs=run(['render-rms',data,root/'tools/fixtures/cliff-owned-start.rms',120,1,work/'cliff-mixed.png',
+        '--players',2,'--civilization',1,'--civilization',4],0)
+    assert '6045 native objects, final RNG 266867314' in mixed_cliffs
+    assert (work/'cliff-mixed.png').stat().st_size>1000
+    resources_cliff=run(['render-rms',data,root/'tools/fixtures/cliff-resource-start.rms',120,12345,work/'cliff-resources.png',
+        '--players',2,'--civilization',1,'--civilization',1],0)
+    assert '6100 native objects, final RNG 146046165' in resources_cliff
+    assert (work/'cliff-resources.png').stat().st_size>1000
+    run(['render-rms',data,root/'tools/fixtures/cliff-resource-start.rms',120,1,work/'cliff-resources-invalid.png',
         '--players',2,'--civilization',1,'--civilization',2],1)
-    assert not invalid_cliff_owned.exists(), 'Unverified owned cliff civilization created an image'
+    assert not (work/'cliff-resources-invalid.png').exists()
     cliff_grass=work/'cliff-grass.rms'
     cliff_grass.write_text((root/'tools/fixtures/cliff-diagnostic.rms').read_text()+
         '<TERRAIN_GENERATION> create_terrain 0 { base_terrain 6 number_of_tiles 30 '
