@@ -390,7 +390,7 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
         }
     }
     rng_.seed(seed);
-    aiRandomState_=seed;
+    legacyRandomState_=seed;
     aiRandomNumbers_.fill(-1);
     gameTime_ = 0;
     players_ = {};
@@ -917,7 +917,8 @@ bool Game::initScenario(const Scenario &scenario, std::string *err) {
     return initScenario(scenario,err,false);
 }
 
-bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsCompletionOrder) {
+bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsCompletionOrder,
+                        const uint32_t *postRmsRandomState) {
     if (!scenario.map.width || scenario.map.width != scenario.map.height) {
         if (err) *err = "only square scenario maps are currently supported";
         return false;
@@ -936,7 +937,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     }
 
     rng_.seed(1);
-    aiRandomState_=1;
+    legacyRandomState_=1;
     aiRandomNumbers_.fill(-1);
     gameTime_ = 0;
     players_ = scenario.players;
@@ -1140,6 +1141,8 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
                         configureGate(*object);
     rebuildAdjacency();
     refreshAllAutomaticTechnologies();
+    // Imported RMS callbacks already consumed their draws in the generator.
+    if(postRmsRandomState)legacyRandomState_=*postRmsRandomState;
     initializeCivilizationBonuses();
     refreshAllAutomaticTechnologies();
     const Object *hero = nullptr;
@@ -1237,7 +1240,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     for (const auto &placement:generated.resourcesAfterOwned)
         placeResource(placement.unitId,placement.x,placement.y,placement.facet,nextId++,placement.owner);
     scenario.nextUnitId=nextId;
-    if (!initScenario(scenario,err,true)) return false;
+    if (!initScenario(scenario,err,true,&rng)) return false;
     if(!generated.elevation.empty()) {
         for(int y=0;y<mapSize;++y) for(int x=0;x<mapSize;++x) {
             const size_t source=size_t(x)*mapSize+mapSize-1-y,destination=size_t(y)*mapSize+x;
@@ -1328,6 +1331,7 @@ bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std:
     for(size_t player=1;player<=civilizations.size();++player)
         computers[player].age=aiTechLevel(int(player));
     aiPlayers_=std::move(computers);
+    randomState=legacyRandomState_;
     return true;
 }
 
@@ -4271,6 +4275,109 @@ const dat::Unit *Game::effectiveUnitForPlayer(int player,const dat::Unit *unit) 
     return found==cache.end()?unit:&found->second.unit;
 }
 
+int Game::objectGraphic(const Object &o,const dat::Unit &base) const {
+    const dat::Unit *visualUnit =
+        o.state == State::Build
+            ? builderUnit(o)
+            : o.state == State::Repair
+                  ? repairerUnit(o)
+                  : o.gatherTargetId
+                        ? gathererUnit(o)
+                        : o.jobUnit
+                              ? o.jobUnit
+                              : &base;
+    if (!visualUnit) visualUnit = &base;
+    int gid = visualUnit->standingGraphic[0];
+    if (o.state == State::Build ||
+        o.state == State::Repair) {
+        const int workingGraphic =
+            o.state == State::Build
+                ? builderWorkingGraphic(o)
+                : repairWorkingGraphic(o);
+        if (workingGraphic >= 0)
+            gid = workingGraphic;
+    }
+    if (o.state == State::Gather) {
+        if (o.farmMoveActive &&
+            visualUnit->walkingGraphic >= 0) {
+            gid = visualUnit->walkingGraphic;
+        } else {
+            const dat::Task *task =
+                gatherTask(o, *visualUnit);
+            if (task) {
+                if (task->workingGraphic >= 0)
+                    gid = task->workingGraphic;
+                else if (task->proceedingGraphic >= 0)
+                    gid = task->proceedingGraphic;
+            }
+        }
+    }
+    if (o.underConstruction &&
+        base.constructionGraphic >= 0)
+        gid = base.constructionGraphic;
+    if (o.felled && base.dyingGraphic >= 0)
+        gid = base.dyingGraphic;
+    if (o.state == State::Walk) {
+        const dat::Task *task =
+            o.carriedAmount > 0
+                ? gatherTask(o, *visualUnit)
+                : nullptr;
+        if (task && task->carryingGraphic >= 0)
+            gid = task->carryingGraphic;
+        else if (visualUnit->walkingGraphic >= 0)
+            gid = visualUnit->walkingGraphic;
+    }
+    if ((o.state == State::Attack || o.state == State::Heal) &&
+        base.attackGraphic >= 0)
+        gid = base.attackGraphic;
+    return gid;
+}
+
+void Game::refreshUpgradeGraphic(Object &object,const dat::Unit &before,const dat::Unit &after) {
+    int current=objectGraphic(object,before);
+    const auto replace=[&](int oldGraphic,int newGraphic) {
+        const auto *graphic=assets_.dat().graphic(newGraphic);
+        if(current!=oldGraphic || current==newGraphic || !graphic)return;
+        current=newGraphic;
+        object.animTime=0;object.initialIdleDelay=0;object.initialFrame=0;
+        int frame=0;
+        if(graphic->sequenceType&4) {
+            const auto first=genieRandomDraw(legacyRandomState_);
+            frame=std::max(0,std::min(int(graphic->frameCount)-1,int(first*uint32_t(std::max(0,int(graphic->frameCount)))/32767u)));
+            if(graphic->sequenceType&1) {
+                const auto second=genieRandomDraw(legacyRandomState_);
+                if(graphic->frameDuration>0) {
+                    const float cycle=graphic->frameCount*graphic->frameDuration+graphic->replayDelay;
+                    const double elapsed=double(second)*cycle*(1.f/32767.f);
+                    frame=int(elapsed/graphic->frameDuration);
+                    if(frame>=graphic->frameCount) {
+                        frame=std::max(0,int(graphic->frameCount)-1);
+                        object.initialIdleDelay=std::max(0.f,float(elapsed-double(frame)*graphic->frameDuration)-graphic->frameDuration);
+                    }
+                } else frame=int(second*uint32_t(std::max(0,int(graphic->frameCount)))/32767u);
+            }
+        }
+        if((graphic->sequenceType&1) && graphic->frameDuration>0)object.animTime=frame*graphic->frameDuration;
+        else object.initialFrame=uint16_t(frame);
+    };
+    if(before.type==dat::UT_Building) {
+        // Original556730 refreshes construction before saving rand(), then srand(saved).
+        replace(before.constructionGraphic,after.constructionGraphic);
+        legacyRandomState_=genieRandomDraw(legacyRandomState_);
+    }
+    // Each original base callback sees the graphic selected by preceding callbacks.
+    if(before.type>=dat::UT_Combatant && before.type<=dat::UT_Building)
+        replace(before.attackGraphic,after.attackGraphic);
+    if(before.type>=dat::UT_DeadFish && before.type<=dat::UT_Building) {
+        if(current==before.walkingGraphic)replace(before.walkingGraphic,after.walkingGraphic);
+        else if(current==before.runningGraphic)replace(before.runningGraphic,after.runningGraphic);
+    }
+    if(current==before.standingGraphic[0])replace(before.standingGraphic[0],after.standingGraphic[0]);
+    else if(current==before.dyingGraphic)replace(before.dyingGraphic,after.dyingGraphic);
+    else if(current==before.undeadGraphic)replace(before.undeadGraphic,after.undeadGraphic);
+    // shortcut: Snow/delta-layer visuals and foreign-civilization graphic substitution need separate callback parity.
+}
+
 void Game::applyUnitUpgrades(int player,const std::vector<int> &previousEffects) {
     const auto &effects=playerEffects_[size_t(player)];
     const bool appended=previousEffects.size()<=effects.size() &&
@@ -4280,6 +4387,9 @@ void Game::applyUnitUpgrades(int player,const std::vector<int> &previousEffects)
         auto prototypes=initialUnitPrototypes(player);
         for(size_t index=0;index<effects.size();++index)
             for(const auto &command:assets_.dat().effects[size_t(effects[index])].commands) {
+                dat::Unit previousUpgrade;
+                if(index>=previousEffects.size() && command.type==3 && prototypes.count(command.a))
+                    previousUpgrade=prototypes.at(command.a).unit;
                 const auto changed=applyPrototypeCommand(player,command,prototypes);
                 if(index<previousEffects.size())continue;
                 for(Object &object:objects_) {
@@ -4295,7 +4405,7 @@ void Game::applyUnitUpgrades(int player,const std::vector<int> &previousEffects)
                         object.maxHitPoints=maximum;
                         if(object.unit->type==dat::UT_Building || prototype.unit.type==dat::UT_Building)
                             pathingChanged=true;
-                        // shortcut: Original upgrade sprite refresh RNG is not reproduced here.
+                        refreshUpgradeGraphic(object,previousUpgrade,prototype.unit);
                     } else if(command.c==0) {
                         double hp=0;
                         if(command.type==5)hp=double(object.hitPoints)*double(command.d)+.5;
@@ -13542,7 +13652,7 @@ bool Game::executeAiAction(
         bool known=false;
         const int limit=resolveAiValue(player,state,action.children[1].value,known);
         if (!known || !limit) return false;
-        const int draw=int(genieRandomDraw(aiRandomState_));
+        const int draw=int(genieRandomDraw(legacyRandomState_));
         aiRandomNumbers_[size_t(player)]=draw%limit+1;
         return true;
     }
@@ -13640,21 +13750,8 @@ bool Game::executeAiAction(
 
 void Game::updateAiPlayer(
     int player, AiPlayerState &state) {
-    if (state.program.rules.empty())
-        return;
-    constexpr size_t kRulesPerSlice = 96;
-    const size_t count =
-        state.program.rules.size();
-    for (size_t checked = 0;
-         checked < kRulesPerSlice &&
-         checked < count;
-         ++checked) {
-        AiRule &rule =
-            state.program.rules[
-                state.ruleCursor];
-        state.ruleCursor =
-            (state.ruleCursor + 1) %
-            count;
+    // Original40f910 visits the whole ordered program on each admitted evaluation.
+    for (AiRule &rule : state.program.rules) {
         if (!rule.enabled) continue;
         bool matches = true;
         for (const AiNode &condition :
@@ -13816,6 +13913,7 @@ void Game::updateAi(float dt) {
         } else {
             state.ageTime += dt;
         }
+        // shortcut: Native interval until original 50..100ms host-step admission drives its 20-call PER gate.
         state.ruleTime -= dt;
         if (state.ruleTime <= 0.0f) {
             state.ruleTime = 0.25f;
@@ -16008,60 +16106,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
         sx -= ox;
         sy -= oy;
         if (sx < -400 || sx > viewW + 400 || sy < -100 || sy > viewH + 500) continue;
-        const dat::Unit *visualUnit =
-            o.state == State::Build
-                ? builderUnit(o)
-                : o.state == State::Repair
-                      ? repairerUnit(o)
-                      : o.gatherTargetId
-                            ? gathererUnit(o)
-                            : o.jobUnit
-                                  ? o.jobUnit
-                                  : o.unit;
-        if (!visualUnit) visualUnit = o.unit;
-        int gid = visualUnit->standingGraphic[0];
-        if (o.state == State::Build ||
-            o.state == State::Repair) {
-            const int workingGraphic =
-                o.state == State::Build
-                    ? builderWorkingGraphic(o)
-                    : repairWorkingGraphic(o);
-            if (workingGraphic >= 0)
-                gid = workingGraphic;
-        }
-        if (o.state == State::Gather) {
-            if (o.farmMoveActive &&
-                visualUnit->walkingGraphic >= 0) {
-                gid = visualUnit->walkingGraphic;
-            } else {
-                const dat::Task *task =
-                    gatherTask(o, *visualUnit);
-                if (task) {
-                    if (task->workingGraphic >= 0)
-                        gid = task->workingGraphic;
-                    else if (task->proceedingGraphic >= 0)
-                        gid = task->proceedingGraphic;
-                }
-            }
-        }
-        if (o.underConstruction &&
-            o.unit->constructionGraphic >= 0)
-            gid = o.unit->constructionGraphic;
-        if (o.felled && o.unit->dyingGraphic >= 0)
-            gid = o.unit->dyingGraphic;
-        if (o.state == State::Walk) {
-            const dat::Task *task =
-                o.carriedAmount > 0
-                    ? gatherTask(o, *visualUnit)
-                    : nullptr;
-            if (task && task->carryingGraphic >= 0)
-                gid = task->carryingGraphic;
-            else if (visualUnit->walkingGraphic >= 0)
-                gid = visualUnit->walkingGraphic;
-        }
-        if ((o.state == State::Attack || o.state == State::Heal) &&
-            o.unit->attackGraphic >= 0)
-            gid = o.unit->attackGraphic;
+        int gid = objectGraphic(o,*o.unit);
         gid = civilizationGraphic(gid, o.player);
         float graphicTime = o.animTime;
         float graphicFacing = o.facing;

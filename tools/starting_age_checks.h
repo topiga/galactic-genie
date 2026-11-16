@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "../src/engine/rms_map.h"
+#include "../src/core/genie_random.h"
 
 static void startingAgeChecks(swgb::Assets &assets) {
     // Actual original601f90..6026be normal-mode controls, civ6/1, raw ages3..6.
@@ -42,9 +43,13 @@ create_object UNIT-BIKE-E { number_of_objects 1 set_place_for_every_player min_d
         auto sorted=prefix[size_t(player)-1];std::sort(sorted.begin(),sorted.end());
         check(sorted==baseCompleted[size_t(player)-1],"Native RMS research baseline matches original pre-age completed states");
     }
+    check(seed==3895143042u,"Original common-border RNG before starting-age research");
+    const uint32_t expectedRng[]={19483,2618,28080,28080};
+    size_t caseIndex=0;
     for(const auto &c:cases) {
         swgb::RmsSessionOptions options;options.startingAge=uint32_t(c.age);uint32_t rng=1;
         check(game.initRmsSession(script,defines,120,rng,{6,1},options,&error),error.c_str());
+        check(rng==expectedRng[caseIndex++],"Original starting-age building upgrades reseed the shared CRT stream");
         for(int player=1;player<=2;++player) {
             auto expected=prefix[size_t(player)-1];
             const auto &added=player==1?c.first:c.second;
@@ -63,6 +68,16 @@ create_object UNIT-BIKE-E { number_of_objects 1 set_place_for_every_player min_d
                   game.objectHitPoints(scout)==c.scoutHp[size_t(player)-1],
                   "Original starting-age live worker and scout HP changes");
         }
+        uint32_t aiRng=rng;
+        const int first=int(swgb::genieRandomDraw(aiRng))+1,second=int(swgb::genieRandomDraw(aiRng))+1;
+        const std::string source="(defrule (random-number == -1) => (set-goal 990 1) (disable-self))"
+            "(defrule (true) => (generate-random-number 32768) (disable-self))"
+            "(defrule (random-number == "+std::to_string(first)+") => (set-goal 991 1) (generate-random-number 32768) (disable-self))"
+            "(defrule (random-number == "+std::to_string(second)+") => (set-goal 992 1) (disable-self))";
+        check(game.loadAiSourceForTesting(2,"post-age-rng",source,{},&error),error.c_str());
+        game.update(0,{});
+        check(game.aiGoalForTesting(2,990)==1 && game.aiGoalForTesting(2,991)==1 && game.aiGoalForTesting(2,992)==1,
+              "First ordered AI pass continues the original post-upgrade shared random stream");
     }
     std::puts("PASS: original normal starting ages3..6 research order, complete technology sets, statistics and live HP");
 }

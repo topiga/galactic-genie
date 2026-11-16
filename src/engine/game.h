@@ -138,7 +138,7 @@ public:
                  int mapSize, uint32_t &randomState, std::string *err = nullptr, uint32_t playerCount = 2,
                  const std::vector<uint16_t> &playerCivilizations = {},
                  const std::vector<std::vector<uint8_t>> &diplomacy = {});
-    // Normal-mode startup; generation RNG is returned, not yet upgrade-animation RNG.
+    // Normal-mode startup; returns the shared RNG after starting-age research.
     bool initRmsSession(const RmsScript &script, const std::unordered_set<std::string> &defines,
                         int mapSize, uint32_t &randomState,
                         const std::vector<uint16_t> &civilizations, const RmsSessionOptions &options,
@@ -662,7 +662,8 @@ public:
     static constexpr int kTileHalfH = 24;
 
 private:
-    bool initScenario(const Scenario &scenario, std::string *err, bool rmsCompletionOrder);
+    bool initScenario(const Scenario &scenario, std::string *err, bool rmsCompletionOrder,
+                      const uint32_t *postRmsRandomState = nullptr);
     bool initializeStartingAge(int player,int rawAge);
     enum class State : uint8_t {
         Idle,
@@ -882,7 +883,6 @@ private:
             warnedFacts;
         std::unordered_set<std::string>
             warnedActions;
-        size_t ruleCursor = 0;
         float ruleTime = 0.0f;
         float economyTime = 0.0f;
         float ageTime = 0.0f;
@@ -1174,6 +1174,8 @@ private:
     const std::vector<dat::EffectCommand> &unitCommands(int player,int unitId) const;
     const dat::Unit *effectiveUnitForPlayer(
         int player, const dat::Unit *unit) const;
+    int objectGraphic(const Object &object,const dat::Unit &unit) const;
+    void refreshUpgradeGraphic(Object &object,const dat::Unit &before,const dat::Unit &after);
     void applyUnitUpgrades(int player,const std::vector<int> &previousEffects);
     bool technologyRequirementsMet(int player,
                                   const dat::Tech &technology) const;
@@ -1395,8 +1397,8 @@ private:
 
     Assets &assets_;
     std::mt19937 rng_;
-    // shortcut: AI-only legacy stream until original map/world RNG consumers are ported.
-    uint32_t aiRandomState_=1;
+    // shortcut: Shared RMS/upgrade/AI stream; other world consumers still need original call ordering.
+    uint32_t legacyRandomState_=1;
     std::array<int32_t,17> aiRandomNumbers_{};
     int mapSize_ = 0;
     std::vector<uint8_t> terrain_;

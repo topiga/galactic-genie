@@ -117,5 +117,12 @@ static void aiControllerChecks(swgb::Assets &assets) {
           "(defrule (random-number == 42) => (set-goal 923 1))");
     check(game.aiGoalForTesting(1,920)==1 && game.aiGoalForTesting(1,923)==1,
           "New match resets random state/result; large limits retain original 15-bit draw range");
+    std::string fullPass;
+    for(int i=0;i<200;++i)
+        fullPass+="(defrule (true) => (set-goal 930 "+std::to_string(i)+") (disable-self))";
+    fullPass+="(defrule (goal 930 199) => (set-goal 931 1))";
+    run(1,fullPass);
+    check(game.aiGoalForTesting(1,930)==199 && game.aiGoalForTesting(1,931)==1,
+          "Original PER evaluation scans every rule in order without a 96-rule slice");
     std::puts("PASS: original AI population classes, civilian garrison/queues, civilization and strategic-number queries");
 }
