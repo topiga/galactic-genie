@@ -2,9 +2,11 @@
 #pragma once
 #include <filesystem>
 #include <fstream>
+#include "rms_common_border_checks.h"
 // Original 4df9b0 full runner, authored cliff/forest geometry, seed1, two owners (Empire unless paired below).
 // Private rms-general-rows-*-1-1-1-oracle-2026-11-15.json records every original object.
 static void rmsGeneralObjectChecks(swgb::Assets &assets) {
+    rmsCommonBorderChecks(assets);
     const auto &data=assets.dat();
     std::ifstream input(std::filesystem::path(__FILE__).parent_path()/"fixtures/cliff-full-start.rms");
     check(bool(input),"authored general-object fixture opens");

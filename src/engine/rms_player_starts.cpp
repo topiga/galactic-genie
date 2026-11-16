@@ -6,7 +6,7 @@
 
 namespace swgb {
 static bool generatePlayerStarts(uint32_t width, uint32_t height, int32_t radius, uint32_t playerCount,
-    uint32_t &randomState, std::vector<RmsPlayerStart> &out, std::string *err, bool fixedPositions) {
+    uint32_t &randomState, std::vector<RmsPlayerStart> &out, std::string *err, bool fixedPositions, const std::vector<RmsPlayerStartRegion> *lands=nullptr) {
     out = {};
     if (err) err->clear();
     auto fail = [&](const char *message) {
@@ -17,8 +17,26 @@ static bool generatePlayerStarts(uint32_t width, uint32_t height, int32_t radius
     if (!width || !height || width > 1024 || height > 1024 || radius < 0 ||
         radius > 1024 || 2 * radius >= static_cast<int32_t>(std::min(width, height)))
         return fail("unsupported dimensions or base radius");
-    const int32_t innerWidth = static_cast<int32_t>(width) - 2 * radius;
-    const int32_t innerHeight = static_cast<int32_t>(height) - 2 * radius;
+    int32_t innerWidth = static_cast<int32_t>(width) - 2 * radius;
+    int32_t innerHeight = static_cast<int32_t>(height) - 2 * radius;
+    int32_t originX=radius,originY=radius;
+    if(lands) {
+        bool owned=false;
+        for(const auto &land:*lands) {
+            if(land.owner<=0)continue;
+            if(land.owner>int32_t(playerCount) || land.left<0 || land.top<0 ||
+               land.right>int32_t(width) || land.bottom>int32_t(height) ||
+               land.right<=land.left || land.bottom<=land.top || land.radius<0 || land.radius>1024)
+                return fail("unsupported player-land bounds");
+            owned=true;
+            // Original4e7750: minimum usable spans and maximum origins, not rectangle intersection.
+            innerWidth=std::min(innerWidth,land.right-land.left-2*land.radius);
+            innerHeight=std::min(innerHeight,land.bottom-land.top-2*land.radius);
+            originX=std::max(originX,land.left+land.radius);
+            originY=std::max(originY,land.top+land.radius);
+        }
+        if(!owned || innerWidth<=0 || innerHeight<=0)return fail("empty player-land usable region");
+    }
     const int32_t a = innerWidth * 6 / 10, b = innerHeight * 6 / 10;
     const int32_t margin = innerWidth * 2 / 10, halfPerimeter = a + b;
     if (!halfPerimeter) return fail("player perimeter is empty");
@@ -58,11 +76,11 @@ static bool generatePlayerStarts(uint32_t width, uint32_t height, int32_t radius
         const int32_t edge = fixedPositions ? static_cast<int32_t>(genieRandomDraw(rng) *
             static_cast<uint32_t>(margin) / 32767u) : margin / 2;
         // The original deliberately uses the width-derived margin on both axes.
-        if (p < a) v = {p + margin + radius, edge + radius};
-        else if (p < halfPerimeter) v = {edge + (fixedPositions ? margin : 0) + a + radius, p - a + margin + radius};
+        if (p < a) v = {p + margin + originX, edge + originY};
+        else if (p < halfPerimeter) v = {edge + (fixedPositions ? margin : 0) + a + originX, p - a + margin + originY};
         else if (p < halfPerimeter + a)
-            v = {halfPerimeter - p + margin + a + radius, edge + (fixedPositions ? margin : 0) + b + radius};
-        else v = {edge + radius, halfPerimeter + a - p + margin + b + radius};
+            v = {halfPerimeter - p + margin + a + originX, edge + (fixedPositions ? margin : 0) + b + originY};
+        else v = {edge + originX, halfPerimeter + a - p + margin + b + originY};
         if (v.x < 0 || v.y < 0 || v.x >= static_cast<int32_t>(width) ||
             v.y >= static_cast<int32_t>(height))
             return fail("original placement falls outside the supported map");
@@ -78,5 +96,10 @@ bool generateRmsPlayerStarts(uint32_t width, uint32_t height, int32_t radius, ui
 bool generateRmsFixedPlayerStarts(uint32_t width, uint32_t height, int32_t radius, uint32_t playerCount,
     uint32_t &randomState, std::vector<RmsPlayerStart> &out, std::string *err) {
     return generatePlayerStarts(width, height, radius, playerCount, randomState, out, err, true);
+}
+bool generateRmsFixedPlayerStartsForLands(uint32_t width, uint32_t height,
+    const std::vector<RmsPlayerStartRegion> &lands, uint32_t playerCount,
+    uint32_t &randomState, std::vector<RmsPlayerStart> &out, std::string *err) {
+    return generatePlayerStarts(width,height,0,playerCount,randomState,out,err,true,&lands);
 }
 } // namespace swgb

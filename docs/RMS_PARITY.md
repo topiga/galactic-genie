@@ -4362,3 +4362,59 @@ captures were newly executed, then replayed against the reproducible repository
 build. Evidence: `rms-unseen-seeds-wave1-report-2026-11-16.json`. Eight
 asset-independent comparator tests cover truncation, extra objects, RNG, poses,
 malformed records, duplicate IDs, complete CLI reporting and stale source rejection.
+
+Wave2: the same two unseen seeds also match all8 cases across Naboo Swamp54222,
+Planets and Moons54213, Geddes55007 and Yavin55003. No engine changes or new
+profile exceptions were needed. Evidence: `rms-unseen-seeds-wave2-report-2026-11-16.json`.
+An initial run failed to import Unicorn because resolving the virtualenv Python
+symlink selected the base interpreter; the runner now preserves executable
+symlinks. Those failures remain classified as execution errors, not engine
+mismatches. Final reports replay against one stable native binary and verified
+probe/source hashes.
+
+The subsequent shared-code investigation below tests original field selection
+before replacing the bordered-start map-name allowlist.
+
+Wave3: boundary seeds0 and2147483648 match8 cases across Tundra54219, Eredenn55017,
+Swamp54221 and Space Mass54214. This brings the unseen matrix to24 comparisons
+across10 map families. The two boundary seeds intentionally exercise unsigned
+RNG state behavior; they do not represent independent initial random streams.
+Evidence: `rms-unseen-seeds-wave3-report-2026-11-16.json`.
+
+### Shared fixed-start bounds aggregation (2026-11-16)
+
+The original4e7750..4e77a7 scans every player-owned land, takes the minimum usable
+width/height after subtracting twice each radius, and takes maximum left/top
+origins after adding each radius. Neutral lands do not constrain the starts.
+This differs from using the first player land and from rectangle intersection.
+
+84 controlled original cases varied first, second and both player lands' borders
+and radii, with/without a preceding neutral land, both directly and through full
+finalization. A further18 cases distinguish the aggregate formula from rectangle
+intersection: shifting only the second rectangle by7 changes both starts by7
+without reducing the usable span. These are controlled post-parser mutations,
+not a claim that shipped RMS independently specifies each player's rectangle.
+
+The shared fixed-start implementation now computes those aggregates. The existing
+map pipeline uses it and no longer has a map-name allowlist for fixed bordered
+starts. Random owned bordered starts remain rejected pending separate evidence;
+multiple authored player-land blocks remain unsupported. Other world, prototype,
+terrain and lifecycle checks are retained.54 direct original fixtures cover the
+aggregate path, alongside existing single-region starts and invalid-input checks.
+
+Two complete original/native runs of an authored120 map with asymmetric shared
+borders (left10%,right20%,top15%,bottom5%) match all10 starting objects, terrain,
+poses and RNG for seeds1/20261116. This map previously hit the name-based rejection;
+no new map predicate was added. All24 unseen packaged comparisons still match
+after the shared change.
+
+Evidence: `rms-player-border-structural-differential-oracle-2026-11-16.json`,
+`rms-player-border-aggregation-discriminator-oracle-2026-11-16.json`,
+`rms-common-border-full-startup-report-2026-11-16.json`, and
+`rms-unseen-seeds-region-report-2026-11-16.json`.
+
+Validation: all131 retained packaged startup cases, general/authored regressions
+and the two new complete bordered-start fixtures pass under ASan/UBSan. The54
+aggregate fixtures, existing288 randomized/35 fixed start fixtures and invalid
+inputs pass. Strict integrated map checks, production CLI checks and desktop
+dummy-driver smoke pass. All24 new packaged comparisons match unchanged.

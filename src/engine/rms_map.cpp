@@ -1736,14 +1736,23 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         const int right=land.rightBorder<0?int(width):land.rightBorder;
         const int bottom=land.bottomBorder<0?int(height):land.bottomBorder;
         if(right<=land.leftBorder || bottom<=land.topBorder) return fail("empty player-land border rectangle");
-        // shortcut: bordered startup remains limited to compared water-map profiles.
-        if(ownedObjects && !spaceStartup && !swamp && !nabooSwamp && !connectedIslands && !basinCliffs && !alliedRoads && !coastalCliffs && !geonosisCliffs && !eredennCliffs && !tundraCliffs && !resourceIslands && !arenaForest && (land.leftBorder || land.topBorder || right!=int(width) || bottom!=int(height)))
-            return fail("owned startup on bordered player lands remains unverified");
-        const auto placeStarts=defines.count("FIXED_POSITIONS")?generateRmsFixedPlayerStarts:generateRmsPlayerStarts;
-        if (!placeStarts(uint32_t(right-land.leftBorder),uint32_t(bottom-land.topBorder),
-                         static_cast<int32_t>(land.radius),playerCount,rng,starts,err)) return false;
+        if(defines.count("FIXED_POSITIONS")) {
+            std::vector<RmsPlayerStartRegion> regions;
+            for(size_t n=0;n<lands.size();++n) {
+                const auto &region=lands[n];
+                regions.push_back({landMetadata[n].owner,region.leftBorder,region.topBorder,
+                    region.rightBorder<0?int(width):region.rightBorder,
+                    region.bottomBorder<0?int(height):region.bottomBorder,int(region.radius)});
+            }
+            if(!generateRmsFixedPlayerStartsForLands(width,height,regions,playerCount,rng,starts,err))return false;
+        } else {
+            if(ownedObjects && (land.leftBorder || land.topBorder || right!=int(width) || bottom!=int(height)))
+                return fail("random owned startup on bordered player lands remains unverified");
+            if(!generateRmsPlayerStarts(uint32_t(right-land.leftBorder),uint32_t(bottom-land.topBorder),
+                                       int32_t(land.radius),playerCount,rng,starts,err))return false;
+            for(auto &start:starts){start.x+=land.leftBorder;start.y+=land.topBorder;}
+        }
         for (size_t owner=0;owner<starts.size();++owner) {
-            starts[owner].x+=land.leftBorder;starts[owner].y+=land.topBorder;
             placements[playerLandBegin+owner].x=starts[owner].x;
             placements[playerLandBegin+owner].y=starts[owner].y;
             generated.playerStarts.push_back(starts[owner]);
