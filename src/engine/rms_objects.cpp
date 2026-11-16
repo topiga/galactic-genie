@@ -40,6 +40,7 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         {1017,5238,10,42,5000,11,1,-1,0,0,3.f},
         {1018,5239,10,42,5000,11,1,-1,0,0,3.f},
         {1296,1958,10,42,2100,4,1,-1,0,0,3.f},
+        {1122,5248,10,42,50,1,6,-1,0,0,0.f},
         {1120,5246,10,42,50,1,6,-1,0,0,0.f},
         {1172,5316,10,42,50,13,2,-1,0,0,1.f},
         {1173,5315,10,42,50,13,2,-1,0,0,1.f},
@@ -83,7 +84,7 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
         u.terrainRestriction!=spec.restriction || u.hillMode!=(unitId==1295?3:0) || u.flyMode || u.canBeBuiltOn!=int(crater) ||
         u.recyclable || u.lineOfSight!=(unitId==1295?6.f:unitId==1296?1.f:(unitId==1184 || unitId==1185 || unitId==519 || unitId==524 || unitId==537)?2.f:building?1.f:0.f) || u.trainSound!=-1 ||
-        u.obstructionType!=(mountain?10:(unitId==1120 || unitId==1123 || crater)?0:2) || u.obstructionClass!=((unitId==1120 || unitId==1123 || crater)?0:(unitId==1170 || unitId==1171 || unitId==1172 || unitId==1173 || unitId==1296 || building)?3:1) || u.civilization ||
+        u.obstructionType!=(mountain?10:(unitId==1120 || unitId==1122 || unitId==1123 || crater)?0:2) || u.obstructionClass!=((unitId==1120 || unitId==1122 || unitId==1123 || crater)?0:(unitId==1170 || unitId==1171 || unitId==1172 || unitId==1173 || unitId==1296 || building)?3:1) || u.civilization ||
         u.enableAutoGather!=(spec.resource<0?0:1) || !g || g->sequenceType!=(mine?5:(mountain || crater || unitId==1295)?0:6) || g->angleCount!=spec.angles)
         return fail("unsupported resource prototype or graphic");
     if ((spec.type==20 || spec.type==30 || mountain || crater || unitId==1296 || building) && (u.createDoppelgangerOnDeath!=spec.doppel || u.speed!=0 ||
@@ -211,10 +212,11 @@ const ResourceSpec *validateAquatic(const dat::DatFile &data,int16_t unitId,cons
     static constexpr ResourceSpec fish450{450,5269,30,23,0,9,1,17,350,1,0};
     static constexpr ResourceSpec fish451{451,5270,30,23,0,9,1,17,350,1,0};
     static constexpr ResourceSpec fish455{455,5271,30,23,0,9,1,17,225,1,0};
+    static constexpr ResourceSpec fish458{458,5274,30,23,0,9,1,17,225,1,0};
     static constexpr ResourceSpec deepFish{456,5272,30,23,0,9,1,17,225,1,0};
     static constexpr ResourceSpec fish{69,5268,30,25,0,9,1,17,200,1,0};
     static constexpr ResourceSpec wave{1585,10295,30,42,1000,31,1,-1,0,0,0};
-    const auto &spec=unitId==450?fish450:unitId==451?fish451:unitId==455?fish455:unitId==456?deepFish:unitId==69?fish:wave;
+    const auto &spec=unitId==458?fish458:unitId==450?fish450:unitId==451?fish451:unitId==455?fish455:unitId==456?deepFish:unitId==69?fish:wave;
     const bool largeFish=unitId==450 || unitId==451 || unitId==455 || unitId==456;
     const float radius=largeFish?1.f:.5f;
     auto fail=[&]()->const ResourceSpec* {if(err)*err="RMS aquatic: unsupported original profile";return nullptr;};
@@ -225,7 +227,7 @@ const ResourceSpec *validateAquatic(const dat::DatFile &data,int16_t unitId,cons
        u.lineOfSight!=0 || u.speed!=(unitId==69?1.32f:0.f) || u.terrainRestriction!=spec.restriction || u.obstructionType || u.obstructionClass ||
        u.hillMode || u.flyMode || u.canBeBuiltOn || u.recyclable || u.civilization || u.enableAutoGather!=(unitId!=1585) || u.createDoppelgangerOnDeath!=spec.doppel ||
        u.placementSideTerrain[0]!=(unitId==69?2:-1) || u.placementSideTerrain[1]!=(unitId==69?35:-1) || u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
-       u.trainSound!=-1 || !g || g->sequenceType!=7 || g->frameCount!=((unitId==450 || unitId==451)?35:largeFish?30:unitId==69?12:48) || g->angleCount!=1 || g->frameDuration!=((unitId==450 || unitId==451)?.1f:.13f) ||
+       u.trainSound!=-1 || !g || g->sequenceType!=7 || g->frameCount!=((unitId==450 || unitId==451)?35:largeFish?30:(unitId==69 || unitId==458)?12:48) || g->angleCount!=1 || g->frameDuration!=((unitId==450 || unitId==451)?.1f:.13f) ||
        g->replayDelay!=0 || g->soundId!=-1 || !g->angleSounds.empty())return fail();
     int stores=0;for(const auto &storage:u.resourceStorages){if(storage.flag || (storage.type>=0 && (storage.type!=spec.resource || storage.amount!=spec.amount)))return fail();stores+=storage.type>=0;}
     if(stores!=(unitId==1585?0:1))return fail();
@@ -389,7 +391,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     const bool predator=isPredator(unitId);
     if(!objectRow && (unitId==349 || unitId==350 || unitId==351 || unitId==411 || unitId==413) && group.mode!=0)return fail("tree species requires verified mode0 rows");
     const bool tree=isTree(unitId) && group.mode==0,bird=unitId==816,largeFish=unitId==450 || unitId==451 || unitId==455 || unitId==456,
-        aquatic=unitId==69 || unitId==1585 || largeFish;
+        aquatic=unitId==458 || unitId==69 || unitId==1585 || largeFish;
     const bool bigHunt=unitId==822 || unitId==1249 || unitId==1364;
     const bool herd=crawler || unitId==594 || unitId==833 || hunt || predator || bigHunt;
     const auto *spec=crawler?validateSandcrawler(data,terrain,err):aquatic?validateAquatic(data,unitId,terrain,err):bird?validateBird(data,terrain,err):herd?validateHerd(data,unitId,terrain,err):validateResource(data,unitId,terrain,err);
@@ -584,7 +586,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
                 for(int xx=x-1;xx<=x+1;++xx)
                     if(occupied[yy*width+xx] || restriction[terrain[yy*width+xx]]<=.05f)return false;
         }
-        return (bird || aquatic || unitId==1120 || unitId==1123 || !occupied[tile]) && restriction[terrain[tile]]>.05f;
+        return (bird || aquatic || unitId==1120 || unitId==1122 || unitId==1123 || !occupied[tile]) && restriction[terrain[tile]]>.05f;
     };
     auto create=[&](int tile) {
         RmsTimberPlacement placement{float(tile%width)+(largeFish?0.f:.5f),float(tile/width)+(largeFish?0.f:.5f),0,0,unitId};
@@ -636,7 +638,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             for(int yy=int(std::floor(placement.y-radius));yy<int(std::ceil(placement.y+radius));++yy)
                 for(int xx=int(std::floor(placement.x-radius));xx<int(std::ceil(placement.x+radius));++xx)
                     if(xx>=0 && yy>=0 && xx<int(width) && yy<int(height))occupied[yy*width+xx]=true;
-        } else if(!herd && !bird && !aquatic && unitId!=1120 && unitId!=1123 && !crater)occupied[tile]=true;
+        } else if(!herd && !bird && !aquatic && unitId!=1120 && unitId!=1122 && unitId!=1123 && !crater)occupied[tile]=true;
     };
     RmsZoneCache resourceZones;
     for(size_t player=0;player<(perPlayer?novaPlayerStarts.size():1);++player) {

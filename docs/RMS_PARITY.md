@@ -4002,3 +4002,36 @@ regressions pass. Strict integrated RMS, production file/archive checks and
 desktop menu/render/audio-stream smoke also pass. The production audit accepts
 75 of138 configurations across25 map resources; this is acceptance coverage,
 not a percentage of complete engine parity.
+
+### Eredenn55017 neutral lake and frozen scenery (2026-11-16)
+
+Actual-derived Tiny/default two-Empire seeds1/12345/16160 match the full
+original runner:2164/2200/2209 objects, final RNG2210266758/2436159394/3370259064.
+All ordered IDs, owners, units, facets and exact positions match, alongside
+terrain/elevation/slope grids and captured startup animations. Native import
+fixtures retain263 original animation/health records and resource counters.
+
+The bounded profile adds two snow player lands followed by one neutral water
+land of288 target tiles. Existing position resolution produces the original
+neutral centers(68,71)/(55,51)/(70,93); no new random-placement algorithm was
+needed. Six terrain rows, four elevation levels and cliff settings5/8/4/10/10/2/3
+are checked explicitly. Unlike Tundra, the ice35 row is not flat-only.
+
+Frozen plant1122 reuses zero-height static decoration placement. Seafood458
+reuses animated type30 placement with its actual half-tile footprint, resource17
+amount225 and graphic5274 (12 frames, duration0.13). Original master/graphic/
+sound captures and static sprite-list layout evidence precede comparison;
+pose capture verifies that the selected sprite points at the standing graphic.
+These zero-height objects do not block subsequent placement. Prototype mutation
+checks reject invalid frozen-plant/seafood data atomically.
+
+Evidence: `rms-eredenn55017-full-startup-findings-2026-11-16.json`,
+`rms-eredenn55017-geometry-findings-2026-11-16.json`,
+`rms-eredenn55017-assets-provenance-2026-11-16.json`, and
+`rms-eredenn55017-sprite-layout-static-2026-11-16.txt`. Other sizes, civilizations
+and later gameplay remain outside these startup comparisons.
+
+Validation:103 retained packaged startup cases and the general/authored
+regressions pass, plus strict RMS, production file/archive tests and desktop
+menu/render/audio-stream smoke. The production audit accepts78 of138
+configurations across26 resources; acceptance is not whole-engine parity.
