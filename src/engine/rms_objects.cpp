@@ -538,7 +538,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
                 for(int xx=x-1;xx<=x+1;++xx)
                     if(occupied[yy*width+xx] || restriction[terrain[yy*width+xx]]<=.05f)return false;
         }
-        return (bird || unitId==1123 || !occupied[tile]) && restriction[terrain[tile]]>.05f;
+        return (bird || aquatic || unitId==1123 || !occupied[tile]) && restriction[terrain[tile]]>.05f;
     };
     auto create=[&](int tile) {
         RmsTimberPlacement placement{float(tile%width)+.5f,float(tile/width)+.5f,0,0,unitId};
@@ -556,6 +556,12 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             placement.headingRadians=float(double(heading)*3.14159265358979323846/4.);
             placement.facet=uint8_t((heading+7)%8);
         } else if(herd || aquatic) {
+            const auto &prototype=data.civs[0].units[unitId];
+            if(prototype.speed>1.e-7f) {
+                // Original4a1440 leaves moving objects .01 tiles inside their collision bounds.
+                placement.x=std::clamp(placement.x,prototype.collisionSize[0]+.01f,float(width)-prototype.collisionSize[0]-.01f);
+                placement.y=std::clamp(placement.y,prototype.collisionSize[1]+.01f,float(height)-prototype.collisionSize[1]-.01f);
+            }
             // Base facet, animated initial frame/phase, heading, then three action timers.
             genieRandomDraw(rng);genieRandomDraw(rng);
             const auto &g=*data.graphic(spec->graphic);
@@ -580,7 +586,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             for(int yy=int(std::floor(placement.y-radius));yy<int(std::ceil(placement.y+radius));++yy)
                 for(int xx=int(std::floor(placement.x-radius));xx<int(std::ceil(placement.x+radius));++xx)
                     if(xx>=0 && yy>=0 && xx<int(width) && yy<int(height))occupied[yy*width+xx]=true;
-        } else if(!herd && !bird && unitId!=1123 && !crater)occupied[tile]=true;
+        } else if(!herd && !bird && !aquatic && unitId!=1123 && !crater)occupied[tile]=true;
     };
     RmsZoneCache resourceZones;
     for(size_t player=0;player<(perPlayer?novaPlayerStarts.size():1);++player) {
@@ -657,7 +663,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             while(next[inner]>=0 && remaining>0) {
                 if(!spend(1)) return fail("work limit exceeded");
                 const int tile=pop(inner);
-                if(group.mode==1 && !pass(tile)) continue;
+                if(group.mode==1 && ((objectRow && objectRow->terrain>=0 && terrain[tile]!=objectRow->terrain) || !pass(tile))) continue;
                 create(tile);--remaining;
                 if(group.mode==2) {
                     eligible[tile]=false;
@@ -694,7 +700,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
 }
 bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
     const std::vector<uint8_t> &terrain,const dat::DatFile &data,
-    const std::vector<RmsPlayerStart> &playerStarts,uint32_t &randomState,
+    const std::vector<RmsPlayerStart> &landCenters,uint32_t &randomState,
     std::vector<RmsTimberPlacement> &out,std::string *err,
     const std::vector<uint32_t> &occupiedTiles,const std::vector<uint8_t> *rowEligibility) {
     out.clear();if(err) err->clear();
@@ -702,10 +708,10 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
         if(err) *err=std::string("RMS holocron: ")+reason;
         return false;
     };
-    if((width!=64 && width!=120) || height!=width || terrain.size()!=size_t(width)*height || playerStarts.size()!=2)
-        return fail("requires64/120-square terrain and two player starts");
-    for(const auto &start:playerStarts)
-        if(start.x<2 || start.y<2 || start.x>int(width)-2 || start.y>int(height)-2) return fail("invalid player start");
+    if((width!=64 && width!=120) || height!=width || terrain.size()!=size_t(width)*height || (landCenters.size()!=2 && (width!=120 || landCenters.size()!=4)))
+        return fail("requires64/120-square terrain and two land centers (or four at120)");
+    for(const auto &start:landCenters)
+        if(start.x<2 || start.y<2 || start.x>int(width)-2 || start.y>int(height)-2) return fail("invalid land center");
     if(std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
         return t!=0 && t!=27 && (width!=120 || (t!=1 && t!=2 && t!=4 && t!=5 && t!=6 && t!=9 && t!=10 && t!=12 && t!=18 && t!=20 && t!=21 && t!=22 && t!=41 && t!=44 && t!=14 && t!=45 && t!=46 && t!=50 && t!=19 && t!=26 && t!=32 && t!=33 && t!=34 && t!=36 && t!=49));
     }) || (width==64 && !occupiedTiles.empty()))
@@ -745,7 +751,7 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
         if((rowEligibility && !rowEligibility->empty() && !(*rowEligibility)[tile]) ||
            removed[tile] || occupied[tile] || pass[terrain[tile]]<=.05f) continue;
         const int x=tile%width,y=tile/width;
-        if(std::any_of(playerStarts.begin(),playerStarts.end(),[&](const auto &start) {
+        if(std::any_of(landCenters.begin(),landCenters.end(),[&](const auto &start) {
             return std::abs(x-start.x)<25 && std::abs(y-start.y)<25;
         })) continue;
         // Original4de1b0 removes temporary spacing nodes from this row's queue.

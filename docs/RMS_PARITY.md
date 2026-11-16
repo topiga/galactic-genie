@@ -2710,3 +2710,46 @@ The Tatooine production audit accepts21/138 standard cases, with117 unsupported
 cases still rejected. All20 shared packaged startup cases,52 general object-row
 cases, production CLI checks and desktop smoke pass. Desktop smoke uses dummy
 video/audio and verifies effects/music streaming rather than audible mixing.
+
+### Growing neutral lands and aquatic boundaries (2026-11-16)
+
+Raw packaged54209 now matches the complete original4df9b0 runner for fixed
+Tiny120/two-Empire/default-resource starts. This composition adds two growing
+neutral lands before the player lands, explicit player zones, elevation on two
+base terrains, flat-only water and cliffs. The existing geometry stages match
+without changing their algorithms; the acceptance gate remains limited to the
+compared composition.
+
+| Seed | Objects | Final RNG |
+|---|---:|---:|
+| 1 | 2846 | 2542443735 |
+| 12345 | 2805 | 4168222063 |
+| 16160 | 2793 | 3585658713 |
+
+All ordered object records, terrain/elevation/slopes and startup animation poses
+match. Three shared-controller corrections were necessary: global holocrons
+exclude neutral land centers as well as player centers; loose-group members
+individually check the requested terrain before placement (4dee03); and
+zero-height aquatic prototypes bypass object overlap (48e81b), including nearby
+cliff footprints. Moving objects also retain the4a1440 boundary clamp: the
+seed12345 fish enters its factory at x0.5 and exits at float0.51. Stationary
+waves retain their half-tile positions. Neither rejected loose-group terrain
+nor the boundary adjustment consumes random draws.
+
+The shared packaged suite now holds23 complete cases. New checks cover native
+import, Gaia cost counters3850/3800/3350, five holocrons, exact imported fish
+boundary position and atomic rejection of uncompared random-position starts.
+The private full comparison uses full-precision coordinates; the historical
+half-tile object hash alone would not detect the fish boundary difference.
+Evidence: `rms-packaged-mixed54209-full-findings-2026-11-16.json`, the three
+`rms-text-full-mixed54209-*-comparison-2026-11-16.json` reports and targeted
+loose-group/aquatic trace supplements. These execute the original PE locally
+with modeled host boundaries; they are not new live Windows captures or proof
+of all map settings, civilizations or subsequent gameplay.
+
+Validation passes all23 shared packaged fixtures,52 general object-row cases,
+Forest/holocron regressions, strict integrated RMS tests and production CLI
+checks. The production audit accepts24/138 sampled cases across eight map
+families;114 remain rejected. Native import also preserves zero-HP Gaia fish
+instead of raising them to1HP. The rebuilt desktop passes menu/preferences and
+headless effects/music smoke; audible mixing was not rechecked.

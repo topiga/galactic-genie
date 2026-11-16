@@ -371,8 +371,43 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         } else return fail("unsupported directive " + command);
     }
     if (base<0 || lands.empty()) return fail("explicit base terrain and at least one land required");
+    const bool mixedLandCliffs=[&]() {
+        if(width!=120 || height!=120 || base!=0 || !playerLands || playerLandBegin!=2 ||
+           playerCount!=2 || lands.size()!=4 || !playerZoneOverride || !ownedObjects ||
+           !startingWorkers || !startingScouts || workerGroups!=1 || scoutGroups!=1 ||
+           workerMinDistance!=6 || workerMaxDistance!=6 || startingStalagmites ||
+           playerCivilizations!=std::vector<uint16_t>{1,1} || !defines.count("FIXED_POSITIONS") ||
+           !cliffStage || !elevationStage || connectionStage || terrainRows.size()!=6 || elevationRows.size()!=12 ||
+           cliffSettings.minCount!=5 || cliffSettings.maxCount!=10 || cliffSettings.minLength!=4 ||
+           cliffSettings.maxLength!=10 || cliffSettings.curl!=10 || cliffSettings.waterDistance!=2 || cliffSettings.cliffDistance!=3)return false;
+        for(size_t n=0;n<lands.size();++n) {
+            const auto &land=lands[n];const auto &position=placements[n];const auto &metadata=landMetadata[n];
+            const bool neutral=n<2;const int border=n==0?18:n==1?48:0;
+            if(land.terrain!=(neutral?6:0) || land.radius!=(neutral?3u:9u) ||
+               land.targetTiles!=(n==0?12240u:n==1?720u:3600u) || land.zone!=(n==0?26:n==1?25:int(n)) ||
+               land.clumpingFactor!=8 || land.borderFuzziness!=20 || land.separation!=(neutral?0u:7u) ||
+               land.leftBorder!=border || land.topBorder!=border || land.rightBorder!=(neutral?120-border:-1) ||
+               land.bottomBorder!=(neutral?120-border:-1) || position.x!=-1 || position.y!=-1 ||
+               position.minPlacementDistance!=(n==0?100:-1) || metadata.owner!=(neutral?0:int(n-1)) ||
+               metadata.id!=(n==0?0:n==1?32:1))return false;
+        }
+        const uint32_t terrain[]={18,18,1,22,45,12},bases[]={0,0,0,1,6,0};
+        const uint32_t tiles[]={1728,720,144,144,1152,288},clumps[]={14,28,4,4,24,24},spacing[]={5,5,1,1,1,1};
+        for(size_t n=0;n<terrainRows.size();++n) {
+            const auto &row=terrainRows[n];
+            if(row.terrain!=terrain[n] || row.baseTerrain!=bases[n] || row.targetTiles!=tiles[n] ||
+               row.clumps!=clumps[n] || row.spacing!=spacing[n] || row.clumping!=20 ||
+               row.avoidPlayerStarts!=(n<4) || row.flatTerrainOnly!=(n==2 || n==3) || row.minHeight || row.maxHeight!=255)return false;
+        }
+        for(size_t n=0;n<elevationRows.size();++n) {
+            const auto &row=elevationRows[n];const auto level=n<5?n:n-5;
+            if(row.elevation!=level+1 || row.baseHeight!=level || row.baseTerrain!=(n<5?0u:6u) ||
+               row.targetTiles!=2000 || row.clumps!=20 || row.spacing!=(level==0?2u:1u))return false;
+        }
+        return true;
+    }();
     // shortcut: expand after composed original cliff/terrain/startup comparisons.
-    if(cliffStage) {
+    if(cliffStage && !mixedLandCliffs) {
         // Verified packaged Reytha/Arid/Hoth/Kessel geometry; other cliff compositions remain gated.
         const bool packagedCliffGeometry=[&]() {
             const unsigned kind=base==26 && terrainRows.size()==5 && terrainRows[0].terrain==46?4:base==32?3:base==14?1:base==26?2:0;
@@ -466,7 +501,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         }
     }
     if(allies && ownedObjects) return fail("allied owned-object startup remains unverified");
-    if(playerZoneOverride && ownedObjects) {
+    if(playerZoneOverride && ownedObjects && !mixedLandCliffs) {
         // shortcut: explicit zones on the compared flat120 Forest profile; extend geometry with original startup replays.
         if(width!=120 || height!=120 || base!=6 || playerCount!=2 || lands.size()!=2 ||
            elevationStage || connectionStage || !defines.count("FIXED_POSITIONS") ||
@@ -481,7 +516,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
            row.minHeight || row.maxHeight!=255)
             return fail("unsupported explicit-zone terrain profile");
     }
-    if(ownedObjects && lands.size()!=playerCount) {
+    if(ownedObjects && lands.size()!=playerCount && !mixedLandCliffs) {
         // shortcut: fixed neutral seed lands only; broaden after original mixed-land startup comparisons.
         if(width!=120 || height!=120 || base!=6 || playerLandBegin!=0 || playerCount!=2 ||
            lands.size()>playerCount+(cliffStage?1:2) || elevationStage || connectionStage ||
@@ -496,11 +531,11 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         }
     }
     const bool ownedForest=ownedObjects && playerLands && base==41 && lands[0].terrain==9;
-    const bool ownedMixedForest=ownedObjects && playerLands && (base==6 || base==12 || base==14 || base==26 || base==32 || base==41) && lands[0].terrain==base &&
+    const bool ownedMixedForest=mixedLandCliffs || (ownedObjects && playerLands && (base==6 || base==12 || base==14 || base==26 || base==32 || base==41) && lands[0].terrain==base &&
         width==120 && height==120 && playerCount==2 && playerCivilizations.size()==2 &&
         std::all_of(playerCivilizations.begin(),playerCivilizations.end(),[](uint16_t civ){return civ>=1 && civ<=8;}) &&
         startingWorkers && startingScouts && workerMinDistance==6 && workerMaxDistance==6 &&
-        !startingStalagmites;
+        !startingStalagmites);
     if (startingStalagmites) {
         if (!ownedForest)
             return fail("starting573 requires forest Command Centers");
@@ -811,7 +846,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 return fail("owned forest starts require dry terrain and live411 scenery");
         } else if (ownedMixedForest) {
             for(auto tile:generated.terrain)
-                if(tile!=1 && tile!=2 && tile!=4 && tile!=5 && tile!=6 && tile!=9 && tile!=10 && tile!=12 && tile!=18 && tile!=20 && tile!=21 && tile!=22 && tile!=41 && tile!=44 && tile!=14 && tile!=45 && tile!=46 && tile!=50 && tile!=19 && tile!=26 && tile!=32 && tile!=33 && tile!=34 && tile!=49)
+                if(tile!=0 && tile!=1 && tile!=2 && tile!=4 && tile!=5 && tile!=6 && tile!=9 && tile!=10 && tile!=12 && tile!=18 && tile!=20 && tile!=21 && tile!=22 && tile!=41 && tile!=44 && tile!=14 && tile!=45 && tile!=46 && tile!=50 && tile!=19 && tile!=26 && tile!=32 && tile!=33 && tile!=34 && tile!=49)
                     return fail("unsupported Forest startup terrain "+std::to_string(tile));
             for(const auto &tree:generated.scenery)
                 if((!isTree(tree.unitId) && tree.unitId!=217 && tree.unitId!=1341) || !tree.alive) return fail("Forest startup requires live348/349/411/413 scenery");
@@ -1073,8 +1108,10 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                        row.landId!=-2 || row.minDistance!=25 || row.terrain!=-1 || row.spacing ||
                        row.temporarySpacing!=20 || row.zoneDistance)
                         return fail("unsupported holocron placement modifiers");
+                    std::vector<RmsPlayerStart> landCenters;
+                    for(const auto &land:generated.lands) landCenters.push_back(land.center);
                     if(!generateRmsHolocronPlacements(width,height,generated.terrain,data,
-                        generated.playerStarts,rng,placed,err,rowBlockers,&eligibility)) return false;
+                        landCenters,rng,placed,err,rowBlockers,&eligibility)) return false;
                 } else {
                     RmsGlobalGroupPlacement global;
                     if(row.landId==-2 || row.landId>=0) {
@@ -1085,8 +1122,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                         placed,err,rowBlockers,16000000,selectedStarts,
                         RmsResourceDistance::Near,&eligibility,(row.landId==-2 || row.landId>=0)?&global:nullptr,nullptr,&row)) return false;
                 }
-                // Original waves and zero-height plants do not block later objects.
-                for(const auto &object:placed) if(object.unitId!=816 && object.unitId!=1585 && object.unitId!=1123 && (object.unitId<1329 || object.unitId>1331)) {
+                // Original zero-height aquatic objects and plants do not block later objects.
+                for(const auto &object:placed) if(object.unitId!=816 && object.unitId!=1585 && object.unitId!=69 && object.unitId!=1123 && (object.unitId<1329 || object.unitId>1331)) {
                     if(object.unitId==1019 || object.unitId==1020 || object.unitId==1165 || object.unitId==1166 || isGaiaBuilding(object.unitId))
                         appendFootprint(object,blockers);
                     else blockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));

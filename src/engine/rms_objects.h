@@ -113,15 +113,15 @@ bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
     const RmsGlobalGroupPlacement *globalPlacement=nullptr,
     const RmsResourcePlayerRange *playerRange=nullptr,
     const RmsObjectRow *objectRow=nullptr);
-// Original stock holocron285 row: five global placements, player exclusion25,
+// Original stock holocron285 row: five global placements, land-center exclusion25,
 // temporary spacing20. Bounded to64-square grass or120-square dry/Forest21 terrain
-// with two starts;120 may retain centered411/413 trees. Slopes do not restrict it. Owned starting
-// objects must remain within9 tiles of starts; other Gaia objects are unsupported.
+// with two land centers (or four at120). Slopes do not restrict it; occupiedTiles
+// supplies retained static obstacles, including forest trees and starting buildings.
 // This helper does not import holocrons or implement their pickup/gameplay.
 // Partial placement when the candidate queue exhausts is successful.
 bool generateRmsHolocronPlacements(uint32_t width, uint32_t height,
     const std::vector<uint8_t> &terrain, const dat::DatFile &data,
-    const std::vector<RmsPlayerStart> &playerStarts, uint32_t &randomState,
+    const std::vector<RmsPlayerStart> &landCenters, uint32_t &randomState,
     std::vector<RmsTimberPlacement> &out, std::string *err=nullptr,
     const std::vector<uint32_t> &occupiedTiles={},
     const std::vector<uint8_t> *rowEligibility=nullptr);

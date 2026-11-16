@@ -1547,9 +1547,8 @@ Game::Object *Game::addObject(const dat::Unit *unit, int player, float x, float 
             object.resourceAmount = storage.amount;
             break;
         }
-    // Original static resource constructors retain zero HP; resources are alive by state/amount.
-    if (player==0 && unit->type<dat::UT_Combatant && unit->speed==0 &&
-        unit->hitPoints==0 && object.resourceAmount>0)
+    // Original Gaia resource/decorative constructors retain zero HP, including moving fish.
+    if (player==0 && unit->type<dat::UT_Combatant && unit->hitPoints==0)
         object.hitPoints=object.maxHitPoints=0;
     object.facing = facing;
     object.spawnId = spawnId;
