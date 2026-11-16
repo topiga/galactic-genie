@@ -4588,3 +4588,83 @@ automatic-technology tests pass under the same sanitizers. Ten comparator tests
 pass, as do eleven malformed snapshot-argument controls. The rebuilt desktop
 passes dummy-driver menu/start/pause navigation and 60 render frames with effect
 playback, streamed music and EOF looping. This is not a new live Windows UI test.
+
+### Three through eight owners and whole allied-team selection (2026-11-16)
+
+Sixteen complete authored RMS comparisons now match ordered objects, poses,
+terrain/elevation/slope bytes and final RNG: fixed seed 1 at 144/200 for every
+player count 3–8, plus random seed 20261116 at both dimensions for counts 3/8.
+All players are Empire; each owns a Command Center, three workers and a scout.
+Independent original owner contexts include captured masters, resource arrays,
+research, visibility, queues, object lists, AI and diplomacy. A relocated
+2-player control matches the previous reference exactly. The native shared
+owned-land/scout path no longer imposes a two-owner limit; other asset, terrain,
+square-map and placement-distance checks remain. The original still registers
+TINY_MAP, so these raw dimensions do not establish named UI map-size presets.
+
+The original whole selector at601f90 also executes successfully for civilizations
+6/6 and6/1 with enemy, mutual-allied and directional diplomacy. Both recipients
+have full original master tables (1596 slots,1446 nonnull records). The actual
+getters, alliance predicate and effect callbacks run. The configuration gates
+are an explicit zero-valued fixture, not a recovered normal-world option mapping;
+CRT allocation boundaries remain modeled. Each case restores verified pre-bonus
+state. This establishes selection for those raw inputs, not all session setup.
+
+Observed effect orders:
+
+| Civilizations | Relationship | Player1 | Player2 |
+|---|---|---|---|
+|6/6|enemy, mutual or directional|9,15|9,15|
+|6/1|enemy|9,15|4,10|
+|6/1|mutual allies|9,10,15|4,10,15|
+|6/1|only1 treats2 as ally|9,10,15|4,10|
+
+Thus own teams apply, duplicate civilizations do not stack, alliances are
+recipient-directional, and teams are ordered by civilization rather than by
+recipient or effect discovery. The existing native selection agrees; no special
+civilization/team branch was added. Retained tests check dispatch order and
+recipient-specific LOS/search-radius changes.
+
+Local evidence ledgers: `rms-commonborder-count-startup-context-findings-2026-11-16.json`
+and `rms-whole-selector-findings-2026-11-16.json`; native matrix report is
+`rms-count-full-matrix/report.json` in the build directory. Full game-session
+construction, mixed-civilization3–8-owner worlds and unrelated unit catalogs
+remain outside this authored RMS evidence.
+
+### Combined prototype upgrades and HP commands (2026-11-16)
+
+Seven actual original109→71 sequences show in-place source-master replacement,
+not an ID alias. The source slot/pointer and ID109 remain; target71 stays a
+separate prototype. Existing and newly requested109 objects use the copied
+source state. HP changes to109 before an upgrade are overwritten by target71's
+current state; changes to71 before the upgrade are copied. Later commands to109
+affect the source objects, while later commands to71 do not affect them.
+
+For a damaged109 at1000/2500: adding500 to109 then upgrading restores1000/2500;
+upgrading then adding500 to109 produces1200/3000; adding500 to71 before upgrading
+also produces1200/3000. Repeated upgrades preserve those stats but consume
+original animation-related RNG. Native upgrade sprite/RNG equivalence remains
+unverified and is not included in the new stat/identity claim.
+
+The implementation replaces transitive ID aliases with stable per-player
+prototype records and copied attribute-command histories. This carries the
+source/target distinction through HP, other attributes, costs, training times,
+attack and armour. Shared DAT assets remain immutable. Gate variants must use
+the same stable per-player prototypes so a research refresh cannot turn an open
+gate into a pointer-identity mismatch.
+
+Validation: the sixteen retained count/dimension cases and one fresh three-player
+seed12345 original run match. The fresh driver passes the complete civilization
+list and player count to a separate immutable Empire-only probe. Ten comparator
+tests, the packaged/general/owned startup and import suite, and focused costs,
+civilization/team, combined upgrade/HP, combat modifiers, healing and automatic
+research checks pass; native suites use ASan/UBSan. The file/DRS CLI suite passes,
+including a positive three-player scout render and invalid-civilization rejection.
+The rebuilt desktop passes menu navigation and60 render/audio smoke frames.
+
+The broader `swgbtool test-combat` still fails building destruction and attacker
+spacing checks. A separately compiled pre-change538778b build produces identical
+combat diagnostics and failure; no assertions were relaxed. Logs are retained
+as `count-upgrade-combat-check.log` and `count-upgrade-baseline-combat.log` in the
+build directory. This is an existing gameplay validation gap, not a passing
+end-to-end gameplay claim. No new live Windows UI comparison was performed.

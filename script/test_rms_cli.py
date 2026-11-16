@@ -308,8 +308,12 @@ with tempfile.TemporaryDirectory(prefix='rms-cli-', dir=build) as directory:
     output=run(['render-rms',data,root/'tools/fixtures/owned-scouts.rms',32,1,work/'scouts.png',
                 '--players',2,'--civilization',1,'--civilization',1],0)
     assert '10 native objects' in output and '512005877' in output
+    output=run(['render-rms',data,root/'tools/fixtures/owned-scouts.rms',32,1,work/'three-player-scouts.png',
+                '--players',3,'--civilization',1,'--civilization',2,'--civilization',3],0)
+    assert '15 native objects' in output
+    assert (work/'three-player-scouts.png').stat().st_size>100
     run(['render-rms',data,root/'tools/fixtures/owned-scouts.rms',32,1,work/'invalid-scouts.png',
-         '--players',3,'--civilization',1,'--civilization',2,'--civilization',3],1)
+         '--players',3,'--civilization',1,'--civilization',2,'--civilization',65535],2)
     assert not (work/'invalid-scouts.png').exists()
     nova=work/'near-nova.rms'
     nova.write_text((root/'tools/fixtures/owned-scouts.rms').read_text()+'''
