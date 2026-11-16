@@ -5188,3 +5188,17 @@ The next integration prerequisite is the actual depletion/state-entry and
 dead-unit creation path, followed by separating actionability from persistent
 update-list membership. Rebuilding lists from `active`, or assigning a fixed
 removal delay to every exhausted resource, would encode the wrong algorithm.
+
+The subsequent nine actual gather-update controls close the decrement boundary:
+`404ee0` through target/worker virtualFC `5519b0` changes resource amount but not
+target HP, state or membership. Exact exhaustion requests the worker's
+search/drop-off state; it does not invoke target kill. The acquisition
+constructor `404160/40ad40` adds a target reference without initiating death.
+Thus a target already in state3/5 can finalize on later owner updates, while
+state2/HP50 remains alive after exhaustion. The unresolved earlier preparation
+path is now narrowed to task selection `409a60 → master+104 task-table virtual+4`
+and its felling/attack action. Local evidence:
+`gather-depletion-entry-findings-2026-11-16.json`,
+`gather-depletion-entry-v1-oracle-2026-11-16.json`, and the companion assembly.
+This is an explicit remaining mismatch with native gather's immediate
+`killObject` call, not evidence that native resource death is already equivalent.
