@@ -3576,3 +3576,21 @@ wall insertion and elevated building gates are still not enabled by this change.
 
 All68 packaged and29 authored building regressions pass under ASan/UBSan,
 and strict integrated RMS checks pass after sharing the eligibility grid.
+
+
+### Wall boundary controller (2026-11-16)
+
+The native controller now reproduces original499a60's obstruction grid,
+consumed direction bytes, eight side routes, reachability, pruning and ordered
+wall segments for three authored flat120 Empire fixtures (seeds1,12345,16160).
+The shared tests construct its inputs from native-generated cliffs, surviving
+scenery and starting objects; they do not replay captured object coordinates.
+All16 stage hashes per seed match the original executable. Unsupported
+obstructions and malformed grids reject without replacing the output.
+
+Evidence: `rms-wall117-native-prototype-findings-2026-11-16.json` and the three
+`rms-text-full-wall117-gatelist-1-1-SEED-stage-inputs-2026-11-16.json` captures.
+Only the low direction byte consumed by this controller is reproduced; this is
+not a claim of complete original hierarchical pathfinding. Gate creation,
+wall-row integration and full packaged54208 remain separate work. These three
+boundary comparisons do not increase the complete packaged-map case count.

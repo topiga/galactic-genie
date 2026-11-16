@@ -39,6 +39,7 @@ set(SWGB_CORE_SOURCES
     src/engine/rms_connections.cpp
     src/engine/rms_slopes.cpp
     src/engine/rms_zones.cpp
+    src/engine/rms_walls.cpp
     src/engine/rms_map.cpp
     src/engine/rms_player_starts.cpp
     src/engine/ai_military.cpp

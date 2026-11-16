@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "rms_owned_building_checks.h"
+#include "rms_wall_checks.h"
 static void ownedRmsSpawnChecks(swgb::Assets &assets,swgb::SoftRenderer &renderer) {
     const std::string source=R"(<LAND_GENERATION> base_terrain 0
         create_player_lands { terrain_type 0 base_size 3 number_of_tiles 60 }
@@ -110,5 +111,6 @@ static void ownedRmsSpawnChecks(swgb::Assets &assets,swgb::SoftRenderer &rendere
               game.populationCapacityForTesting(owner)==(owner==5?200.f:5.f),
               "Independent owner resources and population after many-owner import");
     ownedRmsBuildingChecks(assets,renderer);
+    ownedRmsWallBoundaryChecks(assets);
     std::puts("PASS: owned RMS Command Center import, civilization order, population and cost accounting");
 }
