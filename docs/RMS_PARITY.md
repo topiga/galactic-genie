@@ -101,9 +101,29 @@ applying their inner placement distance, as the original does.
 This enables the bounded fixed120/two-Empire profile with one or two fixed neutral
 seed lands (zero radius/growth, base terrain6), without cliffs, elevation or
 connections. These five cases also match all original startup poses and grids.
-Arbitrary owned rows, broader mixed-land startup and new unit constructors still
-reject explicitly. Dispatch matching alone does not establish full terrain or
-gameplay parity.
+Additional worker83/count1 rows now execute through the shared worker placement
+callback and remain interleaved with Gaia rows in native import. Three complete
+original runner comparisons cover a row just after scouts, a row after all Gaia,
+and two rows interleaved after Nova rows. They match6,209/6,208/6,215 ordered
+objects and RNG1555457656/1935763599/3226277433 respectively. The native importer
+checks all ownership/positions and54 original owned animation/health/foundation
+states across these cases. As in the original, each count1 row creates the owner's
+resource84 quantity (three in this verified profile), not one worker.
+
+The original resource arrays were also captured after a repeat replay that
+revalidated all records, poses, grids and RNG. Both owners have the following
+counters; native import compares resource4 to capacity minus usage and resource84
+to its civilization attribute, alongside the stored counters:
+
+| Additional worker rows | Population used/capacity | Resources4/11/21/37/40/84 | Cost counters98/164/165 |
+|---|---|---|---|
+| One | 7/5 | -2/7/2/6/1/3 | 725/350/375 |
+| Two | 10/5 | -5/10/2/9/1/3 | 875/500/375 |
+
+Other arbitrary owned rows, broader mixed-land startup and new unit constructors
+still reject explicitly. Additional workers currently require the verified
+ungrouped83/count1/radius3/min6/max6 profile without spacing/terrain modifiers.
+This does not establish full terrain or gameplay parity.
 
 ## General object-row controller: 2026-11-15
 

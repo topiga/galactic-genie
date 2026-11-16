@@ -1170,13 +1170,14 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     // RMS and saved scenarios use the same original world axes.
     for(size_t i=0;i<generated.terrain.size();++i)
         scenario.map.tiles[i].terrain=generated.terrain[i];
-    auto placeResource = [&](int unitId,float x,float y,uint8_t facet,uint32_t spawnId) {
+    auto placeResource = [&](int unitId,float x,float y,uint8_t facet,uint32_t spawnId,uint16_t owner=0) {
         ScenarioUnit unit;
         unit.unitId=unitId;
         unit.spawnId=spawnId;
+        unit.player=uint8_t(owner);
         unit.state=2;
         unit.x=x; unit.y=y;
-        const auto &prototype=assets_.dat().civs[0].units[unitId];
+        const auto &prototype=assets_.dat().civs[owner?playerCivilizations[owner-1]:0].units[unitId];
         const auto *graphic=assets_.dat().graphic(prototype.standingGraphic[0]);
         unit.rotation=rmsTimberFacing(facet,graphic->angleCount)+kPi*.5f;
         scenario.units.push_back(unit);
@@ -1210,7 +1211,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     }
     const uint32_t resourceIdBase=nextId;
     for (const auto &placement:generated.resourcesAfterOwned)
-        placeResource(placement.unitId,placement.x,placement.y,placement.facet,nextId++);
+        placeResource(placement.unitId,placement.x,placement.y,placement.facet,nextId++,placement.owner);
     scenario.nextUnitId=nextId;
     if (!initScenario(scenario,err)) return false;
     if(!generated.elevation.empty()) {
@@ -1224,6 +1225,18 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
             cornerElevation_[size_t(y)*(mapSize_+1)+x]=static_cast<uint8_t>(elevationAt(float(x),float(y)));
         lookAt(mapSize_*.5f,mapSize_*.5f);
     }
+    auto recordStartupCost=[&](const auto &unit,uint16_t owner) {
+        float cost=0;
+        for (const auto &entry:unit.costs)
+            if ((entry.flag&0xff) && entry.type>=0 && entry.type<=3) cost+=entry.amount;
+        // Original starting objects record their cost without charging the owner.
+        resources_[owner][98]+=cost;
+        resources_[owner][unit.type==dat::UT_Building?165:164]+=cost;
+        if (unit.cls==58 || unit.cls==47) {
+            resources_[owner][11]+=1;
+            resources_[owner][unit.cls==58?37:40]+=1;
+        }
+    };
     for (size_t index=0;index<generated.ownedObjects.size();++index) {
         const auto &placement=generated.ownedObjects[index];
         const auto &unit=assets_.dat().civs[placement.civilization].units[placement.unitId];
@@ -1233,20 +1246,13 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
             object->animTime=placement.animationFrame*(graphic?graphic->frameDuration:0.f);
             object->initialIdleDelay=placement.initialIdleDelay;
         }
-        float cost=0;
-        for (const auto &entry:unit.costs)
-            if ((entry.flag&0xff) && entry.type>=0 && entry.type<=3) cost+=entry.amount;
-        // Original starting objects record their cost without charging the owner.
-        resources_[placement.owner][98]+=cost;
-        resources_[placement.owner][unit.type==dat::UT_Building?165:164]+=cost;
-        if (unit.cls==58 || unit.cls==47) {
-            resources_[placement.owner][11]+=1;
-            resources_[placement.owner][unit.cls==58?37:40]+=1;
-        }
+        recordStartupCost(unit,placement.owner);
     }
     for(size_t index=0;index<generated.resourcesAfterOwned.size();++index) {
         const auto &placement=generated.resourcesAfterOwned[index];
+        if(placement.owner)recordStartupCost(assets_.dat().civs[playerCivilizations[placement.owner-1]].units[placement.unitId],placement.owner);
         if(auto *object=findObject(resourceIdBase+uint32_t(index))) {
+            if(placement.owner)object->pendingFoundation=255;
             const auto *graphic=assets_.dat().graphic(object->unit->standingGraphic[0]);
             object->animTime=placement.animationFrame*(graphic?graphic->frameDuration:0.f);
             object->initialIdleDelay=placement.initialIdleDelay;

@@ -832,11 +832,12 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             pass[terrain]=1;
             return startZones.lookup(width,generated.terrain,pass,index,err);
         };
-        if (startingWorkers) for (const auto &target:startupTargets) {
-            const auto owner=uint16_t(target.owner);
-            const auto &center=generated.playerStarts[owner-1];
+        auto placeWorkers=[&](uint16_t owner,const RmsPlayerStart &center,int minimum,int maximum,
+                              const std::vector<uint32_t> &blockedTiles,const std::vector<uint8_t> *eligibility,auto emit) {
             std::vector<uint32_t> candidates;
-            if (!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,workerMaxDistance,rng,candidates,err)) return false;
+            if (!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,maximum,rng,candidates,err)) return false;
+            if(eligibility && !eligibility->empty())candidates.erase(std::remove_if(candidates.begin(),candidates.end(),
+                [&](uint32_t tile){return !(*eligibility)[tile];}),candidates.end());
             uint32_t zoneIndex;
             if(!startZone(center,25,zoneIndex)) return false;
             const auto &zones=startZones.entry(zoneIndex)->zones.tiles;
@@ -848,13 +849,13 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(zones[tile]!=zone) continue;
                 const int x=tile%width,y=tile/width;
                 if (std::any_of(generated.lands.begin(),generated.lands.end(),[&](const auto &land) {
-                    return std::abs(x-land.center.x)<workerMinDistance && std::abs(y-land.center.y)<workerMinDistance;
+                    return std::abs(x-land.center.x)<minimum && std::abs(y-land.center.y)<minimum;
                 })) continue;
                 const float px=x+.5f,py=y+.5f;
                 // Original RMS placement ignores existing workers, but blocks every owner's CC.
                 const bool blocked=pass[generated.terrain[tile]]<=.05f || std::any_of(generated.ownedObjects.begin(),generated.ownedObjects.end(),[&](const auto &object) {
                     return object.unitId==109 && std::abs(px-object.x)<2.2f && std::abs(py-object.y)<2.2f;
-                }) || std::binary_search(occupied.begin(),occupied.end(),tile);
+                }) || std::binary_search(blockedTiles.begin(),blockedTiles.end(),tile);
                 if (blocked && tile!=candidates.back()) continue;
                 // Original forces the last rejected candidate without a gender draw or count decrement.
                 if (!blocked && unitId==83 && genieRandomDraw(rng)>16383) unitId=293;
@@ -869,10 +870,14 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     }
                     if (draw==3) facet=uint8_t((value*8u/32767u+7)%8);
                 }
-                generated.ownedObjects.push_back({px,py,owner,playerCivilizations[owner-1],unitId,255,facet,frame,delay});
+                emit(RmsOwnedPlacement{px,py,owner,playerCivilizations[owner-1],unitId,255,facet,frame,delay});
                 if (blocked || !--remaining) break;
             }
-        }
+            return true;
+        };
+        if (startingWorkers) for (const auto &target:startupTargets)
+            if(!placeWorkers(uint16_t(target.owner),generated.lands[target.landIndex].center,workerMinDistance,workerMaxDistance,
+                occupied,nullptr,[&](const auto &object){generated.ownedObjects.push_back(object);}))return false;
         if (startingScouts) for (const auto &target:startupTargets) {
             const auto owner=uint16_t(target.owner);
             const auto civ=playerCivilizations[owner-1];const int id=scoutIds[civ-1];
@@ -933,6 +938,29 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 std::vector<RmsObjectTarget> targets;
                 if(!selectRmsObjectTargets(row,generated.lands,playerCount,targets,err))return false;
                 if(targets.empty())continue;
+                const bool ownedRow=std::any_of(targets.begin(),targets.end(),[](const auto &target){return target.owner>0;});
+                if(ownedRow) {
+                    // shortcut: additional worker83/count1 rows; other owned constructors need original comparisons.
+                    if(row.unitId!=83 || row.mode || row.groups!=1 || row.perGroup!=1 || row.variance || row.radius!=3 ||
+                       row.terrain!=-1 || row.minDistance!=6 || row.maxDistance!=6 || row.spacing || row.temporarySpacing || row.zoneDistance)
+                        return fail("unsupported additional owned object row");
+                    auto workerBlockers=occupied;
+                    for(const auto &object:generated.resourcesAfterOwned)
+                        if(!object.owner && (object.unitId==59 || object.unitId==66 || object.unitId==102 || isTree(object.unitId)))
+                            workerBlockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
+                    std::sort(workerBlockers.begin(),workerBlockers.end());
+                    workerBlockers.erase(std::unique(workerBlockers.begin(),workerBlockers.end()),workerBlockers.end());
+                    for(const auto &target:targets) {
+                        if(target.owner<=0 || target.landIndex<0)return fail("additional workers require owned selected lands");
+                        if(!placeWorkers(uint16_t(target.owner),generated.lands[target.landIndex].center,6,6,workerBlockers,&eligibility,
+                            [&](const auto &object) {
+                                generated.resourcesAfterOwned.push_back({object.x,object.y,object.facet,0,object.unitId,
+                                    object.animationFrame,object.initialIdleDelay,object.owner});
+                                blockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
+                            }))return false;
+                    }
+                    continue;
+                }
                 std::vector<RmsPlayerStart> selectedStarts;
                 for(const auto &target:targets) {
                     if(target.owner!=0)return fail("owned resource construction remains unsupported");

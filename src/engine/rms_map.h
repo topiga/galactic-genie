@@ -25,7 +25,7 @@ struct RmsMap {
     std::vector<RmsSceneryPlacement> scenery; // Creation order, including removed scenery.
     std::vector<RmsMapLand> lands; // Original source order, land ID and owner preserved.
     std::vector<RmsPlayerStart> playerStarts; // Owner order1..playerCount; no starting units implied.
-    std::vector<RmsTimberPlacement> resourcesAfterOwned; // Verified stock resource prefix, after starting units.
+    std::vector<RmsTimberPlacement> resourcesAfterOwned; // Ordered rows after initial startup, including owned workers.
     std::vector<RmsOwnedPlacement> ownedObjects; // Starting buildings and units, in creation order.
 };
 
