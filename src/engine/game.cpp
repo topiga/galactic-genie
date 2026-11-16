@@ -15326,9 +15326,13 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
             if (playInterfaceSound_)
                 playInterfaceSound_(
                     kInterfaceCannotDoSound);
-        } else if (issueGarrisonCommand(*building)) {
-            garrisonCursorActive_ = false;
-            flashCommandTarget(*building);
+        } else {
+            const uint32_t targetId=building->spawnId;
+            garrisonCursorActive_=false;
+            enqueueSelectedCommand(false,[this,targetId](const std::vector<Object *> &selected) {
+                Object *target=findObject(targetId);
+                if (target && target->active && issueGarrisonCommand(*target,selected)) flashCommandTarget(*target);
+            });
         }
         garrisonHandled = true;
     }
@@ -15353,10 +15357,19 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
             objectAtScreen(
                 in.pointerX, in.pointerY,
                 in.screenW, in.screenH);
+        const auto workers=selectedObjectsInOrder(true);
+        const bool repairable=target && std::any_of(workers.begin(),workers.end(),
+            [this,target](const Object *worker){return isRepairableBy(*worker,*target);});
+        if (repairable) {
+        const uint32_t targetId=target?target->spawnId:0;
+        repairCursorActive_=false;
+        enqueueSelectedCommand(true,[this,targetId](const std::vector<Object *> &selected) {
+        Object *target=targetId?findObject(targetId):nullptr;
+        if (target && !target->active) target=nullptr;
         Object *acknowledgement = nullptr;
         if (target)
             for (Object *worker :
-                 selectedObjectsInOrder(true))
+                 selected)
                 if (issueRepairCommand(
                         *worker, *target) &&
                     !acknowledgement)
@@ -15364,7 +15377,6 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
         if (acknowledgement) {
             playUnitAcknowledgement(
                 *acknowledgement, false);
-            repairCursorActive_ = false;
             flashCommandTarget(*target);
             statusMessage_ =
                 "REPAIRING " +
@@ -15374,6 +15386,11 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
             statusMessage_ =
                 "THAT TARGET CANNOT BE REPAIRED";
             statusTime_ = 3.0f;
+        }
+        });
+        } else {
+            statusMessage_="THAT TARGET CANNOT BE REPAIRED";
+            statusTime_=3.f;
         }
         repairHandled = true;
     }
@@ -15405,14 +15422,28 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
         in.pointerY <
             in.screenH -
                 kSelectionPanelHeight) {
-        std::vector<Object *> selected =
-            selectedObjectsInOrder(true);
+        float targetX=0, targetY=0;
+        screenToWorld(in.pointerX,in.pointerY,in.screenW,in.screenH,targetX,targetY);
+        const Object *clicked=objectAtScreen(in.pointerX,in.pointerY,in.screenW,in.screenH);
+        const uint32_t targetId=clicked?clicked->spawnId:0;
+        const UnitCommand command=pendingUnitCommand_;
+        const auto actors=selectedObjectsInOrder(true);
+        const bool valid=std::any_of(actors.begin(),actors.end(),[&](const Object *actor) {
+            if (command==UnitCommand::Patrol) return true;
+            if (command==UnitCommand::Unload)
+                return isTransport(*actor) && garrisonedCount(*actor,false)>0 &&
+                    std::isfinite(targetX) && std::isfinite(targetY) && targetX>=0 && targetY>=0 &&
+                    targetX<mapSize_ && targetY<mapSize_;
+            if (!clicked || !clicked->active || clicked->hidden || actor==clicked ||
+                !isFriendlyPlayer(actor->player,clicked->player)) return false;
+            return command!=UnitCommand::Heal || canHeal(*actor,*clicked);
+        });
+        if (valid) {
+        unitCommandCursorActive_=false;
+        enqueueSelectedCommand(true,[this,command,targetId,targetX,targetY](const std::vector<Object *> &selected) {
         Object *acknowledgement = nullptr;
         bool issued = false;
-        if (pendingUnitCommand_ == UnitCommand::Unload) {
-            float targetX = 0, targetY = 0;
-            screenToWorld(in.pointerX, in.pointerY, in.screenW, in.screenH,
-                          targetX, targetY);
+        if (command == UnitCommand::Unload) {
             for (Object *unit : selected) {
                 if (!issueUnloadOrder(*unit, targetX, targetY)) continue;
                 issued = true;
@@ -15423,14 +15454,8 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
                 commandMarkerY_ = targetY;
                 commandMarkerTime_ = 0.65f;
             }
-        } else if (pendingUnitCommand_ ==
+        } else if (command ==
             UnitCommand::Patrol) {
-            float targetX = 0.0f;
-            float targetY = 0.0f;
-            screenToWorld(
-                in.pointerX, in.pointerY,
-                in.screenW, in.screenH,
-                targetX, targetY);
             for (Object *unit : selected) {
                 clearUnitCommandOrder(*unit);
                 unit->patrolActive = true;
@@ -15456,12 +15481,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
             commandMarkerY_ = targetY;
             commandMarkerTime_ = 0.65f;
         } else {
-            Object *target =
-                objectAtScreen(
-                    in.pointerX,
-                    in.pointerY,
-                    in.screenW,
-                    in.screenH);
+            Object *target = targetId?findObject(targetId):nullptr;
             if (target && target->active &&
                 !target->hidden &&
                 isFriendlyPlayer(
@@ -15469,7 +15489,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
                     target->player)) {
                 for (Object *unit : selected) {
                     if (unit == target) continue;
-                    if (pendingUnitCommand_ == UnitCommand::Heal) {
+                    if (command == UnitCommand::Heal) {
                         if (issueHealCommand(*unit,*target)) {
                             issued=true;
                             if (!acknowledgement) acknowledgement=unit;
@@ -15481,7 +15501,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
                         false;
                     unit->attackTargetId = 0;
                     unit->moveGoalActive = false;
-                    if (pendingUnitCommand_ ==
+                    if (command ==
                         UnitCommand::Guard)
                         unit->guardTargetId =
                             target->spawnId;
@@ -15503,27 +15523,31 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
                     *acknowledgement,
                     false);
             statusMessage_ =
-                pendingUnitCommand_ == UnitCommand::Heal ? "HEALING" :
-                pendingUnitCommand_ == UnitCommand::Unload ? "UNLOADING" :
-                pendingUnitCommand_ ==
+                command == UnitCommand::Heal ? "HEALING" :
+                command == UnitCommand::Unload ? "UNLOADING" :
+                command ==
                         UnitCommand::Patrol
                     ? "PATROLLING"
-                    : pendingUnitCommand_ ==
+                    : command ==
                               UnitCommand::Guard
                           ? "GUARDING"
                           : "FOLLOWING";
             statusTime_ = 2.0f;
-            unitCommandCursorActive_ =
-                false;
         } else {
             showCannotDo(
                 -1,
-                pendingUnitCommand_ == UnitCommand::Heal ? "SELECT A WOUNDED FRIENDLY UNIT TO HEAL" :
-                pendingUnitCommand_ == UnitCommand::Unload ? "CANNOT UNLOAD THERE" :
-                pendingUnitCommand_ ==
+                command == UnitCommand::Heal ? "SELECT A WOUNDED FRIENDLY UNIT TO HEAL" :
+                command == UnitCommand::Unload ? "CANNOT UNLOAD THERE" :
+                command ==
                         UnitCommand::Patrol
                     ? "CANNOT PATROL THERE"
                     : "SELECT A FRIENDLY TARGET");
+        }
+        });
+        } else {
+            showCannotDo(-1,command==UnitCommand::Heal?"SELECT A WOUNDED FRIENDLY UNIT TO HEAL":
+                command==UnitCommand::Unload?"CANNOT UNLOAD THERE":
+                command==UnitCommand::Patrol?"CANNOT PATROL THERE":"SELECT A FRIENDLY TARGET");
         }
         unitCommandHandled = true;
     }
@@ -15560,9 +15584,10 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
             in.pointerX, in.pointerY,
             in.screenW, in.screenH,
             targetX, targetY);
+        enqueueSelectedCommand(true,[this,targetX,targetY](const std::vector<Object *> &selected) {
         Object *acknowledgement = nullptr;
         for (Object *source :
-             selectedObjectsInOrder(true))
+             selected)
             if (issueAttackGround(
                     *source, targetX, targetY) &&
                 !acknowledgement)
@@ -15574,6 +15599,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
             commandMarkerY_ = targetY;
             commandMarkerTime_ = 0.65f;
         }
+        });
         attackGroundCursorActive_ = false;
         attackGroundHandled = true;
     }
