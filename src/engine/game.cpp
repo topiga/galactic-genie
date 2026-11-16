@@ -3179,6 +3179,12 @@ int Game::attackDamage(const Object &source,
     ensureUnitPrototypes(source.player);
     ensureUnitPrototypes(target.player);
     int damage = 0;
+    // Runtime types10..40 inherit base calculator5518f0, without armour or minimum damage.
+    if (target.unit->type < dat::UT_Combatant) {
+        for (const dat::AttackOrArmor &attack : source.unit->attacks)
+            damage += modifiedAttackAmount(source, attack);
+        return damage;
+    }
     for (const dat::AttackOrArmor &attack :
          source.unit->attacks) {
         bool armourPresent = false;

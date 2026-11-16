@@ -3,6 +3,7 @@
 #include "hit_point_effect_checks.h"
 #include "gather_arithmetic_checks.h"
 #include "gather_resource_health_checks.h"
+#include "base_object_damage_checks.h"
 #include "combined_upgrade_checks.h"
 #include "allied_bonus_checks.h"
 #include "multiowner_bonus_checks.h"
@@ -23,6 +24,7 @@
 static void civilizationBonusChecks(swgb::Assets &assets) {
     gatherArithmeticChecks();
     gatherResourceHealthChecks(assets);
+    baseObjectDamageChecks(assets);
     hitPointEffectChecks(assets);
     combinedUpgradeChecks(assets);
     upgradeRngChecks(assets);

@@ -5270,3 +5270,33 @@ incorrect even if its first hit matched. Source controls are retained locally as
 `tree-attack-restart-v2-oracle-2026-11-16.json`. These execute original attack
 code with explicit lookup/visibility/notification boundaries; target owner
 lifecycle and full parent action110 transition are not yet established by them.
+
+The HP-independence change passes the focused ASan/UBSan checks, broad
+cost/bonus/research/healing/AI suite and combat/gather/drop-off regressions.
+The rebuilt desktop passes its menu and60-frame dummy-driver smoke test.
+Logs: `resource-health-{before,local,bonus,combat,desktop}.log` in the external
+build directory; `before` retains the intentional failing regression.
+
+Native attack damage now follows the verified target-runtime dispatch boundary:
+types10,15,20,25,30,40 inherit base calculator5518f0, which sums signed packet
+amounts without armour matching or minimum-one damage. Types50,60,70,80 retain
+the combat calculator path. Constructor vtable writes and +EC entries are
+recorded with original bytes/hash in
+`object-damage-vtable-dispatch-findings-2026-11-16.json`; type90 is not included.
+Native checks use shipped Gaia prototypes of the available base runtime classes
+and positive, zero and negative class999 attack packets. The old calculator
+failed this regression by imposing minimum-one damage. The existing combat
+regressions still cover armour matching and technology modifiers; this change
+does not newly reproduce terrain/elevation multipliers or health mutation.
+
+The bounded felling trace now executes actual target owner admission, completed
+attack destruction/child clearing, parent action110, movement construction and
+completion, and initial gathering. Parent progression is12→4→6→7; first transfer
+is0.039000000804662704 with tree remaining99.96099853515625. No child-result or
+child-clear bypass remains in v5. It still starts from an authored attackstate7,
+concatenates phases rather than running the world loop, uses coincident movement
+positions, and models movement/gather graphic changes and world side effects.
+This closes the action transition, not full elapsed-world timing or native
+felling parity. Exact branches, sprite arithmetic, failed probes and source
+hashes are in `tree-felling-release-transition-findings-2026-11-16.json`, with
+`tree-parent-to-gather-v5-oracle-2026-11-16.json` and the restart-v3 oracle.
