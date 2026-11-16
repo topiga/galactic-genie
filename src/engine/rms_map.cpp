@@ -616,7 +616,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     }
     const bool airTransport=std::any_of(resourceRows.begin(),resourceRows.end(),[](const auto &row){return row.unitId==1521;});
     if(airTransport) {
-        // shortcut: one transport row on the compared flat120 profile; extend quantities and geometry with original cases.
+        // shortcut: one transport row on the compared flat120 profile; extend geometry with original cases.
         if(!ownedMixedForest || base!=6 ||
            std::count_if(resourceRows.begin(),resourceRows.end(),[](const auto &row){return row.unitId==1521;})!=1 ||
            data.terrainRestrictions.size()<=23)
@@ -979,7 +979,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     // shortcut: compared worker/scout/transport profiles; extend other owned constructors with original comparisons.
                     const bool scout=row.unitId==550 && row.matchPlayerCiv;
                     const bool air=row.unitId==1521 && row.matchPlayerCiv;
-                    if((row.unitId!=83 && !scout && !air) || (air && row.groups!=1) || row.mode || row.perGroup!=1 || row.variance || row.radius!=3 ||
+                    if((row.unitId!=83 && !scout && !air) || row.mode || row.perGroup!=1 || row.variance || row.radius!=3 ||
                        row.terrain!=-1 || row.minDistance!=(air?3:scout?7:6) || row.maxDistance!=(scout?9:6) || row.spacing || row.temporarySpacing || row.zoneDistance)
                         return fail("unsupported additional owned object row");
                     auto staticBlockers=occupied;

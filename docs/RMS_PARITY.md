@@ -236,6 +236,35 @@ cover each civilization, not all64 pairings or every seed. The one-row/count1,
 flat120/base6 and distances3..6 limits remain. Full-map evidence and resource
 replay hashes are indexed in `rms-airtransport-findings-2026-11-16.json`.
 
+## Transport quantities and exhaustion: 2026-11-16
+
+The single transport row now accepts nonnegative ungrouped quantities. Three
+more complete original comparisons cover zero, two and99 per owner:
+
+| Requested per owner | Total map objects | Transports placed | Final RNG |
+|---:|---:|---|---:|
+| 0 | 6,202 | 0 / 0 | 1530472592 |
+| 2 | 6,206 | 2 / 2 | 4238084908 |
+| 99 | 6,316 | 63 / 51 | 2174457350 |
+
+All ordered records, grids, owned/Gaia poses and RNG match. Zero creates no
+transport but still consumes120 queue draws. The99 case exhausts candidate
+space; strict flying-object overlap prevents stacking transports. Independent
+original resource replays verify population/military counts and unit-cost
+accounting; native import compares these alongside height and sampled poses.
+
+This brings the general full-map suite to44 cases. Unsupported grouping variance
+still rejects without changing the running world or caller RNG. Evidence is
+indexed in `rms-airtransport-quantity-findings-2026-11-16.json`. Multiple transport
+rows, other owned-unit constructors and broader geometry remain unverified.
+
+The fresh production acceptance audit still passes9/138 packaged combinations
+(Forest, Reytha and Arid over three standard seeds each); this transport work
+does not yet unlock another complete packaged map. All44 general cases, the
+packaged-map regressions, transport render checks, RMS validation/CLI tests and
+desktop menu/audio smoke checks pass. The new audit is retained separately as
+`rms-packaged-generation-audit-transport-production-2026-11-16.json`.
+
 ## General object-row controller: 2026-11-15
 
 Gaia resources after owned startup now execute in source order from parsed rows,
