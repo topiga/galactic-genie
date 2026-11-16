@@ -5586,3 +5586,24 @@ completion and destroyed-foundation cancellation. Invalid construction targets
 are checked before building iteration so inactive foundations cannot strand their
 builders' references. Existing gather/list/clock/command checks pass. Log:
 `frozen-support-final-local.log`.
+
+### Garrison action primary ownership (2026-11-17)
+
+Original action3 constructor402f70 acquires via40ad40 at402fdb, and
+403010→40a8e0 releases the primary. Native accepted garrison now acquires after
+route validation and saved-work capture. Common cancellation, invalid/full
+containers and successful boarding release it; containment and saved work do
+not own action references. The test helper now calls the production order
+handler rather than assigning IDs and bypassing validation. Evidence:
+`garrison-primary-findings-2026-11-17.json` and its static assembly.
+
+This is primary ownership only: original movement children may target an object
+or coordinates, building-annex normalization is not newly ported, and successful
+boarding requests original action state1 before eventual controller destruction.
+Native boarding completion is the release adapter; exact destruction timing is
+not claimed. No uniform extra movement reference is inferred.
+
+Focused ASan/UBSan checks pass for accepted/rejected garrison ownership, thawing
+its container, Stop, boarding completion and container destruction, alongside
+all frozen-building/support-action/gather/list regressions. Log:
+`garrison-reference-local.log`.

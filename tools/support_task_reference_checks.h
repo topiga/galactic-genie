@@ -93,5 +93,22 @@ static void supportTaskReferenceChecks(swgb::Assets &assets) {
           "Frozen building skips production even though native production uses a separate phase");
     game.setBuildingFrozenForTesting(center,false);game.update(1.f,{});
     check(game.productionRemainingForTesting(center)<remaining,"Explicit thaw resumes production");
+    const auto passenger=game.spawnObjectForTesting(1,83,1,12.f,64.f);
+    game.setBuildingFrozenForTesting(center,true);
+    check(game.garrisonForTesting(passenger,center) && game.objectTaskReferencesForTesting(center)==1 &&
+          !game.objectFrozenForTesting(center),"Accepted garrison acquires and thaws its container");
+    check(!game.garrisonForTesting(passenger,wall) && game.objectTaskReferencesForTesting(center)==1,
+          "Rejected garrison preserves the existing container reference");
+    game.stopUnitForTesting(passenger);
+    check(game.objectTaskReferencesForTesting(center)==0,"Stop releases pending garrison reference");
+    check(game.garrisonForTesting(passenger,center),"Restart accepted boarding");
+    for(int tick=0;tick<200 && game.garrisonContainerForTesting(passenger)<0;++tick)game.update(.1f,{});
+    check(game.garrisonContainerForTesting(passenger)==int32_t(center) &&
+          game.objectTaskReferencesForTesting(center)==0,
+          "Boarding completes garrison action; containment is not a task reference");
+    const auto latePassenger=game.spawnObjectForTesting(1,83,1,12.f,68.f);
+    check(game.garrisonForTesting(latePassenger,center),"Acquire container before destruction");
+    game.damageObjectForTesting(center,100000);game.update(.1f,{});
+    check(game.objectTaskReferencesForTesting(center)==0,"Destroyed container releases pending garrison action target");
     std::puts("PASS: repair, heal and build primary references, rejection, replacement, death and completion");
 }

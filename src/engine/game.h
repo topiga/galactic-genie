@@ -192,14 +192,8 @@ public:
     // chosen variant id, or -(id + 2) if it could not be placed.
     int placeGateForTesting(uint32_t workerId, int civilization, float x, float y);
     bool garrisonForTesting(uint32_t unitId, uint32_t buildingId) {
-        Object *u = findObject(unitId);
-        Object *b = findObject(buildingId);
-        if (!u || !b || !canGarrison(*u, *b)) return false;
-        u->garrisonTargetId = buildingId;
-        float tx = 0, ty = 0;
-        interactionPoint(*u, *b, 0.35f, tx, ty);
-        issueMove(*u, tx, ty, b, 0.35f);
-        return true;
+        Object *u = findObject(unitId), *b = findObject(buildingId);
+        return u && b && issueGarrisonOrder(*u,*b);
     }
     int garrisonVolleyForTesting(uint32_t buildingId) const {
         const Object *b = findObject(buildingId);

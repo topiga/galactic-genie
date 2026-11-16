@@ -4840,6 +4840,7 @@ void Game::clearUnitCommandOrder(
         unit.animTime = 0.f;
     }
     setTaskReference(unit.healTargetId, 0);
+    setTaskReference(unit.garrisonTargetId, 0);
     clearConstructionAssignment(unit);
     if (unit.state == State::Heal) unit.state = State::Idle;
     unit.rememberedAttackId=0;
@@ -4858,7 +4859,7 @@ void Game::stopUnit(Object &unit) {
     setGatherTarget(unit, 0);
     setDropOffTarget(unit, 0);
     setTaskReference(unit.repairTargetId, 0);
-    unit.garrisonTargetId = 0;
+    setTaskReference(unit.garrisonTargetId, 0);
     unit.attackTargetId = 0;
     unit.attackAutomatic = false;
     unit.attackGroundActive = false;
@@ -6382,7 +6383,7 @@ bool Game::issueGatherCommand(
     worker.attackAutomatic = false;
     worker.attackGroundActive = false;
     worker.attackShotPending = false;
-    worker.garrisonTargetId = 0;
+    setTaskReference(worker.garrisonTargetId, 0);
     setTaskReference(worker.repairTargetId, 0);
     setGatherTarget(worker, resource.spawnId);
     worker.resourceWorkTargetId =
@@ -6474,7 +6475,7 @@ bool Game::issueDropOffCommand(
     worker.attackAutomatic = false;
     worker.attackGroundActive = false;
     worker.attackShotPending = false;
-    worker.garrisonTargetId = 0;
+    setTaskReference(worker.garrisonTargetId, 0);
     setTaskReference(worker.repairTargetId, 0);
     setDropOffTarget(worker, building.spawnId);
     worker.manualDropOff = true;
@@ -6562,7 +6563,7 @@ bool Game::issueRepairCommand(
     worker.attackAutomatic = false;
     worker.attackGroundActive = false;
     worker.attackShotPending = false;
-    worker.garrisonTargetId = 0;
+    setTaskReference(worker.garrisonTargetId, 0);
     setTaskReference(worker.repairTargetId, target.spawnId);
     worker.wander = false;
     worker.moveGoalActive = false;
@@ -7383,8 +7384,7 @@ bool Game::issueGarrisonOrder(
     unit.attackAutomatic = false;
     unit.attackGroundActive = false;
     unit.attackShotPending = false;
-    unit.garrisonTargetId =
-        container.spawnId;
+    setTaskReference(unit.garrisonTargetId, container.spawnId);
     unit.moveGoalActive = false;
     unit.moveGroupId = 0;
     unit.moveSpeedLimit = 0.0f;
@@ -7409,12 +7409,12 @@ void Game::updateGarrisoning(int player) {
             findObject(unit.garrisonTargetId);
         if (!building ||
             !canGarrison(unit, *building)) {
-            unit.garrisonTargetId = 0;
+            setTaskReference(unit.garrisonTargetId, 0);
             continue;
         }
         if (garrisonedCount(*building, false) >=
             building->unit->garrisonCapacity) {
-            unit.garrisonTargetId = 0;
+            setTaskReference(unit.garrisonTargetId, 0);
             unit.moveGoalActive = false;
             unit.state = State::Idle;
             continue;
@@ -7434,7 +7434,7 @@ void Game::updateGarrisoning(int player) {
         unit.selected = false;
         unit.garrisonedInId =
             (int32_t)building->spawnId;
-        unit.garrisonTargetId = 0;
+        setTaskReference(unit.garrisonTargetId, 0);
         unit.moveGoalActive = false;
         unit.moveGroupId = 0;
         unit.path.clear();
@@ -8092,7 +8092,7 @@ bool Game::assignBuilder(Object &worker,
     worker.attackAutomatic = false;
     worker.attackGroundActive = false;
     worker.attackShotPending = false;
-    worker.garrisonTargetId = 0;
+    setTaskReference(worker.garrisonTargetId, 0);
     worker.farmMoveActive = false;
     worker.wander = false;
     float targetX = 0.0f;
@@ -9555,7 +9555,7 @@ bool Game::issueAttackGround(
     clearUnitCommandOrder(source);
     setGatherTarget(source, 0);
     setDropOffTarget(source, 0);
-    source.garrisonTargetId = 0;
+    setTaskReference(source.garrisonTargetId, 0);
     setTaskReference(source.repairTargetId, 0);
     source.attackTargetId = 0;
     source.attackAutomatic = false;
