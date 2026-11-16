@@ -423,6 +423,8 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     automaticTargetsAcquired_ = retaliationOrders_ = armedBuildingsEngaged_ = 0;
     attackModeChanges_ = 0;
     objects_.clear();
+    shieldGeneratorIndices_.clear();
+    shieldGeneratorCacheSize_=size_t(-1);
     unitPrototypes_ = {}; unitPrototypeEffects_ = {}; unitPrototypesReady_ = {};
     visibleTiles_.clear();exploredTiles_.clear();observedTiles_.clear();rememberedObjects_.clear();rememberedPlayer_=0;initiallyExplored_=true;
     selectionOrder_.clear();
@@ -961,7 +963,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     }
     triggers_ = scenario.triggers;
     triggerOrder_ = scenario.triggerOrder;
-    triggerRuntime_.resize(triggers_.size());
+    triggerRuntime_.assign(triggers_.size(),{});
     for (size_t i = 0; i < triggers_.size(); i++)
         triggerRuntime_[i].enabled = triggers_[i].enabled;
     instructions_.clear();
@@ -1058,6 +1060,8 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     }
 
     objects_.clear();
+    shieldGeneratorIndices_.clear();
+    shieldGeneratorCacheSize_=size_t(-1);
     unitPrototypes_ = {}; unitPrototypeEffects_ = {}; unitPrototypesReady_ = {};
     visibleTiles_.clear();exploredTiles_.clear();observedTiles_.clear();rememberedObjects_.clear();rememberedPlayer_=0;initiallyExplored_=true;
     selectionOrder_.clear();
@@ -1169,11 +1173,28 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
                    int mapSize, uint32_t &randomState, std::string *err, uint32_t playerCount,
                    const std::vector<uint16_t> &playerCivilizations,
                    const std::vector<std::vector<uint8_t>> &diplomacy) {
+    if (!playerCivilizations.empty() &&
+        (playerCivilizations.size()!=playerCount ||
+         std::any_of(playerCivilizations.begin(),playerCivilizations.end(),[&](uint16_t civ) {
+             return civ<1 || civ>8 || size_t(civ)>=assets_.dat().civs.size();
+         }))) {
+        if(err)*err="RMS player civilizations must contain one valid civilization per player";
+        return false;
+    }
     uint32_t rng = randomState;
     RmsMap generated;
     if (!generateRmsMap(script,defines,mapSize,mapSize,assets_.dat(),rng,generated,err,playerCount,
                         playerCivilizations,diplomacy)) return false;
     Scenario scenario;
+    // Session players exist even when RMS places no starting objects for them.
+    for(size_t i=0;i<playerCivilizations.size();++i) {
+        auto &player=scenario.players[i];
+        player.active=true;player.human=i==0;
+        player.civilization=scenario.civilizations[i]=playerCivilizations[i];
+        player.color=uint32_t(i);player.populationLimit=200;
+        for(size_t other=0;other<=playerCount;++other)
+            player.diplomacy[other]=diplomacy.empty()?(other==0 || other==i+1?0:3):diplomacy[i+1][other];
+    }
     scenario.map.width=scenario.map.height=generated.width;
     scenario.map.tiles.resize(generated.terrain.size());
     // RMS and saved scenarios use the same original world axes.
@@ -1205,12 +1226,6 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         placeResource(placement.unitId,placement.x,placement.y,placement.facet,nextId++);
     const uint32_t ownedIdBase=nextId;
     for (const auto &placement:generated.ownedObjects) {
-        auto &player=scenario.players[placement.owner-1];
-        player.active=true;player.human=placement.owner==1;
-        player.civilization=scenario.civilizations[placement.owner-1]=placement.civilization;
-        player.color=placement.owner-1;player.populationLimit=200;
-        for (const auto &other:generated.ownedObjects)
-            player.diplomacy[other.owner]=diplomacy.empty()?(other.owner==placement.owner?0:3):diplomacy[placement.owner][other.owner];
         ScenarioUnit unit;
         unit.unitId=placement.unitId;unit.player=uint8_t(placement.owner);
         unit.spawnId=nextId++;unit.state=2;
