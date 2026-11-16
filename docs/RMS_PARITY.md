@@ -5537,3 +5537,52 @@ passes menu/preferences and60 dummy-driver render/audio frames
 focused ASan/UBSan checks additionally assert parent+movement references in4,
 child release before6, and parent-only/no-transfer entry7
 (`postattack-reference-local.log`). No fresh live Windows match was run.
+
+### Frozen buildings and support-action references (2026-11-17)
+
+Original repair106 constructor56fb10, heal105 constructor569a00 and build101
+constructor565bd0 each call primary target setter40ad40. Native accepted repair,
+healing and builder assignments now acquire through the shared reference setter;
+rejection leaves existing ownership unchanged. Completion, replacement, Stop,
+worker death and trigger cleanup release these slots. Builder ownership begins
+only after successful routing. Existing heal/repair/construction IDs represent
+these owned primary slots; copying an Object still has no reference side effects.
+Child actions and original auxiliary builder/healer counters1ac/1ad are not
+included in this primary-slot port. Evidence:
+`repair-heal-build-primary-findings-2026-11-17.json` and matching static assembly.
+
+Eight bounded original runtime controls establish explicit freeze559d90,
+repeated-toggle no-op, deferred migration through555130, acquire5586e0 from
+pending/already sleeping states, explicit thaw, and unchanged/changed manager
+masks. Native frozen state is separate from sleeping membership. Frozen callbacks
+commit pending migration and skip ordinary work, including native construction
+and production phases. Target acquisition clears frozen state; building damage
+thaws before damage handling, even for nonlethal hits. Death/removal also thaws.
+Owner transfer preserves the frozen selector and sleeping membership.
+
+The natural completion callback is enabled for owned light walls (master72):
+original state0→2 at554710 checks ownerID!=0 and game mode!=7. Owner+a0 is the
+player index; the Scenario Editor constructor529590 sets mode7 at529711 through
+virtual+c/424aa0. Native sessions are gameplay, so successful owned72 completion
+calls the shared freeze setter. No idle test or refs==0 condition is added; the
+original toggle has neither. Initial-setup freeze has additional option getters
+that remain unmapped, so this does not claim identical initial wall membership.
+
+The original manager94 is spatial-mask bookkeeping, not a scheduler that freezes
+idle buildings. Native global visibility still visits frozen buildings; it does
+not reproduce manager614840 notifications or its saved-mask cache. That
+substitution remains an explicit parity gap. Evidence:
+`building-freeze-controls-v1-oracle-2026-11-17.json`,
+`building-freeze-findings-2026-11-17.json` and
+`building-freeze-gate-mapping-findings-2026-11-17.json`. Runtime fixtures author
+object/master/owner storage and model external boundaries; no complete live
+Windows match or building factory is implied.
+
+Focused ASan/UBSan checks pass for freeze/repeat/migration, pending and migrated
+repair-acquire thaw, nonlethal damage thaw, owner transfer, natural light-wall
+completion and frozen production pause/resume. Support-action tests cover
+primary acquisition, rejected/repeated orders, Stop, worker death, healing/build
+completion and destroyed-foundation cancellation. Invalid construction targets
+are checked before building iteration so inactive foundations cannot strand their
+builders' references. Existing gather/list/clock/command checks pass. Log:
+`frozen-support-final-local.log`.

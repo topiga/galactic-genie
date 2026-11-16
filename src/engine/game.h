@@ -290,6 +290,14 @@ public:
     int objectUpdateListForTesting(uint32_t id) const {
         const Object *o=findObject(id); return o ? o->updateList : -1;
     }
+    bool setBuildingFrozenForTesting(uint32_t id, bool frozen) {
+        Object *o=findObject(id);
+        if (!o || o->unit->type!=dat::UT_Building) return false;
+        setBuildingFrozen(*o,frozen);return true;
+    }
+    bool objectFrozenForTesting(uint32_t id) const {
+        const Object *o=findObject(id);return o && o->buildingFrozen;
+    }
     bool objectPendingSleepForTesting(uint32_t id) const {
         const Object *o=findObject(id); return o && o->pendingSleep;
     }
@@ -815,7 +823,7 @@ private:
         float patrolStartY = 0;
         float patrolEndX = 0;
         float patrolEndY = 0;
-        uint32_t healTargetId = 0;
+        uint32_t healTargetId = 0; // owned action target; change through setTaskReference
         uint32_t guardTargetId = 0;
         uint32_t followTargetId = 0;
         bool moveGoalActive = false;
@@ -838,6 +846,7 @@ private:
         uint32_t gatherChildReference = 0;
         uint8_t taskReferences = 0;
         uint8_t updateList = 0; // actual membership: primary, sleep, auxiliary
+        bool buildingFrozen = false;
         bool sleepRequested = false;
         bool pendingSleep = false;
         bool auxiliaryUpdate = false;
@@ -899,10 +908,10 @@ private:
         float constructionRemaining = 0;
         float constructionTotal = 0;
         uint32_t constructionBuilderId = 0;
-        uint32_t constructionTargetId = 0;
+        uint32_t constructionTargetId = 0; // owned action target
         uint32_t gatherTargetId = 0;
         uint32_t dropOffTargetId = 0;
-        uint32_t repairTargetId = 0;
+        uint32_t repairTargetId = 0; // owned action target
         uint32_t garrisonTargetId = 0;
         uint32_t spawnId = 0;
         int32_t garrisonedInId = -1;
@@ -1003,6 +1012,7 @@ private:
     void setObjectOwner(Object &object, int player);
     GenieUpdateList &objectUpdateList(int owner, uint8_t list);
     void wakeObject(Object &object);
+    void setBuildingFrozen(Object &object, bool frozen);
     void setTaskReference(uint32_t &slot, uint32_t target);
     void setGatherTarget(Object &worker, uint32_t target);
     void setDropOffTarget(Object &worker, uint32_t target);

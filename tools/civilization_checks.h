@@ -7,6 +7,7 @@
 #include "work_attack_checks.h"
 #include "object_update_list_checks.h"
 #include "object_sleep_reference_checks.h"
+#include "support_task_reference_checks.h"
 #include "felling_animation_checks.h"
 #include "combined_upgrade_checks.h"
 #include "allied_bonus_checks.h"
@@ -32,6 +33,7 @@ static void civilizationBonusChecks(swgb::Assets &assets) {
     runWorkAttackChecks();
     objectUpdateListChecks();
     objectSleepReferenceChecks(assets);
+    supportTaskReferenceChecks(assets);
     fellingAnimationChecks(assets);
     hitPointEffectChecks(assets);
     combinedUpgradeChecks(assets);

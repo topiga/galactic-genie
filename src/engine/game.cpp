@@ -1653,6 +1653,18 @@ void Game::wakeObject(Object &object) {
     registerObjectUpdate(index);
 }
 
+void Game::setBuildingFrozen(Object &object, bool frozen) {
+    if (object.unit->type != dat::UT_Building || object.buildingFrozen == frozen) return;
+    object.buildingFrozen = frozen;
+    if (frozen) {
+        if (!object.sleepRequested) {
+            object.sleepRequested = true;
+            object.pendingSleep = true;
+        }
+    } else wakeObject(object);
+    // shortcut: Global visibility still visits frozen objects; original manager94 notifications remain unported.
+}
+
 void Game::setTaskReference(uint32_t &slot, uint32_t target) {
     if (slot == target) return;
     if (Object *old = findObject(slot)) {
@@ -1668,6 +1680,7 @@ void Game::setTaskReference(uint32_t &slot, uint32_t target) {
     if (Object *next = findObject(target)) {
         if (next->taskReferences < 250) ++next->taskReferences;
         wakeObject(*next);
+        setBuildingFrozen(*next,false);
     }
 }
 
@@ -1728,7 +1741,7 @@ Game::Object *Game::addObject(const dat::Unit *unit, int player, float x, float 
     object.triggerAddressable = triggerAddressable;
     object.sleepRequested = unit->type < dat::UT_Flag && object.hitPoints > 0.f;
     object.auxiliaryUpdate = unit->type == dat::UT_25;
-    // shortcut: Frozen-building manager callbacks still use native primary updates.
+    // shortcut: Initial-setup freeze option gates remain unported; completion uses the verified callback.
     objects_.push_back(object);
     registerObjectUpdate(objects_.size() - 1);
     if (spawnId) objectIndices_[spawnId] = objects_.size() - 1;
@@ -4826,7 +4839,8 @@ void Game::clearUnitCommandOrder(
         unit.initialFrame = 0;
         unit.animTime = 0.f;
     }
-    unit.healTargetId = 0;
+    setTaskReference(unit.healTargetId, 0);
+    clearConstructionAssignment(unit);
     if (unit.state == State::Heal) unit.state = State::Idle;
     unit.rememberedAttackId=0;
     unit.shelteredWork = {};
@@ -4843,7 +4857,7 @@ void Game::stopUnit(Object &unit) {
     clearUnitCommandOrder(unit);
     setGatherTarget(unit, 0);
     setDropOffTarget(unit, 0);
-    unit.repairTargetId = 0;
+    setTaskReference(unit.repairTargetId, 0);
     unit.garrisonTargetId = 0;
     unit.attackTargetId = 0;
     unit.attackAutomatic = false;
@@ -4983,7 +4997,7 @@ bool Game::canHeal(const Object &source, const Object &target) const {
 bool Game::issueHealCommand(Object &source, Object &target) {
     if (!canHeal(source,target)) return false;
     stopUnit(source);
-    source.healTargetId=target.spawnId;
+    setTaskReference(source.healTargetId, target.spawnId);
     return true;
 }
 
@@ -6369,7 +6383,7 @@ bool Game::issueGatherCommand(
     worker.attackGroundActive = false;
     worker.attackShotPending = false;
     worker.garrisonTargetId = 0;
-    worker.repairTargetId = 0;
+    setTaskReference(worker.repairTargetId, 0);
     setGatherTarget(worker, resource.spawnId);
     worker.resourceWorkTargetId =
         resource.spawnId;
@@ -6461,7 +6475,7 @@ bool Game::issueDropOffCommand(
     worker.attackGroundActive = false;
     worker.attackShotPending = false;
     worker.garrisonTargetId = 0;
-    worker.repairTargetId = 0;
+    setTaskReference(worker.repairTargetId, 0);
     setDropOffTarget(worker, building.spawnId);
     worker.manualDropOff = true;
     worker.wander = false;
@@ -6549,7 +6563,7 @@ bool Game::issueRepairCommand(
     worker.attackGroundActive = false;
     worker.attackShotPending = false;
     worker.garrisonTargetId = 0;
-    worker.repairTargetId = target.spawnId;
+    setTaskReference(worker.repairTargetId, target.spawnId);
     worker.wander = false;
     worker.moveGoalActive = false;
     worker.path.clear();
@@ -6571,7 +6585,7 @@ void Game::updateRepairing(float dt,int player) {
                 worker, *target, false) ||
             target->hitPoints >=
                 target->maxHitPoints - 0.001f) {
-            worker.repairTargetId = 0;
+            setTaskReference(worker.repairTargetId, 0);
             worker.moveGoalActive = false;
             worker.path.clear();
             worker.state = State::Idle;
@@ -6634,7 +6648,7 @@ void Game::updateRepairing(float dt,int player) {
                     available / perHitPoint);
         }
         if (repaired <= 0.0001f) {
-            worker.repairTargetId = 0;
+            setTaskReference(worker.repairTargetId, 0);
             worker.state = State::Idle;
             worker.animTime = 0;
             statusMessage_ =
@@ -7364,7 +7378,7 @@ bool Game::issueGarrisonOrder(
         clearConstructionAssignment(unit);
     setGatherTarget(unit, 0);
     setDropOffTarget(unit, 0);
-    unit.repairTargetId = 0;
+    setTaskReference(unit.repairTargetId, 0);
     unit.attackTargetId = 0;
     unit.attackAutomatic = false;
     unit.attackGroundActive = false;
@@ -8051,8 +8065,8 @@ void Game::clearConstructionAssignment(Object &worker) {
                 worker.spawnId)
             building->constructionBuilderId = 0;
     }
-    worker.constructionTargetId = 0;
-    worker.repairTargetId = 0;
+    setTaskReference(worker.constructionTargetId, 0);
+    setTaskReference(worker.repairTargetId, 0);
     if (worker.state == State::Build) {
         worker.state = State::Idle;
         worker.animTime = 0.0f;
@@ -8090,7 +8104,7 @@ bool Game::assignBuilder(Object &worker,
     if (building.constructionBuilderId == 0)
         building.constructionBuilderId =
             worker.spawnId;
-    worker.constructionTargetId = building.spawnId;
+    setTaskReference(worker.constructionTargetId, building.spawnId);
     return true;
 }
 
@@ -8599,6 +8613,12 @@ bool Game::placeBuildingWorld(float worldX, float worldY) {
 }
 
 void Game::updateConstruction(float dt,int player) {
+    for (Object &worker : objects_) {
+        if (worker.player != player || !worker.constructionTargetId) continue;
+        const Object *target = findObject(worker.constructionTargetId);
+        if (!target || !target->active || !target->underConstruction || target->player != worker.player)
+            stopUnit(worker);
+    }
     struct CompletedBuilding {
         uint32_t spawnId;
         const dat::Unit *unit;
@@ -8611,7 +8631,7 @@ void Game::updateConstruction(float dt,int player) {
     for (size_t index = 0; index < count; index++) {
         Object &building = objects_[index];
         if (building.player!=player)continue;
-        if (!building.active ||
+        if (!building.active || building.buildingFrozen ||
             !building.underConstruction)
             continue;
         const float previousHealth=std::max(1.f,building.maxHitPoints*(1.f-building.constructionRemaining/std::max(.001f,building.constructionTotal)));
@@ -8702,11 +8722,13 @@ void Game::updateConstruction(float dt,int player) {
             if (builder.constructionTargetId ==
                 building.spawnId) {
                 builders.push_back(builder.spawnId);
-                builder.constructionTargetId = 0;
+                setTaskReference(builder.constructionTargetId, 0);
                 builder.state = State::Idle;
                 builder.animTime = 0.0f;
             }
         building.constructionBuilderId = 0;
+        // Original 554710: owned light-wall completion freezes outside the scenario editor.
+        if (building.player != 0 && building.unit->id == 72) setBuildingFrozen(building,true);
         completed.push_back(
             {building.spawnId, building.unit,
              building.player, building.x,
@@ -9321,6 +9343,7 @@ void Game::defeatCheatPlayer(int player) {
     for (Object &object : objects_) {
         if (object.active && object.player == player) {
             clearUnitCommandOrder(object);
+            setBuildingFrozen(object,false);
             object.active = false;
         }
     }
@@ -9533,7 +9556,7 @@ bool Game::issueAttackGround(
     setGatherTarget(source, 0);
     setDropOffTarget(source, 0);
     source.garrisonTargetId = 0;
-    source.repairTargetId = 0;
+    setTaskReference(source.repairTargetId, 0);
     source.attackTargetId = 0;
     source.attackAutomatic = false;
     source.attackShotPending = false;
@@ -9917,6 +9940,7 @@ void Game::syncFarmTerrain(Object &farm, bool dying) {
 }
 
 void Game::killObject(Object &object, bool countKill, bool retainRemains) {
+    setBuildingFrozen(object,false);
     wakeObject(object);
     if (object.resourceDeathState == 3) object.resourceDeathState = 7;
     clearUnitCommandOrder(object);
@@ -10027,7 +10051,9 @@ void Game::killObject(Object &object, bool countKill, bool retainRemains) {
 }
 
 void Game::damageObject(Object &object, int damage, uint32_t attackerId) {
-    if (!object.active || damage <= 0) return;
+    if (!object.active) return;
+    setBuildingFrozen(object,false);
+    if (damage <= 0) return;
     Object *attacker = findObject(attackerId);
     if (object.player == localPlayer_ &&
         attacker && attacker->active &&
@@ -12783,6 +12809,7 @@ void Game::executeEffect(const ScenarioEffect &effect) {
     case 15:
         for (Object *object : effectTargets(effect)) {
             clearUnitCommandOrder(*object);
+            setBuildingFrozen(*object,false);
             object->active = false;
         }
         rebuildAdjacency();
@@ -14323,7 +14350,7 @@ void Game::updateProductionAndDecay(float dt,int player) {
          index++) {
         Object &building = objects_[index];
         if(building.player!=player)continue;
-        if (!building.active ||
+        if (!building.active || building.buildingFrozen ||
             building.productionQueue.empty())
             continue;
         const int pendingTechnology=building.productionQueue.front().technologyId;
@@ -14688,6 +14715,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
             registerObjectUpdate(index);
             return false; // original false-return migration skips the swapped tail
         }
+        if (o.buildingFrozen) return false;
         if (o.resourceDeathState == 7) { o.resourceDeathState = 8; return false; }
         if (o.resourceDeathState == 8) {
             return true;
