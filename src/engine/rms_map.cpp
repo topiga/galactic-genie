@@ -374,6 +374,29 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         } else return fail("unsupported directive " + command);
     }
     if (base<0 || lands.empty()) return fail("explicit base terrain and at least one land required");
+    const bool flatTatooine=[&]() {
+        if(width!=120 || height!=120 || base!=14 || !playerLands || playerLandBegin || lands.size()!=2 ||
+           playerCount!=2 || playerZoneOverride || !ownedObjects || !startingWorkers || !startingScouts ||
+           workerGroups!=1 || scoutGroups!=1 || workerMinDistance!=6 || workerMaxDistance!=6 || startingStalagmites ||
+           playerCivilizations!=std::vector<uint16_t>{1,1} || !defines.count("FIXED_POSITIONS") ||
+           cliffStage || elevationStage || connectionStage || terrainRows.size()!=5)return false;
+        for(size_t n=0;n<lands.size();++n) {
+            const auto &land=lands[n];const auto &position=placements[n];const auto &metadata=landMetadata[n];
+            if(land.terrain!=14 || land.radius!=9 || land.targetTiles!=1800 || land.zone!=int(n+1) ||
+               land.clumpingFactor!=8 || land.borderFuzziness!=15 || land.separation ||
+               land.leftBorder || land.topBorder || land.rightBorder!=-1 || land.bottomBorder!=-1 ||
+               position.x!=-1 || position.y!=-1 || position.minPlacementDistance!=-1 ||
+               metadata.id!=1 || metadata.owner!=int(n+1))return false;
+        }
+        const uint32_t terrain[]={50,46,50,45,46},tiles[]={1728,2880,144,288,288},clumps[]={17,16,7,24,30},spacing[]={5,0,3,1,1};
+        for(size_t n=0;n<terrainRows.size();++n) {
+            const auto &row=terrainRows[n];
+            if(row.terrain!=terrain[n] || row.baseTerrain!=14 || row.targetTiles!=tiles[n] || row.clumps!=clumps[n] ||
+               row.spacing!=spacing[n] || row.clumping!=20 || row.avoidPlayerStarts!=(n==0 || n==2) ||
+               row.flatTerrainOnly || row.minHeight || row.maxHeight!=255)return false;
+        }
+        return true;
+    }();
     const bool mixedLandCliffs=[&]() {
         const bool water=base==6;
         if(width!=120 || height!=120 || (base!=0 && !water) || !playerLands || playerLandBegin!=2 ||
@@ -1128,9 +1151,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 }
                 if(row.unitId==1307 && (base!=26 || !cliffStage || terrainRows.size()!=5 || terrainRows[0].terrain!=46))
                     return fail("Gaia mines require the verified Kessel profile");
-                if(isGaiaBuilding(row.unitId) && row.unitId!=1307 && (base!=14 || !cliffStage))
-                    return fail("Gaia Tatooine buildings require the verified cliff profile");
-                if(row.unitId==938 && (base!=14 || !cliffStage))
+                if(isGaiaBuilding(row.unitId) && row.unitId!=1307 && (base!=14 || (!cliffStage && !flatTatooine)))
+                    return fail("Gaia Tatooine buildings require a verified profile");
+                if(row.unitId==938 && (base!=14 || (!cliffStage && !flatTatooine)))
                     return fail("Sandcrawler startup requires the verified Tatooine profile");
                 std::vector<RmsObjectTarget> targets;
                 if(!selectRmsObjectTargets(row,generated.lands,playerCount,targets,err))return false;

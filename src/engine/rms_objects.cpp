@@ -363,7 +363,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         return fail("unsupported mountain row");
     const bool crawler=unitId==938;
     if(crawler && (!objectRow || width!=120 || height!=120 || objectRow->landId!=-2 ||
-       objectRow->minDistance!=10 || objectRow->maxDistance!=-1 || objectRow->terrain!=-1 ||
+       (objectRow->minDistance!=10 && objectRow->minDistance!=20) || objectRow->maxDistance!=-1 || objectRow->terrain!=-1 ||
        objectRow->spacing || objectRow->temporarySpacing || objectRow->zoneDistance ||
        group.mode!=1 || group.groups!=2 || group.perGroup!=1 || group.variance || group.radius!=3))
         return fail("unsupported Sandcrawler row");

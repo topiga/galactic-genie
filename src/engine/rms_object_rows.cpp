@@ -59,6 +59,8 @@ bool parseRmsObjectRow(const std::vector<RmsToken> &tokens, size_t &index,
     ++cursor;
     while(cursor<tokens.size() && tokens[cursor].text!="}") {
         const auto &name=tokens[cursor].text;
+        // Original object handler warns on terrain opcode77, then leaves the row unchanged.
+        if(name=="set_avoid_player_start_areas") { ++cursor;continue; }
         if(name=="set_scaling_to_map_size") { row.scaling=1;++cursor;continue; }
         if(name=="set_scaling_to_player_number") { row.scaling=2;++cursor;continue; }
         if(name=="set_gaia_object_only") { row.owner=0;++cursor;continue; }

@@ -47,6 +47,8 @@ int main() {
     assert(row.landId==-2);
     row=parse("550 { place_on_specific_land_id 2147483637 }");
     assert(row.landId==2147483647);
+    assert((words(parse("938 { number_of_objects 1 number_of_groups 2 set_gaia_object_only min_distance_to_players 20 set_avoid_player_start_areas }"))==
+        std::array<int32_t,15>{938,-1,1,1,0,2,3,0,-2,20,-1,0,0,0,0}));
     row=parse("350 { number_of_objects 30 set_scaling_to_player_number set_scaling_to_map_size }");
     RmsObjectRow scaled;std::string error;
     {

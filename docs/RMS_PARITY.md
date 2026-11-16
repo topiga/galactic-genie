@@ -2,16 +2,16 @@
 
 ## Current comparison coverage: 2026-11-16
 
-Twelve packaged profiles have complete original-runner comparisons at fixed Tiny120,
+Thirteen packaged profiles have complete original-runner comparisons at fixed Tiny120,
 two Empire players and default resources: Forest54204, Reytha54220, Arid54201,
 Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
-Tatooine New55019, Endor54207, four-biome connections54210 and inland54203.
-The shared packaged suite contains45 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
+Tatooine New55019, Endor54207, four-biome connections54210, inland54203 and flat Tiny Mos Espa55014.
+The shared packaged suite contains48 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
 Gaia resource accounting and deferred foundation rendering.
 
-The standard production audit accepts36/138 map/seed attempts (twelve of46 resources,
-three seeds each);102 are explicitly rejected. This measures supported
+The standard production audit accepts39/138 map/seed attempts (thirteen of46 resources,
+three seeds each);99 are explicitly rejected. This measures supported
 configurations, not an engine completion percentage. New comparisons run the
 original executable locally with modeled host boundaries. Live Windows evidence
 below remains a separate, earlier baseline. Later gameplay and other map settings
@@ -2995,3 +2995,41 @@ All45 shared packaged cases pass with ASan/UBSan. The retained full Forest,
 52 general rows, foundation and transport checks also pass, as do strict RMS
 integration, production CLI tests and the desktop dummy-video/audio smoke.
 The production audit accepts36/138 attempts across twelve profiles;102 reject.
+
+### Flat Tiny Mos Espa script behavior (2026-11-16)
+
+Raw55014 Tiny retains the shipped malformed `else if SMALL_MAP`: after the Tiny
+Sandcrawler block, the original interpreter suppresses the remaining objects,
+elevation and cliffs. Native preprocessing already reproduced the conditional
+behavior. The flat composition now admits the same Tatooine land/terrain pattern
+and verified Gaia buildings without requiring a cliff stage.
+
+| Seed | Objects | Final RNG | Gaia total/unit/building cost |
+|---:|---:|---:|---|
+| 1 | 2079 | 3909827769 | 3650/3150/500 |
+| 12345 | 2097 | 3952924120 | 3600/3050/550 |
+| 16160 | 2090 | 109627149 | 3850/3350/500 |
+
+Every ordered object, grid and captured pose matches the full original runner;
+independent resource replays confirm startup costs and Sandcrawler counters
+(population4=-2, units11=7, military40=2). All elevation and slope cells remain0.
+The shared test treats native omitted flat grids as zero-filled original grids.
+
+`set_avoid_player_start_areas` appears inside the Sandcrawler object block.
+Actual object-handler opcode77 warns and returns success without row mutation;
+native parsing now preserves that specific no-op. Other unsupported directives
+still reject. The resulting row has two loose groups of one object each and a
+20-tile exclusion distance, rather than the previously compared10. The existing
+placement algorithm reproduces it unchanged.
+
+Evidence: `rms-packaged-mosespa55014-full-findings-2026-11-16.json` and
+`rms-55014-object-avoid-starts-op77-2026-11-16.json`. These captures establish
+Tiny/fixed/two-Empire startup only. Small/larger Mos Espa layouts and the suppressed
+building/mountain rows remain unverified and are not enabled by this change.
+
+All48 shared packaged cases pass with ASan/UBSan, alongside retained full Forest,
+52 general rows, foundation and transport checks. Focused parser, strict RMS
+integration and production CLI tests pass. The audit accepts39/138 attempts
+across thirteen profiles;99 still reject explicitly.
+The rebuilt desktop preferences/menu/effects/music smoke also passes with dummy
+video/audio. No new live Windows or audible-mixing check was performed.
