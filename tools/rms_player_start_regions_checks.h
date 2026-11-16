@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 // Original4e76a0; rms-player-border-structural-differential-oracle-2026-11-16.json.
 static void checkRmsPlayerStartRegions() {
     using namespace swgb;
@@ -120,6 +123,27 @@ static void checkRmsPlayerStartRegions() {
         check(rng==c.rng && out.size()==c.centers.size(),"original aggregated start RNG/count");
         for(size_t n=0;n<out.size();++n)check(out[n].x==c.centers[n].x && out[n].y==c.centers[n].y,"original aggregated player-land starts");
     }
+    std::ifstream input(std::filesystem::path(__FILE__).parent_path()/"fixtures/rms-player-regions-dimensions.tsv");
+    check(bool(input),"original dimension/count fixtures open");
+    std::string line;size_t matrixCases=0;
+    while(std::getline(input,line)) {
+        if(line.empty() || line[0]=='#')continue;
+        std::istringstream fields(line);uint32_t width,height,players,seed,regionCount,expectedRng;int fixed;
+        check(bool(fields>>width>>height>>players>>fixed>>seed>>regionCount) && players>=1 && players<=8 && regionCount<=64 && (fixed==0 || fixed==1),"dimension/count fixture header");
+        std::vector<RmsPlayerStartRegion> regions(regionCount);
+        for(auto &r:regions)check(bool(fields>>r.owner>>r.left>>r.top>>r.right>>r.bottom>>r.radius),"dimension/count fixture regions");
+        check(bool(fields>>expectedRng),"dimension/count fixture RNG");
+        std::vector<RmsPlayerStart> expected(players);
+        for(auto &p:expected)check(bool(fields>>p.x>>p.y),"dimension/count fixture centers");
+        std::string extra;check(!(fields>>extra),"dimension/count fixture trailing data");
+        uint32_t rng=seed;std::vector<RmsPlayerStart> out;std::string error;
+        const auto generate=fixed?generateRmsFixedPlayerStartsForLands:generateRmsPlayerStartsForLands;
+        check(generate(width,height,regions,players,rng,out,&error),error);
+        check(rng==expectedRng && out.size()==expected.size(),"original dimension/count RNG and count");
+        for(size_t n=0;n<out.size();++n)check(out[n].x==expected[n].x && out[n].y==expected[n].y,"original dimension/count starts");
+        ++matrixCases;
+    }
+    check(input.eof() && matrixCases==384,"complete original dimension/count matrix");
     for(bool random:{false,true})for(const auto &regions:std::vector<std::vector<RmsPlayerStartRegion>>{
         {},{{0,0,0,120,120,0}},{{3,0,0,120,120,0}},{{1,-1,0,120,120,0}},
         {{1,0,0,121,120,0}},{{1,0,0,120,120,-1}},{{1,0,0,120,120,60}}}) {

@@ -155,5 +155,5 @@ int main() {
         check(!generateRmsPlayerStarts(32,32,3,players,state,out,&error) &&
               state==123 && out.empty() && !error.empty(),"invalid player count must fail atomically");
     }
-    std::cout << "288 randomized, 35 fixed and 108 multi-land original player-start fixtures and invalid-input checks passed\n";
+    std::cout << "288 randomized, 35 fixed and 492 multi-land original player-start fixtures and invalid-input checks passed\n";
 }
