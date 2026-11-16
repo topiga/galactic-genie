@@ -14347,16 +14347,19 @@ void Game::updateProductionAndDecay(float dt) {
 }
 
 void Game::update(float dt,const InputState &in) {
-    updateFrame(dt,dt,in,true);
+    updateFrame(dt,dt,in,true,gameTime_+dt);
 }
 
 void Game::updateLocal(uint32_t hostMilliseconds,float uiDt,const InputState &in) {
     // Original new-game world61e61f and game4247da both default to 1.5x.
     const auto step=localClock_.advance(hostMilliseconds,1.5f);
-    updateFrame(float(step.deltaMilliseconds)/1000.f,uiDt,in,step.admitted);
+    // Original world time is uint32 milliseconds; float dt belongs only to simulation consumers.
+    const uint32_t milliseconds=uint32_t(std::llround(gameTime_*1000.0))+step.deltaMilliseconds;
+    const double worldTime=step.admitted?double(milliseconds)/1000.0:gameTime_;
+    updateFrame(float(step.deltaMilliseconds)/1000.f,uiDt,in,step.admitted,worldTime);
 }
 
-void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advanceWorld) {
+void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advanceWorld,double worldTime) {
     refreshVisibility();
     soundViewWidth_=std::max(1,incoming.screenW);
     InputState in=incoming;
@@ -14365,7 +14368,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
         if(advanceWorld)updateSkirmish(dt);
         if (victoryState_ >= 0) return;
     }
-    gameTime_ += dt;
+    gameTime_ = worldTime;
     handleControlGroup(in);
     // Placement armed by the build menu last frame may now take clicks.
     placementJustBegun_ = false;

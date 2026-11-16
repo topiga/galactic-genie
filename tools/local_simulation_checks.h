@@ -94,5 +94,25 @@ static void localSimulationChecks(swgb::Assets &assets) {
     initialize();
     game.updateLocal(1000,.016f,{});
     check(game.aiGoalForTesting(2,980)==1,"New session resets local host baseline and first AI evaluation");
+    swgb::Scenario empty;
+    empty.map.width=empty.map.height=8;empty.map.tiles.resize(64);
+    empty.playerSlotCount=1;empty.players[0].active=empty.players[0].human=true;
+    empty.players[0].civilization=1;
+    check(game.initScenario(empty,&error),error.c_str());
+    game.updateLocal(1000,0,{});
+    for(uint32_t i=1;i<1000;++i)game.updateLocal(1000+i*66,0,{});
+    check(game.loadAiSourceForTesting(1,"integer-world-time",
+          "(defrule (game-time == 99) => (set-goal 981 1))",{},&error),error.c_str());
+    game.updateLocal(67000,0,{});
+    check(game.aiGoalForTesting(1,981)==1,
+          "One thousand99ms simulation steps reach original game-time99 without float accumulation drift");
+    check(game.initScenario(empty,&error),error.c_str());
+    game.update(4294967.f,{}); // 296ms before the original uint32 world clock wraps.
+    game.updateLocal(1000,0,{});
+    game.updateLocal(1100,0,{});
+    check(game.loadAiSourceForTesting(1,"world-time-wrap",
+          "(defrule (game-time == 0) => (set-goal 982 1))",{},&error),error.c_str());
+    game.updateLocal(1200,0,{});
+    check(game.aiGoalForTesting(1,982)==1,"Original uint32 world milliseconds wrap after two150ms admitted steps");
     std::puts("PASS: local host admission, between-tick input/camera, pause rebase and admitted-call AI cadence");
 }

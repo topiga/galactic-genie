@@ -1326,7 +1326,7 @@ private:
     void playWorldSound(int soundId,int player,float x,float y);
     std::array<int,2> worldSoundMix(float x,float y) const;
     void updateAmbience(float dt, int screenW, int screenH);
-    void updateFrame(float dt,float uiDt,const InputState &in,bool advanceWorld);
+    void updateFrame(float dt,float uiDt,const InputState &in,bool advanceWorld,double worldTime);
     void updateProductionAndDecay(float dt);
     void updateAi(float dt);
     void updateAiPlayer(
