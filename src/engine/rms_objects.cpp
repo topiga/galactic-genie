@@ -293,10 +293,9 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             objectRow->radius<0 || uint32_t(objectRow->radius)!=group.radius || playerRange)
             return fail("object row and grouping parameters disagree");
         if(objectRow->owner < -1 || objectRow->owner>0 || objectRow->matchPlayerCiv ||
-            (objectRow->landId==1 && objectRow->owner!=0) ||
-            (objectRow->landId!=-1 && objectRow->landId!=-2 && objectRow->landId!=1))
+            (objectRow->landId>=0 && objectRow->owner!=0) || objectRow->landId < -2)
             return fail("object row requires supported Gaia land selection");
-        if((objectRow->landId==1)!=perPlayer || novaPlayerStarts.size()>8 ||
+        if((objectRow->landId>=0)!=perPlayer || novaPlayerStarts.size()>8 ||
             (objectRow->landId==-2 && !globalPlacement) ||
             (objectRow->landId==-1 && globalPlacement))
             return fail("object row land selection lacks matching centers");

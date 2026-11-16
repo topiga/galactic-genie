@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "rms_script.h"
+#include "rms_object_rows.h"
 #include "rms_cliffs.h"
 #include "rms_objects.h"
 #include "rms_scenery.h"
@@ -14,10 +15,6 @@ struct RmsOwnedPlacement {
     uint8_t pendingFoundation=255; // Original building+264; consumed by visible rendering.
     uint8_t facet=0, animationFrame=0;
     float initialIdleDelay=0;
-};
-struct RmsMapLand {
-    RmsPlayerStart center;
-    int id=0,owner=0;
 };
 struct RmsMap {
     uint32_t width = 0, height = 0;

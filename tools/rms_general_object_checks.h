@@ -27,12 +27,13 @@ static void rmsGeneralObjectChecks(const swgb::dat::DatFile &data) {
         {6205,1003759820u,2218478092u},
         {6213,1186593183u,3238364985u},
         {6221,707435866u,2827731819u},
+        {6202,664476888u,374431829u},
     };
     auto replace=[](std::string &text,const std::string &from,const std::string &to) {
         const auto at=text.find(from);check(at!=std::string::npos,"authored variation finds directive");
         text.replace(at,from.size(),to);
     };
-    for(size_t variant=0;variant<11;++variant) {
+    for(size_t variant=0;variant<12;++variant) {
         auto changed=rows;
         switch(variant) {
         case 0: std::reverse(changed.begin()+4,changed.end());break;
@@ -52,6 +53,7 @@ static void rmsGeneralObjectChecks(const swgb::dat::DatFile &data) {
         case 8: changed.insert(changed.begin()+4,"create_object 66 { number_of_objects 5 max_distance_to_other_zones 7 }");break;
         case 9: changed.insert(changed.begin()+4,"create_object 66 { number_of_objects 4 set_tight_grouping number_of_groups 3 min_distance_to_players 20 max_distance_to_other_zones 7 }");break;
         case 10: changed.insert(changed.begin()+4,"create_object 413 { number_of_objects 20 max_distance_to_other_zones 15 }");break;
+        case 11: changed.insert(changed.begin()+4,"create_object 66 { number_of_objects 7 place_on_specific_land_id 7 }");break;
         }
         std::string text=source.substr(0,first);
         for(const auto &row:changed)text+=row+'\n';
@@ -81,5 +83,5 @@ static void rmsGeneralObjectChecks(const swgb::dat::DatFile &data) {
         check(gridHash(map.terrain)==742396127u && gridHash(map.elevation)==1017236165u && gridHash(map.slopes)==1017236165u,
             "general rows preserve original terrain/elevation/slopes");
     }
-    std::puts("PASS: eleven general object-row variations match complete original runner");
+    std::puts("PASS: twelve general object-row variations match complete original runner");
 }

@@ -21,7 +21,9 @@ static RmsObjectRow parse(const std::string &text) {
     assert(parseRmsObjectRow(input,index,row,&error) && error.empty() && index==input.size());
     return row;
 }
+#include "rms_object_dispatch_checks.h"
 int main() {
+    checkRmsObjectDispatch();
     // Original handler oracle rms-object-parser-oracle-2026-11-13.json.
     assert((words(parse("109 { }"))==std::array<int32_t,15>{109,-1,0,1,0,1,3,-1,-1,-1,-1,0,0,0,0}));
     assert((words(parse("109 { set_place_for_every_player group_placement_radius 18 min_distance_to_players 0 max_distance_to_players 0 }"))==

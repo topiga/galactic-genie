@@ -63,6 +63,31 @@ This is **not general 1:1 terrain generation**. Other seeds, sizes, civilization
 teams and map families still need complete comparisons. Historical checkpoints
 below describe earlier coverage, not the current result.
 
+## Owned dispatch and selected lands: 2026-11-16
+
+The shared selector now dispatches the existing Command Center, worker and scout
+startup callbacks in selected-land order. Gaia rows select matching land records,
+preserve duplicate matches, and skip absent IDs without constructing a queue or
+consuming RNG. Explicit `land_id` now stores argument+10, matching the original
+parser and `place_on_specific_land_id`; default neutral0/player1 IDs stay special.
+Selected Gaia rows retain all land centers for inner-distance exclusion.
+
+127 executions of original `4dddf0` and its `4de8fb` owner-resolution prefix verify
+selection, ordering, zero counts, scaling, empty/missing IDs and owner overrides.
+The fixtures are in `tools/rms_object_dispatch_checks.h`. Those probes intercepted
+placement calls, so they establish dispatch, not constructor parity. A complete
+runner comparison with an unmatched specific-land row additionally matches all
+6,202 objects, grids, startup poses and final RNG664476888.
+
+The original `4dad80` civilization mapper was also executed for every unit ID
+0..32767 and civilization0..8 (294,912 calls); sparse results remain local in
+`rms-object-civilization-map-oracle-2026-11-16.json`. This is research evidence,
+not a newly implemented general native constructor.
+
+Arbitrary owned rows, mixed-land owned startup and new unit constructors still
+reject explicitly. The existing supported startup callbacks retain their prior
+bounds. Dispatch matching alone does not establish full terrain/gameplay parity.
+
 ## General object-row controller: 2026-11-15
 
 Gaia resources after owned startup now execute in source order from parsed rows,

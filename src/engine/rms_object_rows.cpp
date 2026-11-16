@@ -6,6 +6,22 @@
 #include <string_view>
 
 namespace swgb {
+bool selectRmsObjectTargets(const RmsObjectRow &row,const std::vector<RmsMapLand> &lands,
+                           uint32_t playerCount,std::vector<RmsObjectTarget> &out,std::string *err) {
+    if(err)err->clear();
+    auto fail=[&]() { if(err)*err="RMS object dispatch: owner or land count outside supported bounds";return false; };
+    if(lands.size()>1024 || playerCount>32766 || row.owner>int32_t(playerCount))return fail();
+    std::vector<RmsObjectTarget> targets;
+    if(row.landId>=0) {
+        for(size_t i=0;i<lands.size();++i) if(lands[i].id==row.landId) {
+            const int owner=row.owner>=0?row.owner:std::max(0,lands[i].owner);
+            if(owner>int32_t(playerCount))return fail();
+            targets.push_back({int(i),owner});
+        }
+    } else if(row.landId==-1 || row.landId==-2)targets.push_back({-1,std::max(0,row.owner)});
+    out=std::move(targets);return true;
+}
+
 // Original4e3850..4e3cfb; saved rms-object-static-evidence-2026-11-12.json,
 // object-command block SHA256 a1f6114957da9fc69b7ff25af06592d51ab1c6a2a26c565436a3ae9b1c06664c.
 bool parseRmsObjectRow(const std::vector<RmsToken> &tokens, size_t &index,

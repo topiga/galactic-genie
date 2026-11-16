@@ -2094,12 +2094,12 @@ create_object 69 { set_scaling_to_map_size number_of_objects 3 }
         check(!game.initRms(script,{},120,rng,&error,2,civs) && rng==1 && game.activeObjectCount()==retainedCount,
             "invalid owned cliff civilizations preserve the current world");
     }
-    const auto invalidSource=ownedSource+"\ncreate_object 66 { place_on_specific_land_id 0 }";
+    const auto invalidSource=ownedSource+"\ncreate_object 66 { set_place_for_every_player }";
     check(script.load(0,[&](int32_t,std::vector<uint8_t> &out) {
         out.assign(invalidSource.begin(),invalidSource.end());return true;
     },{},&error),error.c_str());
     rng=1;
     check(!game.initRms(script,{"FIXED_POSITIONS"},120,rng,&error,2,{1,1}) && rng==1 && game.activeObjectCount()==retainedCount,
-        "unsupported object land selection preserves the current world");
+        "unsupported owned resource construction preserves the current world");
 
 }

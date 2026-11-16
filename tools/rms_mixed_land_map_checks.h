@@ -148,6 +148,13 @@ static void checkRmsMixedLandMap() {
   const std::string neutral="create_land { terrain_type 3 base_size 1 number_of_tiles 40 "+
     std::string(c.explicitPosition?"land_position 50 50 ":"")+(c.randomMode&2?"set_zone_randomly ":"")+"} ";
   for(const char *p=c.pattern;*p;++p)source+=*p=='P'?player:neutral;
+  // Original parser4e314a: explicit7 becomes17; defaults0/1 stay special.
+  const bool explicitLandId=&c==cases;
+  if(explicitLandId) {
+   const auto at=source.find("create_land {");
+   check(at!=std::string::npos,"neutral land fixture exists");
+   source.insert(at+13," land_id 7 ");
+  }
   source+=paint+connect;
   RmsScript script;RmsMap map;std::string error;
   check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes){
@@ -168,7 +175,7 @@ static void checkRmsMixedLandMap() {
   size_t playerIndex=0;
   for(size_t i=0;i<c.lands.size();++i) {
    const auto &expected=c.lands[i];const auto &actual=map.lands[i];
-   check(actual.id==expected.id && actual.owner==expected.owner &&
+   check(actual.id==(explicitLandId && expected.owner==0?17:expected.id) && actual.owner==expected.owner &&
      actual.center.x==expected.center.x && actual.center.y==expected.center.y,"original mixed land metadata/order");
    if(expected.owner>0) {
     check(map.playerStarts[playerIndex].x==expected.center.x && map.playerStarts[playerIndex].y==expected.center.y,"owned start uses owner not row ordinal");

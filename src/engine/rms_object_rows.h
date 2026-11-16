@@ -1,8 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "rms_script.h"
+#include "rms_player_starts.h"
 
 namespace swgb {
+struct RmsObjectRow;
+struct RmsMapLand {
+    RmsPlayerStart center;
+    int id=0,owner=0;
+};
+struct RmsObjectTarget {
+    int landIndex=-1,owner=0;
+};
+// Original4dddf0 source-order dispatch; global selectors yield one target with
+// landIndex=-1. Missing selected lands yield none, even when groups is zero.
+// Original4de8fb resolves explicit owner, then nonnegative land owner, then Gaia.
+// No RNG or placement; failure preserves out.
+bool selectRmsObjectTargets(const RmsObjectRow &row,
+    const std::vector<RmsMapLand> &lands,uint32_t playerCount,
+    std::vector<RmsObjectTarget> &out,std::string *err=nullptr);
 // Original 60-byte row semantics, not a binary overlay: bytes08/09 are mode/scale.
 struct RmsObjectRow {
     int32_t unitId=-1, terrain=-1;

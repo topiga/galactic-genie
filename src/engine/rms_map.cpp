@@ -158,7 +158,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     land.centerY=height*static_cast<uint32_t>(y)/100;
                     position=true;
                 } else if (name == "base_size" && value>=0 && value<=1024) land.radius=value;
-                else if(name=="land_id" && !players && value>=0 && value<=32767) landId=value;
+                else if(name=="land_id" && !players && value>=0 && value<=32767) landId=value+10;
                 else if(name=="min_placement_distance" && !players && value>=0 && value<=4096) minPlacementDistance=value;
                 else if (value>=0 && value<=100 &&
                          (name=="left_border" || name=="right_border" ||
@@ -286,7 +286,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         } else if (stage==3 && command=="create_object" && startingScouts) {
             RmsObjectRow row;
             if(!parseRmsObjectRow(tokens,i,row,err)) return false;
-            if(row.matchPlayerCiv || row.owner>0 || (row.landId>=0 && (row.landId!=1 || row.owner!=0)))
+            if(row.matchPlayerCiv || row.owner>0)
                 return fail("unsupported resource owner or land selector");
             if(row.landId < -2) return fail("unsupported resource land selector");
             holocrons |= row.unitId==285;
@@ -758,6 +758,12 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     for(size_t tile=0;tile<sceneryOccupied.size();++tile)
         if(sceneryOccupied[tile]) occupied.push_back(static_cast<uint32_t>(tile));
     if (ownedObjects) {
+        RmsObjectRow startupRow;startupRow.landId=1;
+        std::vector<RmsObjectTarget> startupTargets;
+        if(!selectRmsObjectTargets(startupRow,generated.lands,playerCount,startupTargets,err))return false;
+        if(startupTargets.size()!=playerCount)return fail("owned startup requires one selected land per player");
+        for(const auto &target:startupTargets)if(target.owner<=0 || target.owner>int(playerCount))
+            return fail("owned startup requires player-owned selected lands");
         if (generated.playerStarts.size()!=playerCount) return fail("owned109 requires player starts");
         if (ownedForest) {
             if (std::any_of(generated.terrain.begin(),generated.terrain.end(),[](uint8_t t){return t!=41 && t!=9 && t!=6 && t!=10;}) ||
@@ -785,8 +791,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 // Forced radius0 CC placement retains non-clearable411 trees inside its footprint.
             }
         }
-        for (uint16_t owner=1;owner<=playerCount;++owner) {
-            const auto &center=generated.playerStarts[owner-1];
+        for (const auto &target:startupTargets) {
+            const auto owner=uint16_t(target.owner);
+            const auto &center=generated.lands[target.landIndex].center;
             // Radius0 has one candidate; original controller forces its final rejected gate too.
             for (int draw=0;draw<4;++draw) genieRandomDraw(rng);
             rng=genieRandomDraw(rng); // Completion reseeds the CRT with its fifth15-bit draw.
@@ -812,7 +819,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             pass[terrain]=1;
             return startZones.lookup(width,generated.terrain,pass,index,err);
         };
-        if (startingWorkers) for (uint16_t owner=1;owner<=playerCount;++owner) {
+        if (startingWorkers) for (const auto &target:startupTargets) {
+            const auto owner=uint16_t(target.owner);
             const auto &center=generated.playerStarts[owner-1];
             std::vector<uint32_t> candidates;
             if (!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,workerMaxDistance,rng,candidates,err)) return false;
@@ -852,7 +860,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if (blocked || !--remaining) break;
             }
         }
-        if (startingScouts) for (uint16_t owner=1;owner<=playerCount;++owner) {
+        if (startingScouts) for (const auto &target:startupTargets) {
+            const auto owner=uint16_t(target.owner);
             const auto civ=playerCivilizations[owner-1];const int id=scoutIds[civ-1];
             const auto &u=data.civs[civ].units[id];const auto &g=*data.graphic(u.standingGraphic[0]);
             const auto &center=generated.playerStarts[owner-1];std::vector<uint32_t> candidates;
@@ -908,7 +917,16 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             for(const auto &sourceRow:resourceRows) {
                 RmsObjectRow row;
                 if(!finalizeRmsObjectRow(sourceRow,width,height,playerCount,row,err)) return false;
+                std::vector<RmsObjectTarget> targets;
+                if(!selectRmsObjectTargets(row,generated.lands,playerCount,targets,err))return false;
+                if(targets.empty())continue;
+                std::vector<RmsPlayerStart> selectedStarts;
+                for(const auto &target:targets) {
+                    if(target.owner!=0)return fail("owned resource construction remains unsupported");
+                    if(target.landIndex>=0)selectedStarts.push_back(generated.lands[target.landIndex].center);
+                }
                 const RmsResourceGroups group{row.mode,uint32_t(row.groups),uint32_t(row.perGroup),uint32_t(row.variance),uint32_t(row.radius)};
+                if(!selectedStarts.empty())row.owner=0;
                 auto rowBlockers=blockers;
                 if(row.unitId==594 || row.unitId==833 || row.unitId==1363 || row.unitId==1365 || isPredator(row.unitId) || isBigHunt(row.unitId)) {
                     rowBlockers=occupied;
@@ -930,13 +948,13 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                         generated.playerStarts,rng,placed,err,rowBlockers,&eligibility)) return false;
                 } else {
                     RmsGlobalGroupPlacement global;
-                    if(row.landId==-2) {
+                    if(row.landId==-2 || row.landId>=0) {
                         for(const auto &land:generated.lands) global.landCenters.push_back(land.center);
                         global.minDistance=row.minDistance;global.spacing=row.spacing;
                     }
                     if(!generateRmsGroupedResourcePlacements(width,height,generated.terrain,data,int16_t(row.unitId),group,rng,
-                        placed,err,rowBlockers,16000000,row.landId==1?generated.playerStarts:std::vector<RmsPlayerStart>{},
-                        RmsResourceDistance::Near,&eligibility,row.landId==-2?&global:nullptr,nullptr,&row)) return false;
+                        placed,err,rowBlockers,16000000,selectedStarts,
+                        RmsResourceDistance::Near,&eligibility,(row.landId==-2 || row.landId>=0)?&global:nullptr,nullptr,&row)) return false;
                 }
                 // Original waves are nonblocking decorations; fish may share their tile.
                 for(const auto &object:placed) if(object.unitId!=816 && object.unitId!=1585)
