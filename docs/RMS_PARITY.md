@@ -4919,7 +4919,7 @@ rather than running catch-up ticks. It preserves the original zero-timestamp
 sentinel and unsigned wraparound. A fresh clock admits a zero-time first step.
 Suspension preserves the last accepted timestamp and sets the original rebase
 flag: the next eligible timestamp advances neither simulation nor AI. Short
-rejected samples do not consume that flag. Queue-forced and synchronized/network
+rejected samples do not consume that flag. Replay-forced and synchronized/network
 admission are deliberately outside this path.
 
 Evidence includes32 additional original admission controls, pause/resume and
@@ -4940,8 +4940,9 @@ Pause, menu and focus transitions mark clock suspension immediately, including
 transitions within one SDL event batch. Events received after Resume in the same
 batch are no longer discarded by the old `wasPlaying` guard. The desktop smoke
 loop uses deterministic33ms host samples through the same admission API.
-Native commands still take effect immediately in the input phase; original
-command-manager queuing and SDL multi-event coalescing are not proven1:1.
+At this milestone native commands still took effect immediately in the input
+phase. The subsequent command-dispatch section records the bounded queue
+integration; SDL multi-event coalescing remains unproven.
 
 AI's arbitrary0.25s timer is replaced by its original normal first/periodic gate:
 the first admitted call evaluates once, and the counter evaluates again on calls
@@ -4971,9 +4972,9 @@ reload preserves each player's previous random result. Existing upgrade and
 starting-age regressions now account for the player wrapper before observing
 PER draws, rather than assuming PER is called directly from map generation.
 
-Whole-world parity remains open. Original active objects run per player before
-that player's wrapper, whereas native production and object phases still use
-global passes. Original secondary-list/manager callbacks and victory-time RNG
+Whole-world parity remains open. The subsequent owner-barrier integration
+replaces the global production/object passes described at this milestone.
+Original secondary-list/manager callbacks and victory-time RNG
 consumers are not fully mapped. The verified empty-world wrapper state must not
 be generalized to arbitrary moving/combat worlds or null holes in a player table.
 
@@ -5000,3 +5001,57 @@ combat pass; shipped714-rule scripts still initialize with three/eight players.
 The desktop smoke exercises60 timestamp-driven render/audio frames. These are
 bounded executable/static comparisons and native regressions, not a new live
 Windows screen or full-world deterministic replay comparison.
+
+
+### Local command dispatch and owner phase barriers (2026-11-16)
+
+Original command manager `432900/446970/446b90` copies payloads into a
+2,000-slot ring and drains by ascending physical slot before player updates
+(`61f715`, player loop `61f85e`). Draining keeps the write cursor: after
+1,999 consumed commands, the next three dispatch as 2001, 2002, 2000.
+Pending commands survive pause and skipped host calls; they do not force
+simulation admission. The previously labelled queue-count field at manager
+`+1614`, object `+4`, actually enables replay-file handling.
+
+Native context/right-click movement, resource work, healing, repair, attack,
+garrison and building rally clicks now capture actor/target IDs and destination
+at input time and dispatch only on admitted world steps. Camera/selection
+changes cannot redirect the captured command. New sessions clear the ring.
+Other HUD/special-mode, production and AI command emitters still use direct
+native handlers; replay, network serialization and exact original opcode
+validation are not implemented by this queue.
+
+The native world now completes each owner's production, work, movement/combat
+and garrison phases before that owner's AI, ascending Gaia then normal owners.
+Global target scans remain intact, and occupancy is rebuilt after spawns.
+This is an owner barrier correction, not exact within-owner traversal parity.
+Original `4af380` walks live lists: appends may execute immediately and removal
+swaps the last entry into the vacancy. Eight original-code mutation controls
+cover those mechanics. Awake/sleep/auxiliary membership depends on constructor,
+wake and deferred-sleep transitions; it cannot be inferred from unit type or
+whether the object is alive. Native phases, global capture/group planning and
+projectile/remains containers still differ from that lifecycle.
+
+Local evidence: `rms-local-command-{dequeue,ring}-oracle-2026-11-16.json`,
+`rms-local-command-ring-findings-2026-11-16.json`, and
+`object-update-list-{findings,controls-v1-oracle}-2026-11-16.json` in the private
+Windows reference research directory. These execute original queue/list code
+with controlled payloads/callbacks, not an end-to-end Windows match.
+
+
+Validation: ASan/UBSan checks pass for physical-ring wrap/overwrite/lifetime,
+command admission, selection/camera snapshots, pause retention, session reset,
+deleted actors and rally-point capture. Four owner-barrier controls compose
+original upgrade RNG callbacks with real native queued research completion and
+PER observations, covering neither/first/second/both owners researching. The
+fixture uses a temporary technology because the original chosen technology is
+civilization-disabled; the production disable gate is preserved.
+
+The broad cost/bonus/research/healing/controller suite, combat/garrison suite,
+and packaged Forest/startup/import regressions pass. Shipped 714-rule AI
+initialization passes with three and eight players. The rebuilt desktop passes
+menu navigation and 60 render/audio frames with effects and streamed music.
+Local build logs: `local-command-check.log`, `owner-order-bonus.log`,
+`owner-order-combat.log`, `owner-order-packaged.log`,
+`owner-order-original-ai.log`, `owner-order-desktop.log`. This validation does
+not establish a complete-match equivalence or a new live Windows UI comparison.
