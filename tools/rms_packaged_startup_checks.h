@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
-#include "rms_fortress_checks.h"
+#include "rms_walled_startup_checks.h"
 // Original 4df9b0 runner, raw Reytha54220, Arid54201, Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009/55019/MosEspa55014 and mixed-land54209/Endor54207/connections54210/inland54203/Migration54216/islands54217/basin54206/allied54218/central54212/Motherlode54225, fixed Tiny two-Empire startup.
 static void rmsPackagedStartupChecks(swgb::Assets &assets,const std::string &dataDir) {
     swgb::ResourceSet resources;swgb::RmsScript script;std::string error;
     check(resources.add(dataDir+"/gamedata_x1.drs",&error),error.c_str());
-    rmsFortressChecks(assets,resources);
+    rmsWalledStartupChecks(assets,resources);
     const std::unordered_set<std::string> defines{"TINY_MAP","FIXED_POSITIONS","DEFAULT_RESOURCES","RANDOM_MAP","2_PLAYERS"};
     const struct {uint32_t resource,seed,count,rng,objects,terrain,elevation,slopes,gaiaCost=0;} cases[]={
         {54220u,1u,1981u,3962920155u,4208403087u,856017665u,304656030u,2385442085u},

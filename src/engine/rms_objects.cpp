@@ -726,8 +726,8 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
     const std::vector<uint8_t> &terrain,const dat::DatFile &data,
     const std::vector<RmsPlayerStart> &landCenters,uint32_t &randomState,
     std::vector<RmsTimberPlacement> &out,std::string *err,
-    const std::vector<uint32_t> &occupiedTiles,const std::vector<uint8_t> *rowEligibility,
-    const RmsPlayerStart *selectedLand) {
+    const std::vector<uint32_t> &occupiedTiles,std::vector<uint8_t> *rowEligibility,
+    const RmsPlayerStart *selectedLand,const RmsObjectRow *objectRow) {
     out.clear();if(err) err->clear();
     auto fail=[&](const char *reason) {
         if(err) *err=std::string("RMS holocron: ")+reason;
@@ -745,6 +745,14 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
        (rowEligibility->size()!=terrain.size() ||
         std::any_of(rowEligibility->begin(),rowEligibility->end(),[](uint8_t value){return value>1;})))
         return fail("invalid persistent row eligibility");
+    const bool arena=objectRow!=nullptr;
+    if(arena && (width!=120 || landCenters.size()!=3 || selectedLand || objectRow->unitId!=285 ||
+       (objectRow->terrain!=6 && objectRow->terrain!=9 && objectRow->terrain!=12) || objectRow->mode || objectRow->scaling ||
+       objectRow->groups!=5 || objectRow->perGroup!=1 || objectRow->variance || objectRow->radius!=3 || objectRow->owner!=-1 ||
+       objectRow->landId!=-2 || objectRow->minDistance!=30 || objectRow->maxDistance!=-1 || objectRow->spacing!=5 ||
+       objectRow->temporarySpacing || objectRow->zoneDistance || objectRow->matchPlayerCiv))return fail("unsupported Arena holocron row");
+    std::vector<uint8_t> eligible;
+    if(arena)eligible=(rowEligibility && !rowEligibility->empty())?*rowEligibility:std::vector<uint8_t>(terrain.size(),1);
     std::vector<bool> occupied(terrain.size());
     for(auto tile:occupiedTiles) {
         if(tile>=terrain.size()) return fail("occupied tile outside map");
@@ -788,8 +796,9 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
            (selectedZones && selectedZones->tiles[tile]!=selectedZone)) continue;
         const int x=tile%width,y=tile/width;
         if(std::any_of(landCenters.begin(),landCenters.end(),[&](const auto &start) {
-            return std::abs(x-start.x)<25 && std::abs(y-start.y)<25;
+            return std::abs(x-start.x)<(arena?30:25) && std::abs(y-start.y)<(arena?30:25);
         })) continue;
+        if(arena && terrain[tile]!=objectRow->terrain)continue;
         if(occupied[tile] || pass[terrain[tile]]<=.05f) {
             if(!selectedLand)continue;
             // Original4dec9c forces the last queued selected-land candidate after collision rejection.
@@ -797,14 +806,19 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
                   (rowEligibility && !rowEligibility->empty() && !(*rowEligibility)[candidates[lastQueued-1]])))--lastQueued;
             if(index+1!=lastQueued)continue;
         }
-        // Original4de1b0 removes temporary spacing nodes from this row's queue.
-        for(int sy=std::max(0,y-20);sy<=std::min(int(height)-1,y+20);++sy)
-            for(int sx=std::max(0,x-20);sx<=std::min(int(width)-1,x+20);++sx) removed[sy*width+sx]=true;
+        // Original4de1b0 removes queue nodes; permanent spacing also masks passable future-row cells.
+        const int spacing=arena?5:20;
+        for(int sy=std::max(0,y-spacing);sy<=std::min(int(height)-1,y+spacing);++sy)
+            for(int sx=std::max(0,x-spacing);sx<=std::min(int(width)-1,x+spacing);++sx) {
+                removed[sy*width+sx]=true;
+                if(arena && pass[terrain[sy*width+sx]]>0)eligible[sy*width+sx]=0;
+            }
         // Static type70: base facet, sprite frame, three action timers, military timer.
         for(int draw=0;draw<6;++draw) genieRandomDraw(rng);
         placements.push_back({x+.5f,y+.5f,7,0,285});
         if(placements.size()==5) break;
     }
+    if(arena && rowEligibility)*rowEligibility=std::move(eligible);
     out=std::move(placements);randomState=rng;return true;
 }
 } // namespace swgb

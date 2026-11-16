@@ -60,5 +60,16 @@ static void rmsHolocron120Checks(const swgb::dat::DatFile &data) {
         check(rng==(kind==0?2073138905u:166830707u) && placements.size()==(kind==0?1u:0u),"Original selected holocron real water/zone/empty-queue controls");
         if(kind==0)check(placements[0].x==71.5f && placements[0].y==72.5f && placements[0].facet==7,"Original forced water holocron position");
     }
+    {
+        std::vector<uint8_t> terrain(14400,6),eligible(14400,1);const auto before=eligible;
+        const std::vector<swgb::RmsPlayerStart> centers{{60,60},{30,75},{100,33}};
+        swgb::RmsObjectRow row{285,6,0,0,1,0,5,3,-1,-2,30,-1,5,0,0,0};
+        for(int invalid:{0,1}) {
+            auto bad=row;if(invalid)bad.terrain=255;else bad.spacing=4;
+            uint32_t rng=1;std::vector<swgb::RmsTimberPlacement> placements{{1,1,0}};
+            check(!swgb::generateRmsHolocronPlacements(120,120,terrain,data,centers,rng,placements,&error,{},&eligible,nullptr,&bad) &&
+                  rng==1 && placements.empty() && eligible==before,"Unverified Arena holocron modifiers reject without changing eligibility or RNG");
+        }
+    }
     std::puts("PASS: original120 holocron placement on grass and retained forests");
 }

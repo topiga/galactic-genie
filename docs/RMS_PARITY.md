@@ -3848,3 +3848,65 @@ Rebuilt desktop headless menu/game/render/audio-stream checks also pass. The
 production CLI audit now accepts66/138 configurations across22 resources;
 remaining rejected profiles still fail explicitly rather than silently using
 a different generator.
+
+### Arena54223 early trees, holocrons and wider walls (2026-11-16)
+
+Three actual derived-reader Tiny/fixed/default full runs match generated active
+objects, original IDs/positions/facets, startup poses, all grids and final RNG:
+
+| Seed | Biome | Active records | Retained state7 records | RNG | Owner costs98,1/2 | Gaia costs98/164 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Endor | 7009 | 157 | 1629495980 | 930 / 1100 | 1500 |
+| 4000 | Alaris | 8256 | 141 | 2591708538 | 940 / 1000 | 1300 |
+| 16160 | Krant | 6911 | 116 | 3017032858 | 920 / 990 | 1550 |
+
+Raw nonnull world-table counts are7166/8397/7027. Lifecycle captures identify
+exactly157/141/116 early-tree IDs becoming state7 during automatic scenery;
+they remain state2 through the connection stage in these samples. They are
+excluded from active comparisons using the observed states, not inferred from
+unit type or position. Native import omits inactive entries while preserving
+all creation-ID gaps; it does not claim the same retained-pointer representation.
+
+The map reuses the existing land, dry connection and early-forest controllers.
+Connection postprocessing explicitly smooths terrain1 (4e432e/4e4339). Saved
+assembly shows its setter is reached only through matching terrain1 neighbors;
+a raster without1 and replacements that cannot introduce1 therefore has no
+smoothing setter callbacks. The admitted Arena geometry/table enforces those
+conditions, and generation also rejects a wet raster before connecting it.
+
+Four separate original controls corroborate the lifecycle distinction. Dry
+forest10/20/21 routes repaint429 cells without deleting early trees. One early
+tree standing on repainted ground survives final scenery; the other58 are
+replaced and become state7. A no-connection sibling replaces all59. This is why
+native code must not delete a tree simply because a route repaints its tile.
+Water/forest interactions remain rejected outside the evidenced profile.
+
+Arena's holocron row additionally requires the biome's ground terrain, exclusion
+30 from every land center, and permanent spacing5. The shared holocron helper
+now implements those modifiers and exports the restricted eligibility mask for
+later rows; legacy temporary spacing20 and Migration fallback remain unchanged.
+The wall controller now accepts the original18..22 bounds and receives bounds
+from the RMS row. Original cache observers and native fixtures match obstruction
+words and every direction byte for all three Arena starts. The full original
+11-stage captures and ordered segments remain local for deeper comparisons.
+
+The reused walled-startup tests cover all active object IDs, native positions,
+owned height/HP, completion animation, costs, research order and population.
+Arena has used population4, remaining capacity1 and building counter2 for both
+players; it does not acquire Fortress's additional building bonuses. Negative
+checks cover unsupported holocron modifiers and mismatched wall-distance pairs.
+
+Evidence: `rms-arena54223-actual-tiny-seed1-findings-2026-11-16.json`,
+`rms-arena54223-branch-lifecycle-findings-2026-11-16.json`,
+`rms-arena54223-case-initializers-2026-11-16.json`,
+`rms-arena54223-branch-cache-findings-2026-11-16.json`,
+`rms-54223-early-forest-connections-gap-review-2026-11-16.json`, and
+`rms-54223-dry-forest-connections-controls-findings-2026-11-16.json`.
+Other map sizes, civilizations, diagonal gate emission, wet forest connections
+and subsequent gameplay are not established as1:1 by these startup comparisons.
+
+Validation: all93 retained packaged startup cases plus the general/authored
+regressions pass, as do strict integrated RMS, production CLI file/archive
+checks and the desktop headless menu/render/audio-stream smoke. The actual
+Tiny/default production audit accepts69 of138 configurations across23 map
+resources; this is an acceptance count, not a percentage of engine parity.

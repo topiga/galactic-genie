@@ -121,6 +121,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
 // with two land centers (or three to five at120). Slopes do not restrict it; occupiedTiles
 // supplies retained static obstacles, including forest trees and starting buildings.
 // selectedLand restricts the queue to its connected terrain zone on Migration120.
+// Arena objectRow uses terrain-filtered distance30 and persistent spacing5 instead.
 // This helper does not import holocrons or implement their pickup/gameplay.
 // Partial placement when the candidate queue exhausts is successful.
 bool generateRmsHolocronPlacements(uint32_t width, uint32_t height,
@@ -128,6 +129,7 @@ bool generateRmsHolocronPlacements(uint32_t width, uint32_t height,
     const std::vector<RmsPlayerStart> &landCenters, uint32_t &randomState,
     std::vector<RmsTimberPlacement> &out, std::string *err=nullptr,
     const std::vector<uint32_t> &occupiedTiles={},
-    const std::vector<uint8_t> *rowEligibility=nullptr,
-    const RmsPlayerStart *selectedLand=nullptr);
+    std::vector<uint8_t> *rowEligibility=nullptr,
+    const RmsPlayerStart *selectedLand=nullptr,
+    const RmsObjectRow *objectRow=nullptr);
 } // namespace swgb

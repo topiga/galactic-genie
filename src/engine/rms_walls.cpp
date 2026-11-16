@@ -40,7 +40,7 @@ class Controller {
         for (float value: in.restrictions) require(std::isfinite(value), "Nonfinite restriction");
         require(in.restrictions[0]>0, "Expected initially passable original terrain0 cache");
         for (uint8_t value: in.terrain) require(value<in.restrictions.size(), "Terrain index out of range");
-        require(in.minimumDistance==16 && in.maximumDistance==20, "Unverified wall-distance profile");
+        require((in.minimumDistance==16 && in.maximumDistance==20) || (in.minimumDistance==18 && in.maximumDistance==22), "Unverified wall-distance profile");
         require(in.commandCenters.size()==2, "Expected two command centers");
         std::array<bool,2> seen{};
         auto geometry=[&](float x,float y,float rx,float ry) {

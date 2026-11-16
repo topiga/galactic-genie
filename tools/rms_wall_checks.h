@@ -58,6 +58,8 @@ static void ownedRmsWallBoundaryChecks(swgb::Assets &assets) {
             check(!swgb::generateRmsWallBoundary(invalid,result,&error) && !error.empty() && hash(result.obstruction)==original,"Unverified wall obstruction rejects atomically");
             invalid=input;invalid.objects[0].unitClass=29;
             check(!swgb::generateRmsWallBoundary(invalid,result,&error) && hash(result.obstruction)==original,"Unverified special wall class rejects atomically");
+            invalid=input;invalid.minimumDistance=18;
+            check(!swgb::generateRmsWallBoundary(invalid,result,&error) && hash(result.obstruction)==original,"Unverified mixed wall-distance pair rejects atomically");
             invalid=input;invalid.terrain.pop_back();
             check(!swgb::generateRmsWallBoundary(invalid,result,&error) && hash(result.obstruction)==original,"Malformed wall terrain rejects atomically");
         }
