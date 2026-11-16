@@ -17,6 +17,12 @@ static void ownedRmsWallBoundaryChecks(swgb::Assets &assets) {
         {16160u, 3787531182u, {3332784581u, 1485044019u, 1060473042u, 4080570182u, 1714203709u, 3664350798u, 1212449678u, 426989960u, 1473983288u, 761724018u, 1376899582u, 990901592u, 86664909u, 2656006818u, 1831916887u, 1115432037u}},
     };
     const auto hash=[](const auto &values){uint32_t h=2166136261u;for(auto value:values)h=(h^uint32_t(value))*16777619u;return h;};
+    struct ImportCase { uint32_t seed,count,added,rng,objects; int walls1,walls2; };
+    const ImportCase imports[]={
+        {1u,6095u,108u,3334285395u,1440103112u,46,41},
+        {12345u,6076u,105u,222964401u,231367775u,58,29},
+        {16160u,6161u,98u,3621490841u,2306590884u,56,27},
+    };
     for(const auto &c:cases) {
         swgb::RmsScript script;std::string error;
         check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes){if(id)return false;bytes.assign(source.begin(),source.end());return true;},{},&error),error.c_str());
@@ -55,6 +61,49 @@ static void ownedRmsWallBoundaryChecks(swgb::Assets &assets) {
             invalid=input;invalid.terrain.pop_back();
             check(!swgb::generateRmsWallBoundary(invalid,result,&error) && hash(result.obstruction)==original,"Malformed wall terrain rejects atomically");
         }
+        const auto &expected=*std::find_if(std::begin(imports),std::end(imports),[&](const auto &v){return v.seed==c.seed;});
+        const std::string wallSource="#const RMS_117 117\n"+source+"create_object RMS_117 { set_place_for_every_player number_of_objects 9999 min_distance_to_players 16 max_distance_to_players 20 }";
+        swgb::RmsScript wallScript;
+        check(wallScript.load(0,[&](int32_t id,std::vector<uint8_t> &bytes){if(id)return false;bytes.assign(wallSource.begin(),wallSource.end());return true;},{},&error),error.c_str());
+        swgb::RmsMap walls;rng=c.seed;
+        check(swgb::generateRmsMap(wallScript,{"FIXED_POSITIONS"},120,120,assets.dat(),rng,walls,&error,2,{1,1}),error.c_str());
+        std::vector<uint32_t> records;
+        for(const auto &o:walls.resourcesAfterOwned)
+            records.insert(records.end(),{uint32_t(o.unitId),o.owner,uint32_t(o.x*2),uint32_t(o.y*2),o.facet,o.annexParentIndex});
+        check(rng==expected.rng && walls.resourcesAfterOwned.size()==expected.added && hash(records)==expected.objects,
+              "Original ordered walls, gates, explicit posts, facets, parent indices and RNG");
+        check(walls.terrain==map.terrain && walls.elevation==map.elevation && walls.slopes==map.slopes,"Walls retain original terrain grids");
+        swgb::Game game(assets);rng=c.seed;
+        check(game.initRms(wallScript,{"FIXED_POSITIONS"},120,rng,&error,2,{1,1}),error.c_str());
+        check(rng==expected.rng && game.activeObjectCount()==expected.count,"Wall import does not duplicate annexes or object IDs");
+        for(int owner:{1,2}) {
+            const int cost=5*(owner==1?expected.walls1:expected.walls2);
+            check(game.resource(owner,98)==575+cost && game.resource(owner,165)==375+cost && game.resource(owner,164)==200 &&
+                  game.resource(owner,4)==1 && game.resource(owner,11)==4 && game.resource(owner,21)==2,"Original wall cost and population counters");
+            check(game.technologyOrderForTesting(owner)==std::vector<int>({0,486,22,451,10}),"Original wall research without gate-head tech17");
+        }
+        uint32_t first=0;
+        for(const auto &o:walls.cliffs)first=o.creationOrdinal+1;
+        first+=uint32_t(walls.scenery.size()+walls.objects.size()+walls.ownedObjects.size())+1;
+        for(size_t n=0;n<walls.resourcesAfterOwned.size();++n) {
+            const auto &o=walls.resourcesAfterOwned[n];const uint32_t id=first+uint32_t(n);const auto pos=game.objectPosition(id);
+            check(game.objectUnitId(id)==o.unitId && game.objectPlayer(id)==o.owner && pos[0]==o.y && pos[1]==120-o.x &&
+                  game.objectHitPoints(id)==(o.unitId==117?1500:2750) && game.pendingFoundationForTesting(id)==255,
+                  "Original imported wall/gate identity, position, HP and foundation");
+            if(o.unitId==117)check((int(std::lround(game.objectFacing(id)/(6.283185307179586f/5)))%5+5)%5==o.facet,"Original wall adjacency facet survives native import");
+            const auto animation=game.objectAnimationForTesting(id);
+            check(animation[0]==0 && animation[1]==0,"Original wall/gate completion resets animation");
+        }
+        const auto gate=std::find_if(walls.resourcesAfterOwned.begin(),walls.resourcesAfterOwned.end(),[](const auto &o){return o.unitId==64 || o.unitId==88;});
+        check(gate!=walls.resourcesAfterOwned.end(),"Fixture contains a gate assembly");
+        const uint32_t gateId=first+uint32_t(gate-walls.resourcesAfterOwned.begin());
+        check(game.damageObjectForTesting(gateId,3000) && !game.objectActive(gateId) && !game.objectActive(gateId+1) && !game.objectActive(gateId+2),
+              "Explicit RMS post parents retain native gate destruction behavior");
+        if(c.seed==1) {
+            auto bad=assets.dat();bad.civs[1].units[81].resourceStorages[0].type=4;bad.civs[1].units[81].resourceStorages[0].amount=1;rng=c.seed;
+            check(!swgb::generateRmsMap(wallScript,{"FIXED_POSITIONS"},120,120,bad,rng,walls,&error,2,{1,1}) && rng==c.seed && walls.terrain.empty(),
+                  "Unsupported gate-post completion rejects before generation");
+        }
     }
-    std::puts("PASS: original wall boundary stages from native generated objects");
+    std::puts("PASS: original wall routes, emission, explicit annex import, facets and completion");
 }

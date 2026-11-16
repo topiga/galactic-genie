@@ -5,6 +5,7 @@
 #include "rms_elevation.h"
 #include "rms_connections.h"
 #include "rms_zones.h"
+#include "rms_walls.h"
 #include "rms_land_placement.h"
 #include "rms_terrain_cleanup.h"
 #include "rms_early_forest.h"
@@ -1027,7 +1028,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     return fail("scouts require connected passable grass and foundations");
         }
     }
-    const auto ownedBuilding=std::find_if(resourceRows.begin(),resourceRows.end(),[](const auto &row){return row.unitId==87 || row.unitId==70 || row.unitId==50 || row.unitId==79;});
+    const auto ownedBuilding=std::find_if(resourceRows.begin(),resourceRows.end(),[](const auto &row){return row.unitId==87 || row.unitId==70 || row.unitId==50 || row.unitId==79 || row.unitId==117;});
     if(ownedBuilding!=resourceRows.end()) {
         // shortcut: flat Empire87/70/50/79 completion; extend slopes, other row combinations and boundary fallback with original traces.
         if(width!=120 || height!=120 || base!=6 || playerCount!=2 || playerCivilizations!=std::vector<uint16_t>{1,1} ||
@@ -1050,6 +1051,52 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         const bool mixed=basicMixed || defendedMixed;
         for(const auto &row:resourceRows) {
             if(!mixed && row.unitId!=ownedBuilding->unitId)return fail("unsupported mixed owned buildings");
+            if(row.unitId==117) {
+                if(resourceRows.size()!=1 || row.owner!=-1 || row.landId!=1 || row.matchPlayerCiv || row.scaling ||
+                   row.groups!=9999 || row.perGroup!=1 || row.mode || row.variance || row.radius!=3 || row.terrain!=-1 ||
+                   row.minDistance!=16 || row.maxDistance!=20 || row.spacing || row.temporarySpacing || row.zoneDistance)
+                    return fail("unsupported wall startup composition");
+                if(data.terrainRestrictions.size()<=25)return fail("missing wall path restriction");
+                for(int id:{117,64,88,81,95}) {
+                    if(data.civs[1].units.size()<=117)return fail("missing wall or gate prototype");
+                    const auto &u=data.civs[1].units[id];const auto *g=data.graphic(u.standingGraphic[0]);
+                    const bool wall=id==117,gate=id==64 || id==88;
+                    const int graphic=wall?238:id==64?1084:id==88?1195:1111;
+                    const int head=wall?-1:(id==64 || id==81)?487:490;
+                    if(!u.exists || u.id!=id || u.type!=dat::UT_Building || u.cls!=(wall?6:8) || u.hitPoints!=(wall?1500:2750) ||
+                       u.collisionSize[data.footprintAxesSwapped?1:0]!=(id==64?1.f:.5f) || u.collisionSize[data.footprintAxesSwapped?0:1]!=(id==88?1.f:.5f) || u.collisionSize[2]!=4 ||
+                       u.clearanceSize[data.footprintAxesSwapped?1:0]!=(id==64?2.f:.5f) || u.clearanceSize[data.footprintAxesSwapped?0:1]!=(id==88?2.f:.5f) ||
+                       u.speed || u.flyMode || u.hillMode || u.trait || u.convertTerrain || u.canBeBuiltOn || u.terrainRestriction!=10 ||
+                       u.obstructionType!=2 || u.obstructionClass!=(gate?5:4) || u.adjacentMode!=1 || u.graphicsAngle ||
+                       u.foundationTerrainId!=-1 || u.oldOverlayId!=-1 || u.stackUnitId!=-1 || u.pileUnit!=-1 || u.disappearsWhenBuilt ||
+                       u.techId!=(wall?10:-1) || u.headUnit!=head || u.transformUnit!=(id==64?78:id==88?91:-1) ||
+                       u.trainSound!=-1 || u.constructionSound!=(wall?228:541) || u.standingGraphic[0]!=graphic || u.standingGraphic[1]!=-1 ||
+                       u.defaultTaskId!=-1 || size_t(id)>=data.unitHeaders.size() || !data.unitHeaders[id].tasks.empty() ||
+                       !g || g->frameCount!=1 || g->angleCount!=(wall?5:1) || g->sequenceType!=(wall?2:0) ||
+                       g->frameDuration || g->replayDelay || g->soundId!=-1 || !g->angleSounds.empty())
+                        return fail("unsupported wall or gate lifecycle metadata");
+                    if(gate) {
+                        const auto suffix=u.name.rfind("CLOS");
+                        if(suffix==std::string::npos || suffix+4!=u.name.size() ||
+                           data.civs[1].units[u.transformUnit].name!=u.name.substr(0,suffix)+"OPEN" ||
+                           data.civs[1].units[id==64?81:95].name!=u.name.substr(0,suffix)+"END")
+                            return fail("unsupported native gate companion names");
+                    }
+                    for(size_t n=0;n<u.annexes.size();++n) {
+                        const auto &a=u.annexes[n];const bool post=gate && n<2;
+                        const float dx=post && id==64?(n==0?-1.5f:1.5f):0,dy=post && id==88?(n==0?1.5f:-1.5f):0;
+                        if(a.unitId!=(post?(id==64?81:95):-1) || a.misplacementX!=dx || a.misplacementY!=dy)
+                            return fail("unsupported wall gate annex layout");
+                    }
+                    for(size_t n=0;n<u.costs.size();++n) {
+                        const auto &c=u.costs[n];const bool paid=wall && n==0;
+                        if(c.type!=(paid?2:-1) || c.amount!=(paid?5:0) || c.flag!=(paid?1:0))return fail("unsupported wall completion cost");
+                    }
+                    for(const auto &storage:u.resourceStorages)
+                        if(storage.type!=-1 || storage.amount || storage.flag)return fail("unsupported wall completion storage");
+                }
+                continue;
+            }
             const int buildingId=row.unitId;const bool prefab=buildingId==70,farm=buildingId==50,tower=buildingId==79;
             const float radius=tower?.5f:prefab?1.f:1.5f;
             const bool quantity=prefab?((row.mode==0 && row.perGroup==1) || (row.mode==1 && row.perGroup==4)):(!row.mode && row.perGroup==1);
@@ -1464,6 +1511,88 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(targets.empty())continue;
                 const bool ownedRow=std::any_of(targets.begin(),targets.end(),[](const auto &target){return target.owner>0;});
                 if(ownedRow) {
+                    if(row.unitId==117) {
+                        RmsWallInput input;input.width=width;input.height=height;input.terrain=generated.terrain;
+                        input.restrictions=data.terrainRestrictions[25].passableBuildableDmgMultiplier;
+                        auto obstacle=[&](int id,int owner,float x,float y) {
+                            const auto &u=data.civs[owner?playerCivilizations[owner-1]:0].units[id];
+                            const float rx=u.collisionSize[data.footprintAxesSwapped?1:0],ry=u.collisionSize[data.footprintAxesSwapped?0:1];
+                            input.objects.push_back({owner,x,y,rx,ry,u.obstructionType,u.obstructionClass,u.cls});
+                            if(id==109)input.commandCenters.push_back({owner,x,y,rx,ry});
+                        };
+                        for(const auto &o:generated.cliffs)obstacle(o.unit,0,o.x,o.y);
+                        for(const auto &o:generated.scenery)if(o.alive)obstacle(o.unitId,0,o.x,o.y);
+                        for(const auto &o:generated.ownedObjects)obstacle(o.unitId,o.owner,o.x,o.y);
+                        RmsWallBoundary boundary;
+                        if(!generateRmsWallBoundary(input,boundary,err))return false;
+                        auto &placed=generated.resourcesAfterOwned;
+                        for(const auto &target:targets) {
+                            if(target.owner<1 || target.owner>2 || target.landIndex<0)return fail("walls require player lands");
+                            const auto &center=generated.lands[target.landIndex].center;
+                            std::vector<uint32_t> unused;
+                            // Original4de830 consumes this queue before dispatching4df5b0.
+                            if(!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,row.maxDistance,rng,unused,err))return false;
+                            std::array<int,4> gates{};
+                            auto create=[&](int id,float x,float y,uint32_t parent=UINT32_MAX) {
+                                RmsTimberPlacement object{x,y,uint8_t(id==117?2:7),0,int16_t(id),0,0,uint16_t(target.owner)};
+                                object.annexParentIndex=parent;placed.push_back(object);
+                            };
+                            for(const auto &segment:boundary.segments[target.owner]) {
+                                if(!segment.active)continue;
+                                int x=segment.fromX,y=segment.fromY,skip=0;
+                                const int ex=segment.toX,ey=segment.toY;
+                                if(std::max(std::abs(x-ex),std::abs(y-ey))>=4) {
+                                    const int direction=y>ey?0:(x<ex && y<ey)?1:x<ex?2:3;
+                                    if(gates[direction]<2) {
+                                        // shortcut: diagonal gate constructors await original controlled comparisons.
+                                        if(direction<2)return fail("unverified diagonal wall gate");
+                                        ++gates[direction];const uint32_t parent=uint32_t(placed.size());
+                                        const float gx=x+(direction==2?2.f:.5f),gy=y+(direction==2?.5f:2.f);
+                                        create(direction==2?64:88,gx,gy);
+                                        if(direction==2) {create(81,gx-1.5f,gy,parent);create(81,gx+1.5f,gy,parent);}
+                                        else {create(95,gx,gy+1.5f,parent);create(95,gx,gy-1.5f,parent);}
+                                        for(int draw=0;draw<9;++draw)genieRandomDraw(rng);
+                                        for(int completion=0;completion<3;++completion)rng=genieRandomDraw(rng);
+                                        skip=4;
+                                    }
+                                }
+                                for(;;) {
+                                    if(skip)--skip;
+                                    else {
+                                        create(117,x+.5f,y+.5f);
+                                        for(int draw=0;draw<4;++draw)genieRandomDraw(rng);
+                                        rng=genieRandomDraw(rng);
+                                    }
+                                    bool moved=false;
+                                    if(x<ex){++x;moved=true;}
+                                    if(y>ey){--y;moved=true;}else if(y<ey){++y;moved=true;}
+                                    if(!moved)break;
+                                }
+                            }
+                        }
+                        // Original555f80 tries a same-unit neighbor before a class8 gate/post.
+                        std::vector<std::vector<size_t>> cells(size_t(width)*height);
+                        for(size_t n=0;n<placed.size();++n) {
+                            const auto &o=placed[n];
+                            if(o.x<0 || o.y<0 || o.x>=width || o.y>=height)return fail("wall object outside map");
+                            cells[size_t(o.y)*width+size_t(o.x)].push_back(n);
+                        }
+                        constexpr int dx[]={0,0,-1,1,-1,1,-1,1},dy[]={-1,1,0,0,-1,-1,1,1};
+                        for(auto &o:placed)if(o.unitId==117) {
+                            bool neighbors[8]{};
+                            for(int d=0;d<8;++d) {
+                                const int x=int(o.x)+dx[d],y=int(o.y)+dy[d];
+                                if(x<0 || y<0 || x>=int(width) || y>=int(height))continue;
+                                const auto &cell=cells[size_t(y)*width+x];
+                                auto match=std::find_if(cell.begin(),cell.end(),[&](size_t n){return placed[n].unitId==117;});
+                                if(match==cell.end())match=std::find_if(cell.begin(),cell.end(),[&](size_t n){return data.civs[1].units[placed[n].unitId].cls==8;});
+                                neighbors[d]=match!=cell.end() && placed[*match].owner==o.owner;
+                            }
+                            const auto &n=neighbors;
+                            o.facet=n[0]&&n[1]&&!n[2]&&!n[3]?1:n[2]&&n[3]&&!n[0]&&!n[1]?0:n[4]&&n[7]&&!n[5]&&!n[6]?3:n[5]&&n[6]&&!n[4]&&!n[7]?4:2;
+                        }
+                        continue;
+                    }
                     if(row.unitId==87 || row.unitId==70 || row.unitId==50 || row.unitId==79) {
                         const bool prefab=row.unitId==70,farm=row.unitId==50,tower=row.unitId==79;
                         const uint8_t foundation=farm?7:27;

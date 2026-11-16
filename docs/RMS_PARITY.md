@@ -3594,3 +3594,36 @@ Only the low direction byte consumed by this controller is reproduced; this is
 not a claim of complete original hierarchical pathfinding. Gate creation,
 wall-row integration and full packaged54208 remain separate work. These three
 boundary comparisons do not increase the complete packaged-map case count.
+
+
+### Wall and cardinal gate startup integration (2026-11-16)
+
+The authored flat120 Empire wall row now runs through native RMS generation
+and import. For seeds1,12345,16160, the complete original comparisons match
+all ordered objects, terrain/height/slope grids, startup poses and final RNG:
+
+| Seed | Total objects | Added walls/gates/posts | Final RNG |
+| --- | --- | --- | --- |
+| 1 | 6095 | 108 | 3334285395 |
+| 12345 | 6076 | 105 | 222964401 |
+| 16160 | 6161 | 98 | 3621490841 |
+
+The original consumes each owner's ordinary candidate queue before special wall
+dispatch, even though wall routes do not use those candidates. Native generation
+preserves those draws and the constructor/completion reseeding order. Gate posts
+are explicit ordered placements with parent references; RMS import suppresses
+implicit annex creation, while regular scenario import retains it.
+
+Shared tests verify all257 imported wall facets, every new object's identity,
+position, HP and startup animation, exact wall costs, technology10 completion
+without gate-head technology17, and absence of duplicate posts. A native gate
+kill also verifies that explicit post links retain existing destruction behavior;
+that is an integration regression, not a fresh original death comparison.
+
+Evidence: the three `rms-text-full-wall117-gatelist-SEED-comparison-2026-11-16.json`
+results, `rms-wall117-emission-api-findings-2026-11-16.json` and
+`rms-wall117-lifecycle-review-2026-11-16.json`. Prototype guards account for
+both raw DAT axes and the native asset loader's rotated footprints. This covers
+one authored wall-row composition; full packaged54208 and diagonal gate dispatch
+remain unadmitted. Separate controlled original diagonal-constructor evidence
+is retained for the next integration step.

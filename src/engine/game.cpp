@@ -1108,7 +1108,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
         const bool hidden = source.garrisonedInId >= 0;
         const uint32_t parentId =
             addScenarioObject(unit, x, y, source.initialFrame, source.spawnId, hidden);
-        if (!hidden && unit->type == dat::UT_Building) {
+        if (!rmsCompletionOrder && !hidden && unit->type == dat::UT_Building) {
             for (const dat::BuildingAnnex &annex : unit->annexes) {
                 if (annex.unitId < 0) continue;
                 const dat::Unit *part = findUnit(civilization, annex.unitId);
@@ -1262,6 +1262,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         const auto &placement=generated.resourcesAfterOwned[index];
         recordStartupResources(assets_.dat().civs[placement.owner?playerCivilizations[placement.owner-1]:0].units[placement.unitId],placement.owner);
         if(auto *object=findObject(resourceIdBase+uint32_t(index))) {
+            if(placement.annexParentIndex!=UINT32_MAX)object->annexParentId=resourceIdBase+placement.annexParentIndex;
             if(placement.owner)object->pendingFoundation=placement.pendingFoundation;
             else if(object->unit->type==dat::UT_Building && object->unit->foundationTerrainId>=0)
                 object->pendingFoundation=uint8_t(object->unit->foundationTerrainId);

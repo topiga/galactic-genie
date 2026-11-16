@@ -34,6 +34,7 @@ struct RmsTimberPlacement {
     uint16_t owner=0; // Preserve interleaved owned rows after initial startup.
     float heightAboveGround=0;
     uint8_t pendingFoundation=255;
+    uint32_t annexParentIndex=UINT32_MAX; // Index in resourcesAfterOwned; RMS emits annexes explicitly.
 };
 // One original ungrouped unit348 row, default modifiers, on a flat map.
 // Occupied tiles represent verified centered, half-tile scenery footprints.
