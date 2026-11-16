@@ -2,16 +2,16 @@
 
 ## Current comparison coverage: 2026-11-16
 
-Fifteen packaged profiles have complete original-runner comparisons at fixed Tiny120,
+Sixteen packaged profiles have complete original-runner comparisons at fixed Tiny120,
 two Empire players and default resources: Forest54204, Reytha54220, Arid54201,
 Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
-Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216 and five-land islands54217.
-The shared packaged suite contains56 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
+Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217 and central basin54206.
+The shared packaged suite contains59 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
 Gaia resource accounting and deferred foundation rendering.
 
-The standard production audit accepts45/138 map/seed attempts (fifteen of46 resources,
-three seeds each);93 are explicitly rejected. This measures supported
+The standard production audit accepts48/138 map/seed attempts (sixteen of46 resources,
+three seeds each);90 are explicitly rejected. This measures supported
 configurations, not an engine completion percentage. New comparisons run the
 original executable locally with modeled host boundaries. Live Windows evidence
 below remains a separate, earlier baseline. Later gameplay and other map settings
@@ -3127,3 +3127,38 @@ All56 shared packaged cases pass with ASan/UBSan, along with retained Forest,
 Strict RMS integration and production CLI tests pass. The audit accepts45/138
 attempts across fifteen profiles;93 remain unsupported. The rebuilt desktop
 preferences/menu/effects/music smoke passes with dummy video/audio.
+
+### Central basin, random zones and repeated water passes (2026-11-16)
+
+Raw54206 combines a neutral island created before the players, bordered player
+lands, random player zones, twelve terrain passes, seven elevation levels,
+cliffs and active player-only water connections. Three complete original runs
+match at fixed Tiny120/two-Empire/default resources:
+
+| Seed | Objects | Final RNG | Player zones | Gaia unit/total cost |
+|---:|---:|---:|---|---:|
+| 1 | 1278 | 1896101015 | 2,3 | 1800 |
+| 12345 | 1289 | 2743095053 | 3,3 | 3150 |
+| 16160 | 1284 | 1733658282 | 3,2 | 3050 |
+
+All ordered objects, grids and captured startup poses agree. Independent resource
+replays verify the same output plus owner counters, actual land metadata,
+terrain/elevation arrays and all connection settings. The repeated water passes
+repaint shallow/rough/deep terrain before the forest rows. The existing workers
+and connection algorithms reproduce the composition without changes.
+
+Random-zone draws execute during parsing, before later random object choices.
+Native generation's existing runtime preprocessing callback preserves that
+ordering. Standalone token dumps without the callback are not used as final
+object-row evidence. Seed12345 verifies equal random player zones without
+implicitly treating the enemy players as allies.
+
+Evidence: `rms-packaged-basin54206-full-findings-2026-11-16.json` and individual
+`rms-text-full-basin54206` full/resource/comparison captures. This remains bounded
+startup parity, not evidence for other sizes, settings or subsequent simulation.
+
+Validation: all59 shared packaged cases and retained Forest/general-object,
+holocron, foundation and transport regressions pass. The strict RMS suite and
+production CLI checks pass; the desktop smoke verifies60 render frames and
+audio streaming without a live display or listening comparison. The production
+audit accepts48/138 attempts, with90 unsupported attempts rejected.
