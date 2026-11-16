@@ -28,9 +28,37 @@ static void rmsHolocron120Checks(const swgb::dat::DatFile &data) {
         rng=f.entry;
         check(!swgb::generateRmsHolocronPlacements(120,120,terrain,data,starts,rng,placements,&error,{14400}) &&
               rng==f.entry && placements.empty(),"Invalid holocron tree occupancy rejects atomically");
+        const swgb::RmsPlayerStart outside{120,0};
+        check(!swgb::generateRmsHolocronPlacements(120,120,terrain,data,starts,rng,placements,&error,{},nullptr,&outside) &&
+              rng==f.entry && placements.empty(),"Selected holocron center outside map rejects atomically");
         terrain[0]=53;
         check(!swgb::generateRmsHolocronPlacements(120,120,terrain,data,starts,rng,placements,&error) &&
               rng==f.entry && placements.empty(),"Unproven holocron terrain ID rejects atomically");
+    }
+    // Original selected handler: nine eligible nodes, real constructor; rejected gates modeled by occupied tiles.
+    for(bool blocked:{false,true}) {
+        std::vector<uint8_t> terrain(14400,0),eligible(14400,0);
+        std::vector<uint32_t> occupied;
+        for(int y=70;y<=72;++y)for(int x=70;x<=72;++x){eligible[y*120+x]=1;if(blocked)occupied.push_back(y*120+x);}
+        const auto before=eligible;
+        const std::vector<swgb::RmsPlayerStart> centers{{10,10},{110,10},{40,40}};
+        uint32_t rng=1;std::vector<swgb::RmsTimberPlacement> placements;
+        check(swgb::generateRmsHolocronPlacements(120,120,terrain,data,centers,rng,placements,&error,occupied,&eligible,&centers[2]),error.c_str());
+        check(rng==2073138905u && placements.size()==1 && placements[0].x==(blocked?71.5f:72.5f) &&
+              placements[0].y==72.5f && placements[0].facet==7 && eligible==before,"Original selected holocron last-node fallback and temporary spacing");
+        auto excluded=centers;excluded[2]={70,70};rng=1;
+        check(swgb::generateRmsHolocronPlacements(120,120,terrain,data,excluded,rng,placements,&error,occupied,&eligible,&excluded[2]) &&
+              rng==166830707u && placements.empty(),"Selected holocron minimum-distance prefilter never forces placement");
+    }
+    // Actual master-gate rejection on water differs from zone-prefilter rejection and an empty queue.
+    for(int kind:{0,1,2}) {
+        std::vector<uint8_t> terrain(14400,kind==0?1:0),eligible(14400,0);
+        if(kind!=2)for(int y=70;y<=72;++y)for(int x=70;x<=72;++x){eligible[y*120+x]=1;terrain[y*120+x]=1;}
+        const std::vector<swgb::RmsPlayerStart> centers{{10,10},{110,10},{40,40}};
+        uint32_t rng=1;std::vector<swgb::RmsTimberPlacement> placements;
+        check(swgb::generateRmsHolocronPlacements(120,120,terrain,data,centers,rng,placements,&error,{},&eligible,&centers[2]),error.c_str());
+        check(rng==(kind==0?2073138905u:166830707u) && placements.size()==(kind==0?1u:0u),"Original selected holocron real water/zone/empty-queue controls");
+        if(kind==0)check(placements[0].x==71.5f && placements[0].y==72.5f && placements[0].facet==7,"Original forced water holocron position");
     }
     std::puts("PASS: original120 holocron placement on grass and retained forests");
 }

@@ -2,16 +2,16 @@
 
 ## Current comparison coverage: 2026-11-16
 
-Thirteen packaged profiles have complete original-runner comparisons at fixed Tiny120,
+Fourteen packaged profiles have complete original-runner comparisons at fixed Tiny120,
 two Empire players and default resources: Forest54204, Reytha54220, Arid54201,
 Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
-Tatooine New55019, Endor54207, four-biome connections54210, inland54203 and flat Tiny Mos Espa55014.
-The shared packaged suite contains48 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
+Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014 and Migration54216.
+The shared packaged suite contains53 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
 Gaia resource accounting and deferred foundation rendering.
 
-The standard production audit accepts39/138 map/seed attempts (thirteen of46 resources,
-three seeds each);99 are explicitly rejected. This measures supported
+The standard production audit accepts42/138 map/seed attempts (fourteen of46 resources,
+three seeds each);96 are explicitly rejected. This measures supported
 configurations, not an engine completion percentage. New comparisons run the
 original executable locally with modeled host boundaries. Live Windows evidence
 below remains a separate, earlier baseline. Later gameplay and other map settings
@@ -3033,3 +3033,58 @@ integration and production CLI tests pass. The audit accepts39/138 attempts
 across thirteen profiles;99 still reject explicitly.
 The rebuilt desktop preferences/menu/effects/music smoke also passes with dummy
 video/audio. No new live Windows or audible-mixing check was performed.
+
+### Migration and selected-land holocrons (2026-11-16)
+
+Raw54216 places the two player islands before a larger neutral island. Its object
+rows select the neutral island using script land ID21 (internal31). Five complete
+original runs cover all three biomes at fixed Tiny120/two-Empire/default resources:
+
+| Seed | Biome | Objects | Final RNG | Gaia unit/total cost |
+|---:|---|---:|---:|---:|
+| 1 | Alaris | 1305 | 2998338829 | 2000 |
+| 12345 | Alaris | 1273 | 729864312 | 800 |
+| 16160 | Reytha | 1233 | 1961976023 | 1200 |
+| 8000 | Reytha | 1305 | 2144920549 | 1050 |
+| 5000 | Naboo Grass | 1278 | 2980740548 | 800 |
+
+All ordered objects, full terrain/elevation/slopes and captured poses match.
+Independent original resource replays agree (Gaia building cost0, storage11=5).
+The Command Center row's group radius14 is accepted for its ungrouped single
+placement. Existing selected-land resource dispatch handles the later rows.
+
+Holocrons now support a selected neutral land: construct the global candidate
+queue for unlimited maximum distance, exclude25 around every land center, force
+the selected center's terrain passable for zone lookup, and retain only its
+connected zone. The normal master placement gate still uses the original terrain
+restriction. Temporary spacing20 removes candidates without changing persistent
+eligibility. Static4de830 analysis and full captures verify these distinctions.
+
+The selected handler also forces the last actual queued candidate after a master
+gate rejection. It does not force candidates rejected by distance or zone
+prefilters. A bounded original probe with nine eligible tiles(70..72,70..72),
+seed1 and selected center(40,40) verifies the fallback and queue order. Eligibility
+filters before queue insertion, and temporary spacing deletes future queue nodes;
+native fallback therefore uses the last remaining eligible/unremoved candidate.
+
+Real original-gate controls distinguish the paths: an entirely shallow-water map
+returns gate failure for all nine candidates but creates one holocron at(71.5,72.5),
+RNG2073138905 (6962 queue draws plus6 constructor draws). With only the nine
+eligible tiles underwater, zone filtering creates none, RNG166830707. Empty
+eligibility also creates none while retaining all6962 queue draws. Separate
+forced-rejection controls prove controller flow rather than physical collision
+geometry; normal-gate and minimum-distance controls are retained too.
+
+Evidence: `rms-packaged-migration54216-full-findings-2026-11-16.json`,
+`rms-migration54216-selected-holocron-findings-2026-11-16.json` and
+`rms-selected-holocron-fallback-findings-2026-11-16.json`. The resource supplement
+retains an inherited cosmetic case label; source/raw-script hashes and actual
+rows identify54216. These remain startup comparisons, not whole-match parity.
+
+All53 shared packaged startup cases pass with ASan/UBSan, alongside the retained
+Forest/general-row/foundation/transport suites. Focused selected-holocron tests
+include the real-water, zone-rejection and empty-eligibility controls. Strict RMS
+integration and production CLI tests pass. The production audit accepts42/138
+attempts across fourteen profiles;96 remain explicitly unsupported.
+The rebuilt desktop smoke passes using dummy video/audio; no fresh live Windows
+or pixel/audio-mixing comparison is claimed.

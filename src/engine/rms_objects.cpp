@@ -726,7 +726,8 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
     const std::vector<uint8_t> &terrain,const dat::DatFile &data,
     const std::vector<RmsPlayerStart> &landCenters,uint32_t &randomState,
     std::vector<RmsTimberPlacement> &out,std::string *err,
-    const std::vector<uint32_t> &occupiedTiles,const std::vector<uint8_t> *rowEligibility) {
+    const std::vector<uint32_t> &occupiedTiles,const std::vector<uint8_t> *rowEligibility,
+    const RmsPlayerStart *selectedLand) {
     out.clear();if(err) err->clear();
     auto fail=[&](const char *reason) {
         if(err) *err=std::string("RMS holocron: ")+reason;
@@ -768,16 +769,34 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
     const auto &pass=data.terrainRestrictions[7].passableBuildableDmgMultiplier;
     for(auto t:terrain)
         if(t>=pass.size() || !std::isfinite(pass[t])) return fail("invalid holocron terrain restriction");
+    RmsZoneCache zones;const RmsZones *selectedZones=nullptr;uint8_t selectedZone=0;
+    if(selectedLand) {
+        if(width!=120 || selectedLand->x<0 || selectedLand->y<0 || selectedLand->x>=int(width) || selectedLand->y>=int(height))
+            return fail("selected land outside verified map");
+        auto connectivity=pass;connectivity[terrain[selectedLand->y*width+selectedLand->x]]=1;
+        uint32_t index;
+        if(!zones.lookup(width,terrain,connectivity,index,err))return false;
+        selectedZones=&zones.entry(index)->zones;selectedZone=selectedZones->tiles[selectedLand->y*width+selectedLand->x];
+    }
     uint32_t rng=randomState;std::vector<uint32_t> candidates;
     if(!generateRmsObjectCandidates(width,height,rng,candidates,err)) return false;
     std::vector<bool> removed(terrain.size());std::vector<RmsTimberPlacement> placements;
-    for(auto tile:candidates) {
-        if((rowEligibility && !rowEligibility->empty() && !(*rowEligibility)[tile]) ||
-           removed[tile] || occupied[tile] || pass[terrain[tile]]<=.05f) continue;
+    size_t lastQueued=candidates.size();
+    for(size_t index=0;index<candidates.size();++index) {
+        const auto tile=candidates[index];
+        if((rowEligibility && !rowEligibility->empty() && !(*rowEligibility)[tile]) || removed[tile] ||
+           (selectedZones && selectedZones->tiles[tile]!=selectedZone)) continue;
         const int x=tile%width,y=tile/width;
         if(std::any_of(landCenters.begin(),landCenters.end(),[&](const auto &start) {
             return std::abs(x-start.x)<25 && std::abs(y-start.y)<25;
         })) continue;
+        if(occupied[tile] || pass[terrain[tile]]<=.05f) {
+            if(!selectedLand)continue;
+            // Original4dec9c forces the last queued selected-land candidate after collision rejection.
+            while(lastQueued>index+1 && (removed[candidates[lastQueued-1]] ||
+                  (rowEligibility && !rowEligibility->empty() && !(*rowEligibility)[candidates[lastQueued-1]])))--lastQueued;
+            if(index+1!=lastQueued)continue;
+        }
         // Original4de1b0 removes temporary spacing nodes from this row's queue.
         for(int sy=std::max(0,y-20);sy<=std::min(int(height)-1,y+20);++sy)
             for(int sx=std::max(0,x-20);sx<=std::min(int(width)-1,x+20);++sx) removed[sy*width+sx]=true;
