@@ -8,6 +8,7 @@
 static void check(bool ok,const std::string &message) {
     if (!ok) { std::cerr<<message<<'\n'; std::exit(1); }
 }
+#include "rms_dimension_stage_checks.h"
 #include "rms_many_owned_checks.h"
 #include "rms_elevation_pipeline_checks.h"
 #include "rms_elevation_map_checks.h"
@@ -16,6 +17,7 @@ static void check(bool ok,const std::string &message) {
 #include "rms_cliff_map_checks.h"
 
 int main() {
+    checkRmsDimensionStages();
     checkRmsElevationPipeline();
     checkRmsElevationMap();
     checkRmsConnectionsMap();

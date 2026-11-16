@@ -4454,3 +4454,56 @@ including all four complete bordered-start fixtures, pass under ASan/UBSan.
 The108 aggregate-region fixtures, existing288 randomized/35 fixed fixtures,
 invalid-input checks, eight comparator tests (including placement-mode mismatch),
 strict map checks, production CLI checks and desktop dummy-driver smoke pass.
+
+### Broader dimensions, player counts and civilizations (2026-11-16)
+
+The original player-placement matrix now covers raw square dimensions 120, 144,
+168 and 200; 1, 3, 4 and 8 players; fixed/random positioning; seeds 1/20261116;
+equal, split and translated owner regions; and neutral-first layouts. All 384
+native cases match start coordinates and RNG. Each original case also matches
+its separately executed full-finalizer counterpart (768 original executions).
+The raw dimensions have not been mapped to the UI's named size presets.
+The committed TSV extends the existing shared player-start tests; it does not
+add size-specific production behavior.
+
+A separate 16-case original LAND/TERRAIN matrix covers those four dimensions
+and player counts at fixed seed 1. Every full grid and all five scheduler/stage
+RNG checkpoints match native land growth, smoothing and terrain placement.
+Each land requests 3600 tiles with radius 13 and 10% borders; one terrain patch
+requests 10% of the map in seven clumps. The retained tests check grid lengths,
+64-bit grid fingerprints and RNG. The local differential run checked every byte.
+This is a stage comparison with finalized inputs, not a complete packaged-map
+startup comparison: objects, forests, elevations and civilization effects are
+excluded. Original scheduler logging consumes one draw before the first stage
+and one after each successful stage, including the last.
+
+Fourteen further full RMS comparisons cover civilization pairs 7/7, 1/7, 1/2,
+2/1, 3/4, 5/6 and 7/8 in fixed and random modes at seed 20261116. The authored
+border map matches ordered starting objects, all grids, captured poses and RNG.
+These are healthy pre-bonus constructors. Original civilization/tree/team effects
+run after RMS creation; the reference world lacks the full master table needed
+to execute them safely. In particular, a zero master count would silently skip
+unit effects. These matches do **not** establish civilization bonuses, damaged
+building graphics, HP or full game initialization parity. Comparison manifests
+now accept `civilizations: [1, 2]` (exactly two IDs from 1 through 8) and preserve
+reference limitations in reports. The full-map adapter remains 120×120/two players.
+
+Evidence retained locally: `rms-player-region-dimension-count-matrix-oracle-2026-11-16.json`,
+`rms-land-terrain-dimension-expanded-prefix-oracle-2026-11-16.json`,
+`rms-land-terrain-native-dimension-comparison-2026-11-16.json`, and build-folder
+`rms-civilizations-wave1/report.json` / `rms-civilizations-wave2/report.json`.
+The stage findings also retain scoped-hook equivalence against both original
+baseline captures; only instrumentation dispatch changed, not hook bodies or guards.
+
+A further 16 LAND/TERRAIN cases vary fixed/random placement and seeds
+12345/20261116 at dimensions 144/200 with 3/8 players. All tiles and stage RNG
+checkpoints match again; all 32 stage cases are retained in integrated map tests.
+Evidence: `rms-land-terrain-mode-seed-prefix-oracle-2026-11-16.json` and
+`rms-land-terrain-native-mode-seed-comparison-2026-11-16.json`.
+
+Validation: strict integrated map tests and the retained packaged/general startup
+suite pass under ASan/UBSan; the suite includes all 18 authored bordered-start
+fixtures (four existing plus fourteen civilization cases). Nine comparator tests
+pass, including invalid civilizations, native argument propagation and rejection
+of a saved capture from a different civilization pair. No production algorithm
+change or map-specific admission was needed for these new cases.
