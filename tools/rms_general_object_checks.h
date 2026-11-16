@@ -40,12 +40,24 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         {6204,3734544698u,521501797u,742396127u},
         {6204,1377182600u,950845333u,742396127u},
         {6206,3096183411u,124473770u,742396127u},
+        {6202,1530472592u,374431829u,742396127u},
+        {6206,3610667440u,1571899923u,742396127u},
+        {6210,2307401085u,3562095874u,742396127u},
+        {6206,3610667440u,1571899923u,742396127u},
+        {6230,2077327384u,4170535033u,742396127u},
+        {6202,3566328568u,374431829u,742396127u},
+        {6206,2077327384u,1095507756u,742396127u},
+        {6210,561083704u,2899244114u,742396127u},
+        {6206,2077327384u,1095507756u,742396127u},
+        {6279,2630457888u,422691155u,742396127u},
+        {6195,3061798307u,2267873829u,742396127u},
+        {6202,664476888u,864327435u,742396127u},
     };
     auto replace=[](std::string &text,const std::string &from,const std::string &to) {
         const auto at=text.find(from);check(at!=std::string::npos,"authored variation finds directive");
         text.replace(at,from.size(),to);
     };
-    for(size_t variant=0;variant<23;++variant) {
+    for(size_t variant=0;variant<35;++variant) {
         auto changed=rows;
         switch(variant) {
         case 0: std::reverse(changed.begin()+4,changed.end());break;
@@ -96,7 +108,7 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
                 }
             }
         }
-        if(variant>=20) {
+        if(variant>=20 && variant<=22) {
             const std::string scouts="create_object 550 { set_place_for_every_player match_player_civ number_of_objects 1 min_distance_to_players 7 max_distance_to_players 9 group_placement_radius 3 }";
             if(variant==20)changed.insert(changed.begin()+3,scouts);
             else if(variant==21)changed.push_back(scouts);
@@ -107,6 +119,17 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
                     if(row.find("create_object 66 ")==0 && (++nova==1 || nova==4))changed.push_back(scouts);
                 }
             }
+        }
+        if(variant>=23 && variant<=32) {
+            const bool scout=variant>=28;const size_t quantity=(variant-23)%5;
+            const int counts[]={0,2,4,1,99};
+            changed.push_back("create_object "+std::string(scout?"550 { match_player_civ ":"83 { ")+"set_place_for_every_player number_of_objects "+
+                std::to_string(counts[quantity])+(quantity==3?" set_scaling_to_player_number ":" ")+
+                "min_distance_to_players "+(scout?"7 max_distance_to_players 9":"6 max_distance_to_players 6")+" group_placement_radius 3 }");
+        }
+        if(variant>=33) {
+            for(size_t i=1;i<=2;++i)replace(changed[i],"number_of_objects 1",
+                "number_of_objects "+std::to_string(variant==33?0:2));
         }
         for(const auto &row:changed)text+=row+'\n';
         swgb::RmsScript script;std::string error;swgb::RmsMap map;uint32_t rng=1;
@@ -127,15 +150,31 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
             const int ids[]={4,11,21,37,40,84,98,164,165};
             const float values[4][9]={{-2,7,2,6,1,3,725,350,375},{-5,10,2,9,1,3,875,500,375},
                 {0,5,2,3,2,3,625,250,375},{-1,6,2,3,3,3,675,300,375}};
+            const float quantityValues[12][2][9]={
+                {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
+                {{-1.0f,6.0f,2.0f,5.0f,1.0f,3.0f,675.0f,300.0f,375.0f},{-1.0f,6.0f,2.0f,5.0f,1.0f,3.0f,675.0f,300.0f,375.0f}},
+                {{-3.0f,8.0f,2.0f,7.0f,1.0f,3.0f,775.0f,400.0f,375.0f},{-3.0f,8.0f,2.0f,7.0f,1.0f,3.0f,775.0f,400.0f,375.0f}},
+                {{-1.0f,6.0f,2.0f,5.0f,1.0f,3.0f,675.0f,300.0f,375.0f},{-1.0f,6.0f,2.0f,5.0f,1.0f,3.0f,675.0f,300.0f,375.0f}},
+                {{-16.0f,21.0f,2.0f,20.0f,1.0f,3.0f,1425.0f,1050.0f,375.0f},{-10.0f,15.0f,2.0f,14.0f,1.0f,3.0f,1125.0f,750.0f,375.0f}},
+                {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
+                {{-1.0f,6.0f,2.0f,3.0f,3.0f,3.0f,675.0f,300.0f,375.0f},{-1.0f,6.0f,2.0f,3.0f,3.0f,3.0f,675.0f,300.0f,375.0f}},
+                {{-3.0f,8.0f,2.0f,3.0f,5.0f,3.0f,775.0f,400.0f,375.0f},{-3.0f,8.0f,2.0f,3.0f,5.0f,3.0f,775.0f,400.0f,375.0f}},
+                {{-1.0f,6.0f,2.0f,3.0f,3.0f,3.0f,675.0f,300.0f,375.0f},{-1.0f,6.0f,2.0f,3.0f,3.0f,3.0f,675.0f,300.0f,375.0f}},
+                {{-59.0f,64.0f,2.0f,3.0f,61.0f,3.0f,3575.0f,3200.0f,375.0f},{-16.0f,21.0f,2.0f,3.0f,18.0f,3.0f,1425.0f,1050.0f,375.0f}},
+                {{5.0f,0.0f,2.0f,0.0f,0.0f,3.0f,375.0f,0.0f,375.0f},{5.0f,0.0f,2.0f,0.0f,0.0f,3.0f,375.0f,0.0f,375.0f}},
+                {{1.0f,4.0f,2.0f,2.0f,2.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,2.0f,2.0f,3.0f,575.0f,200.0f,375.0f}},
+            };
             const int extra=variant>=20?2+(variant==22):int(variant==19);
+            const float *expectedCounters=values[extra];
             for(int owner=1;owner<=2;++owner) {
-                check(game.populationUsedForTesting(owner)==values[extra][1] && game.populationCapacityForTesting(owner)==5,
+                if(variant>=23)expectedCounters=quantityValues[variant-23][owner-1];
+                check(game.populationUsedForTesting(owner)==expectedCounters[1] && game.populationCapacityForTesting(owner)==5,
                     "additional owned units preserve original population usage/capacity");
                 for(size_t i=0;i<9;++i) {
                     const float actual=ids[i]==4?game.populationCapacityForTesting(owner)-game.populationUsedForTesting(owner):
                         ids[i]==84?game.playerAttributeForTesting(owner,84):game.resource(owner,ids[i]);
-                    check(actual==values[extra][i],("additional owned resource "+std::to_string(ids[i])+" owner "+std::to_string(owner)+
-                        " got "+std::to_string(actual)+" expected "+std::to_string(values[extra][i])).c_str());
+                    check(actual==expectedCounters[i],("additional owned resource "+std::to_string(ids[i])+" owner "+std::to_string(owner)+
+                        " got "+std::to_string(actual)+" expected "+std::to_string(expectedCounters[i])).c_str());
                 }
             }
         }
@@ -232,6 +271,58 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         {22,6047u,2,0,255,0.20000000298023224f,60.0f},
         {22,6108u,1,0,255,0.20000000298023224f,60.0f},
         {22,6109u,2,0,255,0.20000000298023224f,60.0f},
+        {23,6011u,1,0,255,0.20000000298023224f,2500.0f},
+        {23,6012u,2,0,27,0.20000000298023224f,2500.0f},
+        {23,6019u,1,0,255,0.20000000298023224f,60.0f},
+        {23,6020u,2,0,255,0.20000000298023224f,60.0f},
+        {24,6236u,1,5,255,1.0f,40.0f},
+        {24,6237u,1,4,255,1.0f,40.0f},
+        {24,6238u,2,5,255,1.0f,40.0f},
+        {24,6239u,2,7,255,3.5840632915496826f,40.0f},
+        {25,6236u,1,5,255,1.0f,40.0f},
+        {25,6239u,1,3,255,1.0f,40.0f},
+        {25,6240u,2,3,255,1.0f,40.0f},
+        {25,6243u,2,6,255,1.0f,40.0f},
+        {26,6236u,1,5,255,1.0f,40.0f},
+        {26,6237u,1,4,255,1.0f,40.0f},
+        {26,6238u,2,5,255,1.0f,40.0f},
+        {26,6239u,2,7,255,3.5840632915496826f,40.0f},
+        {27,6236u,1,5,255,1.0f,40.0f},
+        {27,6252u,1,0,255,1.0f,40.0f},
+        {27,6253u,2,2,255,1.0f,40.0f},
+        {27,6263u,2,4,255,1.0f,40.0f},
+        {28,6011u,1,0,255,0.20000000298023224f,2500.0f},
+        {28,6012u,2,0,27,0.20000000298023224f,2500.0f},
+        {28,6019u,1,0,255,0.20000000298023224f,60.0f},
+        {28,6020u,2,0,255,0.20000000298023224f,60.0f},
+        {29,6236u,1,0,255,0.20000000298023224f,60.0f},
+        {29,6237u,1,0,255,0.20000000298023224f,60.0f},
+        {29,6238u,2,0,255,0.20000000298023224f,60.0f},
+        {29,6239u,2,0,255,0.20000000298023224f,60.0f},
+        {30,6236u,1,0,255,0.20000000298023224f,60.0f},
+        {30,6239u,1,0,255,0.20000000298023224f,60.0f},
+        {30,6240u,2,0,255,0.20000000298023224f,60.0f},
+        {30,6243u,2,0,255,0.20000000298023224f,60.0f},
+        {31,6236u,1,0,255,0.20000000298023224f,60.0f},
+        {31,6237u,1,0,255,0.20000000298023224f,60.0f},
+        {31,6238u,2,0,255,0.20000000298023224f,60.0f},
+        {31,6239u,2,0,255,0.20000000298023224f,60.0f},
+        {32,6236u,1,0,255,0.20000000298023224f,60.0f},
+        {32,6295u,1,0,255,0.20000000298023224f,60.0f},
+        {32,6296u,2,0,255,0.20000000298023224f,60.0f},
+        {32,6312u,2,0,255,0.20000000298023224f,60.0f},
+        {33,6011u,1,0,255,0.20000000298023224f,2500.0f},
+        {33,6012u,2,0,27,0.20000000298023224f,2500.0f},
+        {34,6011u,1,0,255,0.20000000298023224f,2500.0f},
+        {34,6012u,2,0,27,0.20000000298023224f,2500.0f},
+        {34,6013u,1,6,255,1.0f,40.0f},
+        {34,6014u,1,5,255,1.0f,40.0f},
+        {34,6015u,2,2,255,1.0f,40.0f},
+        {34,6016u,2,7,255,1.5916622877120972f,40.0f},
+        {34,6017u,1,0,255,0.20000000298023224f,60.0f},
+        {34,6018u,1,0,255,0.20000000298023224f,60.0f},
+        {34,6019u,2,0,255,0.20000000298023224f,60.0f},
+        {34,6020u,2,0,255,0.20000000298023224f,60.0f},
         };
         for(const auto &pose:ownedPoses)if(pose.variant==variant) {
             const int unit=game.objectUnitId(pose.id);
@@ -268,16 +359,16 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
             "general rows preserve original terrain/elevation/slopes");
         if(variant==22) {
             const auto retained=game.activeObjectCount();
-            for(const char *row:{"create_object 83 { set_place_for_every_player number_of_objects 2 min_distance_to_players 6 max_distance_to_players 6 }",
-                "create_object 550 { set_place_for_every_player match_player_civ number_of_objects 2 min_distance_to_players 7 max_distance_to_players 9 }"}) {
+            for(const char *row:{"create_object 83 { set_place_for_every_player number_of_objects 2 group_variance 1 min_distance_to_players 6 max_distance_to_players 6 }",
+                "create_object 550 { set_place_for_every_player match_player_civ number_of_objects 2 group_variance 1 min_distance_to_players 7 max_distance_to_players 9 }"}) {
                 const std::string unsupported=text+row;swgb::RmsScript invalid;uint32_t unchanged=1;
                 check(invalid.load(60000,[&](int32_t,std::vector<uint8_t> &bytes){bytes.assign(unsupported.begin(),unsupported.end());return true;},
                     swgb::RmsScript::Limits{},&error),error.c_str());
                 check(!game.initRms(invalid,{"FIXED_POSITIONS","TINY_MAP","RANDOM_MAP","2_PLAYERS","DEFAULT_RESOURCES"},120,unchanged,&error,2,{1,1}) &&
                     unchanged==1 && game.activeObjectCount()==retained && game.populationUsedForTesting(1)==6,
-                    "unsupported owned-row quantities preserve the running world and caller RNG");
+                    "unsupported owned-row variance preserve the running world and caller RNG");
             }
         }
     }
-    std::puts("PASS: twenty-three general object-row variations match complete original runner");
+    std::puts("PASS: thirty-five general object-row variations match complete original runner");
 }

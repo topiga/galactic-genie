@@ -136,7 +136,7 @@ create_object 550 { set_place_for_every_player min_distance_to_players 7 max_dis
     for(const auto &change:std::vector<std::pair<std::string,std::string>>{
             {"match_player_civ",""},{"min_distance_to_players 7","min_distance_to_players 6"},
             {"max_distance_to_players 9","max_distance_to_players 10"},
-            {"create_object 550 {","create_object 550 { number_of_objects 2"}}) {
+            {"create_object 550 {","create_object 550 { group_variance 1"}}) {
         auto source=valid;source.replace(source.find(change.first),change.first.size(),change.second);invalids.push_back(source);
     }
     for(const auto &source:invalids) {

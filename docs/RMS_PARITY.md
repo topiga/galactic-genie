@@ -130,10 +130,39 @@ constructor comparisons use two Empire owners; the exhaustive mapper research
 alone is not full constructor coverage for every civilization.
 
 Other arbitrary owned rows, broader mixed-land startup and new unit constructors
-still reject explicitly. Additional workers require the verified ungrouped83/count1/
-radius3/min6/max6 profile; scouts require550/count1/radius3/min7/max9 with civilization
+still reject explicitly. Additional workers require the verified ungrouped83/
+radius3/min6/max6 profile; scouts require550/radius3/min7/max9 with civilization
 mapping, both without spacing/terrain modifiers. This does not establish full
 terrain or gameplay parity.
+
+## Owned worker/scout quantities: 2026-11-16
+
+The shared startup callbacks now accept nonnegative ungrouped quantities in both
+initial and later worker/scout rows. Initial rows use the common RMS parser and
+scaling logic. A finalized worker quantity of1 still uses resource84 (three in
+this verified profile); scaled quantity2 creates two workers. Zero still builds
+and shuffles the placement queue: later zero-worker/scout rows preserve all6,202
+objects but consume120/288 additional CRT draws respectively.
+
+Twelve complete original-executable replays cover later counts0/2/4, player-scaled
+count1, exhausted count99, and initial worker/scout counts0/2. All match ordered
+objects, terrain/elevation/slopes, owned/Gaia startup poses and final RNG. Native
+import also verifies original population, worker/scout and cost counters. Requests
+for99 stop at exhausted candidates: the tested worker row adds17/11 workers to
+the two owners; the scout row adds60/17 scouts. Initial zero rows leave no workers
+or scouts; initial count2 gives each owner two of each.
+
+These extend `rms_general_object_checks.h` to35 complete-map cases. Private
+provenance is in `rms-owned-quantities-findings-2026-11-16.json` and the matching
+`rms-general-rows-quantity-*-comparison-2026-11-15.json` files (the latter retain
+the helper's filename date). This is execution of the original PE with captured
+assets and modeled host boundaries, not a new live Windows session.
+
+Aircraft1521 and other constructors remain unsupported. Aircraft research has
+identified the actual civilization remaps, DAT/task/graphic/sound records and a
+separate original air-path manager; a successful complete comparison is still
+required before enabling placement. The last packaged production audit remains
+9/138 accepted configurations, and RMS menu integration remains separate work.
 
 ## General object-row controller: 2026-11-15
 

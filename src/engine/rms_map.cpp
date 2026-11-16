@@ -82,7 +82,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     bool holocrons = false;
     std::vector<RmsObjectRow> resourceRows;
     constexpr int scoutIds[]={550,552,556,554,258,558,927,932};
-    int workerMinDistance=1,workerMaxDistance=3;
+    int workerMinDistance=1,workerMaxDistance=3,workerGroups=1,scoutGroups=1;
     bool startingStalagmites = false;
     bool playerLands = false;
     bool playerZoneOverride = false;
@@ -293,44 +293,26 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             resourceRows.push_back(row);
             nearNova=!holocrons && width==32;
         } else if (stage==3 && command=="create_object" && startingWorkers && !startingScouts) {
-            if (!number(value) || value!=550 || i==tokens.size() || tokens[i++].text!="{")
-                return fail("only the starting550 scout row may follow workers");
-            bool each=false,match=false,inner=false,outer=false;
-            while (i<tokens.size() && tokens[i].text!="}") {
-                const auto name=tokens[i++].text;
-                if (name=="set_place_for_every_player") { each=true;continue; }
-                if (name=="match_player_civ") { match=true;continue; }
-                if (!number(value)) return fail("missing scout parameter value");
-                if (name=="number_of_objects" && value==1) continue;
-                if (name=="group_placement_radius" && value==3) continue;
-                if (name=="min_distance_to_players" && value==7) inner=true;
-                else if (name=="max_distance_to_players" && value==9) outer=true;
-                else return fail("unsupported scout parameter/value "+name);
-            }
-            if (i==tokens.size() || !each || !match || !inner || !outer)
-                return fail("scouts require every-player civilization matching and distances7..9");
-            ++i;startingScouts=true;
+            RmsObjectRow row;
+            if(!parseRmsObjectRow(tokens,i,row,err))return false;
+            if(row.unitId!=550 || row.owner!=-1 || row.landId!=1 || !row.matchPlayerCiv || row.mode || row.perGroup!=1 ||
+               row.variance || row.radius!=3 || row.minDistance!=7 || row.maxDistance!=9 || row.terrain!=-1 ||
+               row.spacing || row.temporarySpacing || row.zoneDistance)
+                return fail("scouts require ungrouped every-player civilization matching and distances7..9");
+            RmsObjectRow finalized;
+            if(!finalizeRmsObjectRow(row,width,height,playerCount,finalized,err))return false;
+            scoutGroups=finalized.groups;startingScouts=true;
         } else if (stage==3 && command=="create_object" && ownedObjects && !startingWorkers) {
-            if (!number(value) || value!=83 || i==tokens.size() || tokens[i++].text!="{")
-                return fail("only an83 worker row may follow owned109");
-            // Original4e3850 initializes object quantity to1 before parsing attributes.
-            bool count=true,each=false;
-            int inner=-1,outer=-1,groupRadius=-1;
-            while (i<tokens.size() && tokens[i].text!="}") {
-                const auto name=tokens[i++].text;
-                if (name=="set_place_for_every_player") { each=true; continue; }
-                if (!number(value)) return fail("missing worker parameter value");
-                if (name=="number_of_objects" && value==1) count=true;
-                else if (name=="min_distance_to_players") inner=value;
-                else if (name=="max_distance_to_players") outer=value;
-                else if (name=="group_placement_radius" && value>=0) groupRadius=value;
-                else return fail("unsupported worker parameter/value "+name);
-            }
-            const bool diagnostic=inner==1 && outer==3 && (groupRadius==-1 || groupRadius==18);
-            const bool packaged=inner==6 && outer==6 && (groupRadius==-1 || groupRadius==3);
-            if (i==tokens.size() || !count || !each || (!diagnostic && !packaged))
-                return fail("workers require count1, every-player placement and verified distances1..3 or6..6");
-            ++i; startingWorkers=true;workerMinDistance=inner;workerMaxDistance=outer;
+            RmsObjectRow row;
+            if(!parseRmsObjectRow(tokens,i,row,err))return false;
+            const bool diagnostic=row.minDistance==1 && row.maxDistance==3 && (row.radius==3 || row.radius==18);
+            const bool packaged=row.minDistance==6 && row.maxDistance==6 && row.radius==3;
+            if(row.unitId!=83 || row.owner!=-1 || row.landId!=1 || row.matchPlayerCiv || row.mode || row.perGroup!=1 ||
+               row.variance || row.terrain!=-1 || row.spacing || row.temporarySpacing || row.zoneDistance || (!diagnostic && !packaged))
+                return fail("workers require ungrouped every-player placement and verified distances1..3 or6..6");
+            RmsObjectRow finalized;
+            if(!finalizeRmsObjectRow(row,width,height,playerCount,finalized,err))return false;
+            workerGroups=finalized.groups;startingWorkers=true;workerMinDistance=row.minDistance;workerMaxDistance=row.maxDistance;
         } else if (stage == 3 && command == "create_object" && !hasObjects) {
             if (!number(value) || (value!=348 && value!=66 && value!=102 && value!=109 && value!=573) || i==tokens.size() || tokens[i++].text!="{")
                 return fail("expected Gaia348/66/102, owned109, or leading Gaia573 block");
@@ -832,7 +814,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             pass[terrain]=1;
             return startZones.lookup(width,generated.terrain,pass,index,err);
         };
-        auto placeWorkers=[&](uint16_t owner,const RmsPlayerStart &center,int minimum,int maximum,
+        auto placeWorkers=[&](uint16_t owner,const RmsPlayerStart &center,int minimum,int maximum,int requested,
                               const std::vector<uint32_t> &blockedTiles,const std::vector<uint8_t> *eligibility,auto emit) {
             std::vector<uint32_t> candidates;
             if (!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,maximum,rng,candidates,err)) return false;
@@ -843,7 +825,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             const auto &zones=startZones.entry(zoneIndex)->zones.tiles;
             const auto zone=zones[size_t(center.y)*width+center.x];
             const auto &pass=data.terrainRestrictions[25].passableBuildableDmgMultiplier;
-            int remaining=3;
+            int remaining=requested;
+            if(!remaining)return true;
             int16_t unitId=83;
             for (const auto tile:candidates) {
                 if(zones[tile]!=zone) continue;
@@ -876,9 +859,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             return true;
         };
         if (startingWorkers) for (const auto &target:startupTargets)
-            if(!placeWorkers(uint16_t(target.owner),generated.lands[target.landIndex].center,workerMinDistance,workerMaxDistance,
+            if(!placeWorkers(uint16_t(target.owner),generated.lands[target.landIndex].center,workerMinDistance,workerMaxDistance,workerGroups==1?3:workerGroups,
                 occupied,nullptr,[&](const auto &object){generated.ownedObjects.push_back(object);}))return false;
-        auto placeScout=[&](uint16_t owner,const RmsPlayerStart &center,const std::vector<uint32_t> &blockedTiles,
+        auto placeScout=[&](uint16_t owner,const RmsPlayerStart &center,int requested,const std::vector<uint32_t> &blockedTiles,
                             const std::vector<uint8_t> *eligibility,auto emit) {
             const auto civ=playerCivilizations[owner-1];const int id=scoutIds[civ-1];
             const auto &u=data.civs[civ].units[id];const auto &g=*data.graphic(u.standingGraphic[0]);
@@ -892,6 +875,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             const auto &zones=startZones.entry(zoneIndex)->zones.tiles;
             const auto zone=zones[size_t(center.y)*width+center.x];
             const auto &pass=data.terrainRestrictions[restriction].passableBuildableDmgMultiplier;
+            int remaining=requested;
+            if(!remaining)return true;
             for (const auto tile:candidates) {
                 if(zones[tile]!=zone) continue;
                 const int x=tile%width,y=tile/width;
@@ -919,12 +904,12 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 const uint8_t facet=uint8_t((genieRandomDraw(rng)*8u/32767u+7)%8);
                 for (int draw=0;draw<4;++draw) genieRandomDraw(rng);
                 emit(RmsOwnedPlacement{px,py,owner,civ,int16_t(id),255,facet,frame,delay});
-                break;
+                if(blocked || !--remaining)break;
             }
             return true;
         };
         if (startingScouts) for (const auto &target:startupTargets)
-            if(!placeScout(uint16_t(target.owner),generated.lands[target.landIndex].center,occupied,nullptr,
+            if(!placeScout(uint16_t(target.owner),generated.lands[target.landIndex].center,scoutGroups,occupied,nullptr,
                 [&](const auto &object){generated.ownedObjects.push_back(object);}))return false;
         if (!resourceRows.empty()) {
             auto blockers=occupied;
@@ -948,7 +933,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(ownedRow) {
                     // shortcut: additional worker/scout startup profiles; other owned constructors need original comparisons.
                     const bool scout=row.unitId==550 && row.matchPlayerCiv;
-                    if((row.unitId!=83 && !scout) || row.mode || row.groups!=1 || row.perGroup!=1 || row.variance || row.radius!=3 ||
+                    if((row.unitId!=83 && !scout) || row.mode || row.perGroup!=1 || row.variance || row.radius!=3 ||
                        row.terrain!=-1 || row.minDistance!=(scout?7:6) || row.maxDistance!=(scout?9:6) || row.spacing || row.temporarySpacing || row.zoneDistance)
                         return fail("unsupported additional owned object row");
                     auto staticBlockers=occupied;
@@ -965,8 +950,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                             blockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
                         };
                         const auto &center=generated.lands[target.landIndex].center;
-                        const bool placed=scout?placeScout(uint16_t(target.owner),center,staticBlockers,&eligibility,emit):
-                            placeWorkers(uint16_t(target.owner),center,6,6,staticBlockers,&eligibility,emit);
+                        const bool placed=scout?placeScout(uint16_t(target.owner),center,row.groups,staticBlockers,&eligibility,emit):
+                            placeWorkers(uint16_t(target.owner),center,6,6,row.groups==1?3:row.groups,staticBlockers,&eligibility,emit);
                         if(!placed)return false;
                     }
                     continue;
