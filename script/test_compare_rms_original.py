@@ -56,9 +56,9 @@ class RunnerTests(unittest.TestCase):
             probe = work/'probe.py';probe.write_text('raise SystemExit(1)')
             native = work/'native'
             native.write_text('#!' + sys.executable + '\nfrom pathlib import Path\nimport sys\n'
-                              'assert sys.argv[4:6] == ["1", "2"]\n'
+                              'assert sys.argv[4] == "1,2"\n'
                               'p=Path(sys.argv[3])\n'
-                              'for suffix in ("", ".heights", ".slopes"): Path(str(p)+suffix).write_bytes(bytes(14400))\n'
+                              'for suffix in ("", ".heights", ".slopes"): Path(str(p)+suffix).write_bytes(bytes(int(sys.argv[7])*int(sys.argv[8])))\n'
                               'print("rng 42")\n')
             native.chmod(0o700)
             for name in ('genie_x1.dat', 'gamedata_x1.drs'):(work/name).write_bytes(b'fixture')
@@ -72,12 +72,18 @@ class RunnerTests(unittest.TestCase):
             command = [sys.executable, str(Path(__file__).with_name('compare_rms_original.py')),
                        '--manifest', str(manifest), '--native', str(native), '--data', str(work),
                        '--python', sys.executable, '--existing']
-            for problem in ('good', 'source', 'mode', 'civilizations'):
-                stale = problem != 'good'
+            for problem in ('good', 'source', 'mode', 'civilizations', 'dimensions', 'larger'):
+                stale = problem not in ('good', 'larger')
                 source.write_text('changed' if problem == 'source' else 'original fixture')
                 cases = json.loads(manifest.read_text())
                 cases[0]['positions'] = 'random' if problem == 'mode' else 'fixed'
                 cases[0]['civilizations'] = [2,1] if problem == 'civilizations' else [1,2]
+                cases[0]['width'] = cases[0]['height'] = 144 if problem in ('dimensions', 'larger') else 120
+                if problem == 'larger':
+                    capture=json.loads(oracle.read_text())
+                    capture.update(width=144,height=144,playerCount=2)
+                    for key in ('terrain','heights','slopes'):capture[key]=[0]*(144*144)
+                    oracle.write_text(json.dumps(capture))
                 manifest.write_text(json.dumps(cases))
                 output = work/problem
                 run = subprocess.run(command + ['--output', str(output)], capture_output=True, text=True)
@@ -89,8 +95,19 @@ class RunnerTests(unittest.TestCase):
     def test_invalid_civilizations(self):
         with tempfile.TemporaryDirectory() as directory:
             work=Path(directory);manifest=work/'cases.json'
-            for civs in (None, [], [1], [1, 9], [True, 1], '12'):
+            for civs in (None, [], [1]*9, [1, 9], [True, 1], '12'):
                 manifest.write_text(json.dumps([dict(id='bad', seed=1, civilizations=civs)]))
+                run=subprocess.run([sys.executable,str(Path(__file__).with_name('compare_rms_original.py')),
+                    '--manifest',str(manifest),'--output',str(work/'out'),'--native','missing',
+                    '--data','missing','--python',sys.executable],capture_output=True,text=True)
+                self.assertEqual(run.returncode,2,run.stderr)
+                self.assertFalse((work/'out').exists())
+
+    def test_invalid_dimensions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work=Path(directory);manifest=work/'cases.json'
+            for size in (0, 1025, True, '144', 144.5):
+                manifest.write_text(json.dumps([dict(id='bad', seed=1, width=size)]))
                 run=subprocess.run([sys.executable,str(Path(__file__).with_name('compare_rms_original.py')),
                     '--manifest',str(manifest),'--output',str(work/'out'),'--native','missing',
                     '--data','missing','--python',sys.executable],capture_output=True,text=True)

@@ -86,7 +86,8 @@ def run_case(case, args):
         result['probeSha256'] = digest(probe)
         if not args.existing:
             before = oracle_path.stat().st_mtime_ns if oracle_path.exists() else None
-            env = dict(os.environ, SWGB_CLIFF_SEED=str(case['seed']), SWGB_OWNER_CIVS=','.join(map(str, case['civilizations'])))
+            env = dict(os.environ, SWGB_CLIFF_SEED=str(case['seed']), SWGB_OWNER_CIVS=','.join(map(str, case['civilizations'])),
+                       SWGB_RAW_DIMENSION=str(case['width']), SWGB_RAW_WIDTH=str(case['width']), SWGB_RAW_HEIGHT=str(case['height']))
             env.pop('SWGB_PARSE_ONLY', None)
             with (work / 'original.log').open('w') as log:
                 run = subprocess.run([str(args.python), str(probe)], env=env, stdout=log,
@@ -99,6 +100,8 @@ def run_case(case, args):
         oracle = json.loads(oracle_path.read_text())
         if oracle['seed'] != case['seed'] or oracle['civs'] != case['civilizations'] or oracle['probeSha256'] != result['probeSha256']:
             raise ValueError('oracle seed, civilizations or probe hash does not match requested case')
+        if (oracle.get('width', 120), oracle.get('height', 120), oracle.get('playerCount', 2)) != (case['width'], case['height'], len(case['civilizations'])):
+            raise ValueError('oracle dimensions or player count do not match requested case')
         result['sourceSha256'] = digest(case['source'])
         if oracle['sourceFileSha256'] != result['sourceSha256']:
             raise ValueError('oracle RMS source hash does not match requested resource')
@@ -112,7 +115,7 @@ def run_case(case, args):
             raise ValueError('native executable changed during matrix')
         terrain = work / 'terrain.bin'
         command = [str(args.native), str(args.data / 'genie_x1.dat'), str(case['seed']),
-                   str(terrain), *map(str, case['civilizations']), str(args.data / 'gamedata_x1.drs'), str(case['resource']), 'tiny' if case['positions'] == 'fixed' else 'tiny-random']
+                   str(terrain), ','.join(map(str, case['civilizations'])), str(args.data / 'gamedata_x1.drs'), str(case['resource']), str(case['width']), str(case['height']), 'tiny' if case['positions'] == 'fixed' else 'tiny-random']
         with (work / 'native.records').open('w') as records, (work / 'native.log').open('w') as log:
             run = subprocess.run(command, stdout=records, stderr=log, timeout=args.timeout)
         if digest(args.native) != args.native_sha:
@@ -124,8 +127,8 @@ def run_case(case, args):
             return result
         grids = {key: Path(str(terrain) + suffix).read_bytes()
                  for key, suffix in [('terrain', ''), ('heights', '.heights'), ('slopes', '.slopes')]}
-        if any(len(oracle[key]) != 120 * 120 for key in grids):
-            raise ValueError('oracle does not contain complete Tiny120 grids')
+        if any(len(oracle[key]) != case['width'] * case['height'] for key in grids):
+            raise ValueError('oracle does not contain complete requested grids')
         result['comparison'] = compare(oracle, (work / 'native.records').read_text(), grids)
         result['status'] = 'match' if result['comparison']['matches'] else 'mismatch'
     except (OSError, ValueError, KeyError, TypeError, IndexError, subprocess.TimeoutExpired) as error:
@@ -147,8 +150,12 @@ def main():
     for case in cases:
         case.setdefault('positions', 'fixed')
         case.setdefault('civilizations', [1, 1])
-        if not isinstance(case['civilizations'], list) or len(case['civilizations']) != 2 or any(type(c) is not int or not 1 <= c <= 8 for c in case['civilizations']):
-            parser.error('this full-map adapter requires two civilizations in1..8')
+        for name in ('width', 'height'):
+            case.setdefault(name, 120)
+            if type(case[name]) is not int or not 1 <= case[name] <= 1024:
+                parser.error('dimensions must be integers in 1..1024')
+        if not isinstance(case['civilizations'], list) or not 1 <= len(case['civilizations']) <= 8 or any(type(c) is not int or not 1 <= c <= 8 for c in case['civilizations']):
+            parser.error('requires 1..8 civilizations in 1..8')
         if case['positions'] not in ('fixed', 'random'):
             parser.error('positions must be fixed or random')
     ids = [case['id'] for case in cases]
@@ -159,8 +166,8 @@ def main():
     args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=False)
     args.native_sha = digest(args.native)
-    report = dict(context='Tiny120, default resources, two enemy players; civilizations and placement mode per case',
-                  limitations=['Full-map adapter remains Tiny120/two players; only listed civilizations and modes are tested.',
+    report = dict(context='TINY_MAP preset, default resources, enemy players; raw dimensions, civilizations and placement mode per case',
+                  limitations=['Raw dimensions do not imply a named UI map size; only listed reference contexts are tested.',
                                'Compares ordered object identity/XY/facet, grids, final RNG and captured initial poses.',
                                'Does not compare HP, absolute object height, runtime gameplay or UI.'],
                   nativeSha256=args.native_sha, manifestSha256=digest(args.manifest),
