@@ -247,7 +247,6 @@ int main() {
                             "create_terrain -253 { base_terrain 0 }",
                             "create_terrain 3 { base_terrain 256 }",
                             "create_terrain 3 { base_terrain -256 }",
-                            "create_terrain 3 { base_terrain 3 }",
                             "create_terrain 3 { base_terrain 0 height_limits 0 1 }",
                             "create_terrain 3 { base_terrain 0 number_of_clumps -1 }"}) {
         load(players+" <TERRAIN_GENERATION> "+invalid); state=1;

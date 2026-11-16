@@ -358,7 +358,14 @@ int main() {
     swgb::RmsTerrainRow valid{10,3,0,1,0,20}, invalid=valid;
     checkFailure(0,9,{valid}); checkFailure(9,8,{valid});
     invalid.clumps=1000; checkFailure(9,9,{valid,invalid});
-    invalid=valid; invalid.terrain=invalid.baseTerrain; checkFailure(9,9,{invalid});
+    // Original4e6bc0 retains queue/growth draws even when the terrain IDs are equal.
+    for(int maximum:{7,255})for(uint32_t seed:{1u,12345u})for(uint32_t clumps:{2u,0u}) {
+        std::vector<uint8_t> same(81,6);uint32_t state=seed;
+        swgb::RmsTerrainRow self{15,6,6,clumps,0,20,false,0,maximum};
+        assert(swgb::generateRmsTerrain(9,9,{self},state,same,&error));
+        const uint32_t expected=clumps?(seed==1?3946230366u:2667843085u):(seed==1?2503793637u:2406323101u);
+        assert(error.empty() && same==std::vector<uint8_t>(81,6) && state==expected);
+    }
     invalid=valid; invalid.clumps=1000; checkFailure(9,9,{invalid});
     invalid=valid; invalid.spacing=1025; checkFailure(9,9,{invalid});
     invalid=valid; invalid.clumping=10001; checkFailure(9,9,{invalid});
@@ -417,5 +424,5 @@ int main() {
     tiles.assign(1024*1024,0); rng=1;
     invalid=valid; invalid.targetTiles=1; invalid.spacing=1024; invalid.clumps=999;
     checkFailure(1024,1024,{invalid});
-    std::cout << "313 original terrain fixtures plus 72 geometry fixtures, exact multi-row bytes and invalid-input checks passed\n";
+    std::cout << "313 original terrain fixtures plus 72 geometry and 8 same-terrain fixtures, exact multi-row bytes and invalid-input checks passed\n";
 }

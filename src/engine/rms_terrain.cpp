@@ -23,7 +23,7 @@ bool generateRmsTerrain(uint32_t width, uint32_t height,
         (!slopes.empty() && slopes.size() != terrain.size()))
         return fail("height or slope size does not match terrain");
     for (const auto &row : rows)
-        if (row.terrain == row.baseTerrain || row.clumps > 999 ||
+        if (row.clumps > 999 ||
             (terrain.size() == 1 && row.clumps) ||
             row.spacing > 1024 || row.clumping > 10000 ||
             row.targetTiles > static_cast<uint32_t>(std::numeric_limits<int32_t>::max()))

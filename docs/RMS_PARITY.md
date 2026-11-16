@@ -2,16 +2,16 @@
 
 ## Current comparison coverage: 2026-11-16
 
-Ten packaged profiles have complete original-runner comparisons at fixed Tiny120,
+Eleven packaged profiles have complete original-runner comparisons at fixed Tiny120,
 two Empire players and default resources: Forest54204, Reytha54220, Arid54201,
 Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
-Tatooine New55019 and Endor54207. The shared packaged suite contains29 complete
-cases in addition to the separate Forest fixtures. It checks ordered objects,
+Tatooine New55019, Endor54207 and four-biome connections54210.
+The shared packaged suite contains34 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
 Gaia resource accounting and deferred foundation rendering.
 
-The standard production audit accepts30/138 map/seed attempts (ten of46 resources,
-three seeds each);108 are explicitly rejected. This measures supported
+The standard production audit accepts33/138 map/seed attempts (eleven of46 resources,
+three seeds each);105 are explicitly rejected. This measures supported
 configurations, not an engine completion percentage. New comparisons run the
 original executable locally with modeled host boundaries. Live Windows evidence
 below remains a separate, earlier baseline. Later gameplay and other map settings
@@ -2875,3 +2875,46 @@ validation. Previously they bypassed that validation along with the older geomet
 gates. A malformed/missing cliff prototype now rejects before generation with
 unchanged RNG and empty output. Both mixed-land profiles have negative fixtures;
 all29 complete packaged startup cases still pass.
+
+### Four-biome connection composition (2026-11-16)
+
+Raw54210 now matches complete original runs in all four biome branches at fixed
+Tiny120/two-Empire/default resources. It combines water-based land growth,
+explicit or randomized zones, seven elevation levels, cliffs, eight terrain
+rows and connections replacing water1/22/23 with terrain4. No connection or
+cliff algorithm changes were necessary.
+
+| Seed | Biome | Objects | Final RNG | Gaia unit/total cost |
+|---|---|---:|---:|---:|
+| 1 | Yavin | 2860 | 42721692 | 2250 |
+| 12345 | Yavin | 2843 | 805080015 | 1000 |
+| 16160 | Kashyyyk | 2900 | 3916911490 | 950 |
+| 3000 | Naboo Forest | 2764 | 2227137235 | 2950 |
+| 8000 | Reytha | 2807 | 1162255447 | 1250 |
+
+Every ordered object, full terrain/elevation/slope grid, startup pose and native
+import matches. The actual Kashyyyk random zones are3/2; native preprocessing
+consumes their draws before subsequent script choices. Both player separation
+values7/10 are exercised. Native acceptance validates the exact connection
+settings and all four compared geometry compositions.
+
+Kashyyyk and Naboo include rows that paint terrain9 onto9 or6 onto6. They must
+still execute the queue/growth work. The earlier native validation rejected
+these rows; removing that rejection lets the existing algorithm reproduce the
+original RNG. Eight isolated9×9 original-worker cases confirm unchanged terrain
+but71/68 draws for two clumps (seeds1/12345), or20 draws with zero clumps, for
+both height limits7/255. An initial private probe supplied base0 in the wrong
+argument slot; its invalid-input artifacts are retained separately. Corrected
+worker-entry/gate traces and the five independent full-map captures agree.
+
+The shared packaged suite now has34 complete cases, with negative tests for
+uncompared random positions and missing cliff assets. Evidence:
+`rms-packaged-composed54210-full-findings-2026-11-16.json` and
+`rms-same-terrain-worker-oracle-2026-11-16.json`. Full original runs and separate
+resource replays agree for all five seeds. This remains bounded startup evidence,
+not proof of all map sizes, player counts, civilizations or later gameplay.
+
+Validation passes all34 shared packaged cases,52 general object rows, Forest,
+Gaia/owned-foundation rendering and the strict integrated RMS test. The production
+audit accepts33/138 cases across eleven profiles;105 remain rejected. Desktop
+preferences/menu/effects/music smoke passes using dummy video/audio.
