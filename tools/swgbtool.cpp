@@ -2081,6 +2081,18 @@ static int cmdTestCombat(const char *dataDir, const char *out) {
     const bool edgeScrolled = edgeAfterX < edgeBeforeX - 1.0f;
     game.lookAt(mapSize * 0.62f + 8.0f, mapSize * 0.60f + 1.0f);
     game.objectScreenPosition(targetId, screenW, screenH, screenX, screenY);
+    // Screen projection does not reveal enemies: establish sight before testing attack clicks.
+    const auto targetPosition = game.objectPosition(targetId);
+    for (uint32_t id = 11; id <= 14; ++id)
+        if (!game.moveObjectForTesting(id, targetPosition[0] - 4.0f,
+                                       targetPosition[1] - 1.5f + (id - 11)))
+            return 1;
+    game.update(0.001f, {});
+    game.objectScreenPosition(targetId, screenW, screenH, screenX, screenY);
+    if (!game.objectVisibleForTesting(targetId)) {
+        fprintf(stderr, "error: combat target must be visible before attack input\n");
+        return 1;
+    }
     const float initialHitPoints = game.objectHitPoints(targetId);
     input = {};
     input.pointerX = screenX;
@@ -2185,9 +2197,23 @@ static int cmdTestCombat(const char *dataDir, const char *out) {
         return 1;
     }
 
-    // Attack the enemy command center until its first damage graphic is active,
+    // Attack the enemy dwelling until its first damage graphic is active,
     // then select it to validate inspection and its hostile health bar.
     constexpr uint32_t buildingId = 19;
+    const auto buildingPosition = game.objectPosition(buildingId);
+    size_t moved = 0;
+    for (uint32_t id : game.selectedObjectIds()) {
+        if (!game.moveObjectForTesting(id,
+                buildingPosition[0] - 6.0f + (moved % 4) * 1.5f,
+                buildingPosition[1] - 4.0f + (moved / 4) * 1.5f))
+            return 1;
+        ++moved;
+    }
+    game.update(0.001f, {});
+    if (!game.objectVisibleForTesting(buildingId)) {
+        fprintf(stderr, "error: building target must be visible before attack input\n");
+        return 1;
+    }
     const float buildingMaxHitPoints = game.objectMaxHitPoints(buildingId);
     game.lookAt(mapSize * 0.62f + 2.0f, mapSize * 0.60f + 2.0f);
     if (!game.objectScreenPosition(buildingId, screenW, screenH, screenX, screenY)) {
@@ -3008,10 +3034,7 @@ static int cmdTestCombat(const char *dataDir, const char *out) {
     size_t attackersStillEngaged = 0;
     float minimumSeparation =
         std::numeric_limits<float>::max();
-    float minimumY =
-        std::numeric_limits<float>::max();
-    float maximumY =
-        -std::numeric_limits<float>::max();
+    float maximumSeparation = 0;
     for (size_t i = 0;
          i < buildingAttackers.size(); i++) {
         if (!buildingAttack.objectActive(
@@ -3020,8 +3043,6 @@ static int cmdTestCombat(const char *dataDir, const char *out) {
         const auto a =
             buildingAttack.objectPosition(
                 buildingAttackers[i]);
-        minimumY = std::min(minimumY, a[1]);
-        maximumY = std::max(maximumY, a[1]);
         if (buildingAttack.attackTargetForTesting(
                 buildingAttackers[i]) ==
             fortress)
@@ -3036,20 +3057,19 @@ static int cmdTestCombat(const char *dataDir, const char *out) {
                     buildingAttackers[j]);
             const float dx = a[0] - b[0];
             const float dy = a[1] - b[1];
-            minimumSeparation =
-                std::min(
-                    minimumSeparation,
-                    std::sqrt(
-                        dx * dx + dy * dy));
+            const float separation = std::hypot(dx, dy);
+            minimumSeparation = std::min(minimumSeparation, separation);
+            maximumSeparation = std::max(maximumSeparation, separation);
         }
     }
+    // Attackers can spread along either edge of the building.
     const bool buildingAttackSlotsWorked =
         buildingAttackers.size() == 10 &&
         buildingAttack.objectHitPoints(fortress) <
             fortressHealthBefore &&
         attackersStillEngaged >= 8 &&
         minimumSeparation >= 0.34f &&
-        maximumY - minimumY >= 2.0f;
+        maximumSeparation >= 2.0f;
 
     if (out) {
         systems.selectObjectForTesting(
@@ -3197,7 +3217,7 @@ static int cmdTestCombat(const char *dataDir, const char *out) {
         buildingAttackSlotsWorked ? 1 : 0,
         attackersStillEngaged,
         minimumSeparation,
-        maximumY - minimumY);
+        maximumSeparation);
     printf(
         "attack ground: eligibility/button/cancel/order %d/%d/%d/%d, "
         "volley/damage/repeat/replace %d/%d/%d/%d, "
