@@ -2,6 +2,7 @@
 // Genie-style simulation using the original SWGB data and presentation.
 #pragma once
 
+#include "local_simulation_clock.h"
 #include "assets.h"
 #include "ai_script.h"
 #include "pathfinding.h"
@@ -168,7 +169,10 @@ public:
         int player, int unitId) const;
     size_t aiGathererCountForTesting(
         int player, int resourceType) const;
+    // Explicit admitted simulation step; host-driven play uses updateLocal.
     void update(float dt, const InputState &in);
+    void updateLocal(uint32_t hostMilliseconds,float uiDt,const InputState &in);
+    void suspendLocalSimulation() {localClock_.suspend();}
     void updatePaused(float uiDt, const InputState &in);
     std::array<float,2> cameraForTesting() const { return {camX_,camY_}; }
     void render(Renderer &r, int screenW, int screenH);
@@ -883,7 +887,8 @@ private:
             warnedFacts;
         std::unordered_set<std::string>
             warnedActions;
-        float ruleTime = 0.0f;
+        uint32_t updateCount = 0;
+        bool firstEvaluation = true;
         float economyTime = 0.0f;
         float ageTime = 0.0f;
         int age = 1;
@@ -1321,6 +1326,8 @@ private:
     void playWorldSound(int soundId,int player,float x,float y);
     std::array<int,2> worldSoundMix(float x,float y) const;
     void updateAmbience(float dt, int screenW, int screenH);
+    void updateFrame(float dt,float uiDt,const InputState &in,bool advanceWorld);
+    void updateProductionAndDecay(float dt);
     void updateAi(float dt);
     void updateAiPlayer(
         int player, AiPlayerState &state);
@@ -1425,6 +1432,7 @@ private:
     mutable std::map<std::pair<int, int>, int>
         civilizationGraphicCache_;
     std::array<ScenarioPlayer, 16> players_{};
+    uint32_t worldPlayerCount_ = 0;
     std::array<std::map<int, float>, 17> resources_{};
     std::array<std::set<int>, 17> researchedTechs_{};
     std::array<std::vector<int>, 17> researchedTechOrder_{};
@@ -1447,6 +1455,7 @@ private:
     uint32_t nextMoveGroupId_ = 1;
     int difficulty_ = 2;
     double gameTime_ = 0;
+    LocalSimulationClock localClock_;
     int victoryState_ = -1;
     bool keyboardMouseControls_ = false;
     bool classicHud_=false, classicHudRoot_=true, classicHudMenuRequested_=false;

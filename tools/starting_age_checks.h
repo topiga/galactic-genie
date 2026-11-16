@@ -69,6 +69,8 @@ create_object UNIT-BIKE-E { number_of_objects 1 set_place_for_every_player min_d
                   "Original starting-age live worker and scout HP changes");
         }
         uint32_t aiRng=rng;
+        aiRng=swgb::genieRandomDraw(aiRng); // Human player one restores its saved draw.
+        swgb::genieRandomDraw(aiRng); // Player two saves its draw, then enters PER.
         const int first=int(swgb::genieRandomDraw(aiRng))+1,second=int(swgb::genieRandomDraw(aiRng))+1;
         const std::string source="(defrule (random-number == -1) => (set-goal 990 1) (disable-self))"
             "(defrule (true) => (generate-random-number 32768) (disable-self))"

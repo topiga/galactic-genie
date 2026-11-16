@@ -393,7 +393,9 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     legacyRandomState_=seed;
     aiRandomNumbers_.fill(-1);
     gameTime_ = 0;
+    localClock_.reset();
     players_ = {};
+    worldPlayerCount_=2;
     resources_ = {};
     researchedTechs_ = {};
     researchedTechOrder_ = {};
@@ -919,6 +921,10 @@ bool Game::initScenario(const Scenario &scenario, std::string *err) {
 
 bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsCompletionOrder,
                         const uint32_t *postRmsRandomState) {
+    if(scenario.playerSlotCount>players_.size()) {
+        if(err)*err="scenario player table exceeds supported slots";
+        return false;
+    }
     if (!scenario.map.width || scenario.map.width != scenario.map.height) {
         if (err) *err = "only square scenario maps are currently supported";
         return false;
@@ -940,7 +946,15 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     legacyRandomState_=1;
     aiRandomNumbers_.fill(-1);
     gameTime_ = 0;
+    localClock_.reset();
     players_ = scenario.players;
+    worldPlayerCount_=scenario.playerSlotCount;
+    if(!worldPlayerCount_) {
+        // Authored diagnostic scenarios have no serialized player table.
+        for(size_t i=0;i<players_.size();++i)if(players_[i].active)worldPlayerCount_=uint32_t(i+1);
+        for(const auto &unit:scenario.units)if(unit.player<=players_.size())
+            worldPlayerCount_=std::max(worldPlayerCount_,uint32_t(unit.player));
+    }
     resources_ = {};
     researchedTechs_ = {};
     researchedTechOrder_ = {};
@@ -1189,6 +1203,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     if (!generateRmsMap(script,defines,mapSize,mapSize,assets_.dat(),rng,generated,err,playerCount,
                         playerCivilizations,diplomacy)) return false;
     Scenario scenario;
+    scenario.playerSlotCount=playerCount;
     // Session players exist even when RMS places no starting objects for them.
     for(size_t i=0;i<playerCivilizations.size();++i) {
         auto &player=scenario.players[i];
@@ -1409,6 +1424,7 @@ bool Game::loadAiSourceForTesting(
         aiTechLevel(player);
     aiPlayers_[(size_t)player] =
         std::move(state);
+    worldPlayerCount_=std::max(worldPlayerCount_,uint32_t(player));
     return true;
 }
 
@@ -13899,33 +13915,29 @@ void Game::updateAiGatherers(
 }
 
 void Game::updateAi(float dt) {
-    for (size_t player = 1;
-         player < aiPlayers_.size();
-         ++player) {
-        AiPlayerState &state =
-            aiPlayers_[player];
-        if (!state.loaded) continue;
-        const int age =
-            aiTechLevel((int)player);
-        if (age != state.age) {
-            state.age = age;
-            state.ageTime = 0.0f;
-        } else {
-            state.ageTime += dt;
+    // Original normal-player callback wraps even humans and inactive records; Gaia does not.
+    for(uint32_t player=1;player<=worldPlayerCount_;++player) {
+        const uint32_t saved=genieRandomDraw(legacyRandomState_);
+        AiPlayerState &state=aiPlayers_[player];
+        if(state.loaded) {
+            const int age=aiTechLevel(int(player));
+            if(age!=state.age) {state.age=age;state.ageTime=0.f;}
+            else state.ageTime+=dt;
+            if(state.firstEvaluation) {
+                state.firstEvaluation=false;
+                updateAiPlayer(int(player),state);
+            }
+            if(++state.updateCount>=20) {
+                state.updateCount=0;
+                updateAiPlayer(int(player),state);
+            }
+            state.economyTime-=dt;
+            if(state.economyTime<=0.f) {
+                state.economyTime=2.f;
+                updateAiGatherers(int(player),state);
+            }
         }
-        // shortcut: Native interval until original 50..100ms host-step admission drives its 20-call PER gate.
-        state.ruleTime -= dt;
-        if (state.ruleTime <= 0.0f) {
-            state.ruleTime = 0.25f;
-            updateAiPlayer(
-                (int)player, state);
-        }
-        state.economyTime -= dt;
-        if (state.economyTime <= 0.0f) {
-            state.economyTime = 2.0f;
-            updateAiGatherers(
-                (int)player, state);
-        }
+        legacyRandomState_=saved;
     }
 }
 
@@ -13971,6 +13983,7 @@ void Game::updateCamera(float dt,const InputState &in,bool blocked) {
 }
 
 void Game::updatePaused(float uiDt,const InputState &incoming) {
+    localClock_.suspend();
     refreshVisibility();
     soundViewWidth_=std::max(1,incoming.screenW);
     InputState in=incoming;
@@ -14016,239 +14029,7 @@ void Game::handleControlGroup(const InputState &in) {
     }
 }
 
-void Game::update(float dt, const InputState &incoming) {
-    refreshVisibility();
-    soundViewWidth_=std::max(1,incoming.screenW);
-    InputState in=incoming;
-    if (skirmish_) {
-        if (victoryState_ >= 0) return;
-        updateSkirmish(dt);
-        if (victoryState_ >= 0) return;
-    }
-    gameTime_ += dt;
-    handleControlGroup(in);
-    // Placement armed by the build menu last frame may now take clicks.
-    placementJustBegun_ = false;
-    gatherPointJustBegun_ = false;
-    attackGroundJustBegun_ = false;
-    unitCommandJustBegun_ = false;
-    statusTime_ = std::max(0.0f, statusTime_ - dt);
-    attackAlertCooldown_ =
-        std::max(
-            0.0f,
-            attackAlertCooldown_ - dt);
-    if (statusTime_ <= 0) statusMessage_.clear();
-    if (!currentInstruction_.empty()) {
-        instructionTime_ -= dt;
-        if (instructionTime_ <= 0) {
-            currentInstruction_.clear();
-            currentInstructionPlayer_ = -1;
-            if (!instructions_.empty()) {
-                Instruction instruction = std::move(instructions_.front());
-                instructions_.pop_front();
-                startInstruction(std::move(instruction));
-            }
-        }
-    }
-
-    if (in.toggleCheatMenu) {
-        cheatMenuOpen_ = !cheatMenuOpen_;
-        actionMenuOpen_ = false;
-        actionMenuObjectId_ = 0;
-    }
-    if (in.menuBack && healingCursorActive()) {
-        unitCommandCursorActive_=false; unitCommandJustBegun_=false; in.menuBack=false;
-    }
-    if (in.healPressed && !cheatMenuOpen_)
-        for (const Object *unit:selectedObjectsInOrder(true))
-            if (healingTask(*unit)) { executeUnitCommand(UnitCommand::Heal); break; }
-    if(classicHud_ && !cheatMenuOpen_) handleClassicHudInput(in);
-    const bool consumeWorldInput = cheatMenuOpen_;
-    if (cheatMenuOpen_) {
-        if (in.menuUp)
-            cheatMenuSelection_ =
-                cheatMenuSelection_ == 0
-                    ? std::size(kCheats) - 1
-                    : cheatMenuSelection_ - 1;
-        if (in.menuDown)
-            cheatMenuSelection_ =
-                (cheatMenuSelection_ + 1) % std::size(kCheats);
-        if (in.menuActivate)
-            activateCheat(cheatMenuSelection_,
-                          in.screenW, in.screenH);
-        if (in.menuBack)
-            cheatMenuOpen_ = false;
-    }
-    bool actionMenuControlConsumed = false;
-    if (actionMenuOpen_ &&
-        (in.actionTabLeft || in.actionTabRight)) {
-        actionMenuControlConsumed = true;
-        Object *subject = findObject(actionMenuObjectId_);
-        if (actionMenuTab_ ==
-            ActionMenuTab::Stances) {
-        } else if (
-            subject &&
-            actionMenuTab_ ==
-                ActionMenuTab::Commands &&
-            subject->unit->type !=
-                dat::UT_Building) {
-        } else if (subject && isWorker(*subject)) {
-            const int direction =
-                in.actionTabRight ? 1 : -1;
-            int category =
-                actionMenuTab_ == ActionMenuTab::Economy
-                    ? 0
-                    : actionMenuTab_ ==
-                              ActionMenuTab::Military
-                          ? 1
-                          : 2;
-            category = (category + direction + 3) % 3;
-            actionMenuTab_ =
-                category == 0
-                    ? ActionMenuTab::Economy
-                    : category == 1
-                          ? ActionMenuTab::Military
-                          : ActionMenuTab::Defense;
-        } else if (subject) {
-            std::vector<ActionMenuTab> tabs;
-            if (subject->unit->type !=
-                dat::UT_Building) {
-                tabs.push_back(ActionMenuTab::Commands);
-            } else {
-                if (!productionOptions(*subject).empty())
-                    tabs.push_back(ActionMenuTab::Units);
-                if (hasResearchTab(*subject))
-                    tabs.push_back(ActionMenuTab::Research);
-                if (!buildingCommands(*subject).empty())
-                    tabs.push_back(ActionMenuTab::Commands);
-            }
-            if (!tabs.empty()) {
-                auto current = std::find(
-                    tabs.begin(), tabs.end(),
-                    actionMenuTab_);
-                int index =
-                    current == tabs.end()
-                        ? 0
-                        : (int)(current - tabs.begin());
-                index =
-                    (index +
-                     (in.actionTabRight ? 1 : -1) +
-                     (int)tabs.size()) %
-                    (int)tabs.size();
-                actionMenuTab_ = tabs[(size_t)index];
-            }
-        }
-        actionMenuSelection_ = 0;
-        actionMenuScroll_ = 0;
-    }
-    if (actionMenuOpen_) {
-        Object *subject =
-            findObject(actionMenuObjectId_);
-        size_t optionCount = 0;
-        if (actionMenuTab_ ==
-            ActionMenuTab::Stances)
-            optionCount = 4;
-        else if (subject &&
-                 actionMenuTab_ ==
-                     ActionMenuTab::Commands)
-            optionCount =
-                subject->unit->type ==
-                        dat::UT_Building
-                    ? buildingCommands(
-                          *subject)
-                          .size()
-                    : unitCommands(*subject)
-                          .size();
-        else if (subject && isWorker(*subject))
-            optionCount =
-                buildingOptions(
-                    *subject, actionMenuTab_).size();
-        else if (subject &&
-                 actionMenuTab_ ==
-                     ActionMenuTab::Units)
-            optionCount =
-                productionOptions(*subject).size();
-        else if (subject)
-            optionCount =
-                researchOptions(*subject).size();
-
-        const float gridX = kActionMenuX + 12.0f;
-        if (in.cursorVisible &&
-            in.pointerX >= gridX &&
-            in.pointerX <
-                gridX +
-                    kActionMenuColumns *
-                        kActionMenuCell &&
-            in.pointerY >= kActionMenuY &&
-            in.pointerY <
-                kActionMenuY +
-                    kActionMenuRows *
-                        kActionMenuCell) {
-            const size_t column =
-                (size_t)((in.pointerX - gridX) /
-                         kActionMenuCell);
-            const size_t row =
-                (size_t)((in.pointerY -
-                          kActionMenuY) /
-                         kActionMenuCell);
-            const size_t hovered =
-                actionMenuScroll_ +
-                row * kActionMenuColumns +
-                column;
-            if (hovered < optionCount)
-                actionMenuSelection_ = hovered;
-        }
-        if (optionCount > 0 &&
-            (in.menuUp || in.menuDown ||
-             in.menuLeft || in.menuRight)) {
-            actionMenuControlConsumed = true;
-            int next = (int)std::min(
-                actionMenuSelection_,
-                optionCount - 1);
-            if (in.menuUp)
-                next -= (int)kActionMenuColumns;
-            if (in.menuDown)
-                next += (int)kActionMenuColumns;
-            if (in.menuLeft) next--;
-            if (in.menuRight) next++;
-            next = std::max(
-                0, std::min(
-                       (int)optionCount - 1, next));
-            actionMenuSelection_ = (size_t)next;
-            actionMenuScroll_ =
-                (actionMenuSelection_ /
-                 kActionMenuVisibleItems) *
-                kActionMenuVisibleItems;
-        }
-        if (in.menuActivate && optionCount > 0) {
-            actionMenuControlConsumed = true;
-            const size_t visible =
-                actionMenuSelection_ -
-                actionMenuScroll_;
-            handleActionMenuClick(
-                gridX +
-                    (visible %
-                     kActionMenuColumns) *
-                        kActionMenuCell +
-                    kActionMenuCell * 0.5f,
-                kActionMenuY +
-                    (visible /
-                     kActionMenuColumns) *
-                        kActionMenuCell +
-                    kActionMenuCell * 0.5f,
-                in.screenW, in.screenH);
-        } else if (in.menuBack) {
-            actionMenuControlConsumed = true;
-            actionMenuOpen_ = false;
-            actionMenuObjectId_ = 0;
-            playInterfaceFeedback(
-                kInterfaceCancelSound);
-        }
-    }
-
-    updateCamera(dt,in,consumeWorldInput || actionMenuOpen_);
-    updateAmbience(dt,in.screenW,in.screenH);
-
+void Game::updateProductionAndDecay(float dt) {
     updateTriggers(dt);
     updateAi(dt);
     struct ProductionSpawn {
@@ -14481,7 +14262,6 @@ void Game::update(float dt, const InputState &incoming) {
     }
     commandMarkerTime_ = std::max(0.0f, commandMarkerTime_ - dt);
     commandTargetTime_ = std::max(0.0f, commandTargetTime_ - dt);
-    selectionClickAge_ += dt;
     animClock_ = std::fmod(animClock_ + dt, 3600.0f);
     for (Object &object : objects_)
         if (object.active && object.unit && object.unit->cls == 7 &&
@@ -14563,6 +14343,254 @@ void Game::update(float dt, const InputState &incoming) {
     for (Object &object : objects_)
         if (object.selected && !isInspectable(object)) object.selected = false;
     syncSelectionOrder();
+
+}
+
+void Game::update(float dt,const InputState &in) {
+    updateFrame(dt,dt,in,true);
+}
+
+void Game::updateLocal(uint32_t hostMilliseconds,float uiDt,const InputState &in) {
+    // Original new-game world61e61f and game4247da both default to 1.5x.
+    const auto step=localClock_.advance(hostMilliseconds,1.5f);
+    updateFrame(float(step.deltaMilliseconds)/1000.f,uiDt,in,step.admitted);
+}
+
+void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advanceWorld) {
+    refreshVisibility();
+    soundViewWidth_=std::max(1,incoming.screenW);
+    InputState in=incoming;
+    if (skirmish_) {
+        if (victoryState_ >= 0) return;
+        if(advanceWorld)updateSkirmish(dt);
+        if (victoryState_ >= 0) return;
+    }
+    gameTime_ += dt;
+    handleControlGroup(in);
+    // Placement armed by the build menu last frame may now take clicks.
+    placementJustBegun_ = false;
+    gatherPointJustBegun_ = false;
+    attackGroundJustBegun_ = false;
+    unitCommandJustBegun_ = false;
+    statusTime_ = std::max(0.0f, statusTime_ - dt);
+    attackAlertCooldown_ =
+        std::max(
+            0.0f,
+            attackAlertCooldown_ - dt);
+    if (statusTime_ <= 0) statusMessage_.clear();
+    if (!currentInstruction_.empty()) {
+        instructionTime_ -= dt;
+        if (instructionTime_ <= 0) {
+            currentInstruction_.clear();
+            currentInstructionPlayer_ = -1;
+            if (!instructions_.empty()) {
+                Instruction instruction = std::move(instructions_.front());
+                instructions_.pop_front();
+                startInstruction(std::move(instruction));
+            }
+        }
+    }
+
+    if (in.toggleCheatMenu) {
+        cheatMenuOpen_ = !cheatMenuOpen_;
+        actionMenuOpen_ = false;
+        actionMenuObjectId_ = 0;
+    }
+    if (in.menuBack && healingCursorActive()) {
+        unitCommandCursorActive_=false; unitCommandJustBegun_=false; in.menuBack=false;
+    }
+    if (in.healPressed && !cheatMenuOpen_)
+        for (const Object *unit:selectedObjectsInOrder(true))
+            if (healingTask(*unit)) { executeUnitCommand(UnitCommand::Heal); break; }
+    if(classicHud_ && !cheatMenuOpen_) handleClassicHudInput(in);
+    const bool consumeWorldInput = cheatMenuOpen_;
+    if (cheatMenuOpen_) {
+        if (in.menuUp)
+            cheatMenuSelection_ =
+                cheatMenuSelection_ == 0
+                    ? std::size(kCheats) - 1
+                    : cheatMenuSelection_ - 1;
+        if (in.menuDown)
+            cheatMenuSelection_ =
+                (cheatMenuSelection_ + 1) % std::size(kCheats);
+        if (in.menuActivate)
+            activateCheat(cheatMenuSelection_,
+                          in.screenW, in.screenH);
+        if (in.menuBack)
+            cheatMenuOpen_ = false;
+    }
+    bool actionMenuControlConsumed = false;
+    if (actionMenuOpen_ &&
+        (in.actionTabLeft || in.actionTabRight)) {
+        actionMenuControlConsumed = true;
+        Object *subject = findObject(actionMenuObjectId_);
+        if (actionMenuTab_ ==
+            ActionMenuTab::Stances) {
+        } else if (
+            subject &&
+            actionMenuTab_ ==
+                ActionMenuTab::Commands &&
+            subject->unit->type !=
+                dat::UT_Building) {
+        } else if (subject && isWorker(*subject)) {
+            const int direction =
+                in.actionTabRight ? 1 : -1;
+            int category =
+                actionMenuTab_ == ActionMenuTab::Economy
+                    ? 0
+                    : actionMenuTab_ ==
+                              ActionMenuTab::Military
+                          ? 1
+                          : 2;
+            category = (category + direction + 3) % 3;
+            actionMenuTab_ =
+                category == 0
+                    ? ActionMenuTab::Economy
+                    : category == 1
+                          ? ActionMenuTab::Military
+                          : ActionMenuTab::Defense;
+        } else if (subject) {
+            std::vector<ActionMenuTab> tabs;
+            if (subject->unit->type !=
+                dat::UT_Building) {
+                tabs.push_back(ActionMenuTab::Commands);
+            } else {
+                if (!productionOptions(*subject).empty())
+                    tabs.push_back(ActionMenuTab::Units);
+                if (hasResearchTab(*subject))
+                    tabs.push_back(ActionMenuTab::Research);
+                if (!buildingCommands(*subject).empty())
+                    tabs.push_back(ActionMenuTab::Commands);
+            }
+            if (!tabs.empty()) {
+                auto current = std::find(
+                    tabs.begin(), tabs.end(),
+                    actionMenuTab_);
+                int index =
+                    current == tabs.end()
+                        ? 0
+                        : (int)(current - tabs.begin());
+                index =
+                    (index +
+                     (in.actionTabRight ? 1 : -1) +
+                     (int)tabs.size()) %
+                    (int)tabs.size();
+                actionMenuTab_ = tabs[(size_t)index];
+            }
+        }
+        actionMenuSelection_ = 0;
+        actionMenuScroll_ = 0;
+    }
+    if (actionMenuOpen_) {
+        Object *subject =
+            findObject(actionMenuObjectId_);
+        size_t optionCount = 0;
+        if (actionMenuTab_ ==
+            ActionMenuTab::Stances)
+            optionCount = 4;
+        else if (subject &&
+                 actionMenuTab_ ==
+                     ActionMenuTab::Commands)
+            optionCount =
+                subject->unit->type ==
+                        dat::UT_Building
+                    ? buildingCommands(
+                          *subject)
+                          .size()
+                    : unitCommands(*subject)
+                          .size();
+        else if (subject && isWorker(*subject))
+            optionCount =
+                buildingOptions(
+                    *subject, actionMenuTab_).size();
+        else if (subject &&
+                 actionMenuTab_ ==
+                     ActionMenuTab::Units)
+            optionCount =
+                productionOptions(*subject).size();
+        else if (subject)
+            optionCount =
+                researchOptions(*subject).size();
+
+        const float gridX = kActionMenuX + 12.0f;
+        if (in.cursorVisible &&
+            in.pointerX >= gridX &&
+            in.pointerX <
+                gridX +
+                    kActionMenuColumns *
+                        kActionMenuCell &&
+            in.pointerY >= kActionMenuY &&
+            in.pointerY <
+                kActionMenuY +
+                    kActionMenuRows *
+                        kActionMenuCell) {
+            const size_t column =
+                (size_t)((in.pointerX - gridX) /
+                         kActionMenuCell);
+            const size_t row =
+                (size_t)((in.pointerY -
+                          kActionMenuY) /
+                         kActionMenuCell);
+            const size_t hovered =
+                actionMenuScroll_ +
+                row * kActionMenuColumns +
+                column;
+            if (hovered < optionCount)
+                actionMenuSelection_ = hovered;
+        }
+        if (optionCount > 0 &&
+            (in.menuUp || in.menuDown ||
+             in.menuLeft || in.menuRight)) {
+            actionMenuControlConsumed = true;
+            int next = (int)std::min(
+                actionMenuSelection_,
+                optionCount - 1);
+            if (in.menuUp)
+                next -= (int)kActionMenuColumns;
+            if (in.menuDown)
+                next += (int)kActionMenuColumns;
+            if (in.menuLeft) next--;
+            if (in.menuRight) next++;
+            next = std::max(
+                0, std::min(
+                       (int)optionCount - 1, next));
+            actionMenuSelection_ = (size_t)next;
+            actionMenuScroll_ =
+                (actionMenuSelection_ /
+                 kActionMenuVisibleItems) *
+                kActionMenuVisibleItems;
+        }
+        if (in.menuActivate && optionCount > 0) {
+            actionMenuControlConsumed = true;
+            const size_t visible =
+                actionMenuSelection_ -
+                actionMenuScroll_;
+            handleActionMenuClick(
+                gridX +
+                    (visible %
+                     kActionMenuColumns) *
+                        kActionMenuCell +
+                    kActionMenuCell * 0.5f,
+                kActionMenuY +
+                    (visible /
+                     kActionMenuColumns) *
+                        kActionMenuCell +
+                    kActionMenuCell * 0.5f,
+                in.screenW, in.screenH);
+        } else if (in.menuBack) {
+            actionMenuControlConsumed = true;
+            actionMenuOpen_ = false;
+            actionMenuObjectId_ = 0;
+            playInterfaceFeedback(
+                kInterfaceCancelSound);
+        }
+    }
+
+    updateCamera(uiDt,in,consumeWorldInput || actionMenuOpen_);
+    if(advanceWorld)updateAmbience(dt,in.screenW,in.screenH);
+
+    if(advanceWorld)updateProductionAndDecay(dt);
+    selectionClickAge_ += uiDt;
 
     cursorVisible_ = in.cursorVisible;
     cursorX_ = in.pointerX;
@@ -15125,6 +15153,8 @@ void Game::update(float dt, const InputState &incoming) {
                       : CursorMode::Normal;
     }
 
+    if(!advanceWorld)return;
+
     std::uniform_real_distribution<float> r01(0, 1);
     auto spreadBlockedMoveGoal = [&](Object &object) {
         const float originalX = object.moveAnchorX;
@@ -15672,6 +15702,10 @@ void Game::update(float dt, const InputState &incoming) {
     updateProjectiles(dt);
     updateRemains(dt);
     refreshVisibility();
+    // Original world tail restores its auxiliary-pass draw, then consumes a final draw.
+    // shortcut: Native object/auxiliary callbacks are not yet ordered per original player lists.
+    legacyRandomState_=genieRandomDraw(legacyRandomState_);
+    genieRandomDraw(legacyRandomState_);
 }
 
 // Picks the SLP frame for a graphic given a world-space facing and time.

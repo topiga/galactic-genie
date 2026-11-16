@@ -81,6 +81,7 @@ struct Scenario {
     std::string instructions;
     int32_t victoryType = 0;
     uint32_t enabledPlayerCount = 0;
+    uint32_t playerSlotCount = 0; // Instantiated normal-player records, excluding Gaia.
     uint32_t nextUnitId = 0;
     float playerDataVersion = 0;
     std::string originalFilename;

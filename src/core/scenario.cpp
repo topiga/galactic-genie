@@ -320,6 +320,7 @@ void readScenarioObjects(ByteReader &reader, Scenario &scenario) {
     const uint32_t playerCount = reader.u32();
     if (playerCount < 2 || playerCount > 16) throw FormatError("invalid secondary scenario player count");
     const size_t recordCount = playerCount - 1;
+    scenario.playerSlotCount = uint32_t(recordCount);
     for (size_t player = 0; player < recordCount; player++) {
         ScenarioPlayer &state = scenario.players[player];
         sizedString16(reader);

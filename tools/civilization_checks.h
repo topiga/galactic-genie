@@ -9,11 +9,17 @@
 #include "rms_session_start_checks.h"
 #include "starting_age_checks.h"
 #include "upgrade_rng_checks.h"
+#include "local_simulation_checks.h"
+#include "world_rng_checks.h"
+#include "local_simulation_clock_checks.h"
 
 static void civilizationBonusChecks(swgb::Assets &assets) {
     hitPointEffectChecks(assets);
     combinedUpgradeChecks(assets);
     upgradeRngChecks(assets);
+    localSimulationClockChecks();
+    localSimulationChecks(assets);
+    worldRngChecks(assets);
     alliedBonusChecks(assets);
     multiownerBonusChecks(assets);
     rmsSessionPlayerChecks(assets);

@@ -509,12 +509,12 @@ int run(const std::string &root, bool smoke) {
                 continue;
             }
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
-                paused = true; held = false; moved = false;
+                paused = true; game.suspendLocalSimulation(); held = false; moved = false;
             }
             if (event.type == SDL_KEYDOWN && !event.key.repeat) {
                 const auto key = event.key.keysym.sym;
                 if (key == SDLK_q && (event.key.keysym.mod & KMOD_GUI)) running = false;
-                if (key == SDLK_SPACE) paused = !paused;
+                if (key == SDLK_SPACE) {paused = !paused; if(paused)game.suspendLocalSimulation();}
                 if(key>=SDLK_0 && key<=SDLK_9 && !(event.key.keysym.mod & (KMOD_GUI|KMOD_ALT|KMOD_SHIFT))) {
                     input.controlGroup=int(key-SDLK_0);
                     input.storeControlGroup=(event.key.keysym.mod & KMOD_CTRL)!=0;
@@ -527,10 +527,10 @@ int run(const std::string &root, bool smoke) {
                 input.toggleDebug = key == SDLK_m;
                 if (key == SDLK_F8) audio.toggleMute();
                 if (key == SDLK_F10 || (key == SDLK_ESCAPE && !game.actionMenuOpenForTesting() && !game.classicHudSubmenuOpen() && !game.healingCursorActive())) {
-                    menu.pause(); held = false; moved = false; input = {}; continue;
+                    menu.pause(); game.suspendLocalSimulation(); held = false; moved = false; input = {}; continue;
                 }
                 if (key == SDLK_RETURN && game.matchResult() >= 0) {
-                    menu.main(); paused = false; input = {}; continue;
+                    menu.main(); game.suspendLocalSimulation(); paused = false; input = {}; continue;
                 }
                 input.menuUp = key == SDLK_UP; input.menuDown = key == SDLK_DOWN;
                 input.menuLeft = key == SDLK_LEFT; input.menuRight = key == SDLK_RIGHT;
@@ -579,11 +579,13 @@ int run(const std::string &root, bool smoke) {
             SDL_SetWindowTitle(window.get(), title.c_str());
             lastPaused = paused; lastMuted = audio.muted();
         }
-        if (menu.playing() && wasPlaying) {
+        if (menu.playing() && (wasPlaying || !smoke)) {
             if(paused) game.updatePaused(dt,input);
-            else game.update(smoke ? 1.f/30 : dt,input);
+            else game.updateLocal(smoke ? 1000u+uint32_t(frames)*33u : SDL_GetTicks(),
+                                  smoke ? 1.f/30 : dt,input);
         }
         if (game.takeHudMenuRequest()) { menu.pause(); held=false; }
+        if(!menu.playing())game.suspendLocalSimulation();
         if (input.selectPressed || input.commandPressed || input.cycleAttackMode || input.boxSelectCommit)
             std::fprintf(stderr, "input: select=%d command=%d actions=%d box=%d paused=%d selected=%zu pointer=%.0f,%.0f polled=%d,%d\n",
                          input.selectPressed, input.commandPressed, input.cycleAttackMode, input.boxSelectCommit,

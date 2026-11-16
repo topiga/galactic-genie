@@ -40,6 +40,7 @@ static void upgradeRngChecks(swgb::Assets &assets) {
     const auto observe=[&](uint32_t expectedState) {
         // Observe two consecutive draws through the real PER action/fact interface, no RNG getter.
         uint32_t next=expectedState;
+        swgb::genieRandomDraw(next); // Player one saves a draw before entering PER.
         const int first=int(swgb::genieRandomDraw(next))+1;
         const int second=int(swgb::genieRandomDraw(next))+1;
         const std::string source=
