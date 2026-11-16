@@ -4281,3 +4281,31 @@ Validation:127 packaged startup cases and general/authored regressions pass
 under ASan/UBSan, including274 new pose/health/height fixtures. Strict map checks,
 production CLI checks and desktop dummy-driver smoke pass. Production acceptance
 is99 of138 configurations across33 resources, not a parity percentage.
+
+### Ice Lake54226 bare connections and alternate patches (2026-11-16)
+
+Actual-derived Tiny/default two-Empire seeds1/12345/16160/8000 match
+1764/1777/1810/1716 original objects and final RNG2333833765/1892348138/
+3913502968/2653551361. Ordered IDs, owners, types, facets, exact positions,
+terrain/elevation/slope grids and captured poses match. The first three seeds
+use snow-dirt47; seed8000 exercises the alternate grass41 branch.
+
+The original accepts a bare connection command: Ice Lake comments out its whole
+settings block. Native parsing now retains the default99 settings without braces,
+including at EOF and before another section. Malformed explicit blocks still fail.
+A parser regression compares bare and empty-braced forms. Full original execution
+confirms one kind63 record with width1, variance0, replacement-1 and cost1.
+
+The bounded profile has a11520-tile ice35 neutral lake and two2160-tile snow32
+player lands, seven elevation layers, original cliffs and five terrain rows.
+It reuses existing cliff, snowy forest, connection and object controllers.
+Missing cliff metadata and unverified random starts reject atomically.
+
+Evidence: `rms-icelake54226-full-startup-findings-2026-11-16.json` and retained
+`rms-icelake54226-settings-tiny-derived-inventory-*` files. Other map sizes,
+civilizations, seeds and later gameplay remain outside these comparisons.
+
+Validation:131 packaged startup cases (119 general and12 walled cases), including
+276 new pose/health/height fixtures, pass under ASan/UBSan. Strict map checks,
+production CLI checks and desktop dummy-driver smoke pass. The production audit
+accepts102 of138 configurations across34 resources; this is not a parity score.

@@ -23,6 +23,22 @@ static void checkRmsConnectionsMap() {
   {4294967295u,0u,3851874315u,752019259u,2166136261u,2166136261u,20u,10u,5u,21u},
   {4294967295u,1u,1954158615u,3540526962u,521235909u,521235909u,20u,10u,5u,21u},
  };
+ for(const std::string &ending:{std::string(),std::string(" <OBJECTS_GENERATION>")}) {
+  RmsMap maps[2];uint32_t states[2]={1,1};
+  for(int braced=0;braced<2;++braced) {
+   const auto source=land+"<CONNECTION_GENERATION> create_connect_all_players_land"+(braced?" {}":"")+ending;
+   RmsScript script;std::string error;
+   check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes){if(id)return false;bytes.assign(source.begin(),source.end());return true;},{},&error),error);
+   check(generateRmsMap(script,{},32,32,data,states[braced],maps[braced],&error),error);
+  }
+  check(states[0]==states[1] && maps[0].terrain==maps[1].terrain,"Original bare connection retains default settings at EOF or before a section");
+ }
+ for(const std::string &suffix:{std::string(" { terrain_cost 0 2"),std::string(" terrain_cost 0 2")}) {
+  const auto source=land+"<CONNECTION_GENERATION> create_connect_all_players_land"+suffix;
+  RmsScript script;std::string error;RmsMap map;uint32_t rng=1;
+  const bool loaded=script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes){if(id)return false;bytes.assign(source.begin(),source.end());return true;},{},&error);
+  check((!loaded || !generateRmsMap(script,{},32,32,data,rng,map,&error)) && rng==1 && map.terrain.empty(),"Malformed explicit connection settings reject atomically");
+ }
  for(const auto &c:cases) for(bool late:{false,true}) {
   // Section order must not change the scheduler's stage priority.
   auto source=land+(late?connect:std::string())+(c[1]?hill:std::string())+paint+
