@@ -158,11 +158,29 @@ provenance is in `rms-owned-quantities-findings-2026-11-16.json` and the matchin
 the helper's filename date). This is execution of the original PE with captured
 assets and modeled host boundaries, not a new live Windows session.
 
-Aircraft1521 and other constructors remain unsupported. Aircraft research has
-identified the actual civilization remaps, DAT/task/graphic/sound records and a
-separate original air-path manager; a successful complete comparison is still
-required before enabling placement. The last packaged production audit remains
-9/138 accepted configurations, and RMS menu integration remains separate work.
+Aircraft1521 and other constructors remain unsupported. Complete original replays now cover early and late1521 rows. The late row gives
+6,204 objects, RNG3529783542,
+and two Empire transports1036 at95.5/37.5 and41.5/95.5, both with original z1.
+The early row gives6,206 objects, RNG4112436110 and transports at99.5/35.5 and
+31.5/87.5, also z1. All four transports have150HP and original startup poses
+recorded; independent resource replays preserve the complete outputs.
+These runs use the actual air-path manager constructor/bind calls and captured DAT,
+task-header, graphics and sound records. Replaying the previous zero-worker case
+with that manager added preserves its objects, poses, grids and RNG exactly.
+The transport constructor consumes seven CRT draws, unlike the scout path.
+Each transport adds one population and military-unit count, with160 recorded
+unit cost (35food+125carbon). Both owners end at counters4/11/21/37/40/84 =
+0/5/2/3/2/3 and98/164/165 =735/360/375.
+
+This is original-side evidence, not native aircraft parity. The actual placement
+gate checks nearby static ground-object collision boxes; it cannot be replaced
+by an assumption that aircraft ignore ground blockers. Exact collision handling,
+startup height/import and native comparison remain open. Local evidence includes
+`rms-airtransport-placement-static-2026-11-16.json`, successful gate traces,
+`rms-general-rows-airtransport-late-1-1-1-oracle-2026-11-15.json` and the matching
+resource supplement; `rms-airtransport-findings-2026-11-16.json` indexes both
+complete replays and their provenance. The last packaged production audit remains9/138 accepted
+configurations, and RMS menu integration remains separate work.
 
 ## General object-row controller: 2026-11-15
 
