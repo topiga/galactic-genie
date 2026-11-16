@@ -35,6 +35,7 @@ struct RmsWallBoundary {
     std::vector<uint8_t> reachableScratch, reachableBoundary;
     std::vector<uint8_t> prunedScratch, prunedBoundary, segmentScratch;
 };
+// Verified startup cache reconstruction; later terrain edits/removals need ordered update history.
 // Leaves output unchanged on failure; reports bounded-profile rejection through error.
 bool generateRmsWallBoundary(const RmsWallInput& input, RmsWallBoundary& output, std::string* error = nullptr);
 }

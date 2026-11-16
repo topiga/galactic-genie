@@ -35,6 +35,16 @@ static void checkRmsElevationMap() {
         if(c[1]) check(hash(map.elevation)==c[3] && hash(map.slopes)==c[4],"original composed RMS heights and slopes");
         else check(map.elevation.empty() && map.slopes.empty(),"absent elevation stage");
     }
+    // Original derived4e7bd0 gives terrain1 the flat-only default without an explicit directive.
+    data.terrainBlock.terrains.resize(24);data.terrainBlock.terrainsUsed=24;
+    for(auto &terrain:data.terrainBlock.terrains)terrain.enabled=1;
+    std::string shallow=paint;shallow.replace(shallow.find("create_terrain 3"),16,"create_terrain 1");
+    load(land+hill+shallow);uint32_t explicitRng=1;RmsMap shallowExpected;
+    check(generateRmsMap(script,{},16,16,data,explicitRng,shallowExpected,&error),error);
+    shallow.erase(shallow.find("set_flat_terrain_only"),21);
+    load(land+hill+shallow);uint32_t implicitRng=1;
+    check(generateRmsMap(script,{},16,16,data,implicitRng,map,&error) && implicitRng==explicitRng && map.terrain==shallowExpected.terrain,
+          "Derived shallow-water default matches explicit flat-only handling on slopes");
     for(const auto &invalid:{"create_elevation 8 { base_terrain 6 }","create_elevation -1 { base_terrain 6 }",
         "create_elevation 1 { }","create_elevation 1 { base_terrain 256 }",
         "create_elevation 1 { base_terrain 6 number_of_clumps -1 }",

@@ -29,7 +29,7 @@ class Controller {
     int w, h;
     std::array<Point, 2> starts{};
     RmsWallBoundary result;
-    std::vector<uint8_t> boundary;
+    std::vector<uint8_t> boundary, deposits;
     int index(int x, int y) const { return x*h+y; }
     bool inside(int x, int y) const { return x>=0 && y>=0 && x<w && y<h; }
     bool terrainPasses(int x, int y) const { return in.restrictions[in.terrain[y*w+x]] > 0; }
@@ -38,6 +38,7 @@ class Controller {
         require(in.terrain.size()==size_t(w*h), "Bad terrain size");
         require(in.restrictions.size()==53, "Expected actual53 terrain restriction columns");
         for (float value: in.restrictions) require(std::isfinite(value), "Nonfinite restriction");
+        require(in.restrictions[0]>0, "Expected initially passable original terrain0 cache");
         for (uint8_t value: in.terrain) require(value<in.restrictions.size(), "Terrain index out of range");
         require(in.minimumDistance==16 && in.maximumDistance==20, "Unverified wall-distance profile");
         require(in.commandCenters.size()==2, "Expected two command centers");
@@ -60,7 +61,8 @@ class Controller {
             require(o.owner>=0 && o.owner<=2, "Invalid object owner");geometry(o.x,o.y,o.radiusX,o.radiusY);
             require(o.obstructionType>=0 && o.obstructionType<=255 && o.obstructionClass>=0 && o.obstructionClass<=255, "Invalid obstruction metadata");
             require(o.unitClass>=0 && o.unitClass<=32767, "Invalid unit class");
-            require(o.unitClass!=29 && o.unitClass!=30, "Unverified special-class registration");
+            if(o.unitClass==29 || o.unitClass==30)
+                require(o.radiusX==.5f && o.radiusY==.5f, "Unverified deposit registration footprint");
             require(o.obstructionType!=10, "Unverified type10 terrain callback");
             require((o.obstructionType<=2 || o.obstructionType==5), "Unverified obstruction type");
             if (o.obstructionType>0 && o.obstructionType<=2 && o.obstructionClass>0) {
@@ -69,9 +71,15 @@ class Controller {
         }
     }
     void makeObstruction() {
-        result.obstruction.assign(w*h,0);
+        result.obstruction.assign(w*h,0);deposits.assign(w*h,0);
+        std::vector<uint8_t> refreshed(w*h,0);
         for (const auto& o: in.objects) {
+            if(o.unitClass==29 || o.unitClass==30)deposits[index(int(o.x),int(o.y))]=1;
             if (o.obstructionType<=0 || o.obstructionType>2 || o.obstructionClass<=0) continue;
+            const int x0=int(double(o.x)-o.radiusX),x1=int(double(o.x)+o.radiusX)-1;
+            const int y0=int(double(o.y)-o.radiusY),y1=int(double(o.y)+o.radiusY)-1;
+            for(int x=std::max(0,std::min(x0,x1)-1);x<=std::min(w-1,std::max(x0,x1)+1);++x)
+                for(int y=std::max(0,std::min(y0,y1)-1);y<=std::min(h-1,std::max(y0,y1)+1);++y)refreshed[index(x,y)]=1;
             uint32_t word=uint32_t((o.obstructionClass&63)|(o.owner<<8)|0x40)<<8;
             if (o.obstructionClass==5) word|=0x8000;
             for (int y=int(double(o.y)-o.radiusY);y<int(double(o.y)+o.radiusY);++y)
@@ -81,9 +89,15 @@ class Controller {
         }
         result.directions.assign(w*h,0);
         auto pass=[&](int x,int y) { return inside(x,y) && terrainPasses(x,y) && !(result.obstruction[y*w+x]&0x4000); };
-        for (int x=0;x<w;++x) for (int y=0;y<h;++y) if (pass(x,y))
-            for (size_t i=0;i<cardinal.size();++i)
-                if (pass(x+cardinal[i].x,y+cardinal[i].y)) result.directions[index(x,y)]|=directionBits[i];
+        // shortcut: verified startup refresh union; use event history if later terrain edits or unmatched removals affect cached cells.
+        for (int x=0;x<w;++x) for (int y=0;y<h;++y) {
+            const bool update=refreshed[index(x,y)]!=0;
+            if(update && !pass(x,y))continue;
+            for (size_t i=0;i<cardinal.size();++i) {
+                const int nx=x+cardinal[i].x,ny=y+cardinal[i].y;
+                if(update?pass(nx,ny):inside(nx,ny))result.directions[index(x,y)]|=directionBits[i];
+            }
+        }
     }
     void route(int x0,int y0,int x1,int y1,int side,uint8_t ownerBit) {
         if (!(x0<w && x1>=0 && y0<h && y1>0)) return;
@@ -117,8 +131,9 @@ class Controller {
                     if (terrain==35) step=600;
                     else if (nx==0 || ny==0 || nx==w-1 || ny==h-1) step=10;
                     else if (!flags) {
-                        // Special classes29/30 are rejected before entering this bounded controller.
-                        step=10+(side==1 ? ny-y0 : side==2 ? nx-x0 : side==4 ? x1-nx : y1-ny);
+                        bool deposit=deposits[index(nx,ny)]!=0;
+                        for(Point d:cardinal)if(inside(nx+d.x,ny+d.y))deposit|=deposits[index(nx+d.x,ny+d.y)]!=0;
+                        step=deposit?300:10+(side==1 ? ny-y0 : side==2 ? nx-x0 : side==4 ? x1-nx : y1-ny);
                     } else step=(terrain==4 ? 300 : 100)+(n<4 ? 10 : 0);
                     if (boundary[index(nx,ny)]) step=2000;
                 }

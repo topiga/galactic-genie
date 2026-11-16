@@ -2,22 +2,40 @@
 
 ## Current comparison coverage: 2026-11-16
 
-Nineteen packaged profiles have complete original-runner comparisons at fixed Tiny120,
+Twenty packaged profiles have complete original-runner comparisons at fixed120,
 two Empire players and default resources (54218 uses mutual allies): Forest54204, Reytha54220, Arid54201,
 Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
-Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206, allied roads54218, central water54212 and Motherlode54225.
-The shared packaged suite contains68 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
+Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206, allied roads54218, central water54212, Motherlode54225 and the Naboo branch of Fortress54208.
+The shared packaged suite contains70 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
 Gaia resource accounting and deferred foundation rendering. Twenty-nine additional authored
-fixtures cover owned Troop Center, Prefab, Farm and defensive-building placement, completion research order, population grants and rejected placement.
+fixtures cover owned Troop Center, Prefab, Farm and defensive-building placement, completion research order, population grants and rejected placement. Three separate authored wall/gate fixtures cover complete emission and native import.
 
-The standard production audit accepts54/138 map/seed attempts (eighteen of46 resources,
-three seeds each);84 are explicitly rejected. The allied54218 configuration is
+The production audit accepts56/138 map/seed attempts (nineteen of46 resources,
+three seeds each);82 are explicitly rejected. The allied54218 configuration is
 verified separately and is not counted as accepted by this enemy-player audit. This measures supported
 configurations, not an engine completion percentage. New comparisons run the
 original executable locally with modeled host boundaries. Live Windows evidence
 below remains a separate, earlier baseline. Later gameplay and other map settings
 are not established as1:1.
+
+## Reference-context correction: 2026-11-16
+
+The Fortress integration exposed a reference-harness distinction: base reader
+`4df810` does not install the game presets automatically. Production constructs
+`4e7420`, whose derived registration installs the map-size, position and resource
+settings. Earlier base-reader worlds remain valid controlled comparisons, but
+120×120 dimensions alone do not establish the original Tiny preset. Historical
+Tiny labels must be read with each capture's actual script-definition context.
+The earlier live Windows Forest comparison is a separate source of evidence.
+
+Fortress's two new shared cases use the actual derived reader, verified original
+DLL language strings and the unchanged packaged script/includes. Its Tiny
+preset adds two resource rows absent from the base-reader captures. The native
+terrain parser also now applies the derived reader's implicit flat-only default
+for terrain1. The retained68 packaged comparisons still pass after that change.
+See `rms-fortress54208-parser-context-correction-2026-11-16.json` and
+`rms-derived-terrain-default-findings-2026-11-16.json` in local research.
 
 ## Retained Forest and live Windows baseline
 
@@ -3627,3 +3645,53 @@ both raw DAT axes and the native asset loader's rotated footprints. This covers
 one authored wall-row composition; full packaged54208 and diagonal gate dispatch
 remain unadmitted. Separate controlled original diagonal-constructor evidence
 is retained for the next integration step.
+
+
+### Packaged Fortress54208, actual Tiny Naboo branch (2026-11-16)
+
+The unchanged packaged map now executes through native land/elevation/terrain,
+scenery, resource, tower/wall/gate, Prefab, Troop Center and Farm startup. The
+original reference uses the production derived reader and actual Tiny/fixed/default
+settings, with independent resource/research replays. Shared tests cover:
+
+| Seed | Objects | Final RNG | Owner1/2 recorded total cost |
+| --- | --- | --- | --- |
+| 1 | 1852 | 472822087 | 2200 / 2160 |
+| 12345 | 1808 | 3283216374 | 2085 / 2160 |
+
+Every ordered object, all terrain/height/slope bytes and final RNG match. Native
+import additionally checks every owned object's absolute ground height and HP,
+all trailing identities/positions, wall facets, deferred foundations, population,
+costs, and research order22→451→11→10→16→31→85→209→20 after native bootstrap.
+Both players have capacity resource4=21. Gaia startup cost is450.
+
+Two integration fixes were necessary: original ground-building collision uses
+hard and late passes, so zero-height bird816 does not block Prefab70 while
+ordinary positive-height workers still can; later scenery must include the
+footprints of newly created owned buildings. Troop Center hill-mode3 checks the
+original two footprint edges against the reference corner height, not the whole
+footprint's height range. Modes0 used by other supported buildings do not add a
+slope restriction.
+
+Wall routing now includes the original class29/30 deposit query and retained
+path-cache bytes. Actual observers verify every obstruction/direction byte in
+three authored wall fixtures and both Tiny Fortress cases. Untouched shallow
+water can retain the initial passable cache; recomputing the entire grid would
+be wrong. The bounded reconstruction uses the verified registration update
+rectangles. General terrain edits or unmatched object removals still require
+ordered cache-update history; broader cache lifecycle parity is not claimed.
+
+Evidence: `rms-fortress54208-tiny-derived-findings-2026-11-16.json`,
+`rms-fortress54208-tiny-cache-findings-2026-11-16.json`,
+`rms-owned-building-collision-filter-findings-2026-11-16.json`, and
+`rms-building-height-findings-2026-11-16.json`. The base-reader seed1/12345
+worlds also match privately (1844/1799 objects), but are not counted as Tiny cases.
+Reytha/Zaloriis Fortress branches, diagonal gate dispatch, other civilizations,
+settings and later gameplay remain outside this newly admitted profile.
+
+The70 packaged cases,29 authored building cases, three authored wall cases and
+strict integrated RMS checks pass under ASan/UBSan. The rebuilt production CLI
+passes its file/archive tests and accepts56/138 audited attempts; both new
+Fortress Tiny cases render successfully. No live Windows UI/audio check was
+performed for this change.
+The desktop rebuild and headless menu/game/render/audio-stream smoke also pass.
