@@ -2277,7 +2277,9 @@ static int cmdTestCombat(const char *dataDir, const char *out) {
     const bool buildingUpgraded =
         game.researchTechnology(1, 1) &&
         commandCenterBeforeAge == 109 &&
-        game.objectUnitId(commandCenterId) == 71;
+        game.objectUnitId(commandCenterId) == 109 &&
+        game.unitPrototypeForTesting(1,109)->standingGraphic[0] ==
+            assets.dat().civs[1].units[71].standingGraphic[0];
     const bool upgradedProductionMenusWork =
         !game.productionOptionIds(
                  commandCenterId).empty() &&

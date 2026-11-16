@@ -577,6 +577,31 @@ public:
         initializeCivilizationBonuses();
         refreshAllAutomaticTechnologies();
     }
+    void invalidateUnitPrototypesForTesting() {
+        for(size_t player=0;player<unitPrototypesReady_.size();++player) {
+            const bool materialized=!unitPrototypes_[player].empty();
+            unitPrototypesReady_[player]=false;
+            if(materialized)ensureUnitPrototypes(int(player));
+        }
+    }
+    const std::vector<int> &civilizationEffectsForTesting(int player) const {
+        return civilizationEffects_.at(player);
+    }
+    const dat::Unit *unitPrototypeForTesting(int player,int id) const {
+        return effectiveUnitForPlayer(player,findUnit(civilizationForPlayer(player),id));
+    }
+    int unitAttackForTesting(uint32_t id,int attackClass) const {
+        const auto *object=findObject(id);
+        if(!object)return 0;
+        ensureUnitPrototypes(object->player);
+        for(const auto &attack:object->unit->attacks)
+            if(attack.cls==attackClass)return modifiedAttackAmount(*object,attack);
+        return 0;
+    }
+    int unitArmourForTesting(uint32_t id,int armourClass) const {
+        const auto *object=findObject(id);bool present=false;
+        return object?modifiedArmourAmount(*object,armourClass,present):0;
+    }
     float playerAttributeForTesting(int player,int attribute) const {
         return playerAttribute(player,attribute);
     }
@@ -1122,6 +1147,15 @@ private:
         const Object &worker,
         ActionMenuTab category) const;
     bool unitAvailable(int player, int unitId) const;
+    struct UnitPrototype {
+        dat::Unit unit;
+        std::vector<dat::EffectCommand> commands;
+    };
+    std::map<int,UnitPrototype> initialUnitPrototypes(int player) const;
+    std::vector<int> applyPrototypeCommand(int player,const dat::EffectCommand &command,
+                                         std::map<int,UnitPrototype> &prototypes) const;
+    void ensureUnitPrototypes(int player) const;
+    const std::vector<dat::EffectCommand> &unitCommands(int player,int unitId) const;
     const dat::Unit *effectiveUnitForPlayer(
         int player, const dat::Unit *unit) const;
     void applyUnitUpgrades(int player,const std::vector<int> &previousEffects);
@@ -1527,8 +1561,9 @@ private:
     uint64_t techGeneration_ = 1;
     mutable std::array<std::vector<int8_t>, 17> availableCache_{};
     mutable std::array<uint64_t, 17> availableCacheGeneration_{};
-    mutable std::array<std::map<int, int>, 17> upgradeCache_{};
-    mutable std::array<uint64_t, 17> upgradeCacheGeneration_{};
+    mutable std::array<std::map<int,UnitPrototype>,17> unitPrototypes_{};
+    mutable std::array<std::vector<int>,17> unitPrototypeEffects_{};
+    mutable std::array<bool,17> unitPrototypesReady_{};
     struct ResearchMenuCacheEntry {
         uint64_t techGeneration = 0;
         uint64_t queueSignature = 0;

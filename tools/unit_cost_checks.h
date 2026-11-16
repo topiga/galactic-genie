@@ -13,7 +13,12 @@ static void unitCostChecks(swgb::Assets &assets) {
         std::vector<swgb::dat::EffectCommand> saved;
         ~Restore() { target=std::move(saved); }
     } restore{commands,original};
-    auto unit=data.civs[1].units[83];
+    auto &unit=data.civs[1].units[83];
+    const auto originalUnit=unit;
+    struct RestoreUnit {
+        swgb::dat::Unit &unit; swgb::dat::Unit original;
+        ~RestoreUnit(){unit=std::move(original);}
+    } restoreUnit{unit,unit};
     unit.costs={{{0,10,1},{1,20,1},{3,30,256}}}; unit.trainTime=10;
     auto effect=[&](int type,int attribute,float value) {
         swgb::dat::EffectCommand command{};
@@ -27,30 +32,38 @@ static void unitCostChecks(swgb::Assets &assets) {
     for(const auto &selector:selectors) {
         auto command=effect(4,101,1);command.a=selector.unit;command.b=selector.cls;
         commands={command};
+        game.invalidateUnitPrototypesForTesting();
         check(game.unitTrainingTimeForTesting(1,unit)==selector.duration,
               "Original unit-selector priority and class fallback use the full master count");
     }
     commands={effect(4,1,2)};
+    game.invalidateUnitPrototypesForTesting();
     check(game.unitSearchRadiusForTesting(1,unit)==unit.searchRadius,"LOS effects do not implicitly change search radius");
     commands={effect(0,23,7),effect(5,23,2)};
+    game.invalidateUnitPrototypesForTesting();
     check(game.unitSearchRadiusForTesting(1,unit)==14 &&
           game.unitAttributeForTesting(1,unit,1,unit.lineOfSight)==unit.lineOfSight,
           "Independent search-radius effects preserve original order without altering LOS");
     commands={effect(5,100,1.05f),effect(5,100,1.05f),effect(5,101,1.05f),effect(5,101,1.05f)};
+    game.invalidateUnitPrototypesForTesting();
     auto costs=game.unitCostsForTesting(1,unit);
     check(costs[0].amount==10 && costs[1].amount==22 && costs[2].amount==30,
           "Cost multipliers round each signed-short command using the stored float factor and low flag byte");
     check(game.unitTrainingTimeForTesting(1,unit)==10,"Training-time effects use the same per-command rounding");
     commands={effect(0,103,8.9f),effect(4,103,-1.9f),effect(4,104,2.9f),effect(0,105,99)};
+    game.invalidateUnitPrototypesForTesting();
     costs=game.unitCostsForTesting(1,unit);
     check(costs[0].amount==7 && costs[1].amount==22 && costs[2].amount==30,
           "Specific resource effects truncate set/add values and leave disabled costs unchanged");
     unit.costs={{{3,10,1},{2,20,1},{0,30,1}}};
     commands={effect(0,105,7),effect(0,106,9)};
+    game.invalidateUnitPrototypesForTesting();
     costs=game.unitCostsForTesting(1,unit);
     check(costs[0].amount==7 && costs[1].amount==9 && costs[2].amount==30,
           "Resource105 modifies nova and106 modifies ore");
+    unit=originalUnit;
     commands={effect(5,100,.5f)};
+    game.invalidateUnitPrototypesForTesting();
     const float food=game.resource(1,0);
     check(game.loadAiSourceForTesting(1,"discount-purchase",
           "(defrule (true) => (train UNIT-WORKER) (disable-self))",{},&error),error.c_str());
@@ -60,6 +73,7 @@ static void unitCostChecks(swgb::Assets &assets) {
     auto faster=effect(5,13,2);
     faster.a=109;
     commands.push_back(faster);
+    game.invalidateUnitPrototypesForTesting();
     const auto center=game.commandCenterId(1);
     const float remaining=game.productionRemainingForTesting(center);
     const float power=game.objectPoweredForTesting(center)?1.f:.25f;
@@ -67,12 +81,15 @@ static void unitCostChecks(swgb::Assets &assets) {
     check(std::abs(game.productionRemainingForTesting(center)-(remaining-2*power))<.0001f,
           "Building work-rate effects reach the actual production progress");
     commands={effect(5,100,.8f)};
+    game.invalidateUnitPrototypesForTesting();
     check(game.cancelProductionForTesting(game.commandCenterId(1)),"Cancel discounted purchase");
     check(game.resource(1,0)==food-25+40,"Original cancellation refunds current modified costs");
     auto &later=data.effects[size_t(data.techs[174].effectId)].commands;
     Restore restoreLater{later,later};
     commands={effect(4,100,10)};
+    game.invalidateUnitPrototypesForTesting();
     later={effect(5,100,2)};
+    game.invalidateUnitPrototypesForTesting();
     check(game.researchTechnologyForTesting(1,174),"Acquire lower-ID technology after higher-ID technology");
     const auto workerCosts=game.unitCostsForTesting(1,data.civs[1].units[83]);
     check(workerCosts[0].amount==120,

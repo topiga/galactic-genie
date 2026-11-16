@@ -423,6 +423,7 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     automaticTargetsAcquired_ = retaliationOrders_ = armedBuildingsEngaged_ = 0;
     attackModeChanges_ = 0;
     objects_.clear();
+    unitPrototypes_ = {}; unitPrototypeEffects_ = {}; unitPrototypesReady_ = {};
     visibleTiles_.clear();exploredTiles_.clear();observedTiles_.clear();rememberedObjects_.clear();rememberedPlayer_=0;initiallyExplored_=true;
     selectionOrder_.clear();
     for(auto &group:controlGroups_) group.clear();
@@ -1057,6 +1058,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     }
 
     objects_.clear();
+    unitPrototypes_ = {}; unitPrototypeEffects_ = {}; unitPrototypesReady_ = {};
     visibleTiles_.clear();exploredTiles_.clear();observedTiles_.clear();rememberedObjects_.clear();rememberedPlayer_=0;initiallyExplored_=true;
     selectionOrder_.clear();
     for(auto &group:controlGroups_) group.clear();
@@ -1541,6 +1543,7 @@ Game::Object *Game::addObject(const dat::Unit *unit, int player, float x, float 
                               uint32_t spawnId, uint16_t initialFrame, bool hidden,
                               int32_t garrisonedInId, bool triggerAddressable) {
     if (!unit) return nullptr;
+    unit=effectiveUnitForPlayer(player,unit);
     Object object;
     object.unit = unit;
     object.player = player;
@@ -1578,23 +1581,28 @@ Game::Object *Game::addObject(const dat::Unit *unit, int player, float x, float 
 
 bool Game::configureGate(Object &object) {
     if (!object.unit) return false;
-    const std::string &name = object.unit->name;
-    const size_t closed = name.rfind("CLOS");
-    if (closed == std::string::npos ||
-        closed + 4 != name.size())
-        return false;
-    const std::string prefix = name.substr(0, closed);
-    const int civilization =
-        civilizationForPlayer(object.player);
-    const dat::Unit *open =
-        findUnit(civilization, prefix + "OPEN");
-    const dat::Unit *end =
-        findUnit(civilization, prefix + "END");
-    if (!open || !end) return false;
-    object.gate = true;
-    object.gateClosedUnit = object.unit;
-    object.gateOpenUnit = open;
-    object.gateEndUnit = end;
+    const std::string &name=object.unit->name;
+    if(name.size()<4)return false;
+    const bool open=name.compare(name.size()-4,4,"OPEN")==0;
+    if(!open && name.compare(name.size()-4,4,"CLOS")!=0)return false;
+    const std::string prefix=name.substr(0,name.size()-4);
+    const int civilization=civilizationForPlayer(object.player);
+    const auto variant=[&](const dat::Unit *existing,const char *suffix) {
+        const std::string wanted=prefix+suffix;
+        return effectiveUnitForPlayer(object.player,
+            existing && existing->name==wanted ? existing : findUnit(civilization,wanted));
+    };
+    const dat::Unit *closedUnit=open?variant(object.gateClosedUnit,"CLOS"):
+        effectiveUnitForPlayer(object.player,object.unit);
+    const dat::Unit *openUnit=open?effectiveUnitForPlayer(object.player,object.unit):
+        variant(object.gateOpenUnit,"OPEN");
+    const dat::Unit *endUnit=variant(object.gateEndUnit,"END");
+    if(!closedUnit || !openUnit || !endUnit)return false;
+    object.gate=true;
+    object.gateClosedUnit=closedUnit;
+    object.gateOpenUnit=openUnit;
+    object.gateEndUnit=endUnit;
+    object.unit=open?openUnit:closedUnit;
     return true;
 }
 
@@ -2861,11 +2869,8 @@ float Game::modifiedUnitAttribute(const Object &object,
     if (object.player < 0 ||
         (size_t)object.player >= researchedTechs_.size())
         return value;
-    for (int effectId : playerEffects_[(size_t)object.player]) {
-        for (const dat::EffectCommand &command :
-             assets_.dat().effects[(size_t)effectId].commands) {
-            if (command.c != attribute ||
-                !technologyCommandApplies(command, object))
+    for (const auto &command:unitCommands(object.player,object.unit->id)) {
+            if (command.c != attribute)
                 continue;
             if (attribute==0)
                 value=applyShortEffect(truncateShort(value),command);
@@ -2875,19 +2880,16 @@ float Game::modifiedUnitAttribute(const Object &object,
                 value += command.d;
             else if (command.type == 5)
                 value *= command.d;
-        }
     }
     return value;
 }
 
 std::array<dat::ResourceCost,3> Game::unitCosts(int player,const dat::Unit &unit) const {
-    auto costs=unit.costs;
+    const auto *prototype=effectiveUnitForPlayer(player,&unit);
+    auto costs=prototype->costs;
     for (auto &cost:costs) cost.flag &= 0xff;
     if (player<0 || size_t(player)>=playerEffects_.size()) return costs;
-    Object candidate; candidate.unit=&unit; candidate.player=player;
-    for (int effect:playerEffects_[size_t(player)])
-        for (const auto &command:assets_.dat().effects[size_t(effect)].commands) {
-            if (!technologyCommandApplies(command,candidate)) continue;
+    for (const auto &command:unitCommands(player,unit.id)) {
             const int type=command.c==103?0:command.c==104?1:command.c==105?3:command.c==106?2:-1;
             if (command.c!=100 && type<0) continue;
             for (auto &cost:costs)
@@ -2955,17 +2957,15 @@ float Game::researchDuration(int player,const dat::Tech &technology) const {
 }
 
 float Game::unitSearchRadius(int player,const dat::Unit &unit) const {
-    Object candidate;candidate.unit=&unit;candidate.player=player;
-    return modifiedUnitAttribute(candidate,23,unit.searchRadius);
+    Object candidate;candidate.unit=effectiveUnitForPlayer(player,&unit);candidate.player=player;
+    return modifiedUnitAttribute(candidate,23,candidate.unit->searchRadius);
 }
 
 float Game::unitTrainingTime(int player,const dat::Unit &unit) const {
-    int16_t duration=unit.trainTime;
-    Object candidate; candidate.unit=&unit; candidate.player=player;
+    int16_t duration=effectiveUnitForPlayer(player,&unit)->trainTime;
     if (player>=0 && size_t(player)<playerEffects_.size())
-        for (int effect:playerEffects_[size_t(player)])
-            for (const auto &command:assets_.dat().effects[size_t(effect)].commands)
-                if (command.c==101 && technologyCommandApplies(command,candidate))
+        for (const auto &command:unitCommands(player,unit.id))
+                if (command.c==101)
                     duration=applyShortEffect(duration,command);
     return std::max(.1f,float(duration));
 }
@@ -2977,11 +2977,8 @@ int Game::modifiedAttackAmount(
     if (source.player < 0 ||
         (size_t)source.player >= researchedTechs_.size())
         return attack.amount;
-    for (int effectId : playerEffects_[(size_t)source.player]) {
-        for (const dat::EffectCommand &command :
-             assets_.dat().effects[(size_t)effectId].commands) {
-            if (command.c != 9 ||
-                !technologyCommandApplies(command, source))
+    for (const auto &command:unitCommands(source.player,source.unit->id)) {
+            if (command.c != 9)
                 continue;
             if (command.type != 0 && command.type != 4 && command.type != 5)
                 continue;
@@ -2998,7 +2995,6 @@ int Game::modifiedAttackAmount(
             amount = command.type == 0
                          ? (float)value
                          : amount + value;
-        }
     }
     return (int)std::lround(amount);
 }
@@ -3018,11 +3014,8 @@ int Game::modifiedArmourAmount(const Object &target,
     if (target.player < 0 ||
         (size_t)target.player >= researchedTechs_.size())
         return (int)std::lround(amount);
-    for (int effectId : playerEffects_[(size_t)target.player]) {
-        for (const dat::EffectCommand &command :
-             assets_.dat().effects[(size_t)effectId].commands) {
-            if (command.c != 8 ||
-                !technologyCommandApplies(command, target))
+    for (const auto &command:unitCommands(target.player,target.unit->id)) {
+            if (command.c != 8)
                 continue;
             if (command.type != 0 && command.type != 4 && command.type != 5)
                 continue;
@@ -3043,13 +3036,14 @@ int Game::modifiedArmourAmount(const Object &target,
             amount = command.type == 0
                          ? (float)value
                          : amount + value;
-        }
     }
     return (int)std::lround(amount);
 }
 
 int Game::attackDamage(const Object &source,
                        const Object &target) const {
+    ensureUnitPrototypes(source.player);
+    ensureUnitPrototypes(target.player);
     int damage = 0;
     for (const dat::AttackOrArmor &attack :
          source.unit->attacks) {
@@ -4094,114 +4088,134 @@ bool Game::unitAvailable(int player, int unitId) const {
     return (size_t)unitId < cache.size() && cache[(size_t)unitId];
 }
 
-const dat::Unit *Game::effectiveUnitForPlayer(
-    int player, const dat::Unit *unit) const {
-    if (!unit || player < 0 ||
-        (size_t)player >= researchedTechs_.size() ||
-        (size_t)player >= upgradeCache_.size())
-        return unit;
-    // Upgrade map (effect type 3, A -> B), rebuilt only when the researched
-    // set changes. Tech Levels replace the same base master at every age
-    // (109 -> 71, then 109 -> 141, then 109 -> 142), so later replacements
-    // supersede earlier ones and retain aliases from the earlier result.
-    std::map<int, int> &upgrades = upgradeCache_[(size_t)player];
-    if (upgradeCacheGeneration_[(size_t)player] != techGeneration_) {
-        upgradeCacheGeneration_[(size_t)player] = techGeneration_;
-        upgrades.clear();
-        for (int effectId : playerEffects_[(size_t)player]) {
-            for (const dat::EffectCommand &command :
-                 assets_.dat().effects[(size_t)effectId].commands)
-                if (command.type == 3 &&
-                    command.a >= 0 &&
-                    command.b >= 0) {
-                    const auto previous =
-                        upgrades.find(command.a);
-                    if (previous != upgrades.end() &&
-                        previous->second != command.b)
-                        upgrades[previous->second] =
-                            command.b;
-                    upgrades[command.a] =
-                        command.b;
-                }
+std::map<int,Game::UnitPrototype> Game::initialUnitPrototypes(int player) const {
+    std::map<int,UnitPrototype> result;
+    const int civ=civilizationForPlayer(player);
+    if(civ<0 || size_t(civ)>=assets_.dat().civs.size())return result;
+    const auto &units=assets_.dat().civs[size_t(civ)].units;
+    for(size_t id=0;id<units.size();++id)
+        if(units[id].exists)result.emplace(int(id),UnitPrototype{units[id],{}});
+    return result;
+}
+
+std::vector<int> Game::applyPrototypeCommand(int player,const dat::EffectCommand &command,
+                                            std::map<int,UnitPrototype> &prototypes) const {
+    std::vector<int> changed;
+    if(command.type==3) {
+        auto source=prototypes.find(command.a),target=prototypes.find(command.b);
+        if(source==prototypes.end() || target==prototypes.end())return changed;
+        // Original48d390 preserves source identity/class/UI fields while copying target stats.
+        const auto &old=source->second.unit;
+        const auto id=old.id,baseId=old.baseId,cls=old.cls;
+        const auto hidden=old.hideInEditor,enabled=old.enabled,disabled=old.disabled;
+        const auto hotKey=old.hotKeyId;
+        source->second=target->second;
+        auto &unit=source->second.unit;
+        unit.id=id;unit.baseId=baseId;unit.cls=cls;
+        unit.hideInEditor=hidden;unit.enabled=enabled;unit.disabled=disabled;unit.hotKeyId=hotKey;
+        // The original also updates the independent target; retain ordering for self-upgrades.
+        target->second.unit.hideInEditor=1;
+        target->second.unit.baseId=id;
+        changed.push_back(command.a);
+    } else if(command.type==0 || command.type==4 || command.type==5) {
+        for(auto &[id,prototype]:prototypes) {
+            Object candidate;candidate.player=player;candidate.unit=&prototype.unit;
+            if(!technologyCommandApplies(command,candidate))continue;
+            prototype.commands.push_back(command);
+            changed.push_back(id);
         }
     }
-    int unitId = unit->id;
-    const int civilization = civilizationForPlayer(player);
-    std::set<int> visited;
-    while (visited.insert(unitId).second) {
-        const auto found = upgrades.find(unitId);
-        if (found == upgrades.end() || found->second == unitId) break;
-        unitId = found->second;
-    }
-    if (unitId == unit->id) return unit;
-    return findUnit(civilization, unitId);
+    return changed;
+}
+
+void Game::ensureUnitPrototypes(int player) const {
+    if(player<0 || size_t(player)>=unitPrototypes_.size())return;
+    const auto &effects=playerEffects_[size_t(player)];
+    if(unitPrototypesReady_[size_t(player)] && unitPrototypeEffects_[size_t(player)]==effects)return;
+    auto rebuilt=initialUnitPrototypes(player);
+    for(int effect:effects)
+        for(const auto &command:assets_.dat().effects[size_t(effect)].commands)
+            applyPrototypeCommand(player,command,rebuilt);
+    // Keep map nodes and Unit addresses stable for objects and placement previews.
+    auto &cache=unitPrototypes_[size_t(player)];
+    for(auto &[id,prototype]:rebuilt)cache[id]=std::move(prototype);
+    unitPrototypeEffects_[size_t(player)]=effects;
+    unitPrototypesReady_[size_t(player)]=true;
+}
+
+const std::vector<dat::EffectCommand> &Game::unitCommands(int player,int unitId) const {
+    static const std::vector<dat::EffectCommand> empty;
+    if(player<0 || size_t(player)>=unitPrototypes_.size())return empty;
+    ensureUnitPrototypes(player);
+    const auto &cache=unitPrototypes_[size_t(player)];
+    const auto found=cache.find(unitId);
+    return found==cache.end()?empty:found->second.commands;
+}
+
+const dat::Unit *Game::effectiveUnitForPlayer(int player,const dat::Unit *unit) const {
+    if(!unit || player<0 || size_t(player)>=unitPrototypes_.size())return unit;
+    ensureUnitPrototypes(player);
+    const auto &cache=unitPrototypes_[size_t(player)];
+    const auto found=cache.find(unit->id);
+    return found==cache.end()?unit:&found->second.unit;
 }
 
 void Game::applyUnitUpgrades(int player,const std::vector<int> &previousEffects) {
     const auto &effects=playerEffects_[size_t(player)];
     const bool appended=previousEffects.size()<=effects.size() &&
         std::equal(previousEffects.begin(),previousEffects.end(),effects.begin());
-    bool pathingChanged = false;
-    for (Object &object : objects_) {
-        if (!object.active || object.player != player ||
-            !object.unit)
-            continue;
-        const dat::Unit *upgraded =
-            effectiveUnitForPlayer(player, object.unit);
-        if (!upgraded || upgraded == object.unit) {
-            if(appended) {
-                for(size_t index=previousEffects.size();index<effects.size();++index)
-                    for(const auto &command:assets_.dat().effects[size_t(effects[index])].commands) {
-                        if(command.c!=0 || (command.type!=0 && command.type!=4 && command.type!=5) ||
-                           !technologyCommandApplies(command,object))continue;
-                        // Original live-object callback precedes the separate signed-short master update.
+    bool pathingChanged=false;
+    if(appended) {
+        auto prototypes=initialUnitPrototypes(player);
+        for(size_t index=0;index<effects.size();++index)
+            for(const auto &command:assets_.dat().effects[size_t(effects[index])].commands) {
+                const auto changed=applyPrototypeCommand(player,command,prototypes);
+                if(index<previousEffects.size())continue;
+                for(Object &object:objects_) {
+                    if(!object.active || object.player!=player || !object.unit ||
+                       std::find(changed.begin(),changed.end(),object.unit->id)==changed.end())continue;
+                    if(command.type==3) {
+                        const auto &prototype=prototypes.at(object.unit->id);
+                        int16_t maximum=prototype.unit.hitPoints;
+                        for(const auto &prior:prototype.commands)
+                            if(prior.c==0)maximum=applyShortEffect(maximum,prior);
+                        object.hitPoints=object.maxHitPoints!=0
+                            ?float(double(maximum)*object.hitPoints/object.maxHitPoints):0;
+                        object.maxHitPoints=maximum;
+                        if(object.unit->type==dat::UT_Building || prototype.unit.type==dat::UT_Building)
+                            pathingChanged=true;
+                        // shortcut: Original upgrade sprite refresh RNG is not reproduced here.
+                    } else if(command.c==0) {
                         double hp=0;
                         if(command.type==5)hp=double(object.hitPoints)*double(command.d)+.5;
                         else if(object.maxHitPoints!=0) {
-                            const double target=command.type==0 ? double(command.d) : double(object.maxHitPoints)+double(command.d);
+                            const double target=command.type==0?double(command.d):double(object.maxHitPoints)+double(command.d);
                             hp=target*double(object.hitPoints)/double(object.maxHitPoints);
                         }
                         object.hitPoints=truncateShort(hp);
                         object.maxHitPoints=applyShortEffect(truncateShort(object.maxHitPoints),command);
                     }
-            } else {
-                // Diagnostic bonus reinitialization can replace history; gameplay only appends effects.
-                const float maximum=modifiedUnitAttribute(object,0,object.unit->hitPoints);
-                if(maximum!=object.maxHitPoints) {
-                    object.hitPoints=object.maxHitPoints!=0 ? truncateShort(double(maximum)*object.hitPoints/object.maxHitPoints) : 0;
-                    object.maxHitPoints=maximum;
                 }
             }
-            continue;
+    }
+    ensureUnitPrototypes(player);
+    for(Object &object:objects_) {
+        if(!object.active || object.player!=player || !object.unit)continue;
+        object.unit=effectiveUnitForPlayer(player,object.unit);
+        if(!appended) {
+            const float maximum=modifiedUnitAttribute(object,0,object.unit->hitPoints);
+            if(maximum!=object.maxHitPoints) {
+                object.hitPoints=object.maxHitPoints!=0?truncateShort(double(maximum)*object.hitPoints/object.maxHitPoints):0;
+                object.maxHitPoints=maximum;
+            }
         }
-        const bool building =
-            object.unit->type == dat::UT_Building ||
-            upgraded->type == dat::UT_Building;
-        const float health =
-            object.maxHitPoints > 0.0f
-                ? object.hitPoints / object.maxHitPoints
-                : 1.0f;
-        object.unit = upgraded;
-        object.maxHitPoints =
-            std::max(
-                1, (int)std::lround(
-                       modifiedUnitAttribute(
-                           object, 0,
-                           upgraded->hitPoints)));
-        object.hitPoints = std::max(
-            1.0f, object.maxHitPoints *
-                      std::max(0.0f, std::min(1.0f, health)));
-        if (building) {
-            object.gate = false;
-            object.gateClosedUnit = nullptr;
-            object.gateOpenUnit = nullptr;
-            object.gateEndUnit = nullptr;
-            configureGate(object);
-            pathingChanged = true;
+        if(pathingChanged && object.unit->type==dat::UT_Building) {
+            if(!configureGate(object)) {
+                object.gate=false;object.gateClosedUnit=nullptr;object.gateOpenUnit=nullptr;object.gateEndUnit=nullptr;
+            }
         }
     }
-    if (pathingChanged)
-        rebuildAdjacency();
+    if(pathingChanged)rebuildAdjacency();
 }
 
 const std::vector<int> &Game::researchOptions(

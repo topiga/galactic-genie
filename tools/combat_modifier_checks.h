@@ -35,9 +35,9 @@ static void combatModifierChecks(swgb::Assets &assets) {
     auto multiplier=original.front();
     multiplier.type=5; multiplier.a=79; multiplier.b=-1; multiplier.c=9;
     multiplier.d=float(14*256+110);
-    commands={multiplier,multiplier};
+    commands={multiplier,multiplier};game.invalidateUnitPrototypesForTesting();
     const int twiceRoundedDamage=game.objectAttackDamage(turret,troop);
-    commands=original;
+    commands=original;game.invalidateUnitPrototypesForTesting();
     check(twiceRoundedDamage==10,
           "Two 110 percent commands each round attack 4 back to 4, not 5 after combining");
     std::puts("PASS: packed combat multipliers, armour subtraction, naval class, research isolation and per-command rounding");
