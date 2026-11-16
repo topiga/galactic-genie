@@ -286,7 +286,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         } else if (stage==3 && command=="create_object" && startingScouts) {
             RmsObjectRow row;
             if(!parseRmsObjectRow(tokens,i,row,err)) return false;
-            if((row.matchPlayerCiv && row.unitId!=550) || row.owner>0)
+            if((row.matchPlayerCiv && row.unitId!=550 && row.unitId!=1521) || row.owner>0)
                 return fail("unsupported resource owner or land selector");
             if(row.landId < -2) return fail("unsupported resource land selector");
             holocrons |= row.unitId==285;
@@ -613,6 +613,27 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     return fail("scouts require connected passable grass and foundations");
         }
     }
+    const bool airTransport=std::any_of(resourceRows.begin(),resourceRows.end(),[](const auto &row){return row.unitId==1521;});
+    if(airTransport) {
+        // shortcut: one Empire transport row on the compared flat120 profile; extend with original constructor/gate cases.
+        if(!ownedMixedForest || base!=6 || playerCivilizations!=std::vector<uint16_t>{1,1} ||
+           std::count_if(resourceRows.begin(),resourceRows.end(),[](const auto &row){return row.unitId==1521;})!=1 ||
+           data.civs[1].units.size()<=1036 || data.terrainRestrictions.size()<=23)
+            return fail("unsupported air transport startup profile");
+        const auto &u=data.civs[1].units[1036];const auto *g=data.graphic(u.standingGraphic[0]);
+        if(!u.exists || u.id!=1036 || u.type!=dat::UT_Creatable || u.cls!=59 || u.hitPoints!=150 ||
+           u.collisionSize[0]!=.5f || u.collisionSize[1]!=.5f || u.collisionSize[2]!=3 ||
+           u.clearanceSize[0]!=.5f || u.clearanceSize[1]!=.5f || u.terrainRestriction!=23 ||
+           u.flyMode!=1 || u.hillMode || u.trait!=1 || u.headUnit!=-1 || u.trackingUnit!=-1 ||
+           u.trackingUnitMode || u.trackingUnitDensity || u.convertTerrain || u.trainSound!=144 ||
+           u.standingGraphic[0]!=5458 || !g || g->sequenceType!=7 || g->frameCount!=5 ||
+           g->angleCount!=8 || g->frameDuration!=.85f || g->replayDelay || g->soundId!=-1 || !g->angleSounds.empty() ||
+           u.costs[0].type!=0 || u.costs[0].amount!=35 || (u.costs[0].flag&255)!=1 ||
+           u.costs[1].type!=1 || u.costs[1].amount!=125 || (u.costs[1].flag&255)!=1 ||
+           u.resourceStorages[0].type!=4 || u.resourceStorages[0].amount!=-1 || u.resourceStorages[0].flag!=2 ||
+           u.resourceStorages[1].type!=11 || u.resourceStorages[1].amount!=1 || u.resourceStorages[1].flag!=2)
+            return fail("unsupported air transport prototype or graphics");
+    }
     auto safeTerrain = [&](uint8_t terrain, bool allowScenery=false) {
         if (terrain>52 || terrain>=data.terrainBlock.terrains.size()) return false;
         const auto &t=data.terrainBlock.terrains[terrain];
@@ -732,6 +753,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         for(uint8_t terrain:generated.terrain) if(terrain!=10 && terrain!=18 && terrain!=20 && terrain!=21 && terrain!=19 && terrain!=50 && !safeTerrain(terrain))
             return fail("scenery startup on elevations is not verified");
     }
+    if(airTransport && std::any_of(generated.elevation.begin(),generated.elevation.end(),[](uint8_t h){return h!=0;}))
+        return fail("transport startup on elevations is not verified");
     std::vector<uint8_t> sceneryOccupied;
     if(!generated.cliffs.empty()) {
         sceneryOccupied.resize(generated.terrain.size(),0);
@@ -861,12 +884,12 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         if (startingWorkers) for (const auto &target:startupTargets)
             if(!placeWorkers(uint16_t(target.owner),generated.lands[target.landIndex].center,workerMinDistance,workerMaxDistance,workerGroups==1?3:workerGroups,
                 occupied,nullptr,[&](const auto &object){generated.ownedObjects.push_back(object);}))return false;
-        auto placeScout=[&](uint16_t owner,const RmsPlayerStart &center,int requested,const std::vector<uint32_t> &blockedTiles,
+        auto placeMobile=[&](uint16_t owner,const RmsPlayerStart &center,int requested,bool air,const std::vector<uint32_t> &blockedTiles,
                             const std::vector<uint8_t> *eligibility,auto emit) {
-            const auto civ=playerCivilizations[owner-1];const int id=scoutIds[civ-1];
+            const auto civ=playerCivilizations[owner-1];const int id=air?1036:scoutIds[civ-1];
             const auto &u=data.civs[civ].units[id];const auto &g=*data.graphic(u.standingGraphic[0]);
             std::vector<uint32_t> candidates;
-            if (!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,9,rng,candidates,err)) return false;
+            if (!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,air?6:9,rng,candidates,err)) return false;
             if(eligibility && !eligibility->empty())candidates.erase(std::remove_if(candidates.begin(),candidates.end(),
                 [&](uint32_t tile){return !(*eligibility)[tile];}),candidates.end());
             uint32_t zoneIndex;
@@ -881,14 +904,28 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(zones[tile]!=zone) continue;
                 const int x=tile%width,y=tile/width;
                 if (std::any_of(generated.lands.begin(),generated.lands.end(),[&](const auto &land) {
-                    return std::abs(x-land.center.x)<7 && std::abs(y-land.center.y)<7;
+                    return std::abs(x-land.center.x)<(air?3:7) && std::abs(y-land.center.y)<(air?3:7);
                 })) continue;
                 const float px=x+.5f,py=y+.5f;
-                const bool blocked=pass[generated.terrain[tile]]<=.05f || std::any_of(generated.ownedObjects.begin(),generated.ownedObjects.end(),[&](const auto &o) {
+                bool blocked=pass[generated.terrain[tile]]<=.05f;
+                if(air) {
+                    const auto overlaps=[&](int otherId,int otherOwner,float ox,float oy) {
+                        const auto &other=data.civs[otherOwner?playerCivilizations[otherOwner-1]:0].units[otherId];
+                        const float collisionZ=other.cls==27 || (other.type==dat::UT_Building && other.collisionSize[2]==0 && other.id!=50)?1:other.collisionSize[2];
+                        if(other.flyMode!=1 && (other.type==dat::UT_Creatable || other.canBeBuiltOn==1 ||
+                           other.collisionSize[0]<=0 || other.collisionSize[1]<=0 || collisionZ<=0))return false;
+                        return std::abs(px-ox)<.5f+other.collisionSize[data.footprintAxesSwapped?1:0] &&
+                               std::abs(py-oy)<.5f+other.collisionSize[data.footprintAxesSwapped?0:1];
+                    };
+                    for(const auto &o:generated.cliffs)blocked|=overlaps(o.unit,0,o.x,o.y);
+                    for(const auto &o:generated.scenery)if(o.alive)blocked|=overlaps(o.unitId,0,o.x,o.y);
+                    for(const auto &o:generated.ownedObjects)blocked|=overlaps(o.unitId,o.owner,o.x,o.y);
+                    for(const auto &o:generated.resourcesAfterOwned)blocked|=overlaps(o.unitId,o.owner,o.x,o.y);
+                } else blocked|=std::any_of(generated.ownedObjects.begin(),generated.ownedObjects.end(),[&](const auto &o) {
                     return o.unitId==109 && std::abs(px-o.x)<2.25f && std::abs(py-o.y)<2.25f;
                 }) || std::binary_search(blockedTiles.begin(),blockedTiles.end(),tile);
                 if (blocked && tile!=candidates.back()) continue;
-                // Original type70 construction: sprite/facing, action timers, then military timer41e410.
+                // Flying transports skip the ground military retimer after the shared type70 constructor.
                 genieRandomDraw(rng);genieRandomDraw(rng);
                 uint8_t frame=0;float delay=0;
                 if (g.sequenceType&1) {
@@ -902,14 +939,14 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     }
                 }
                 const uint8_t facet=uint8_t((genieRandomDraw(rng)*8u/32767u+7)%8);
-                for (int draw=0;draw<4;++draw) genieRandomDraw(rng);
-                emit(RmsOwnedPlacement{px,py,owner,civ,int16_t(id),255,facet,frame,delay});
+                for (int draw=0;draw<(air?3:4);++draw) genieRandomDraw(rng);
+                emit(RmsOwnedPlacement{px,py,owner,civ,int16_t(id),255,facet,frame,delay,air?1.f:0.f});
                 if(blocked || !--remaining)break;
             }
             return true;
         };
         if (startingScouts) for (const auto &target:startupTargets)
-            if(!placeScout(uint16_t(target.owner),generated.lands[target.landIndex].center,scoutGroups,occupied,nullptr,
+            if(!placeMobile(uint16_t(target.owner),generated.lands[target.landIndex].center,scoutGroups,false,occupied,nullptr,
                 [&](const auto &object){generated.ownedObjects.push_back(object);}))return false;
         if (!resourceRows.empty()) {
             auto blockers=occupied;
@@ -931,10 +968,11 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(targets.empty())continue;
                 const bool ownedRow=std::any_of(targets.begin(),targets.end(),[](const auto &target){return target.owner>0;});
                 if(ownedRow) {
-                    // shortcut: additional worker/scout startup profiles; other owned constructors need original comparisons.
+                    // shortcut: compared worker/scout/transport profiles; extend other owned constructors with original comparisons.
                     const bool scout=row.unitId==550 && row.matchPlayerCiv;
-                    if((row.unitId!=83 && !scout) || row.mode || row.perGroup!=1 || row.variance || row.radius!=3 ||
-                       row.terrain!=-1 || row.minDistance!=(scout?7:6) || row.maxDistance!=(scout?9:6) || row.spacing || row.temporarySpacing || row.zoneDistance)
+                    const bool air=row.unitId==1521 && row.matchPlayerCiv;
+                    if((row.unitId!=83 && !scout && !air) || (air && row.groups!=1) || row.mode || row.perGroup!=1 || row.variance || row.radius!=3 ||
+                       row.terrain!=-1 || row.minDistance!=(air?3:scout?7:6) || row.maxDistance!=(scout?9:6) || row.spacing || row.temporarySpacing || row.zoneDistance)
                         return fail("unsupported additional owned object row");
                     auto staticBlockers=occupied;
                     for(const auto &object:generated.resourcesAfterOwned)
@@ -946,11 +984,11 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                         if(target.owner<=0 || target.landIndex<0)return fail("additional units require owned selected lands");
                         auto emit=[&](const auto &object) {
                             generated.resourcesAfterOwned.push_back({object.x,object.y,object.facet,0,object.unitId,
-                                object.animationFrame,object.initialIdleDelay,object.owner});
+                                object.animationFrame,object.initialIdleDelay,object.owner,object.heightAboveGround});
                             blockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
                         };
                         const auto &center=generated.lands[target.landIndex].center;
-                        const bool placed=scout?placeScout(uint16_t(target.owner),center,row.groups,staticBlockers,&eligibility,emit):
+                        const bool placed=(scout || air)?placeMobile(uint16_t(target.owner),center,row.groups,air,staticBlockers,&eligibility,emit):
                             placeWorkers(uint16_t(target.owner),center,6,6,row.groups==1?3:row.groups,staticBlockers,&eligibility,emit);
                         if(!placed)return false;
                     }

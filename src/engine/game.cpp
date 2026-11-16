@@ -1232,7 +1232,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         // Original starting objects record their cost without charging the owner.
         resources_[owner][98]+=cost;
         resources_[owner][unit.type==dat::UT_Building?165:164]+=cost;
-        if (unit.cls==58 || unit.cls==47) {
+        if (unit.cls==58 || unit.cls==47 || unit.cls==59) {
             resources_[owner][11]+=1;
             resources_[owner][unit.cls==58?37:40]+=1;
         }
@@ -1245,6 +1245,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
             const auto *graphic=assets_.dat().graphic(unit.standingGraphic[0]);
             object->animTime=placement.animationFrame*(graphic?graphic->frameDuration:0.f);
             object->initialIdleDelay=placement.initialIdleDelay;
+            object->heightAboveGround=placement.heightAboveGround;
         }
         recordStartupCost(unit,placement.owner);
     }
@@ -1256,6 +1257,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
             const auto *graphic=assets_.dat().graphic(object->unit->standingGraphic[0]);
             object->animTime=placement.animationFrame*(graphic?graphic->frameDuration:0.f);
             object->initialIdleDelay=placement.initialIdleDelay;
+            object->heightAboveGround=placement.heightAboveGround;
         }
     }
     randomState=rng;
@@ -3239,7 +3241,8 @@ void Game::objectScreenPosition(const Object &object, int screenW, int screenH,
                                 float &screenX, float &screenY) const {
     float projectedX, projectedY;
     toScreen(object.x, object.y, projectedX, projectedY);
-    projectedY -= elevationAt(object.x, object.y) * assets_.dat().terrainBlock.elevHeight;
+    projectedY -= elevationAt(object.x, object.y) * assets_.dat().terrainBlock.elevHeight +
+                  object.heightAboveGround * assets_.dat().terrainBlock.tileHalfHeight;
     const float viewW = screenW / zoom_, viewH = screenH / zoom_;
     const float ox = camX_ - viewW * 0.5f, oy = camY_ - viewH * 0.5f;
     screenX = (projectedX - ox) * zoom_;
@@ -12089,7 +12092,8 @@ bool Game::conditionMet(const ScenarioCondition &condition, float triggerElapsed
         if (!object || !object->active || object->hidden || !object->draw) return false;
         float sx, sy;
         toScreen(object->x, object->y, sx, sy);
-        sy -= elevationAt(object->x, object->y) * assets_.dat().terrainBlock.elevHeight;
+        sy -= elevationAt(object->x, object->y) * assets_.dat().terrainBlock.elevHeight +
+              object->heightAboveGround * assets_.dat().terrainBlock.tileHalfHeight;
         const float halfW = 480.0f / zoom_, halfH = 272.0f / zoom_;
         return std::fabs(sx - camX_) <= halfW && std::fabs(sy - camY_) <= halfH;
     }
@@ -15494,7 +15498,7 @@ void Game::drawGraphic(Renderer &r, int graphicId, float sx, float sy, float fac
                        int sortLayerOverride, int sortBias,
                        float sortYOverride, uint32_t ownerId,
                        bool outlineCandidate, int powerState,
-                       int frameOverride) {
+                       int frameOverride, float shadowDrop) {
     const dat::Graphic *g = assets_.dat().graphic(graphicId);
     if (!g) return;
     if (!drawShadows && depth > 0 && g->layer == 5) return;
@@ -15513,6 +15517,8 @@ void Game::drawGraphic(Renderer &r, int graphicId, float sx, float sy, float fac
             graphicId += 6;
         }
     }
+    // Original54a643/54a6d8 anchors layers0..10 and19 on the ground, independently for each delta.
+    const float drawY=sy+((g->layer<=10 || g->layer==19)?shadowDrop:0);
     if (!g->deltas.empty() && depth < 3) {
         bool drewSelf = false;
         for (const auto &d : g->deltas) {
@@ -15536,7 +15542,7 @@ void Game::drawGraphic(Renderer &r, int graphicId, float sx, float sy, float fac
                     continue;
                 }
                 const SpriteFrame &f = sh->frames[fr];
-                float x = sx + d.offsetX - (flip ? f.w - f.hotX : f.hotX), y = sy + d.offsetY - f.hotY;
+                float x = sx + d.offsetX - (flip ? f.w - f.hotX : f.hotX), y = drawY + d.offsetY - f.hotY;
                 if (viewW > 0 && (x + f.w <= 0 || x >= viewW || y + f.h <= 0 || y >= viewH)) continue;
                 Quad q{x, y, (float)f.w, (float)f.h, flip ? f.u + f.w : f.u, f.v, flip ? f.u : f.u + f.w, f.v + f.h};
                 const int sortLayer =
@@ -15547,7 +15553,7 @@ void Game::drawGraphic(Renderer &r, int graphicId, float sx, float sy, float fac
                     {(int64_t)sortLayer << 40 |
                          (int64_t)((sortYOverride > -100000000.0f
                                         ? sortYOverride
-                                        : sy) *
+                                        : drawY) *
                                        16 +
                                    65536)
                              << 8 |
@@ -15559,7 +15565,7 @@ void Game::drawGraphic(Renderer &r, int graphicId, float sx, float sy, float fac
                             initialFrame, depth + 1, drawShadows, viewW, viewH,
                             sortLayerOverride, sortBias,
                             sortYOverride, ownerId,
-                            outlineCandidate, powerState);
+                            outlineCandidate, powerState, -1, shadowDrop);
             }
         }
         if (drewSelf || g->slp < 0)
@@ -15582,7 +15588,7 @@ void Game::drawGraphic(Renderer &r, int graphicId, float sx, float sy, float fac
     }
     const SpriteFrame &f = sh->frames[fr];
     if (f.w == 0 || f.h == 0) return;
-    float x = sx - (flip ? f.w - f.hotX : f.hotX), y = sy - f.hotY;
+    float x = sx - (flip ? f.w - f.hotX : f.hotX), y = drawY - f.hotY;
     if (viewW > 0 && (x + f.w <= 0 || x >= viewW || y + f.h <= 0 || y >= viewH)) return;
     Quad q{x, y, (float)f.w, (float)f.h, flip ? f.u + f.w : f.u, f.v, flip ? f.u : f.u + f.w, f.v + f.h};
     // Sort: graphic layer first (shadows/rubble under units), then screen y.
@@ -15593,7 +15599,7 @@ void Game::drawGraphic(Renderer &r, int graphicId, float sx, float sy, float fac
     const float sortY =
         sortYOverride > -100000000.0f
             ? sortYOverride
-            : sy;
+            : drawY;
     int64_t key = (int64_t)sortLayer << 40 |
                   (int64_t)(sortY * 16 + 65536) << 8 |
                   ((sortBias + depth) & 0xFF);
@@ -15854,7 +15860,8 @@ void Game::render(Renderer &r, int screenW, int screenH) {
         }
         float sx, sy;
         toScreen(o.x, o.y, sx, sy);
-        sy -= elevationAt(o.x, o.y) * assets_.dat().terrainBlock.elevHeight;
+        const float shadowDrop=o.heightAboveGround * assets_.dat().terrainBlock.tileHalfHeight;
+        sy -= elevationAt(o.x, o.y) * assets_.dat().terrainBlock.elevHeight + shadowDrop;
         sx -= ox;
         sy -= oy;
         if (sx < -400 || sx > viewW + 400 || sy < -100 || sy > viewH + 500) continue;
@@ -15961,7 +15968,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
             -1, 0, -1000000000.0f, o.spawnId,
             o.player > 0 &&
                 o.unit->type != dat::UT_Building,
-            powerState, graphicFrameOverride);
+            powerState, graphicFrameOverride, shadowDrop);
         // Garrison indicator (0x55ec20): the building's own garrisonGraphic
         // overlay while anything is inside (not the animal nursery, 319).
         if (!remembered && o.unit->type == dat::UT_Building && o.unit->garrisonGraphic >= 0 &&
@@ -16634,7 +16641,8 @@ void Game::render(Renderer &r, int screenW, int screenH) {
         if (!object.active || object.hidden || !object.draw || object.flashTime <= 0 || !objectVisible(object)) continue;
         float sx, sy;
         toScreen(object.x, object.y, sx, sy);
-        sy -= elevationAt(object.x, object.y) * assets_.dat().terrainBlock.elevHeight;
+        sy -= elevationAt(object.x, object.y) * assets_.dat().terrainBlock.elevHeight +
+              object.heightAboveGround * assets_.dat().terrainBlock.tileHalfHeight;
         sx -= ox;
         sy -= oy;
         const float pulse = 18.0f + std::sin(object.flashTime * 8.0f) * 4.0f;

@@ -32,6 +32,7 @@ struct RmsTimberPlacement {
     uint8_t animationFrame=0;
     float initialIdleDelay=0;
     uint16_t owner=0; // Preserve interleaved owned rows after initial startup.
+    float heightAboveGround=0;
 };
 // One original ungrouped unit348 row, default modifiers, on a flat map.
 // Occupied tiles represent verified centered, half-tile scenery footprints.

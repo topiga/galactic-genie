@@ -15,6 +15,7 @@ struct RmsOwnedPlacement {
     uint8_t pendingFoundation=255; // Original building+264; consumed by visible rendering.
     uint8_t facet=0, animationFrame=0;
     float initialIdleDelay=0;
+    float heightAboveGround=0;
 };
 struct RmsMap {
     uint32_t width = 0, height = 0;

@@ -52,12 +52,14 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         {6279,2630457888u,422691155u,742396127u},
         {6195,3061798307u,2267873829u,742396127u},
         {6202,664476888u,864327435u,742396127u},
+        {6206,4112436110u,4029094520u,742396127u},
+        {6204,3529783542u,2909101468u,742396127u},
     };
     auto replace=[](std::string &text,const std::string &from,const std::string &to) {
         const auto at=text.find(from);check(at!=std::string::npos,"authored variation finds directive");
         text.replace(at,from.size(),to);
     };
-    for(size_t variant=0;variant<35;++variant) {
+    for(size_t variant=0;variant<37;++variant) {
         auto changed=rows;
         switch(variant) {
         case 0: std::reverse(changed.begin()+4,changed.end());break;
@@ -127,9 +129,13 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
                 std::to_string(counts[quantity])+(quantity==3?" set_scaling_to_player_number ":" ")+
                 "min_distance_to_players "+(scout?"7 max_distance_to_players 9":"6 max_distance_to_players 6")+" group_placement_radius 3 }");
         }
-        if(variant>=33) {
+        if(variant==33 || variant==34) {
             for(size_t i=1;i<=2;++i)replace(changed[i],"number_of_objects 1",
                 "number_of_objects "+std::to_string(variant==33?0:2));
+        }
+        if(variant>=35) {
+            const std::string air="create_object 1521 { set_place_for_every_player match_player_civ number_of_objects 1 min_distance_to_players 3 max_distance_to_players 6 }";
+            if(variant==35)changed.insert(changed.begin()+3,air);else changed.push_back(air);
         }
         for(const auto &row:changed)text+=row+'\n';
         swgb::RmsScript script;std::string error;swgb::RmsMap map;uint32_t rng=1;
@@ -150,7 +156,7 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
             const int ids[]={4,11,21,37,40,84,98,164,165};
             const float values[4][9]={{-2,7,2,6,1,3,725,350,375},{-5,10,2,9,1,3,875,500,375},
                 {0,5,2,3,2,3,625,250,375},{-1,6,2,3,3,3,675,300,375}};
-            const float quantityValues[12][2][9]={
+            const float quantityValues[14][2][9]={
                 {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
                 {{-1.0f,6.0f,2.0f,5.0f,1.0f,3.0f,675.0f,300.0f,375.0f},{-1.0f,6.0f,2.0f,5.0f,1.0f,3.0f,675.0f,300.0f,375.0f}},
                 {{-3.0f,8.0f,2.0f,7.0f,1.0f,3.0f,775.0f,400.0f,375.0f},{-3.0f,8.0f,2.0f,7.0f,1.0f,3.0f,775.0f,400.0f,375.0f}},
@@ -163,6 +169,8 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
                 {{-59.0f,64.0f,2.0f,3.0f,61.0f,3.0f,3575.0f,3200.0f,375.0f},{-16.0f,21.0f,2.0f,3.0f,18.0f,3.0f,1425.0f,1050.0f,375.0f}},
                 {{5.0f,0.0f,2.0f,0.0f,0.0f,3.0f,375.0f,0.0f,375.0f},{5.0f,0.0f,2.0f,0.0f,0.0f,3.0f,375.0f,0.0f,375.0f}},
                 {{1.0f,4.0f,2.0f,2.0f,2.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,2.0f,2.0f,3.0f,575.0f,200.0f,375.0f}},
+                {{0,5,2,3,2,3,735,360,375},{0,5,2,3,2,3,735,360,375}},
+                {{0,5,2,3,2,3,735,360,375},{0,5,2,3,2,3,735,360,375}},
             };
             const int extra=variant>=20?2+(variant==22):int(variant==19);
             const float *expectedCounters=values[extra];
@@ -323,6 +331,30 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         {34,6018u,1,0,255,0.20000000298023224f,60.0f},
         {34,6019u,2,0,255,0.20000000298023224f,60.0f},
         {34,6020u,2,0,255,0.20000000298023224f,60.0f},
+        {35,6011u,1,0,255,0.20000000298023224f,2500.0f},
+        {35,6012u,2,0,27,0.20000000298023224f,2500.0f},
+        {35,6013u,1,6,255,1.0f,40.0f},
+        {35,6014u,1,5,255,1.0f,40.0f},
+        {35,6015u,1,7,255,1.0f,40.0f},
+        {35,6016u,2,7,255,1.5916622877120972f,40.0f},
+        {35,6017u,2,5,255,1.0f,40.0f},
+        {35,6018u,2,7,255,2.6373791694641113f,40.0f},
+        {35,6019u,1,0,255,0.20000000298023224f,60.0f},
+        {35,6020u,2,0,255,0.20000000298023224f,60.0f},
+        {35,6021u,1,0,255,0.8500000238418579f,150.0f},
+        {35,6022u,2,3,255,0.8500000238418579f,150.0f},
+        {36,6011u,1,0,255,0.20000000298023224f,2500.0f},
+        {36,6012u,2,0,27,0.20000000298023224f,2500.0f},
+        {36,6013u,1,6,255,1.0f,40.0f},
+        {36,6014u,1,5,255,1.0f,40.0f},
+        {36,6015u,1,7,255,1.0f,40.0f},
+        {36,6016u,2,7,255,1.5916622877120972f,40.0f},
+        {36,6017u,2,5,255,1.0f,40.0f},
+        {36,6018u,2,7,255,2.6373791694641113f,40.0f},
+        {36,6019u,1,0,255,0.20000000298023224f,60.0f},
+        {36,6020u,2,0,255,0.20000000298023224f,60.0f},
+        {36,6236u,1,4,255,0.8500000238418579f,150.0f},
+        {36,6237u,2,3,255,0.8500000238418579f,150.0f},
         };
         for(const auto &pose:ownedPoses)if(pose.variant==variant) {
             const int unit=game.objectUnitId(pose.id);
@@ -347,7 +379,21 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         for(const auto &o:map.cliffs){ordinal=o.creationOrdinal;record(o.unit,0,o.facet,o.x,o.y);++ordinal;}
         for(const auto &o:map.scenery){if(o.alive)record(o.unitId,0,o.facet,o.x,o.y);++ordinal;}
         for(const auto &o:map.ownedObjects){record(o.unitId,o.owner,o.facet,o.x,o.y);++ordinal;}
-        for(const auto &o:map.resourcesAfterOwned){record(o.unitId,o.owner,o.facet,o.x,o.y);++ordinal;}
+        for(const auto &o:map.resourcesAfterOwned){
+            record(o.unitId,o.owner,o.facet,o.x,o.y);
+            if(variant>=35)check(o.heightAboveGround==(o.unitId==1036?1.f:0.f) &&
+                game.objectHeightForTesting(ordinal+1)==o.heightAboveGround,"original transport height survives native import");
+            if(variant>=35 && o.unitId==1036) {
+                const auto ground=game.objectPosition(6011),air=game.objectPosition(ordinal+1);
+                float gx,gy,ax,ay;
+                check(game.objectScreenPosition(6011,960,544,gx,gy) && game.objectScreenPosition(ordinal+1,960,544,ax,ay),
+                    "transport and ground reference project");
+                const float expectedY=((air[0]+air[1]-ground[0]-ground[1])*swgb::Game::kTileHalfH-
+                    data.terrainBlock.tileHalfHeight)*game.zoom();
+                check(std::abs(ay-gy-expectedY)<.001f,"transport projects one half-tile above ground");
+            }
+            ++ordinal;
+        }
         check(count==cases[variant].count && rng==cases[variant].rng && hash==cases[variant].records,
             "general object rows match complete original object order and RNG");
         auto gridHash=[](const std::vector<uint8_t> &grid) {
@@ -359,7 +405,8 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
             "general rows preserve original terrain/elevation/slopes");
         if(variant==22) {
             const auto retained=game.activeObjectCount();
-            for(const char *row:{"create_object 83 { set_place_for_every_player number_of_objects 2 group_variance 1 min_distance_to_players 6 max_distance_to_players 6 }",
+            for(const char *row:{"create_object 1521 { set_place_for_every_player match_player_civ number_of_objects 2 min_distance_to_players 3 max_distance_to_players 6 }",
+                "create_object 83 { set_place_for_every_player number_of_objects 2 group_variance 1 min_distance_to_players 6 max_distance_to_players 6 }",
                 "create_object 550 { set_place_for_every_player match_player_civ number_of_objects 2 group_variance 1 min_distance_to_players 7 max_distance_to_players 9 }"}) {
                 const std::string unsupported=text+row;swgb::RmsScript invalid;uint32_t unchanged=1;
                 check(invalid.load(60000,[&](int32_t,std::vector<uint8_t> &bytes){bytes.assign(unsupported.begin(),unsupported.end());return true;},
@@ -370,5 +417,5 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
             }
         }
     }
-    std::puts("PASS: thirty-five general object-row variations match complete original runner");
+    std::puts("PASS: thirty-seven general object-row variations match complete original runner");
 }

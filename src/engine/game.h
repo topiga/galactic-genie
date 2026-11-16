@@ -543,6 +543,9 @@ public:
         const Object *o = findObject(spawnId);
         return o && o->felled;
     }
+    float objectHeightForTesting(uint32_t spawnId) const {
+        const auto *object=findObject(spawnId);return object?object->heightAboveGround:0;
+    }
     std::array<float, 2> objectPosition(
         uint32_t spawnId) const;
     bool technologyResearched(int player, int technologyId) const {
@@ -671,6 +674,7 @@ private:
         std::deque<ProductionItem> productionQueue;
         int player = 0; // 0 = gaia
         float x = 0, y = 0;
+        float heightAboveGround = 0;
         float facing = 0; // radians, 0 = +x world axis
         State state = State::Idle;
         float animTime = 0;
@@ -1324,7 +1328,7 @@ private:
                      uint32_t ownerId = 0,
                      bool outlineCandidate = false,
                      int powerState = -1,
-                     int frameOverride = -1);
+                     int frameOverride = -1, float shadowDrop = 0);
     int graphicSortLayer(int graphicId, int depth = 0) const;
 
     Assets &assets_;

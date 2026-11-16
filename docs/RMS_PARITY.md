@@ -158,7 +158,7 @@ provenance is in `rms-owned-quantities-findings-2026-11-16.json` and the matchin
 the helper's filename date). This is execution of the original PE with captured
 assets and modeled host boundaries, not a new live Windows session.
 
-Aircraft1521 and other constructors remain unsupported. Complete original replays now cover early and late1521 rows. The late row gives
+At the research checkpoint, aircraft1521 remained unsupported. Complete original replays now cover early and late1521 rows. The late row gives
 6,204 objects, RNG3529783542,
 and two Empire transports1036 at95.5/37.5 and41.5/95.5, both with original z1.
 The early row gives6,206 objects, RNG4112436110 and transports at99.5/35.5 and
@@ -181,6 +181,32 @@ startup height/import and native comparison remain open. Local evidence includes
 resource supplement; `rms-airtransport-findings-2026-11-16.json` indexes both
 complete replays and their provenance. The last packaged production audit remains9/138 accepted
 configurations, and RMS menu integration remains separate work.
+
+## Native transport placement: 2026-11-16
+
+The native generator now reproduces the two complete original transport replays
+above, including every ordered object, terrain/elevation/slope grid, owned/Gaia
+startup pose and final RNG. Support is bounded to one ungrouped1521/count1 row,
+civilization matching, distances3..6, flat120/base6 and two Empire owners. Other
+civilizations, quantities and elevated transport starts still reject explicitly.
+
+Transport placement reuses the owned mobile queue/zone/animation path, with the
+original collision radii and seven constructor draws rather than the scout's
+eight. The static gate tests other objects' collision boxes and build-on flags;
+flying-object overlap is checked before the ground mobile-unit exemption.
+Native import retains original height above ground and the population/military/
+cost counters. Regression cases include both row positions and unsupported
+quantity rejection without altering the running world or caller RNG.
+
+The37 complete-map regression cases pass. The render check additionally verifies
+actual native quads: transport5460/layer19 stays at the ground anchor and
+5461/layer20 moves up one `tileHalfHeight` (24pixels in the loaded DAT). Screen
+selection/health-bar projection uses the same altitude. Original54a643/54a6d8
+select ground coordinates for layers0..10 and19 independently for each graphic;
+this was confirmed with six original selector calls. Terrain elevation still
+uses its separate `elevHeight` scale. These changes apply to retained RMS startup
+height; flight transitions and all other scenario-created aircraft remain
+separate work. No fresh live Windows or pixel-for-pixel UI comparison is claimed.
 
 ## General object-row controller: 2026-11-15
 
