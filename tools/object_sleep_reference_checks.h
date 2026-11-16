@@ -62,6 +62,21 @@ static void objectSleepReferenceChecks(swgb::Assets &assets) {
           "Reacquiring wakes the target and permits its deferred death admission");
     lethal.stopUnitForTesting(cutter);
     check(!lethal.objectPendingSleepForTesting(target),"State3 release does not request base sleep");
+    swgb::Game postAttack(assets);
+    check(postAttack.init(7,96,&error,1,1),error.c_str());
+    const auto finisher=postAttack.spawnObjectForTesting(1,83,1,27.f,40.5f);
+    const auto timber=postAttack.spawnObjectForTesting(0,349,0,27.5f,40.5f);
+    check(postAttack.issueGatherForTesting(finisher,timber),"Start post-attack movement-child fixture");
+    for(int tick=0;tick<26;++tick)postAttack.update(.1f,{});
+    check(postAttack.objectFelled(timber) && postAttack.objectTaskReferencesForTesting(timber)==2,
+          "State4 retains parent and newly created movement child even in range");
+    postAttack.update(.1f,{});
+    check(postAttack.objectTaskReferencesForTesting(timber)==1 && postAttack.objectCarriedAmount(finisher)==0.f,
+          "Movement completion releases child before entering state6, without gathering");
+    postAttack.update(.1f,{});
+    check(postAttack.objectTaskReferencesForTesting(timber)==1 && postAttack.objectCarriedAmount(finisher)==0.f,
+          "State6 to7 retains only parent and still performs no resource transfer");
+
 
     // Rejected drop-off must not destroy a valid gather controller.
     for(int tick=0;tick<12;++tick)lethal.update(.1f,{});

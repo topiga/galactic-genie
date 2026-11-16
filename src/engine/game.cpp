@@ -6832,7 +6832,8 @@ void Game::updateGathering(Object &worker, float dt) {
         approach(worker, *resource, workRange);
         return;
     }
-    if (worker.resourcePreparationState != 12) setTaskReference(worker.gatherChildReference,0);
+    if (worker.resourcePreparationState != 12 && worker.resourcePreparationState != 4)
+        setTaskReference(worker.gatherChildReference,0);
     const bool farming =
         resource->unit->cls == 7;
     if (!farming) {
@@ -7018,10 +7019,16 @@ void Game::updateGathering(Object &worker, float dt) {
             if (worker.resourcePreparationState == 12) {
                 setTaskReference(worker.gatherChildReference,0);
                 worker.resourcePreparationState = 4;
+                // Original state4 constructs a movement child even when already beside the tree.
+                setTaskReference(worker.gatherChildReference,resource->spawnId);
                 worker.animTime = 0.f; worker.initialFrame = 0;
                 return;
             }
-            if (worker.resourcePreparationState == 4) { worker.resourcePreparationState = 6; return; }
+            if (worker.resourcePreparationState == 4) {
+                setTaskReference(worker.gatherChildReference,0);
+                worker.resourcePreparationState = 6;
+                return;
+            }
             if (worker.resourcePreparationState == 6) { worker.resourcePreparationState = 7; return; }
         }
     }

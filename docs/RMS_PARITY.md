@@ -5516,3 +5516,24 @@ The auxiliary fixture deliberately changes an animated prototype to type25
 before session initialization; it validates routing, not an original type25
 factory or graphics comparison. Existing felling/dead-child, command queue,
 animation and local-clock checks pass. Log: `sleep-reference-final-local.log`.
+
+The post-felling transition also retains the original movement-child reference:
+state12 destroys its attack child, entry4 creates a movement child targeting the
+same tree even when already in range, and the following4→6 completion destroys
+that child before entering6. The ordinary6→7 transition retains only the parent
+reference and performs no gathering on entry. Evidence:
+`tree-postattack-child-findings-2026-11-17.json`, original constructors/setters
+56a99d/4082c0/40ad40 and controller406b60/406bb7. Retained v5 execution confirms
+the state sequence; the precise reference lifetime is established statically.
+Out-of-range child recreation and arbitrary movement completion remain outside
+this bounded comparison.
+
+Validation of the routing integration: broad bonus/research/healing/AI and
+combat/gather/garrison checks pass (`sleep-reference-{bonus,combat}.log`).
+Compatibility checks retain exactly the same five baseline failures already
+listed above (`sleep-reference-fixes.log`); no new failures. The desktop build
+passes menu/preferences and60 dummy-driver render/audio frames
+(`sleep-reference-desktop.log`). After the post-felling child correction,
+focused ASan/UBSan checks additionally assert parent+movement references in4,
+child release before6, and parent-only/no-transfer entry7
+(`postattack-reference-local.log`). No fresh live Windows match was run.

@@ -23,6 +23,8 @@ static void fellingAnimationChecks(swgb::Assets &assets) {
     game.update(.1f,{});
     check(game.objectFelled(tree) && game.objectActive(tree),
           "Target owner admits felling on its next update without deleting the resource");
+    check(game.objectTaskReferencesForTesting(tree)==2,
+          "Completed attack is replaced by a movement child retaining its own tree reference");
     for(int phase=0;phase<2;++phase) {
         game.update(.1f,{});
         check(game.objectCarriedAmount(worker)==0.f,"Preparation transitions do not transfer resources");
