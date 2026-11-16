@@ -5607,3 +5607,11 @@ Focused ASan/UBSan checks pass for accepted/rejected garrison ownership, thawing
 its container, Stop, boarding completion and container destruction, alongside
 all frozen-building/support-action/gather/list regressions. Log:
 `garrison-reference-local.log`.
+
+Broader validation: support-action/frozen integration passes the bonus, research,
+healing and AI checks (`frozen-support-bonus.log`). The combined garrison build
+passes combat/gather/build/repair/garrison and desktop menu/preferences plus60
+headless render/audio frames (`frozen-garrison-{combat,desktop}.log`). Its
+compatibility suite reports exactly the same five baseline failures, with no new
+failures (`frozen-garrison-fixes.log`). These runs do not establish live Windows
+match parity or prove the remaining attack/child-reference/visibility callbacks.
