@@ -224,14 +224,11 @@ void Game::handleClassicHudInput(InputState &in,bool allowOrders) {
         } else if(selected.size()==1 && garrison.hit(x,y)>=0) {
             const size_t index=size_t(garrison.hit(x,y));
             if(allowOrders && (in.pointerTap || classicGarrisonPressed_==members[index]->spawnId)) {
-                const std::string name=unitDisplayName(*members[index]->unit);
-                const bool ejected=ejectGarrisonedUnit(*subject,*members[index]);
-                statusMessage_=ejected?"EJECTED "+name:"NO CLEAR EXIT"; statusTime_=2;
-                playInterfaceFeedback(ejected?kInterfaceButtonSound:kInterfaceCannotDoSound);
+                enqueueGarrisonEjection(*subject,*members[index],true);
             }
         } else if(selected.size()==1 && x>=185 && x<435 && y>=123 && y<162) {
             const size_t index=size_t((x-185)/48);
-            if(allowOrders && index<subject->productionQueue.size()) cancelProductionItem(*subject,index);
+            if(allowOrders && index<subject->productionQueue.size()) enqueueProductionCancellation(*subject,index);
         } else {
             const int slot=layout.slot(in.pointerX,in.pointerY);
             if(slot>=0) {

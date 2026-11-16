@@ -1087,6 +1087,7 @@ private:
     std::string unitCommandTitle(UnitCommand command) const;
     std::string unitCommandHelp(UnitCommand command) const;
     void executeUnitCommand(UnitCommand command);
+    void enqueueSelectedCommand(bool mobileOnly, std::function<void(const std::vector<Object *> &)> command);
     bool issueUnloadOrder(Object &unit, float x, float y);
     void clearUnitCommandOrder(Object &unit);
     void stopUnit(Object &unit);
@@ -1152,6 +1153,8 @@ private:
     bool handleActionMenuClick(float screenX, float screenY,
                                int screenW, int screenH);
     bool cancelProductionItem(Object &building, size_t index);
+    void enqueueProductionCancellation(Object &building, size_t index);
+    void enqueueGarrisonEjection(Object &building, Object &unit, bool feedback);
     bool openSelectedActionMenu();
     std::vector<const dat::Unit *> productionOptions(
         const Object &building) const;
@@ -1491,6 +1494,7 @@ private:
     void handleControlGroup(const InputState &input);
     void renderClassicHud(Renderer &renderer,int width,int height);
     bool activateActionMenuOption(size_t optionIndex);
+    void executeTrainingCommand(uint32_t buildingId,int owner,int unitId);
 
     bool skirmish_ = false, skirmishConquest_ = false;
     float matchTime_ = 0, skirmishAiTime_ = 0;

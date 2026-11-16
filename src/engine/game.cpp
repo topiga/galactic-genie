@@ -3823,18 +3823,7 @@ bool Game::handleSelectionPanelClick(float screenX, float screenY,
                     screenX < x + 34.0f &&
                     localY >= y &&
                     localY < y + 36.0f) {
-                    const std::string name =
-                        unitDisplayName(*unit.unit);
-                    if (ejectGarrisonedUnit(
-                            *building, unit)) {
-                        statusMessage_ =
-                            "EJECTED " + name;
-                        statusTime_ = 2.0f;
-                    } else {
-                        statusMessage_ =
-                            "NO CLEAR EXIT";
-                        statusTime_ = 3.0f;
-                    }
+                    enqueueGarrisonEjection(*building,unit,false);
                     return true;
                 }
                 iconIndex++;
@@ -3886,7 +3875,7 @@ bool Game::handleSelectionPanelClick(float screenX, float screenY,
 
 void Game::applyFormation(FormationType formation) {
     selectedFormation_ = formation;
-    const auto selected = selectedObjectsInOrder(false);
+    enqueueSelectedCommand(false,[this,formation](const std::vector<Object *> &selected) {
     std::vector<Object *> formationUnits;
     float centroidX = 0.0f;
     float centroidY = 0.0f;
@@ -3923,8 +3912,9 @@ void Game::applyFormation(FormationType formation) {
         issueGroupMove(
             std::move(formationUnits),
             destinationX, destinationY,
-            selectedFormation_);
+            formation);
     }
+    });
 }
 
 std::vector<const dat::Unit *> Game::productionOptions(
@@ -4795,12 +4785,29 @@ bool Game::issueUnloadOrder(Object &unit, float x, float y) {
     return true;
 }
 
+void Game::enqueueSelectedCommand(bool mobileOnly,
+    std::function<void(const std::vector<Object *> &)> command) {
+    std::vector<uint32_t> ids;
+    for (const auto *object:selectedObjectsInOrder(mobileOnly)) ids.push_back(object->spawnId);
+    const int player=localPlayer_;
+    localCommands_.enqueue([this,ids=std::move(ids),player,mobileOnly,command=std::move(command)] {
+        std::vector<Object *> actors;
+        for (const auto id:ids) {
+            auto *object=findObject(id);
+            if (object && object->player==player &&
+                (mobileOnly?isSelectable(*object):isInspectable(*object))) actors.push_back(object);
+        }
+        command(actors);
+    });
+}
+
 void Game::executeUnitCommand(
     UnitCommand command) {
     if (command == UnitCommand::Stop) {
+        enqueueSelectedCommand(true,[this](const std::vector<Object *> &selected) {
         Object *acknowledgement = nullptr;
         for (Object *unit :
-             selectedObjectsInOrder(true)) {
+             selected) {
             stopUnit(*unit);
             if (!acknowledgement)
                 acknowledgement = unit;
@@ -4812,6 +4819,7 @@ void Game::executeUnitCommand(
         statusTime_ = 2.0f;
         playInterfaceFeedback(
             kInterfaceButtonSound);
+        });
         return;
     }
     if (command ==
@@ -5133,31 +5141,44 @@ std::string Game::buildingCommandHelp(const Object &building, BuildingCommand co
 }
 
 void Game::executeBuildingCommand(Object &building, BuildingCommand command) {
-    switch (command) {
-    case BuildingCommand::Alarm: {
-        std::vector<std::pair<Object *,bool>> selected;
-        for(auto *o:selectedObjectsInOrder(false)) if(o->player==localPlayer_ && o->unit->id==109 && !o->underConstruction)
-            selected.emplace_back(o,!o->alarmActive);
-        // Snapshot states before overlapping shelter areas change another selected CC.
-        for(auto entry:selected) toggleAlarm(*entry.first,entry.second);
-        break;
-    }
-    case BuildingCommand::ReturnToWork:
-        for(auto *o:selectedObjectsInOrder(false)) if(o->player==localPlayer_ && (o->unit->id==109 || o->unit->id==82))
-            returnGarrisonedWorkers(*o);
-        break;
-    case BuildingCommand::ToggleGate:
-        setGateLocked(building, !building.locked);
-        break;
-    case BuildingCommand::SetGatherPoint: {
+    if (command==BuildingCommand::SetGatherPoint) {
         attackGroundCursorActive_ = false;
         gatherPointBuildingId_ = building.spawnId;
         gatherPointJustBegun_ = true;
         const std::string &message = assets_.localizedString(3084);
         statusMessage_ = message.empty() ? "Click an area to set gather point." : message;
         statusTime_ = 4.0f;
+        return;
+    }
+    std::vector<std::pair<uint32_t,bool>> alarmStates;
+    if (command==BuildingCommand::Alarm)
+        for (const auto *object:selectedObjectsInOrder(false))
+            alarmStates.emplace_back(object->spawnId,!object->alarmActive);
+    const bool locked=!building.locked;
+    const uint32_t id=building.spawnId;
+    const int owner=building.player;
+    enqueueSelectedCommand(false,[this,id,owner,command,locked,alarmStates=std::move(alarmStates)](const std::vector<Object *> &actors) {
+    Object *subject=findObject(id);
+    if (!subject || !subject->active || subject->player!=owner) return;
+    Object &building=*subject;
+    switch (command) {
+    case BuildingCommand::Alarm: {
+        for (auto *object:actors) {
+            if (object->unit->id!=109 || object->underConstruction) continue;
+            const auto state=std::find_if(alarmStates.begin(),alarmStates.end(),
+                [object](const auto &entry){return entry.first==object->spawnId;});
+            if (state!=alarmStates.end()) toggleAlarm(*object,state->second);
+        }
         break;
     }
+    case BuildingCommand::ReturnToWork:
+        for(auto *o:actors) if(o->player==localPlayer_ && (o->unit->id==109 || o->unit->id==82))
+            returnGarrisonedWorkers(*o);
+        break;
+    case BuildingCommand::ToggleGate:
+        setGateLocked(building, locked);
+        break;
+    case BuildingCommand::SetGatherPoint: break;
     case BuildingCommand::RemoveGatherPoint:
         building.rallyActive = false;
         building.rallyTargetId = 0;
@@ -5173,6 +5194,7 @@ void Game::executeBuildingCommand(Object &building, BuildingCommand command) {
         break;
     }
     }
+    });
 }
 
 // Clicking an object makes it the gather target (units then gather from it,
@@ -7509,6 +7531,31 @@ bool Game::openSelectedActionMenu() {
     return true;
 }
 
+void Game::enqueueProductionCancellation(Object &building, size_t index) {
+    const uint32_t id=building.spawnId;
+    const int owner=building.player;
+    localCommands_.enqueue([this,id,owner,index] {
+        auto *subject=findObject(id);
+        if (subject && subject->active && subject->player==owner) cancelProductionItem(*subject,index);
+    });
+}
+
+void Game::enqueueGarrisonEjection(Object &building, Object &unit, bool feedback) {
+    const uint32_t buildingId=building.spawnId, unitId=unit.spawnId;
+    const int owner=building.player;
+    localCommands_.enqueue([this,buildingId,unitId,owner,feedback] {
+        auto *building=findObject(buildingId);
+        auto *unit=findObject(unitId);
+        if (!building || !building->active || building->player!=owner || !unit ||
+            !unit->active || unit->garrisonedInId!=int32_t(buildingId)) return;
+        const std::string name=unitDisplayName(*unit->unit);
+        const bool ejected=ejectGarrisonedUnit(*building,*unit);
+        statusMessage_=ejected?"EJECTED "+name:"NO CLEAR EXIT";
+        statusTime_=ejected?2.f:3.f;
+        if (feedback) playInterfaceFeedback(ejected?kInterfaceButtonSound:kInterfaceCannotDoSound);
+    });
+}
+
 bool Game::cancelProductionItem(Object &building,
                                 size_t index) {
     if (index >= building.productionQueue.size())
@@ -7647,7 +7694,7 @@ bool Game::handleActionMenuClick(float screenX, float screenY,
             (int)((screenX - kActionMenuX - 6.0f) /
                   slotWidth);
         if (index >= 0)
-            cancelProductionItem(
+            enqueueProductionCancellation(
                 *subject, (size_t)index);
         return true;
     }
@@ -7722,11 +7769,12 @@ bool Game::activateActionMenuOption(size_t optionIndex) {
     }
 
     if (actionMenuTab_ != ActionMenuTab::Research) {
-        const std::vector<const dat::Unit *> options = productionOptions(*subject);
-        if (optionIndex < options.size() && options[optionIndex]->cls == 7) {
-            queueFarmReseed(*subject, *options[optionIndex]);
-            return true;
-        }
+        const auto options=productionOptions(*subject);
+        if (optionIndex>=options.size()) return true;
+        const uint32_t buildingId=subject->spawnId;
+        const int owner=subject->player, unitId=options[optionIndex]->id;
+        localCommands_.enqueue([this,buildingId,owner,unitId] {executeTrainingCommand(buildingId,owner,unitId);});
+        return true;
     }
 
     if (subject->productionQueue.size() >= 5) {
@@ -7777,30 +7825,6 @@ bool Game::activateActionMenuOption(size_t optionIndex) {
         item.duration =
             researchDuration(localPlayer_,technology);
         statusMessage_ = "RESEARCH QUEUED";
-    } else {
-        const std::vector<const dat::Unit *> options =
-            productionOptions(*subject);
-        if (optionIndex >= options.size()) return true;
-        const dat::Unit *unit = options[optionIndex];
-        for (const dat::ResourceCost &cost : unitCosts(localPlayer_,*unit)) {
-            if (!cost.flag || cost.type < 0 ||
-                cost.amount <= 0)
-                continue;
-            if (resource(localPlayer_, cost.type) + 0.001f <
-                cost.amount) {
-                showResourceShortage(cost.type);
-                return true;
-            }
-        }
-        for (const dat::ResourceCost &cost : unitCosts(localPlayer_,*unit))
-            if (cost.flag && cost.type >= 0 &&
-                cost.amount > 0)
-                resources_[(size_t)localPlayer_][cost.type] -=
-                    cost.amount;
-        item.unit = unit;
-        item.duration =
-            unitTrainingTime(localPlayer_,*unit);
-        statusMessage_ = "UNIT QUEUED";
     }
     subject->productionQueue.push_back(item);
     if (subject->productionQueue.size() == 1)
@@ -7809,6 +7833,41 @@ bool Game::activateActionMenuOption(size_t optionIndex) {
     playInterfaceFeedback(
         kInterfaceButtonSound);
     return true;
+}
+
+void Game::executeTrainingCommand(uint32_t buildingId, int owner, int unitId) {
+    Object *subject=findObject(buildingId);
+    if (!subject || !subject->active || subject->player!=owner || subject->underConstruction) return;
+    const auto options=productionOptions(*subject);
+    const auto found=std::find_if(options.begin(),options.end(),[unitId](const dat::Unit *unit){return unit->id==unitId;});
+    if (found==options.end()) return;
+    const dat::Unit *unit=*found;
+    if (unit->cls==7) {queueFarmReseed(*subject,*unit);return;}
+    if (subject->productionQueue.size()>=5) {showCannotDo(3088,"PRODUCTION QUEUE FULL");return;}
+    ProductionItem item;
+    for (const dat::ResourceCost &cost : unitCosts(owner,*unit)) {
+        if (!cost.flag || cost.type < 0 ||
+            cost.amount <= 0)
+            continue;
+        if (resource(owner, cost.type) + 0.001f <
+            cost.amount) {
+            showResourceShortage(cost.type);
+            return;
+        }
+    }
+    for (const dat::ResourceCost &cost : unitCosts(owner,*unit))
+        if (cost.flag && cost.type >= 0 &&
+            cost.amount > 0)
+            resources_[(size_t)owner][cost.type] -=
+                cost.amount;
+    item.unit = unit;
+    item.duration =
+        unitTrainingTime(owner,*unit);
+    statusMessage_ = "UNIT QUEUED";
+    subject->productionQueue.push_back(item);
+    if (subject->productionQueue.size()==1) subject->productionRemaining=item.duration;
+    statusTime_=2.f;
+    playInterfaceFeedback(kInterfaceButtonSound);
 }
 
 bool Game::beginBuildingPlacement(
@@ -9249,9 +9308,11 @@ void Game::activateCheat(size_t index, int screenW, int screenH) {
 }
 
 void Game::cycleSelectedAttackMode() {
+    enqueueSelectedCommand(true,[this](const std::vector<Object *> &selected) {
     bool changed = false;
-    for (Object &object : objects_) {
-        if (!object.selected || !isSelectable(object) || !canAttack(object)) continue;
+    for (Object *actor : selected) {
+        Object &object=*actor;
+        if (!canAttack(object)) continue;
         switch (object.attackMode) {
         case AttackMode::Aggressive:
             object.attackMode = AttackMode::Defensive;
@@ -9273,13 +9334,15 @@ void Game::cycleSelectedAttackMode() {
         changed = true;
     }
     if (changed) attackModeChanges_++;
+    });
 }
 
 void Game::setSelectedAttackMode(
     AttackMode mode) {
+    enqueueSelectedCommand(false,[this,mode](const std::vector<Object *> &selected) {
     bool changed = false;
     for (Object *object :
-         selectedObjectsInOrder(false)) {
+         selected) {
         if (!object || !canAttack(*object))
             continue;
         if (object->attackMode != mode) {
@@ -9302,6 +9365,7 @@ void Game::setSelectedAttackMode(
         std::string("STANCE: ") +
         labels[(size_t)mode];
     statusTime_ = 2.0f;
+    });
 }
 
 bool Game::issueAttackGround(
@@ -14462,7 +14526,8 @@ void Game::updatePlayerObjects(float dt,int player) {
             std::find(masterHeroes.begin(),masterHeroes.end(),o.unit->id) != masterHeroes.end();
         if (master) recover(playerAttribute(o.player,49));
         else if (o.unit->trait & 0x20) recover(playerAttribute(o.player,96));
-        float animationDt=dt;
+        // Base/static constructors (54c2a0, tree564db0) do not run animated422cd0.
+        float animationDt=(o.unit->type==dat::UT_EyeCandy || o.unit->type==dat::UT_Trees)?0.f:dt;
         if (o.initialIdleDelay>0) {
             const auto *idleGraphic=assets_.dat().graphic(o.unit->standingGraphic[0]);
             const float lastFrameTime=idleGraphic?(idleGraphic->frameCount-1)*idleGraphic->frameDuration:0.f;
