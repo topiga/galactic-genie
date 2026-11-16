@@ -8,7 +8,7 @@ Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
 Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206, allied roads54218, central water54212 and Motherlode54225.
 The shared packaged suite contains68 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
-Gaia resource accounting and deferred foundation rendering. Twenty-three additional authored
+Gaia resource accounting and deferred foundation rendering. Twenty-six additional authored
 fixtures cover owned Troop Center, Prefab, Farm and defensive-building placement, completion research order, population grants and rejected placement.
 
 The standard production audit accepts54/138 map/seed attempts (eighteen of46 resources,
@@ -3504,3 +3504,41 @@ terrain composition; this section does not claim those are enabled.
 
 All68 packaged and23 owned-building regressions pass under ASan/UBSan;
 strict integrated RMS checks pass after the defensive-building change.
+
+
+### Mixed owned-building startup (2026-11-16)
+
+The same owned-building placement path now accepts the compared ordered mix:
+Troop Center87 single, Prefab70 loose-four, Farm50 five. Each row validates its
+own captured prototype before generation. The common geometry remains the
+flat120, two-Empire cliff/forest fixture; other row combinations are rejected.
+
+| Seed | Objects | Final RNG |
+| --- | --- | --- |
+| 1 | 6007 | 659122895 |
+| 12345 | 5991 | 1730317561 |
+| 16160 | 6083 | 4222011319 |
+
+Complete native/original comparisons match all ordered objects, all terrain,
+elevation and slope bytes, startup poses and pending foundations. Native import
+also matches the interleaved completion order: base CC technologies,31/85/209,
+then16 and20. Each owner has one Troop Center, four Prefabs and five Farms, with
+resource4=21 (remaining population capacity),21=3,98=1085,164=200,165=885.
+A malformed Farm prototype in the final row rejects the entire generation
+atomically, checking that validation covers later rows as well as the first.
+
+The three cases bring authored building regressions to26; packaged coverage
+remains68 cases. Evidence: `rms-owned-mixed-87-70-50-findings-2026-11-16.json`,
+the disjoint original-loader installer plan, and
+`rms-text-full-owned-mixed-87-70-50` original/research/native captures.
+This enables the proved building sequence, not the complete fortified map.
+
+The original wall reference has separately advanced beyond static analysis:
+full seed1 executes actual cached boundary generation, gates and annexes after
+supplying captured Gaia83 and required original-constructor host context.
+It produces6095 objects/RNG3334285395, with an independent replay matching
+objects, grids, poses and boundary segments. This remains reference evidence;
+no native wall generator is enabled by the mixed-building change.
+
+All68 packaged and26 owned-building regressions pass under ASan/UBSan;
+strict integrated RMS checks pass after per-row validation was introduced.

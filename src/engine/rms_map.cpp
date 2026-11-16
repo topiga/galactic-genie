@@ -1029,9 +1029,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     }
     const auto ownedBuilding=std::find_if(resourceRows.begin(),resourceRows.end(),[](const auto &row){return row.unitId==87 || row.unitId==70 || row.unitId==50 || row.unitId==79;});
     if(ownedBuilding!=resourceRows.end()) {
-        const int buildingId=ownedBuilding->unitId;const bool prefab=buildingId==70,farm=buildingId==50,tower=buildingId==79;
-        const float radius=tower?.5f:prefab?1.f:1.5f;
-        // shortcut: flat Empire87/70/50/79 completion; extend slopes, mixed rows and boundary fallback with original traces.
+        // shortcut: flat Empire87/70/50/79 completion; extend slopes, other row combinations and boundary fallback with original traces.
         if(width!=120 || height!=120 || base!=6 || playerCount!=2 || playerCivilizations!=std::vector<uint16_t>{1,1} ||
            !defines.count("FIXED_POSITIONS") || !ownedObjects || !startingWorkers || !startingScouts || startingStalagmites ||
            workerGroups!=1 || scoutGroups!=1 || workerMinDistance!=6 || workerMaxDistance!=6 ||
@@ -1040,35 +1038,41 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
            terrainRows[0].flatTerrainOnly || terrainRows[0].minHeight || terrainRows[0].maxHeight!=255 ||
            terrainRows[0].clumps!=60 || terrainRows[0].spacing!=2 || terrainRows[0].clumping!=20 || !terrainRows[0].avoidPlayerStarts ||
            cliffSettings.minCount!=3 || cliffSettings.maxCount!=9 || cliffSettings.minLength!=5 || cliffSettings.maxLength!=9 ||
-           cliffSettings.curl!=36 || cliffSettings.waterDistance!=2 || cliffSettings.cliffDistance!=2 ||
-           !std::all_of(resourceRows.begin(),resourceRows.end(),[&](const auto &row) {
-               const bool quantity=prefab?((row.mode==0 && row.perGroup==1) || (row.mode==1 && row.perGroup==4)):(!row.mode && row.perGroup==1);
-               const bool range=tower?(row.minDistance==10 && row.maxDistance==13):farm?((row.minDistance==2 && row.maxDistance==5) || (!row.minDistance && !row.maxDistance)):prefab?(row.minDistance==10 && row.maxDistance==12):((row.minDistance==8 && row.maxDistance==14) || (!row.minDistance && !row.maxDistance));
-               return row.unitId==buildingId && row.owner==-1 && row.landId==1 && !row.matchPlayerCiv && !row.scaling && (row.groups==1 || (farm && row.groups==5) || (tower && row.groups==4)) &&
-                      quantity && range && (!(farm || tower) || resourceRows.size()==1) && !row.variance && row.radius==3 && row.terrain==-1 && row.spacing==(tower?6:0) && !row.temporarySpacing && !row.zoneDistance;
-           })) return fail("unsupported owned-building startup composition");
+           cliffSettings.curl!=36 || cliffSettings.waterDistance!=2 || cliffSettings.cliffDistance!=2) return fail("unsupported owned-building startup geometry");
         for(const auto &land:lands)
             if(land.terrain!=6 || land.radius!=13 || land.targetTiles!=7200 || land.leftBorder || land.topBorder ||
                land.rightBorder!=-1 || land.bottomBorder!=-1 || land.clumpingFactor!=8 || land.borderFuzziness!=20 || land.separation) return fail("unsupported owned-building player lands");
-        if(data.civs.size()<=1 || data.civs[1].units.size()<=size_t(buildingId) || data.terrainRestrictions.size()<=4)
-            return fail("missing owned-building prototype");
-        const auto &u=data.civs[1].units[buildingId];const auto *g=data.graphic(u.standingGraphic[0]);
-        if(!u.exists || u.id!=buildingId || u.type!=dat::UT_Building || u.cls!=(tower?10:farm?7:18) || u.hitPoints!=(tower?1250:farm?480:prefab?800:1500) ||
-           u.collisionSize[0]!=radius || u.collisionSize[1]!=radius || u.collisionSize[2]!=(farm?0:prefab?2:4) ||
-           u.clearanceSize[0]!=radius || u.clearanceSize[1]!=radius || u.terrainRestriction!=4 || u.hillMode!=((prefab || farm || tower)?0:3) ||
-           u.speed || u.flyMode || u.canBeBuiltOn || u.trait || u.convertTerrain || u.obstructionType!=(farm?0:2) || u.obstructionClass!=(farm?0:3) ||
-           u.standingGraphic[0]!=(tower?397:farm?1688:prefab?883:4075) || u.standingGraphic[1]!=-1 || u.constructionGraphic!=(tower?342:farm?-1:prefab?348:355) || u.foundationTerrainId!=(farm?7:27) ||
-           u.costs[0].type!=(tower?2:1) || u.costs[0].amount!=(tower?125:farm?50:prefab?25:160) || (u.costs[0].flag&255)!=1 ||
-           u.costs[1].type!=(tower?1:-1) || (tower && (u.costs[1].amount!=25 || (u.costs[1].flag&255)!=1)) || u.costs[2].type!=-1 || u.techId!=(tower?11:farm?20:prefab?16:31) || u.trainSound!=-1 || u.constructionSound!=(tower?227:farm?587:prefab?591:598) || u.adjacentMode!=(tower?1:0) || u.graphicsAngle ||
-           u.disappearsWhenBuilt || u.stackUnitId!=-1 || u.oldOverlayId!=-1 || u.transformUnit!=-1 || u.headUnit!=-1 ||
-           u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 || u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 ||
-           !g || g->sequenceType!=(tower?2:farm?0:prefab?6:1) || g->frameCount!=((farm || tower)?1:prefab?3:2) || g->angleCount!=(tower?8:1) || g->frameDuration!=((prefab || farm || tower)?0.f:.4f) || g->replayDelay ||
-           g->soundId!=-1 || !g->angleSounds.empty()) return fail("unsupported owned-building lifecycle metadata");
-        for(const auto &annex:u.annexes)if(annex.unitId!=-1)return fail("owned-building annexes are unsupported");
-        for(size_t n=0;n<u.resourceStorages.size();++n) {
-            const auto &storage=u.resourceStorages[n];const bool population=prefab && n==0,food=farm && n==0;
-            if(storage.type!=(food?0:population?4:-1) || storage.amount!=(food?15:population?5:0) || storage.flag!=(population?4:0))
-                return fail("unsupported owned-building completion storage");
+        const bool mixed=resourceRows.size()==3 && resourceRows[0].unitId==87 && resourceRows[0].minDistance==8 &&
+                         resourceRows[1].unitId==70 && resourceRows[1].mode==1 && resourceRows[2].unitId==50 && resourceRows[2].groups==5 && resourceRows[2].minDistance==2;
+        for(const auto &row:resourceRows) {
+            if(!mixed && row.unitId!=ownedBuilding->unitId)return fail("unsupported mixed owned buildings");
+            const int buildingId=row.unitId;const bool prefab=buildingId==70,farm=buildingId==50,tower=buildingId==79;
+            const float radius=tower?.5f:prefab?1.f:1.5f;
+            const bool quantity=prefab?((row.mode==0 && row.perGroup==1) || (row.mode==1 && row.perGroup==4)):(!row.mode && row.perGroup==1);
+            const bool range=tower?(row.minDistance==10 && row.maxDistance==13):farm?((row.minDistance==2 && row.maxDistance==5) || (!row.minDistance && !row.maxDistance)):prefab?(row.minDistance==10 && row.maxDistance==12):((row.minDistance==8 && row.maxDistance==14) || (!row.minDistance && !row.maxDistance));
+            const bool supported=row.owner==-1 && row.landId==1 && !row.matchPlayerCiv && !row.scaling && (row.groups==1 || (farm && row.groups==5) || (tower && row.groups==4)) &&
+                   quantity && range && (mixed || !(farm || tower) || resourceRows.size()==1) && !row.variance && row.radius==3 && row.terrain==-1 && row.spacing==(tower?6:0) && !row.temporarySpacing && !row.zoneDistance;
+            if(!supported)return fail("unsupported owned-building startup composition");
+            if(data.civs.size()<=1 || data.civs[1].units.size()<=size_t(buildingId) || data.terrainRestrictions.size()<=4)
+                return fail("missing owned-building prototype");
+            const auto &u=data.civs[1].units[buildingId];const auto *g=data.graphic(u.standingGraphic[0]);
+            if(!u.exists || u.id!=buildingId || u.type!=dat::UT_Building || u.cls!=(tower?10:farm?7:18) || u.hitPoints!=(tower?1250:farm?480:prefab?800:1500) ||
+               u.collisionSize[0]!=radius || u.collisionSize[1]!=radius || u.collisionSize[2]!=(farm?0:prefab?2:4) ||
+               u.clearanceSize[0]!=radius || u.clearanceSize[1]!=radius || u.terrainRestriction!=4 || u.hillMode!=((prefab || farm || tower)?0:3) ||
+               u.speed || u.flyMode || u.canBeBuiltOn || u.trait || u.convertTerrain || u.obstructionType!=(farm?0:2) || u.obstructionClass!=(farm?0:3) ||
+               u.standingGraphic[0]!=(tower?397:farm?1688:prefab?883:4075) || u.standingGraphic[1]!=-1 || u.constructionGraphic!=(tower?342:farm?-1:prefab?348:355) || u.foundationTerrainId!=(farm?7:27) ||
+               u.costs[0].type!=(tower?2:1) || u.costs[0].amount!=(tower?125:farm?50:prefab?25:160) || (u.costs[0].flag&255)!=1 ||
+               u.costs[1].type!=(tower?1:-1) || (tower && (u.costs[1].amount!=25 || (u.costs[1].flag&255)!=1)) || u.costs[2].type!=-1 || u.techId!=(tower?11:farm?20:prefab?16:31) || u.trainSound!=-1 || u.constructionSound!=(tower?227:farm?587:prefab?591:598) || u.adjacentMode!=(tower?1:0) || u.graphicsAngle ||
+               u.disappearsWhenBuilt || u.stackUnitId!=-1 || u.oldOverlayId!=-1 || u.transformUnit!=-1 || u.headUnit!=-1 ||
+               u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 || u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 ||
+               !g || g->sequenceType!=(tower?2:farm?0:prefab?6:1) || g->frameCount!=((farm || tower)?1:prefab?3:2) || g->angleCount!=(tower?8:1) || g->frameDuration!=((prefab || farm || tower)?0.f:.4f) || g->replayDelay ||
+               g->soundId!=-1 || !g->angleSounds.empty()) return fail("unsupported owned-building lifecycle metadata");
+            for(const auto &annex:u.annexes)if(annex.unitId!=-1)return fail("owned-building annexes are unsupported");
+            for(size_t n=0;n<u.resourceStorages.size();++n) {
+                const auto &storage=u.resourceStorages[n];const bool population=prefab && n==0,food=farm && n==0;
+                if(storage.type!=(food?0:population?4:-1) || storage.amount!=(food?15:population?5:0) || storage.flag!=(population?4:0))
+                    return fail("unsupported owned-building completion storage");
+            }
         }
     }
     const bool airTransport=std::any_of(resourceRows.begin(),resourceRows.end(),[](const auto &row){return row.unitId==1521;});
