@@ -5140,3 +5140,51 @@ group; opcode117/submode4 calls `5575a0` with a flattened queue index. The exact
 binding of each original UI cancellation control is still unresolved. Native
 queue-cell cancellation keeps its existing indexed semantics, now deferred;
 it is not silently changed to a type-based cancellation on incomplete evidence.
+
+### Target cursors and final-removal boundaries (2026-11-16)
+
+Target-cursor patrol, guard/follow, heal, unload, repair, garrison and attack-ground
+now use the same admitted-step queue. Clicks retain selected actor IDs, the
+chosen target ID and/or world destination, not screen coordinates or later
+selection. Accepted emission closes targeting immediately; gameplay execution
+and its success/failure feedback happen at dispatch. Read-only eligibility
+checks preserve targeting for invalid repair/heal/friendly-target clicks;
+unload pathfinding remains deferred to its gameplay execution. Dispatch resolves
+live targets again, so death or ownership changes do not retarget the command.
+This extends native admission consistently, without claiming every original
+opcode, pending-state marker or UI failure path is mapped.
+
+Four real-HUD regressions cover patrol, guard, deleted guard targets and repair
+through selection/camera changes. ASan/UBSan local admission and complete
+cost/bonus/research/healing/AI regressions pass. Desktop launcher/menu and
+60 render/audio frames pass. Logs: `target-queue-local.log`,
+`target-queue-bonus.log`, `target-queue-combat.log`, `target-queue-desktop.log`.
+Research reservations, construction placement, deletion, cheats, AI command
+emission and duplicate-command suppression remain separate outstanding paths.
+
+Object lifetime investigation now includes four actual final-removal controls:
+`4af380` invokes the state8 update and class-specific virtual destructor for
+base10, mobile70 or building80, then `4c4050/4aeff0` removes owner membership and
+world deregistration follows. Derived live updates and full descendant cleanup
+are not established by these final-callback controls. Existing-selection cleanup
+at `4c1960` removes state>=7 or contained objects; HP-driven dying states3..6
+alone are different from explicit-kill deselection. Sight-grid changes are not
+proof of physical collision removal.
+
+Eight additional controls use retained real Gaia masters411/349, selected and
+unselected, with resource amount0 and HP0 or50. HP0 proceeds through owner
+updates: state3/dying graphic5242; state7/dead-unit415 request and deselection;
+state8 with membership retained; then owner/world removal. HP50/resource0 stays
+in state2 with membership unchanged. Graphics, actual dead-unit allocation,
+fog and bookkeeping boundaries are explicitly modeled. This proves the
+HP-driven entry, not the actual gather-depletion caller, which still needs
+tracing. No native awake-list or death-registration change is shipped here:
+`active=false` and `Remains.age` are not substituted for these original states.
+
+Evidence is retained locally in `object-membership-removal-findings-2026-11-16.json`,
+`object-final-removal-controls-v1-oracle-2026-11-16.json`,
+`object-real-resource-depletion-findings-2026-11-16.json` and its v6 oracle.
+The next integration prerequisite is the actual depletion/state-entry and
+dead-unit creation path, followed by separating actionability from persistent
+update-list membership. Rebuilding lists from `active`, or assigning a fixed
+removal delay to every exhausted resource, would encode the wrong algorithm.
