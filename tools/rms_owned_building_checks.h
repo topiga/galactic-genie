@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
-// Actual4de830/5cfad0, captured Empire87/70/50; local rms-owned{87,70} findings, 2026-11-16.
+// Actual4de830/5cfad0, captured Empire87/70/50/79; local rms-owned{87,70} findings, 2026-11-16.
 static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &renderer) {
     const std::string baseline=R"(#const RMS_6 6
 #const RMS_21 21
@@ -30,6 +30,12 @@ static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
         {16160u, 1u, 6065u, 2983090062u, 1103799056u, 4191456395u, 1017236165u, 1017236165u, false, 50, false, 1},
         {1u, 1u, 5997u, 1477568208u, 1200157676u, 615177112u, 1017236165u, 1017236165u, false, 50, false, 5},
         {1u, 1u, 5987u, 2551954224u, 1372774334u, 742396127u, 1017236165u, 1017236165u, true, 50},
+        {1u, 1u, 5989u, 3117704239u, 1785968726u, 2071255114u, 1017236165u, 1017236165u, false, 79, false, 1},
+        {12345u, 1u, 5973u, 2132019962u, 374746908u, 1538211736u, 1017236165u, 1017236165u, false, 79, false, 1},
+        {16160u, 1u, 6065u, 510229448u, 2944556398u, 972306119u, 1017236165u, 1017236165u, false, 79, false, 1},
+        {1u, 1u, 5995u, 313705913u, 1879166474u, 1580653879u, 1017236165u, 1017236165u, false, 79, false, 4},
+        {12345u, 1u, 5981u, 3311600017u, 2243955132u, 929382136u, 1017236165u, 1017236165u, false, 50, false, 5},
+        {16160u, 1u, 6073u, 1320910692u, 1198529154u, 735700569u, 1017236165u, 1017236165u, false, 50, false, 5},
     };
     struct Building { uint32_t seed,rows,id,owner; float x,y; bool onCenter=false; int unit=87; bool loose=false; int groups=1; };
     const Building buildings[]={
@@ -95,10 +101,44 @@ static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
         {1, 1, 6027, 2, 37.5f, 87.5f, false, 50, false, 5},
         {1, 1, 6028, 2, 35.5f, 95.5f, false, 50, false, 5},
         {1, 1, 6029, 2, 39.5f, 95.5f, false, 50, false, 5},
+        {1, 1, 6020, 1, 84.5f, 42.5f, false, 79, false, 1},
+        {1, 1, 6021, 2, 42.5f, 102.5f, false, 79, false, 1},
+        {12345, 1, 6000, 1, 25.5f, 94.5f, false, 79, false, 1},
+        {12345, 1, 6001, 2, 73.5f, 2.5f, false, 79, false, 1},
+        {16160, 1, 6092, 1, 22.5f, 47.5f, false, 79, false, 1},
+        {16160, 1, 6093, 2, 47.5f, 106.5f, false, 79, false, 1},
+        {1, 1, 6020, 1, 84.5f, 42.5f, false, 79, false, 4},
+        {1, 1, 6021, 1, 96.5f, 23.5f, false, 79, false, 4},
+        {1, 1, 6022, 1, 107.5f, 33.5f, false, 79, false, 4},
+        {1, 1, 6023, 1, 105.5f, 44.5f, false, 79, false, 4},
+        {1, 1, 6024, 2, 24.5f, 97.5f, false, 79, false, 4},
+        {1, 1, 6025, 2, 40.5f, 103.5f, false, 79, false, 4},
+        {1, 1, 6026, 2, 48.5f, 92.5f, false, 79, false, 4},
+        {1, 1, 6027, 2, 33.5f, 79.5f, false, 79, false, 4},
+        {12345, 1, 6000, 1, 21.5f, 79.5f, false, 50, false, 5},
+        {12345, 1, 6001, 1, 17.5f, 81.5f, false, 50, false, 5},
+        {12345, 1, 6002, 1, 21.5f, 86.5f, false, 50, false, 5},
+        {12345, 1, 6003, 1, 24.5f, 79.5f, false, 50, false, 5},
+        {12345, 1, 6004, 1, 18.5f, 86.5f, false, 50, false, 5},
+        {12345, 1, 6005, 2, 86.5f, 10.5f, false, 50, false, 5},
+        {12345, 1, 6006, 2, 89.5f, 17.5f, false, 50, false, 5},
+        {12345, 1, 6007, 2, 83.5f, 17.5f, false, 50, false, 5},
+        {12345, 1, 6008, 2, 82.5f, 9.5f, false, 50, false, 5},
+        {12345, 1, 6009, 2, 89.5f, 14.5f, false, 50, false, 5},
+        {16160, 1, 6092, 1, 14.5f, 36.5f, false, 50, false, 5},
+        {16160, 1, 6093, 1, 17.5f, 39.5f, false, 50, false, 5},
+        {16160, 1, 6094, 1, 22.5f, 39.5f, false, 50, false, 5},
+        {16160, 1, 6095, 1, 18.5f, 32.5f, false, 50, false, 5},
+        {16160, 1, 6096, 1, 14.5f, 39.5f, false, 50, false, 5},
+        {16160, 1, 6097, 2, 44.5f, 99.5f, false, 50, false, 5},
+        {16160, 1, 6098, 2, 39.5f, 91.5f, false, 50, false, 5},
+        {16160, 1, 6099, 2, 37.5f, 95.5f, false, 50, false, 5},
+        {16160, 1, 6100, 2, 40.5f, 99.5f, false, 50, false, 5},
+        {16160, 1, 6101, 2, 37.5f, 99.5f, false, 50, false, 5},
     };
     for(const auto &c:cases) {
         std::string source=baseline+(c.rows==2?extra:"");
-        const bool prefab=c.unit==70,farm=c.unit==50;
+        const bool prefab=c.unit==70,farm=c.unit==50,tower=c.unit==79;
         const int foundation=farm?7:27;
         const int quantity=(farm && c.onCenter)?0:c.rows*(c.loose?4:c.groups);
         if(c.unit!=87) {
@@ -107,7 +147,7 @@ static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
             source.replace(source.find("#const "+token+" 87"),16,"#const "+token+" "+std::to_string(c.unit));
             const std::string range="min_distance_to_players 8 max_distance_to_players 14";
             for(size_t pos=0;(pos=source.find(range,pos))!=std::string::npos;) {
-                source.replace(pos,range.size(),farm?"min_distance_to_players 2 max_distance_to_players 5":"min_distance_to_players 10 max_distance_to_players 12");
+                source.replace(pos,range.size(),tower?"min_distance_to_players 10 max_distance_to_players 13 min_distance_group_placement 6":farm?"min_distance_to_players 2 max_distance_to_players 5":"min_distance_to_players 10 max_distance_to_players 12");
                 ++pos;
             }
             if(c.loose) {
@@ -132,6 +172,14 @@ static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
             check(scaledScript.load(0,[&](int32_t id,std::vector<uint8_t> &bytes){if(id)return false;bytes.assign(scaled.begin(),scaled.end());return true;},{},&error),error.c_str());
             check(!swgb::generateRmsMap(scaledScript,{"FIXED_POSITIONS"},120,120,assets.dat(),rng,map,&error,2,{1,1}) && rng==c.seed && map.terrain.empty(),
                   "Unverified scaled owned-building quantity rejects atomically");
+            if(tower) {
+                auto adjacent=source;const auto pos=adjacent.find("min_distance_group_placement 6");
+                adjacent.replace(pos,30,"min_distance_group_placement 0");
+                swgb::RmsScript adjacentScript;
+                check(adjacentScript.load(0,[&](int32_t id,std::vector<uint8_t> &bytes){if(id)return false;bytes.assign(adjacent.begin(),adjacent.end());return true;},{},&error),error.c_str());
+                check(!swgb::generateRmsMap(adjacentScript,{"FIXED_POSITIONS"},120,120,assets.dat(),rng,map,&error,2,{1,1}) && rng==c.seed && map.terrain.empty(),
+                      "Unverified touching turret placement rejects atomically");
+            }
             auto bad=assets.dat();bad.civs[1].units[c.unit].foundationTerrainId=farm?27:7;
             check(!swgb::generateRmsMap(script,{"FIXED_POSITIONS"},120,120,bad,rng,map,&error,2,{1,1}) && rng==c.seed && map.terrain.empty(),
                   "Unsupported owned-building foundation rejects atomically");
@@ -161,17 +209,18 @@ static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
         check(game.initRms(script,{"FIXED_POSITIONS"},120,rng,&error,2,{1,1}),error.c_str());
         check(rng==c.rng && game.activeObjectCount()==c.count,"Owned-building native import count/RNG");
         for(int owner:{1,2}) {
-            check(game.resource(owner,98)==575+(farm?50:prefab?25:160)*quantity && game.resource(owner,164)==200 && game.resource(owner,165)==375+(farm?50:prefab?25:160)*quantity &&
-                  game.resource(owner,4)==1+(prefab?5*quantity:0) && game.resource(owner,11)==4 && game.resource(owner,21)==((prefab || farm)?2:3) && game.resource(owner,99)==0,
+            check(game.resource(owner,98)==575+(tower?150:farm?50:prefab?25:160)*quantity && game.resource(owner,164)==200 && game.resource(owner,165)==375+(tower?150:farm?50:prefab?25:160)*quantity &&
+                  game.resource(owner,4)==1+(prefab?5*quantity:0) && game.resource(owner,11)==4 && game.resource(owner,21)==((prefab || farm || tower)?2:3) && game.resource(owner,99)==0,
                   "Original building cost and research counters without duplicate completion grants");
-            check(game.technologyOrderForTesting(owner)==(farm?(quantity?std::vector<int>({0,486,22,451,20}):std::vector<int>({0,486,22,451})):prefab?std::vector<int>({0,486,22,451,16}):std::vector<int>({0,486,22,451,31,85,209})) && (prefab || farm || game.unitAvailableForTesting(owner,307)),
+            check(game.technologyOrderForTesting(owner)==(tower?std::vector<int>({0,486,22,451,11}):farm?(quantity?std::vector<int>({0,486,22,451,20}):std::vector<int>({0,486,22,451})):prefab?std::vector<int>({0,486,22,451,16}):std::vector<int>({0,486,22,451,31,85,209})) && (prefab || farm || tower || game.unitAvailableForTesting(owner,307)),
                   "Original CC then building research chronology and completion unlock");
         }
         for(const auto &b:buildings)if(b.seed==c.seed && b.rows==c.rows && b.onCenter==c.onCenter && b.unit==c.unit && b.loose==c.loose && b.groups==c.groups) {
             const auto id=b.id+1;const auto position=game.objectPosition(id);
-            check(game.objectUnitId(id)==c.unit && game.objectPlayer(id)==int(b.owner) && game.objectHitPoints(id)==(farm?480:prefab?800:1500) &&
+            check(game.objectUnitId(id)==c.unit && game.objectPlayer(id)==int(b.owner) && game.objectHitPoints(id)==(tower?1250:farm?480:prefab?800:1500) &&
                   position[0]==b.y && position[1]==120-b.x && game.pendingFoundationForTesting(id)==(b.owner==1?255:foundation),
                   "Original building ownership, health, position and deferred foundation");
+            if(tower)check(std::abs(game.objectFacing(id)-2.35619449f)<1e-5f,"Original isolated turret facet2 survives native import");
             if(farm)check(game.objectResourceAmount(id)==15,"Original completed Farm stores fifteen food");
             const auto animation=game.objectAnimationForTesting(id);
             check(animation[0]==0 && animation[1]==0,"Original building resets animation on completion");
@@ -183,7 +232,7 @@ static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
             check(game.spawnObjectForTesting(1,83,1,b.y,120-b.x)!=0,"Reveal original enemy building foundation");
             game.lookAt(b.y,120-b.x);game.render(renderer,960,544);
             check(game.pendingFoundationForTesting(id)==255,"Visible enemy building consumes deferred foundation");
-            for(int y=int(b.y)-1;y<int(b.y)+(prefab?1:2);++y)for(int x=int(b.x)-1;x<int(b.x)+(prefab?1:2);++x)
+            for(int y=int(b.y)-(tower?0:1);y<int(b.y)+((prefab || tower)?1:2);++y)for(int x=int(b.x)-(tower?0:1);x<int(b.x)+((prefab || tower)?1:2);++x)
                 check(game.terrainAtForTesting(y,119-x)==foundation,"Enemy building paints exactly its original footprint");
         }
     }

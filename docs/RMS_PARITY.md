@@ -8,8 +8,8 @@ Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
 Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206, allied roads54218, central water54212 and Motherlode54225.
 The shared packaged suite contains68 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
-Gaia resource accounting and deferred foundation rendering. Seventeen additional authored
-fixtures cover owned Troop Center, Prefab and Farm placement, completion research order, population grants and rejected placement.
+Gaia resource accounting and deferred foundation rendering. Twenty-three additional authored
+fixtures cover owned Troop Center, Prefab, Farm and defensive-building placement, completion research order, population grants and rejected placement.
 
 The standard production audit accepts54/138 map/seed attempts (eighteen of46 resources,
 three seeds each);84 are explicitly rejected. The allied54218 configuration is
@@ -3462,3 +3462,45 @@ slopes, other civilizations, harvesting and depletion remain outside this proof.
 
 The68 packaged cases and seventeen owned-building fixtures pass under
 ASan/UBSan after this change. Strict integrated RMS checks also pass.
+
+
+### Defensive-building startup and further Farm seeds (2026-11-16)
+
+Defense79 now uses the shared owned-building candidate loop for one per player
+and the raw54208 four-per-player row, at distances10..13 and spacing6. Four full
+original comparisons match every ordered object, terrain/elevation/slope grid,
+startup animation, pending foundation and final RNG.
+
+| Row form | Seed | Objects | Final RNG |
+| --- | --- | --- | --- |
+| Single | 1 | 5989 | 3117704239 |
+| Single | 12345 | 5973 | 2132019962 |
+| Single | 16160 | 6065 | 510229448 |
+| Four per owner | 1 | 5995 | 313705913 |
+
+The original constructor consumes six draws including completion reseeding.
+Its random initial heading is overwritten by adjacency handling: isolated
+buildings finish at facet2. The verified spacing keeps these buildings apart;
+touching-building configurations remain rejected. Spacing removes the inclusive
+square from the current candidate queue and persists passable-cell exclusions
+for the next owner's queue. Enemy1x1 foundation27 remains deferred until seen.
+
+Native import tests verify1250HP, facet2,125 ore+25 carbon construction
+accounting per building, no population grant, and tech11 completion only once
+per owner. Tests also reject an unverified zero-spacing row before generation.
+Evidence: `rms-owned79-findings-2026-11-16.json`, original loader provenance,
+`rms-owned79-facing-static-2026-11-16.txt`, and the
+`rms-text-full-owned79-{single,four}` full/research/native comparisons.
+
+Two additional five-Farm cases now belong to the shared building regressions:
+seed12345 produces5981 objects/RNG3311600017; seed16160 produces6073 objects/
+RNG1320910692. Both place five Farms per owner, with food15 and one-time tech20
+confirmed by independent original resource replays. No partial group was found
+in these seeds; the separate blocked case still verifies zero-placement handling.
+
+This brings the authored owned-building suite to23 cases, separate from the68
+packaged cases. Full54208 still requires mixed rows, walls/gates and its actual
+terrain composition; this section does not claim those are enabled.
+
+All68 packaged and23 owned-building regressions pass under ASan/UBSan;
+strict integrated RMS checks pass after the defensive-building change.
