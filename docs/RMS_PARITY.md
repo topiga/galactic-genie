@@ -3727,3 +3727,43 @@ The shared suite now contains72 packaged cases; strict RMS and native desktop
 smoke checks pass. The production CLI audit accepts57/138 configurations.
 Optional resource rows and other randomized quantities are being compared
 separately; these samples do not establish every seed or setting as1:1.
+
+### Fortress optional food rows (2026-11-16)
+
+Five additional actual-derived Tiny starts match the original complete ordered
+objects, poses, terrain/elevation/slopes and final RNG:
+
+| Seed | Biome | Objects | RNG | Branch exercised |
+| --- | --- | --- | --- | --- |
+| 0 | Naboo | 1866 | 3055721841 | No near forage or late hunt row |
+| 13 | Naboo | 1804 | 1253119621 | Three forage, two hunt animals requested per player |
+| 10 | Naboo | 1889 | 527864596 | One hunt animal requested per player |
+| 4000 | Reytha | 1844 | 553662306 | Three forage, one Falumpaset requested per player |
+| 7000 | Zaloriis | 1910 | 2138941861 | Two Rontos requested per player |
+
+The shipped54103/54208 scripts independently select omitted/3/6/12 forage and
+omitted/1/2/4 hunt rows. Zaloriis omits forage; hunt species are822 on Naboo,
+822/1364 on Reytha,1249/1364 on Zaloriis. Admission now recognizes those choices
+while retaining all other row-field and geometry checks. Placement itself uses
+the existing controllers. These requested quantities are not forced when the
+original placement queue exhausts.
+
+The five permanent fixtures also retain original cache, resource, research,
+owned height/HP and imported population expectations. Seed10 creates only three
+Prefabs for owner2: remaining capacity16, HUD4/20. The other new starts have
+remaining capacity21 per owner. Original cache observers independently reproduce
+the complete baseline worlds before exporting cache hashes.
+
+Evidence: `rms-fortress54208-derived-sweep-findings-2026-11-16.json`,
+`rms-fortress-0-13-10-case-initializers-2026-11-16.json`,
+`rms-fortress-4000-7000-case-initializers-2026-11-16.json`, and the corresponding
+`rms-fortress54208-tiny-derived-native-{seed}-2026-11-16.json` comparisons.
+Nine full Fortress samples establish these branches, not arbitrary seeds,
+civilizations, map sizes, diagonal gates or subsequent gameplay parity.
+
+Validation:77 packaged cases plus the retained Forest/general-row/authored
+building/wall suites pass under ASan/UBSan. The production CLI audit with the
+three actual preset symbols still accepts57/138 attempts (19 resources);
+acceptance is not full-original comparison coverage. CLI file/archive tests,
+strict RMS tests and desktop headless menu/game/render/audio-stream smoke passed.
+No live Windows UI or audio comparison was performed in this continuation.

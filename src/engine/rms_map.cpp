@@ -1110,15 +1110,29 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     if(row.unitId==348)row.unitId=reytha?411:1161;
                     if(!reytha && row.unitId==822)row.unitId=1249;
                 }
-                expected.erase(std::remove_if(expected.begin(),expected.end(),[&](const auto &row){return reytha?row.unitId==822:(row.unitId==59 || row.unitId==816);}),expected.end());
+                if(!reytha)expected.erase(std::remove_if(expected.begin(),expected.end(),[](const auto &row){return row.unitId==59 || row.unitId==816;}),expected.end());
             }
             const auto extraResources=std::find_if(expected.begin(),expected.end(),[](const auto &row){return row.unitId==816 || row.unitId==1585;});
             if(defines.count("TINY_MAP"))expected.insert(extraResources,{{66,-1,2,0,3,0,2,2,-1,-2,40,-1,9,0,0,0},{102,-1,2,0,4,1,1,2,-1,-2,30,-1,9,0,0,0}});
+            // The original food draws may omit forage/hunt rows entirely.
+            for(auto it=expected.begin();it!=expected.end();) {
+                auto &row=*it;
+                const bool forage=row.unitId==59,hunt=row.unitId==822 || row.unitId==1249;
+                if(!forage && !hunt){++it;continue;}
+                const auto found=std::find_if(resourceRows.begin(),resourceRows.end(),[&](const auto &actual) {
+                    return forage?actual.unitId==59:(actual.unitId==row.unitId || (lands[0].terrain!=0 && actual.unitId==1364));
+                });
+                if(found==resourceRows.end()){it=expected.erase(it);continue;}
+                if((forage && (found->perGroup==3 || found->perGroup==6 || found->perGroup==12)) ||
+                   (hunt && (found->perGroup==1 || found->perGroup==2 || found->perGroup==4))) {
+                    row.unitId=found->unitId;row.perGroup=found->perGroup;
+                }
+                ++it;
+            }
             if(resourceRows.size()!=std::size(expected))return fail("unsupported fortress object composition");
             for(size_t n=0;n<resourceRows.size();++n) {
                 const auto &a=resourceRows[n];auto b=expected[n];
                 if(b.unitId==126 && a.unitId==812)b.unitId=812;
-                if(b.unitId==822 && a.perGroup==2)b.perGroup=2;
                 if(a.unitId!=b.unitId || a.terrain!=b.terrain || a.mode!=b.mode || a.scaling!=b.scaling || a.perGroup!=b.perGroup || a.variance!=b.variance ||
                    a.groups!=b.groups || a.radius!=b.radius || a.owner!=b.owner || a.landId!=b.landId || a.minDistance!=b.minDistance || a.maxDistance!=b.maxDistance ||
                    a.spacing!=b.spacing || a.temporarySpacing!=b.temporarySpacing || a.zoneDistance!=b.zoneDistance || a.matchPlayerCiv!=b.matchPlayerCiv)
