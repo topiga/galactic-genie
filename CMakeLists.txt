@@ -100,6 +100,9 @@ else()
         src/render/soft_renderer.cpp
     )
     target_link_libraries(swgbtool PRIVATE ZLIB::ZLIB)
+    add_executable(swgb-rms-snapshot EXCLUDE_FROM_ALL tools/rms_snapshot.cpp
+        ${SWGB_CORE_SOURCES} src/render/soft_renderer.cpp)
+    target_link_libraries(swgb-rms-snapshot PRIVATE ZLIB::ZLIB)
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(swgbtool PRIVATE -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers)
     endif()

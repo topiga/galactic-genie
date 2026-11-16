@@ -4309,3 +4309,56 @@ Validation:131 packaged startup cases (119 general and12 walled cases), includin
 276 new pose/health/height fixtures, pass under ASan/UBSan. Strict map checks,
 production CLI checks and desktop dummy-driver smoke pass. The production audit
 accepts102 of138 configurations across34 resources; this is not a parity score.
+
+### Automated unseen-seed comparisons (2026-11-16)
+
+`script/compare_rms_original.py` replaces the per-profile comparison scripts for
+new differential runs. It takes a local JSON manifest, executes at most two
+original probes concurrently, then compares the native snapshot against each
+original capture. It reports `match`, `mismatch`, `native_rejected`,
+`native_error`, `original_error` and harness `error` separately. A rejection is
+not a match. Missing object/grid tails count as differences; errors do not
+silently skip cases. Reports retain the first object/grid difference, counts,
+RNG, pose differences, input hashes and native executable hash. Output directories
+must be new; original captures may be replayed with `--existing` only when their
+seed, civilizations, probe hash and RMS source hash agree.
+
+The current adapter deliberately tests Tiny120, fixed/default, two enemy Empire
+players. It compares ordered object ID/owner/type/facet/XY, complete terrain,
+elevation and slope grids, final RNG and captured poses. It does not compare
+health, absolute object height, runtime simulation or UI. Wider map sizes and
+player/civilization combinations require independently verified original probe
+contexts; successful seeds here must not be presented as coverage of those axes.
+
+Build with `cmake --build <build> --target swgb-rms-snapshot`, or on this Mac use
+`python3 script/build_rms_snapshot.py`. The latter uses the same core source list
+and Apple Clang with ASan/UBSan. CMake is not installed on the reference Mac;
+the Apple Clang build is the tested route. Run the asset-independent comparator
+checks with `python3 script/test_compare_rms_original.py`.
+
+A local manifest is a JSON array. Each entry contains `id` (unique safe name),
+`resource` (DRS RMS ID), `seed` (uint32), and absolute paths `probe`, `oracle`,
+`source`. The probe is a retained controlled-original Python runner; `oracle` is
+its expected full JSON capture, and `source` is the matching extracted RMS file.
+No original executable, game assets or private capture files are committed.
+
+```
+python3 script/compare_rms_original.py \
+  --manifest /absolute/path/cases.json --output /absolute/path/new-run \
+  --native /absolute/path/swgb-rms-snapshot --data /absolute/path/Data \
+  --python /absolute/path/unicorn-venv/bin/python --jobs 2
+```
+
+The first broad run exposed an export defect in the old diagnostic probe: empty
+native elevation/slope vectors mean a flat map, but it wrote zero-byte files.
+Old `zip`-based comparisons overlooked their missing tails. The new snapshot
+writes every implicit zero tile; the comparator still rejects truncated files.
+This changes diagnostic serialization, not terrain generation behavior.
+
+Wave1: seeds20261116 and3141592653 were absent from retained full-map fixtures.
+All8 cases across Ice Lake54226, Swamp54221, Space Mass54214 and Geonosis55018
+match with the corrected snapshot, without engine or profile changes. Original
+captures were newly executed, then replayed against the reproducible repository
+build. Evidence: `rms-unseen-seeds-wave1-report-2026-11-16.json`. Eight
+asset-independent comparator tests cover truncation, extra objects, RNG, poses,
+malformed records, duplicate IDs, complete CLI reporting and stale source rejection.
