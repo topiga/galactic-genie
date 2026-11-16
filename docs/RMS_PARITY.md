@@ -2,16 +2,16 @@
 
 ## Current comparison coverage: 2026-11-16
 
-Fourteen packaged profiles have complete original-runner comparisons at fixed Tiny120,
+Fifteen packaged profiles have complete original-runner comparisons at fixed Tiny120,
 two Empire players and default resources: Forest54204, Reytha54220, Arid54201,
 Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
-Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014 and Migration54216.
-The shared packaged suite contains53 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
+Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216 and five-land islands54217.
+The shared packaged suite contains56 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
 Gaia resource accounting and deferred foundation rendering.
 
-The standard production audit accepts42/138 map/seed attempts (fourteen of46 resources,
-three seeds each);96 are explicitly rejected. This measures supported
+The standard production audit accepts45/138 map/seed attempts (fifteen of46 resources,
+three seeds each);93 are explicitly rejected. This measures supported
 configurations, not an engine completion percentage. New comparisons run the
 original executable locally with modeled host boundaries. Live Windows evidence
 below remains a separate, earlier baseline. Later gameplay and other map settings
@@ -3088,3 +3088,42 @@ integration and production CLI tests pass. The production audit accepts42/138
 attempts across fourteen profiles;96 remain explicitly unsupported.
 The rebuilt desktop smoke passes using dummy video/audio; no fresh live Windows
 or pixel/audio-mixing comparison is claimed.
+
+### Five-land islands and wider connections (2026-11-16)
+
+Raw54217 combines two player lands with three neutral islands, seven elevation
+levels and water connections (no cliff stage). Three full original runs cover
+Kessel, Alaris and Endor at fixed Tiny120/two-Empire/default resources:
+
+| Seed | Biome | Objects | Final RNG | Gaia unit/total cost |
+|---:|---|---:|---:|---:|
+| 1 | Kessel | 1726 | 3072405541 | 2050 |
+| 12345 | Alaris | 1763 | 3707918282 | 2400 |
+| 16160 | Endor | 1735 | 999382854 | 1350 |
+
+All ordered objects, grids and captured poses match; independent original
+resource replays agree (Gaia building cost0, storage11=5). Native startup now
+admits the compared player-border combinations and five growing lands. The
+existing fixed-start algorithm correctly places players inside the reduced
+border rectangle. Global holocrons exclude all five centers.
+
+The neutral islands retain internal IDs30,35,35 and owner0. Two tight groups of
+four nova deposits select only ID30; the duplicate35 islands receive neither
+group. Player-only connection kind63 excludes all three neutral owners and uses
+water width3/variance1, replacing terrain1/22/23 with4. Exact original metadata
+replays capture all99 terrain connection settings and the seven finalized terrain
+rows, independently of native preprocessing.
+
+Evidence: `rms-packaged-islands54217-full-findings-2026-11-16.json`, its three
+metadata supplements and individual full/resource/comparison files. Metadata
+supplement raw records begin four bytes into the16-byte land record and are
+labeled[y,id,owner,nextRowX]; IDs and owners are read directly, while full land
+records independently supply positions. No new game assets were required.
+These captures do not establish larger sizes, other player settings or later
+match behavior.
+
+All56 shared packaged cases pass with ASan/UBSan, along with retained Forest,
+52 general rows, selected-holocron edge cases, foundation and transport checks.
+Strict RMS integration and production CLI tests pass. The audit accepts45/138
+attempts across fifteen profiles;93 remain unsupported. The rebuilt desktop
+preferences/menu/effects/music smoke passes with dummy video/audio.

@@ -116,7 +116,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
     const RmsObjectRow *objectRow=nullptr);
 // Original stock holocron285 row: five placements, land-center exclusion25,
 // temporary spacing20. Bounded to64-square grass or120-square dry/Forest21 terrain
-// with two land centers (or three/four at120). Slopes do not restrict it; occupiedTiles
+// with two land centers (or three to five at120). Slopes do not restrict it; occupiedTiles
 // supplies retained static obstacles, including forest trees and starting buildings.
 // selectedLand restricts the queue to its connected terrain zone on Migration120.
 // This helper does not import holocrons or implement their pickup/gameplay.

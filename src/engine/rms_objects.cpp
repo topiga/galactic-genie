@@ -733,8 +733,8 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
         if(err) *err=std::string("RMS holocron: ")+reason;
         return false;
     };
-    if((width!=64 && width!=120) || height!=width || terrain.size()!=size_t(width)*height || (landCenters.size()!=2 && (width!=120 || (landCenters.size()!=3 && landCenters.size()!=4))))
-        return fail("requires64/120-square terrain and two land centers (or three/four at120)");
+    if((width!=64 && width!=120) || height!=width || terrain.size()!=size_t(width)*height || (landCenters.size()!=2 && (width!=120 || (landCenters.size()<3 || landCenters.size()>5))))
+        return fail("requires64/120-square terrain and two land centers (or three to five at120)");
     for(const auto &start:landCenters)
         if(start.x<2 || start.y<2 || start.x>int(width)-2 || start.y>int(height)-2) return fail("invalid land center");
     if(std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
