@@ -5247,3 +5247,26 @@ and sprite/controller release followed by attack-to-parent-gather transition.
 Evidence is frozen in `tree-worker-reload-controls-v1-oracle-2026-11-16.json`
 and `tree-worker-task-reload-findings-2026-11-16.json`; worker83 fallback remains
 untested. No native felling timing change is inferred from reload alone.
+
+### Gathering HP independence and attack animation evidence (2026-11-16)
+
+Native resource work no longer scales HP by the fraction of resources remaining.
+The original `404ee0 → 5519b0` controls change amount only. A native regression
+uses a temporary positive-HP Gaia102 prototype with its original gathering task:
+it confirms partial gathering preserves HP50, and further gathering after
+independent damage preserves HP37. The first assertion failed before removing
+the proportional-HP block. The fixture restores its DAT prototype on exit and
+avoids depletion, so it does not claim the remaining death path is corrected.
+
+Actual graphic7245 loading, sprite construction/update and attack9 now confirm
+an eight-frame,0.1-second animation releases the pending hit crossing frame4.
+Real damage lowers treeHP50 to25; later frames do not repeat the hit. A further
+30-phase restart control reaches hits at phases4 and24. Reload resets before
+state7 starts, not on impact. Same-graphic restart does not reset animation:
+phase20 consumes frame4 crossing while entering the new attack state, so that
+pending hit releases at the phase24 cycle wrap. A reset-per-shot delay would be
+incorrect even if its first hit matched. Source controls are retained locally as
+`tree-attack-release-v2-oracle-2026-11-16.json` and
+`tree-attack-restart-v2-oracle-2026-11-16.json`. These execute original attack
+code with explicit lookup/visibility/notification boundaries; target owner
+lifecycle and full parent action110 transition are not yet established by them.

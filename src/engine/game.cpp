@@ -6891,23 +6891,6 @@ void Game::updateGathering(float dt,int player) {
         worker.carriedResourceType = resource->resourceType;
         worker.carriedAmount = transfer.carried;
         resource->resourceAmount = transfer.remaining;
-        if (resource->maxHitPoints > 0 && !resource->felled &&
-            resource->unit->cls != 7) {
-            float initialAmount = 0.0f;
-            for (const dat::ResourceStorage &storage :
-                 resource->unit->resourceStorages)
-                if (storage.type == resource->resourceType)
-                    initialAmount =
-                        std::max(
-                            initialAmount,
-                            storage.amount);
-            if (initialAmount > 0)
-                resource->hitPoints = std::max(
-                    1.0f,
-                    resource->maxHitPoints *
-                        resource->resourceAmount /
-                        initialAmount);
-        }
         if (resource->resourceAmount <= 0.001f) {
             if (resource->unit->cls == 7 && resource->player > 0 &&
                 reseedQueue_[(size_t)resource->player] > 0) {
