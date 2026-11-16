@@ -3319,7 +3319,9 @@ bool Game::isInspectable(const Object &object) const {
             return false;
     // Resources (trees, mines, bushes, animals, fish) can be clicked to see
     // what is left, like the original (pick requires only state < 7).
-    if (object.resourceAmount > 0.0f && object.resourceType >= 0 && object.resourceType <= 3 &&
+    if (object.resourceType >= 0 && object.resourceType <= 3 &&
+        (object.resourceAmount > 0.f ||
+         (object.unit->type < dat::UT_Combatant && object.hitPoints >= 1.f)) &&
         (object.player == 0 || object.unit->type < dat::UT_Combatant))
         return true;
     return object.player > 0 && object.unit->type >= dat::UT_Combatant;
@@ -6914,6 +6916,10 @@ void Game::updateGathering(float dt,int player) {
                 assignBuilder(worker, *resource);
                 continue;
             }
+            // Resource subtraction5519b0 does not kill a living base object.
+            if (resource->unit->type < dat::UT_Combatant && resource->hitPoints >= 1.f)
+                continue;
+            // shortcut: Dead resources still need original owner-list lifecycle and final removal.
             killObject(*resource, false);
             depletedResource = true;
         }

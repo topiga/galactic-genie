@@ -5300,3 +5300,33 @@ This closes the action transition, not full elapsed-world timing or native
 felling parity. Exact branches, sprite arithmetic, failed probes and source
 hashes are in `tree-felling-release-transition-findings-2026-11-16.json`, with
 `tree-parent-to-gather-v5-oracle-2026-11-16.json` and the restart-v3 oracle.
+
+Exhausting a base resource with HP>=1 now preserves the object and its inspection
+selection. Original full-gather and later owner-update controls retain state2
+for this case; reaching amount0 is not a kill request. The shared resource
+mutation vtable inheritance is recorded in
+`object-resource-mutation-inheritance-findings-2026-11-16.json`. The native
+fixture exhausts a two-unit Gaia102 deposit with50HP, then runs four further
+updates and checks identity/HP/selection. It failed before the change. The guard
+uses HP>=1 because the original considers fractional HP below1 dead. Workers
+already reject exhausted resources when selecting their next target. The
+zero-HP path, farms and full owner-list death lifecycle remain unported; their
+existing removal behavior is not presented as equivalent.
+
+Base damage dispatch passes the focused and broad gameplay ASan/UBSan suites
+(`base-damage-local.log`, `base-damage-bonus.log`). The living-exhaustion change
+passes its reproduced regression and focused checks, plus combat/gathering,
+drop-off, repair, garrison and attack-ground checks
+(`living-depletion-local.log`, `living-depletion-combat.log`).
+
+Next native integration boundary: original stationary workers decrement reload,
+advance lifecycle/sprites, then update the action controller. Native gathering
+currently runs in the production phase before `updatePlayerObjects`, while
+combat owns a separate impact-based cooldown and resets animation per shot.
+The felling transition must share persistent action/sprite state and this order;
+changing only the fixed delay would contradict the new restart controls.
+Awake/sleeping registration likewise needs authoritative action-target reference
+slots and live swap-last traversal, not reconstruction from `active` flags.
+The final desktop rebuild passes menu/preferences and60 dummy-driver frames
+with effects/music decoding (`living-depletion-desktop.log`); no new live
+Windows visual/audio comparison was performed in this pass.
