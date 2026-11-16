@@ -40,8 +40,9 @@ static void checkGeneralObjectRows() {
  row.landId=1;row.owner=0;row.temporarySpacing=0;rng=1;
  assert(run(rng,occupied,16000000,{{3,3}}));assert(out.size()==1);
  row.landId=-1;row.owner=-1;row.mode=1;row.groups=1;row.perGroup=8;row.radius=1;row.terrain=6;
- terrain[27]=6;eligibility.clear();rng=1;assert(run(rng));assert(out.size()==8);
- assert(std::any_of(out.begin(),out.end(),[&](const auto &p){return terrain[int(p.y)*8+int(p.x)]==0;}));
+ terrain[27]=6;eligibility.clear();rng=1;assert(run(rng));assert(out.size()==1);
+ // Original4dee03 filters every loose member, not only its group center.
+ assert(out[0].x==3.5f && out[0].y==3.5f);
  std::cout<<"general executor checks passed\n";
 }
 

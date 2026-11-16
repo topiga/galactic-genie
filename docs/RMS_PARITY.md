@@ -2770,3 +2770,9 @@ and Gaia foundation behavior are not yet enabled.
 Evidence: `rms-packaged-object-rows-55019-TINY_MAP-1-2026-11-15.json` and
 `rms-tatooine-new-inventory-2026-11-16.json` retain original parser output and
 source hashes. The malformed shipped script is not rewritten.
+
+The broader20-suite asset-independent run exposed one old synthetic assertion
+that expected loose-group members on the wrong terrain. It is corrected to the
+original4dee03 behavior already exercised by the complete54209 captures; the
+single eligible tile now yields one object. All20 suites pass after rerunning
+the corrected suite and the remaining candidate/AI suites.
