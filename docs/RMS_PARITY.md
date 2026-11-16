@@ -3806,3 +3806,45 @@ Shared packaged coverage is83 cases. ASan/UBSan regressions, strict RMS checks,
 CLI file/archive checks and rebuilt desktop headless smoke pass. The rebuilt
 production audit accepts60/138 configurations across20 resources; acceptance
 alone is not original parity evidence. No live Windows/UI/audio comparison.
+
+### Neutral resource islands and player zones (2026-11-16)
+
+Actual derived-reader Tiny/fixed/default full references now cover Satellites54211
+and Watermass54202. Both create two neutral resource islands after the player
+lands: original source IDs20/23 become finalized IDs30/33. The existing target
+selector and object controller preserve those identities and resource placement.
+
+| Resource | Seed | Biome | Player zones | Objects | RNG | Gaia unit costs |
+| --- | --- | --- | --- | --- | --- | --- |
+| 54211 | 1 | Alaris | 1 / 2 | 1137 | 3534373653 | 1250 |
+| 54211 | 4000 | Naboo | 1 / 2 | 1119 | 50054625 | 1150 |
+| 54211 | 16160 | Zaloriis | 1 / 2 | 1109 | 4264635455 | 1450 |
+| 54202 | 1 | Yavin | 2 / 3 | 1145 | 2022788982 | 1500 |
+| 54202 | 4000 | Endor | 18 / 18 | 680 | 194355643 | 1200 |
+| 54202 | 16160 | Reytha | 3 / 2 | 687 | 3389064271 | 2250 |
+| 54202 | 8000 | Zaloriis | 18 / 18 | 1126 | 810679061 | 2400 |
+
+All seven comparisons match complete ordered records, XY positions, facets,
+startup poses, terrain/elevation/slopes and RNG. The permanent native tests also
+verify952 retained poses/health values, deferred foundations, land ownership/IDs,
+costs and population. Every player retains cost575 split200/375, population used4
+and remaining capacity1. Gaia has five holocrons, no population usage, and no
+building cost. These counters are captured directly in each full original run.
+
+One bounded geometry predicate reuses the original controllers for both maps.
+It validates the shared four-land layout, exact terrain rows, borders and
+land-ID order, while distinguishing ordinal Satellites zones from Watermass's
+shared18 or randomized2..4 zones. The original runs above cover shared zones and
+both observed random assignments; zone4 and arbitrary seed combinations are not
+claimed as newly full-map compared. Other sizes, civilizations and team setups
+remain outside this profile.
+
+Evidence: `rms-islands54211-derived-original-findings-2026-11-16.json`,
+`rms-watermass54202-derived-original-findings-2026-11-16.json`, and corresponding
+`rms-{islands54211,watermass54202}-tiny-derived-native-{seed}-2026-11-16.json`.
+The90 packaged regressions, retained authored suites, strict RMS checks and
+CLI file/archive checks pass. No live Windows UI/audio comparison was performed.
+Rebuilt desktop headless menu/game/render/audio-stream checks also pass. The
+production CLI audit now accepts66/138 configurations across22 resources;
+remaining rejected profiles still fail explicitly rather than silently using
+a different generator.
