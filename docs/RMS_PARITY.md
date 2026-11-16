@@ -4747,8 +4747,9 @@ passes menu navigation and 60 render/audio smoke frames.
 
 Full session initialization remains incomplete. The desktop still calls the
 custom two-player `initSkirmish` path; `initRms` is a diagnostic world import.
-Starting resources, runtime RNG handoff, AI activation, multi-player victory,
-camera and setup options need an integrated session path. Original UI/static
+At this checkpoint, starting resources, runtime RNG handoff, AI activation,
+multi-player victory, camera and setup options still needed an integrated
+session path; the following update adds a bounded normal-mode entry point. Original UI/static
 evidence maps game+1439 to All Techs and world.config+5be8 to the scenario Full
 Tech Tree setting. Early restrictions and automatic technology eligibility also
 consult these settings, so suppressing late bonuses alone would be incorrect.
@@ -4780,3 +4781,56 @@ mode3/4 branches remain static-only. This phase is not yet integrated into the
 native diagnostic importer and must not be applied to ordinary scenario loads.
 The next bounded original segment is starting-age research at60260f..6026be;
 its mapped calls are static evidence only so far.
+
+
+### Normal-mode session funds, starting ages and AI activation (2026-11-16)
+
+`Game::initRmsSession` now composes diagnostic RMS generation/import with normal
+starting-resource grants, starting-age research and explicit computer scripts.
+It validates player count, tiers, ages and script slots, and parses every AI
+before replacing the world. Resource grants overwrite only banks 0–3, preserving
+starting-object accounting. Normal tiers 0–3 and the subsequent map37 adjustment
+use the original controls above. Scenario loading remains separate.
+
+Ten additional actual-executable controls cover raw starting ages 2–7 in normal
+mode and ages 3–6 in raw mode7. The normal advanced-age path temporarily disables
+the next age, grants the previous age's dependents in ascending technology order,
+follows all six prerequisite slots, then re-enables and completes the next age.
+It excludes dependent technology62, reloads resource-selected technology IDs
+after effects, and clears research-cost counter99. These are shared algorithms,
+not per-civilization upgrade lists. Base age2 does nothing. The new API accepts
+normal ages2–6; special modes and All Techs are not exposed.
+
+Native golden checks for civilizations6/1 and ages3–6 match original completion
+order, complete researched sets, counters21/99 and live Command Center, worker
+and scout HP. They use the same common-border RMS setup as the reference.
+Research does not spend starting bank resources. Evidence retained locally:
+`rms-starting-age-runtime-findings-2026-11-16.json`,
+`rms-starting-age-v6-oracle-2026-11-16.json` and the corresponding static assembly.
+The original executes actual research, upgrade and registration callbacks with
+captured masters and graphics; the harness still models CRT and configured world
+state. This is executable comparison, not a new live Windows UI comparison.
+
+AI is installed after funds and age effects, without evaluating during setup.
+Repository checks prove the first native evaluation sees the selected age and
+funds, buys a worker, and leaves human player1 uncontrolled. Invalid options or
+a missing later AI file preserve the prior world, RNG and computer state. A
+private shipped-script smoke covers three and eight players using all eight
+civilizations: each computer loads714 rules from original `randomgame.per`,
+then executes its initialization goal rule during the next30 native frames.
+The original AI source remains outside the repository. Original static ordering
+and its unresolved authority/timer gates are recorded in
+`rms-ai-activation-order-findings-2026-11-16.json`; exact original evaluation
+cadence and complete computer registration remain unproven.
+
+The focused resource/research/bonus/healing suite passes ASan/UBSan, including
+all four tiers, map37 and advanced-age goldens. Packaged map/import regressions
+and broad combat checks also pass ASan/UBSan; the rebuilt desktop passes menu navigation and60
+render/audio frames. Local logs are `rms-session-age-check-v3.log`,
+`session-original-ai-active-check.log`, `session-start-packaged-check.log` and
+`session-start-desktop-smoke.log` (plus `session-start-combat-check.log`) in the build directory. Full-session parity is not
+established: original building upgrades draw and reseed the CRT RNG, while this
+API currently returns generation RNG only. Desktop menus still launch the
+existing custom skirmish; RMS session UI, multiplayer victory, special modes and
+runtime RNG handoff remain separate work. Malformed cyclic technology data may
+fail after world import; option/script preflight is not a whole-world rollback.
