@@ -4668,3 +4668,45 @@ combat diagnostics and failure; no assertions were relaxed. Logs are retained
 as `count-upgrade-combat-check.log` and `count-upgrade-baseline-combat.log` in the
 build directory. This is an existing gameplay validation gap, not a passing
 end-to-end gameplay claim. No new live Windows UI comparison was performed.
+
+### Mixed-civilization multi-owner startup and combat test repair (2026-11-16)
+
+Sixteen additional complete original/native comparisons match ordered objects,
+initial poses, all terrain/elevation/slope cells and final RNG. Twelve use
+civilizations1..N for every player count3–8 at144/200, fixed seed1. Four use
+reversed civilizations8..1 or the nonconsecutive list8,6,4 at200, seed20261116,
+with both fixed and randomized placement. Each original owner has independently
+allocated, civilization-specific captured masters, resources and research state;
+the previous two-owner3/4 reference is an unchanged relocation control. These
+cases require no new native civilization or map-profile special cases.
+
+The retained common-border tests import all sixteen into Game and check owners,
+unit identities, coordinates, every terrain tile and final generation RNG. They
+also check each owner's original startup cost counters:575 total,200 units and
+375 buildings; native post-bonus population is4 used with5 capacity, or200 for
+Trade Federation. The whole common-border suite passes ASan/UBSan. Local ledger:
+`rms-commonborder-mixed-count-startup-findings-2026-11-16.json`; comparison reports
+are `rms-mixed-count-full`, `rms-mixed-count-permutations` and
+`rms-mixed-count-reverse-random` in the build directory. These are authored RMS
+worlds with enemy diplomacy and actual TINY_MAP registration, not complete
+session creation, named UI-size presets or mixed-owner allied bonus proof.
+
+The earlier broad combat failure was traced to fixture assumptions. Projecting
+an object's screen coordinates does not establish sight; the test clicked
+unseen targets and counted subsequent automatic combat as a manual attack.
+The fixture now positions its troops within sight and checks visibility before
+issuing the same UI clicks. The target described as a Command Center was in fact
+dwelling19; the comment is corrected. No visibility, damage or pathfinding code
+was changed. This repairs the test rather than proving original right-click
+behavior for remembered buildings, which remains separately unverified.
+
+The spacing failure was also axis-specific: attackers were separated alongX
+but the check demanded a2-tileY span. It now measures actual maximum pairwise
+distance in2D, retaining the minimum separation and engaged-attacker checks.
+The final ASan/UBSan broad combat run passes all three manual attack orders,
+damage and destruction deadlines, rubble decay, upgrade menus, garrison,
+repair, shields and attack-ground assertions. Dwelling damage reaches588/800
+in20.07 simulation seconds, destruction takes another36.23, and eight attackers
+remain engaged with0.45 minimum separation and3.05 maximum spread. Evidence:
+`combat-checked-pairwise.log`. Initial long-distance approach is no longer an
+incidental part of this click fixture; this is not a1:1 combat-pathing claim.
