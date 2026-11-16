@@ -10,7 +10,7 @@
 
 namespace swgb {
 namespace {
-bool isTree(int unit) { return unit==348 || unit==349 || unit==350 || unit==411 || unit==413; }
+bool isTree(int unit) { return unit==348 || unit==349 || unit==350 || unit==351 || unit==411 || unit==413; }
 bool isPredator(int unit) { return unit==126 || unit==812 || unit==1197 || unit==1250 || unit==1129 || unit==1252 || unit==1251 || unit==1465 || unit==998 || unit==1033; }
 bool isMountain(int unit) { return unit==1019 || unit==1020 || unit==1165 || unit==1166; }
 bool isCrater(int unit) { return unit>=1329 && unit<=1331; }
@@ -26,6 +26,7 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         {348,5282,10,31,50,11,12,1,100,2,2.f},
         {349,5289,10,31,50,11,11,1,100,2,2.f},
         {350,5298,10,31,50,11,12,1,100,2,2.f},
+        {351,5295,10,31,50,11,12,1,100,2,2.f},
         {411,5292,10,31,50,4,12,1,100,2,2.f},
         {413,5301,10,31,50,11,12,1,125,2,2.f},
         {59,5192,10,27,0,8,6,0,125,1,1.f},
@@ -111,6 +112,7 @@ const ResourceSpec *validateHerd(const dat::DatFile &data,int16_t unitId,const s
     static constexpr ResourceSpec bantha{833,1,70,1,7,19,8,0,200,0,2.f};
     static constexpr ResourceSpec kaadu{1363,46,70,4,5,1,8,0,100,0,2.f};
     static constexpr ResourceSpec eopie{1365,22,70,4,5,1,8,0,140,0,2.f};
+    static constexpr ResourceSpec cupa{1367,80,70,4,10,26,8,0,170,0,2.f};
     static constexpr ResourceSpec womprat{1475,8731,70,4,15,26,8,0,170,0,2.f};
     static constexpr ResourceSpec marine998{998,65,70,5,80,27,8,-1,0,0,2.f};
     static constexpr ResourceSpec marine1033{1033,12,70,5,80,27,8,-1,0,0,2.f};
@@ -127,8 +129,8 @@ const ResourceSpec *validateHerd(const dat::DatFile &data,int16_t unitId,const s
     static constexpr ResourceSpec hunt822{822,31,70,60,50,1,8,0,300,0,2.f};
     static constexpr ResourceSpec hunt1249{1249,17,70,60,75,26,8,0,340,0,2.f};
     static constexpr ResourceSpec ronto{1364,75,70,60,100,19,8,0,400,0,2.f};
-    const auto &spec=unitId==998?marine998:unitId==1033?marine1033:unitId==1465?sarlacc:unitId==1475?womprat:unitId==1251?predator1251:unitId==1252?predator1252:unitId==1250?predator1250:unitId==1129?predator1129:unitId==1364?ronto:unitId==833?bantha:unitId==822?hunt822:unitId==1249?hunt1249:unitId==812?predator812:unitId==1197?predator1197:predator?rancor:unitId==1363?kaadu:unitId==1365?eopie:nerf;
-    const bool hunt=unitId==1363 || unitId==1365 || unitId==1475;
+    const auto &spec=unitId==998?marine998:unitId==1033?marine1033:unitId==1465?sarlacc:unitId==1367?cupa:unitId==1475?womprat:unitId==1251?predator1251:unitId==1252?predator1252:unitId==1250?predator1250:unitId==1129?predator1129:unitId==1364?ronto:unitId==833?bantha:unitId==822?hunt822:unitId==1249?hunt1249:unitId==812?predator812:unitId==1197?predator1197:predator?rancor:unitId==1363?kaadu:unitId==1365?eopie:nerf;
+    const bool hunt=unitId==1363 || unitId==1365 || unitId==1367 || unitId==1475;
     auto fail=[&]()->const ResourceSpec* {if(err)*err="RMS herd: unsupported original animal metadata";return nullptr;};
     if(data.civs.empty() || data.civs[0].units.size()<=size_t(unitId) || data.terrainRestrictions.size()<=size_t(spec.restriction)) return fail();
     const auto &u=data.civs[0].units[unitId];const auto *g=data.graphic(spec.graphic);
@@ -136,10 +138,10 @@ const ResourceSpec *validateHerd(const dat::DatFile &data,int16_t unitId,const s
     const float clearance=unitId==1364?.3f:bigHunt?1.f:predator?.5f:radius;
     if(!u.exists || u.id!=unitId || u.type!=70 || u.cls!=spec.cls || u.hitPoints!=spec.hp || u.standingGraphic[0]!=spec.graphic || u.standingGraphic[1]!=-1 ||
        u.collisionSize[0]!=radius || u.collisionSize[1]!=radius || u.collisionSize[2]!=2.f || u.clearanceSize[0]!=clearance || u.clearanceSize[1]!=clearance ||
-       u.lineOfSight!=((unitId==1250 || unitId==1251 || unitId==1252)?5.f:(unitId==1129 || unitId==998 || unitId==1033)?8.f:bigHunt?4.f:unitId==812?6.f:unitId==1197?10.f:predator?7.f:2.f) || u.speed!=(unitId==998?.5f:unitId==1465?0.f:unitId==1475?1.2f:unitId==1251?.8f:unitId==1250?.7f:unitId==1129?.95f:unitId==1364?.85f:bigHunt?.9f:unitId==812?.9f:unitId==1197?.85f:hunt?.74f:.7f) || u.terrainRestriction!=spec.restriction || u.obstructionType!=5 || u.obstructionClass!=2 ||
+       u.lineOfSight!=((unitId==1250 || unitId==1251 || unitId==1252)?5.f:(unitId==1129 || unitId==998 || unitId==1033)?8.f:bigHunt?4.f:unitId==812?6.f:unitId==1197?10.f:predator?7.f:2.f) || u.speed!=(unitId==998?.5f:unitId==1465?0.f:(unitId==1475 || unitId==1367)?1.2f:unitId==1251?.8f:unitId==1250?.7f:unitId==1129?.95f:unitId==1364?.85f:bigHunt?.9f:unitId==812?.9f:unitId==1197?.85f:hunt?.74f:.7f) || u.terrainRestriction!=spec.restriction || u.obstructionType!=5 || u.obstructionClass!=2 ||
        u.hillMode || u.flyMode || ((unitId==998 || unitId==1033) && u.trait!=2) || u.canBeBuiltOn || u.recyclable || u.civilization || u.enableAutoGather || u.createDoppelgangerOnDeath ||
        u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 || u.placementTerrain[0]!=((unitId==998 || unitId==1033)?23:-1) || u.placementTerrain[1]!=-1 ||
-       u.trainSound!=(unitId==998?627:unitId==1033?942:unitId==1465?1044:unitId==1475?1056:unitId==1251?622:unitId==1252?619:unitId==1250?636:unitId==1129?836:unitId==1364?624:unitId==833?615:unitId==822?612:unitId==1249?562:unitId==812?642:unitId==1197?639:predator?37:unitId==1363?421:unitId==1365?609:630) || !g || g->sequenceType!=7 || g->frameCount!=(unitId==833?11:unitId==1364?8:bigHunt?10:unitId==1363?11:unitId==1365?12:8) || g->angleCount!=spec.angles || g->frameDuration!=((unitId==812 || unitId==1197 || unitId==1251)?.1f:(hunt || predator || bigHunt)?.12f:.275f) ||
+       u.trainSound!=(unitId==998?627:unitId==1033?942:unitId==1465?1044:unitId==1367?442:unitId==1475?1056:unitId==1251?622:unitId==1252?619:unitId==1250?636:unitId==1129?836:unitId==1364?624:unitId==833?615:unitId==822?612:unitId==1249?562:unitId==812?642:unitId==1197?639:predator?37:unitId==1363?421:unitId==1365?609:630) || !g || g->sequenceType!=7 || g->frameCount!=(unitId==833?11:unitId==1364?8:bigHunt?10:unitId==1363?11:unitId==1365?12:unitId==1367?9:8) || g->angleCount!=spec.angles || g->frameDuration!=((unitId==812 || unitId==1197 || unitId==1251)?.1f:(hunt || predator || bigHunt)?.12f:.275f) ||
        g->replayDelay!=((unitId==812 || unitId==1197 || unitId==1251)?1.f:(hunt || predator || bigHunt)?.5f:0.f) || g->soundId!=-1 || !g->angleSounds.empty()) return fail();
     int stores=0;for(const auto &storage:u.resourceStorages) {
         if(storage.flag || (storage.type>=0 && (predator || storage.type!=0 || storage.amount!=spec.amount))) return fail();
@@ -296,7 +298,7 @@ bool generateRmsResourcePlacements(uint32_t width, uint32_t height,
         if (err) *err = std::string("RMS resource: ") + reason;
         return false;
     };
-    if(unitId==59 || unitId==349 || unitId==350 || unitId==411 || unitId==413) return fail("resource requires the verified grouped row");
+    if(unitId==59 || unitId==349 || unitId==350 || unitId==351 || unitId==411 || unitId==413) return fail("resource requires the verified grouped row");
     if (!width || !height || width > 1024 || height > 1024 ||
         terrain.size() != static_cast<size_t>(width)*height || requested > terrain.size())
         return fail("invalid dimensions, terrain size or object count");
@@ -367,9 +369,9 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
        objectRow->spacing || objectRow->temporarySpacing || objectRow->zoneDistance ||
        group.mode!=1 || group.groups!=2 || group.perGroup!=1 || group.variance || group.radius!=3))
         return fail("unsupported Sandcrawler row");
-    const bool hunt=unitId==1363 || unitId==1365 || unitId==1475;
+    const bool hunt=unitId==1363 || unitId==1365 || unitId==1367 || unitId==1475;
     const bool predator=isPredator(unitId);
-    if(!objectRow && (unitId==349 || unitId==350 || unitId==411 || unitId==413) && group.mode!=0)return fail("tree species requires verified mode0 rows");
+    if(!objectRow && (unitId==349 || unitId==350 || unitId==351 || unitId==411 || unitId==413) && group.mode!=0)return fail("tree species requires verified mode0 rows");
     const bool tree=isTree(unitId) && group.mode==0,bird=unitId==816,largeFish=unitId==450 || unitId==451 || unitId==455 || unitId==456,
         aquatic=unitId==69 || unitId==1585 || largeFish;
     const bool bigHunt=unitId==822 || unitId==1249 || unitId==1364;
@@ -548,7 +550,8 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         if(!objectRow && unitId==1585 && terrain[tile]!=22)return false;
         if(unitId==69) {
             const int x=tile%width,y=tile/width;
-            auto shore=[&](int at){return terrain[at]==2 || terrain[at]==35;};
+            // Original48e352 also accepts ice beach37 when a side terrain is ice35.
+            auto shore=[&](int at){return terrain[at]==2 || terrain[at]==35 || terrain[at]==37;};
             if(!((x>0 && shore(tile-1)) || (x+1<int(width) && shore(tile+1)) ||
                  (y>0 && shore(tile-int(width))) || (y+1<int(height) && shore(tile+int(width)))))return false;
         }
@@ -738,7 +741,7 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
     for(const auto &start:landCenters)
         if(start.x<2 || start.y<2 || start.x>int(width)-2 || start.y>int(height)-2) return fail("invalid land center");
     if(std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
-        return t!=0 && t!=27 && (width!=120 || (t!=1 && t!=2 && t!=4 && t!=5 && t!=6 && t!=9 && t!=10 && t!=12 && t!=18 && t!=20 && t!=21 && t!=22 && t!=23 && t!=24 && t!=25 && t!=38 && t!=41 && t!=44 && t!=14 && t!=45 && t!=46 && t!=50 && t!=19 && t!=26 && t!=32 && t!=33 && t!=34 && t!=36 && t!=49));
+        return t!=0 && t!=27 && (width!=120 || (t!=1 && t!=2 && t!=4 && t!=5 && t!=6 && t!=9 && t!=10 && t!=12 && t!=18 && t!=20 && t!=21 && t!=22 && t!=23 && t!=24 && t!=25 && t!=38 && t!=41 && t!=44 && t!=14 && t!=45 && t!=46 && t!=50 && t!=19 && t!=26 && t!=32 && t!=33 && t!=34 && t!=36 && t!=49 && t!=13 && t!=35 && t!=37 && t!=47));
     }) || (width==64 && !occupiedTiles.empty()))
         return fail("requires verified grass or120-square forest terrain");
     if(rowEligibility && !rowEligibility->empty() &&

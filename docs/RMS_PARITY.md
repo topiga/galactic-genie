@@ -3910,3 +3910,45 @@ regressions pass, as do strict integrated RMS, production CLI file/archive
 checks and the desktop headless menu/render/audio-stream smoke. The actual
 Tiny/default production audit accepts69 of138 configurations across23 map
 resources; this is an acceptance count, not a percentage of engine parity.
+
+### Tundra54219 barren trees, Cu-pa and ice shores (2026-11-16)
+
+Actual-derived Tiny/default, two-Empire starts now match the full original
+runner for seeds1/4000/16160/8000:2765/2704/2723/2692 active objects and final
+RNG2106313254/374573099/2541837053/3515303544. These cover all three
+source biome branches and both bordered-land orientations. All ordered object
+IDs, owners, units, facets and exact positions match, as do all14400 terrain,
+elevation and slope cells and captured owned/Gaia startup animation poses.
+
+The geometry reuses existing controllers: two snow32 lands, five elevations,
+cliffs and fourteen terrain rows including flat ice patches and barren forests.
+The profile retains explicit bounds on map size, civilization, land metadata,
+terrain/elevation rows and cliff settings. Native import additionally checks
+473 original animation/health records, resource accounting and population.
+
+Explicit barren-tree351 placement now uses its actual static graphic5295 and
+carbon100 catalog. Cu-pa1367 uses the existing hunt constructor with verified
+HP10, food170, speed1.2, restriction26 and graphic80 (9 frames, duration0.12,
+replay0.5). Masters, task headers, graphics and sounds were loaded through the
+original routines with byte-consumption and relocation checks before full
+startup execution. No placeholder master or skipped constructor was used.
+
+The first comparison exposed a real placement mismatch: original48e33d–48e352
+adds side terrain37 when either required side terrain is35. Shore fish69 must
+therefore accept cardinal neighbors2/35/37. All33 fish in the first three
+references required37; restoring this rule also restores subsequent object
+placement and final RNG. This is an explicit original rule, not a rendering
+alias approximation. Negative tests reject modified351/1367 health metadata
+without changing output or caller RNG.
+
+Evidence: `rms-tundra54219-full-startup-findings-2026-11-16.json`,
+`rms-tundra54219-geometry-findings-2026-11-16.json`,
+`rms-tundra54219-assets-provenance-2026-11-16.json`, and
+`rms-tundra54219-shorefish-side37-findings-2026-11-16.json`. Other sizes,
+civilizations and subsequent gameplay are not established as1:1 here.
+
+Validation:97 retained packaged startup cases and the general/authored suites
+pass, including native import and invalid-metadata checks. Strict RMS,
+production file/archive tests and desktop menu/render/audio-stream smoke pass.
+The production audit accepts72 of138 configurations across24 map resources;
+acceptance is not a whole-engine parity percentage.
