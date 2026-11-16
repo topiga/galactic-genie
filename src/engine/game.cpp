@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "../core/genie_random.h"
+#include "../core/genie_gather.h"
 #include "game.h"
 #include "terrain_draw_scan.h"
 #include "rms_objects.h"
@@ -6880,15 +6881,16 @@ void Game::updateGathering(float dt,int player) {
             worker.resourceWorkTime = 0.0f;
             depletedResource = true; // rebuild obstruction/adjacency below
         }
-        const float gathered = std::min(
-            {resource->resourceAmount,
-             capacity - worker.carriedAmount,
-             gatherer->workRate * dt});
-        if (gathered <= 0) continue;
-        worker.carriedResourceType =
-            resource->resourceType;
-        worker.carriedAmount += gathered;
-        resource->resourceAmount -= gathered;
+        const float multiplier = task && task->resourceMultiplier >= 0
+            ? playerAttribute(worker.player, task->resourceMultiplier) : 1.f;
+        const GenieGatherResult transfer = genieGather(
+            dt, gatherer->workRate, task ? task->workValue1 : 1.f,
+            multiplier, resource->resourceAmount, worker.carriedAmount, capacity);
+        if (transfer.remaining == resource->resourceAmount &&
+            transfer.carried == worker.carriedAmount) continue;
+        worker.carriedResourceType = resource->resourceType;
+        worker.carriedAmount = transfer.carried;
+        resource->resourceAmount = transfer.remaining;
         if (resource->maxHitPoints > 0 && !resource->felled &&
             resource->unit->cls != 7) {
             float initialAmount = 0.0f;

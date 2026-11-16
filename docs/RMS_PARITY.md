@@ -5202,3 +5202,38 @@ and its felling/attack action. Local evidence:
 `gather-depletion-entry-v1-oracle-2026-11-16.json`, and the companion assembly.
 This is an explicit remaining mismatch with native gather's immediate
 `killObject` call, not evidence that native resource death is already equivalent.
+
+Regular gathering now uses the original task work factor and owner resource
+multiplier, separating source removal from carried credit. The shared arithmetic
+retains the original float stores around capacity adjustment and the final
+small-remainder flush (which can exceed carrying capacity). All 93 PC64 controls
+from `gather-arithmetic-controls-v2-oracle-2026-11-16.json` are embedded as
+bitwise checks for remaining amount, carried amount and credited increment.
+Double intermediates match these controls; this is not proof of every x87
+extended-precision input. Alternate PC53/PC24 controls are not native goldens.
+Effective job-prototype research modifiers remain a separate integration gap.
+
+Ten preparation/damage controls further narrow felling. Action110 selects an
+ordinary attack9 child for a living tree, rather than treating task workValue1
+as a duration. Actual base-resource damage (`5517f0/5518f0`) sums packet attack
+amounts without armor-class matching: the supplied worker packet lowers real
+Gaia348/349 HP50 to25 then0, leaving resource amount and object state unchanged.
+Lethal damage wakes the target; its later owner update admits death. Reload
+comes from master+150 through object+174 and is decremented before action update.
+The exact selected worker prototype and complete timed attack-to-gather sequence
+still need execution. Native fixed-time felling, immediate exhaustion removal,
+and owner vector traversal remain explicitly unported. Evidence:
+`tree-task-felling-findings-2026-11-16.json` and its preparation/damage controls.
+
+Actual task selection (`409a60 → 5f7a50`) now confirms worker123 selects its
+header task0/action110 for real living Gaia349 and retains prototype123. The
+original-loaded civilization1 attack packet also matches the DAT packet (sum25).
+This closes that bounded worker case, not base-worker83 job switching or timed
+attack release. Local controls: `tree-worker-task-selection-v4-oracle-2026-11-16.json`
+and `tree-worker123-header-oracle-2026-11-16.json`.
+
+Validation of the gathering integration: the focused and broader gameplay suites
+pass under ASan/UBSan, including the 93 arithmetic goldens. Combat checks pass
+resource work, automatic gathering, drop-off, construction, repair and garrison.
+Logs: `gather-local.log`, `gather-bonus.log`, `gather-combat.log` in the external
+build directory. These do not establish full-match or awake-list equivalence.
