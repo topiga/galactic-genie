@@ -4,6 +4,8 @@
 #include "gather_arithmetic_checks.h"
 #include "gather_resource_health_checks.h"
 #include "base_object_damage_checks.h"
+#include "work_attack_checks.h"
+#include "felling_animation_checks.h"
 #include "combined_upgrade_checks.h"
 #include "allied_bonus_checks.h"
 #include "multiowner_bonus_checks.h"
@@ -25,6 +27,8 @@ static void civilizationBonusChecks(swgb::Assets &assets) {
     gatherArithmeticChecks();
     gatherResourceHealthChecks(assets);
     baseObjectDamageChecks(assets);
+    runWorkAttackChecks();
+    fellingAnimationChecks(assets);
     hitPointEffectChecks(assets);
     combinedUpgradeChecks(assets);
     upgradeRngChecks(assets);

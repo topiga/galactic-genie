@@ -8,6 +8,7 @@
 #include "ai_script.h"
 #include "pathfinding.h"
 #include "../core/scenario.h"
+#include "../core/genie_work_attack.h"
 
 #include <array>
 #include <cstdint>
@@ -274,6 +275,7 @@ public:
         return garrisonCursorActive_;
     }
     bool objectActive(uint32_t spawnId) const;
+    bool objectRegisteredForTesting(uint32_t id) const { return findObject(id) != nullptr; }
     float resource(int player, int resourceId) const;
     bool researchTechnology(int player, int technologyId);
     const std::string &currentInstruction() const { return currentInstruction_; }
@@ -809,6 +811,9 @@ private:
         float flashTime = 0;
         float gateOpenAmount = 0;
         float gateCloseTimer = 0;
+        uint8_t resourceDeathState = 0;
+        bool fellingPending = false;
+        bool dyingSoundPlayed = false;
         bool felled = false; // carbon tree cut down, still holding resources
         // Hunted/slaughtered animals leave a carcass object holding their food,
         // which decays at the animal's resource decay rate (per second).
@@ -825,6 +830,8 @@ private:
         float huntTimer = 0.0f;
         uint32_t resourceWorkTargetId = 0;
         float resourceWorkTime = 0.0f;
+        uint8_t resourcePreparationState = 0;
+        GenieWorkAttackState workAttack;
         float damageSoundTime = 0.0f; // next fire/damage graphic sound
         uint8_t pendingFoundation = 255; // Deferred original RMS building terrain.
         int farmStage = -1; // farm terrain applied: 0 build, 1 grown, 2 dead
@@ -1236,7 +1243,7 @@ private:
     bool assignAutomaticWorkerTask(
         Object &worker,
         const Object &completedBuilding);
-    void updateGathering(float dt,int player);
+    void updateGathering(Object &worker, float dt);
     bool isFriendlyPlayer(int sourcePlayer,
                           int targetPlayer) const;
     bool isRepairableBy(

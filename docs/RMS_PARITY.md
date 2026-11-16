@@ -5330,3 +5330,57 @@ slots and live swap-last traversal, not reconstruction from `active` flags.
 The final desktop rebuild passes menu/preferences and60 dummy-driver frames
 with effects/music decoding (`living-depletion-desktop.log`); no new live
 Windows visual/audio comparison was performed in this pass.
+
+### Native stationary felling and base-tree removal (2026-11-16)
+
+Gathering now runs per worker after sprite advancement inside the owner's object
+update, rather than the earlier production pass. A shared stationary-melee
+controller retains frame/remainder, reload, pending-hit and action6/7 state.
+For ordinary action110 tree work with an animated flags3 graphic, zero animation
+speed/hold and no projectile, native felling uses that controller and the job
+prototype's attack packet. It preserves animation phase across reloads and
+shows the actual attack graphic/frame. It starts at the explicitly verified
+state7 boundary after native in-range approach; original initial-command setup,
+movement and turning are not claimed equivalent. Unsupported sprite/attack
+modes retain the existing preparation path, as does animal hunting.
+
+The helper has150 original executable PC64 phase goldens at dt.05/.1/.16/.25/1,
+checking frame, previous frame, remainder/reload bits, pending/complete flags,
+action state and cumulative hits. Its supported numeric bounds are explicit;
+invalid inputs leave state unchanged. Evidence:
+`tree-work-attack-dt-matrix-pc64-oracle-2026-11-16.json`. Prior default-Unicorn
+precision was not silently treated as original PC64; the matrix explicitly
+sets x87 control037f, consistent with the gathering controls.
+
+Lethal preparation damage schedules the fall for the target owner's next update.
+The worker then traverses the in-range preparation4→6→7 before transferring
+resources. For non-contained, non-undead, non-decaying base trees (types10/15),
+positive resources keep state3; exhaustion waits for the next owner update to
+enter7. State7 ends actionability/selection but retains identity, then8 remains
+registered, then final deregistration removes the ID mapping while backing
+storage remains a tombstone. Death sound is emitted once at admission, not again
+on resource exhaustion. Dead-unit415 still uses the native remains renderer;
+this is not the original factory, full awake/sleeping-list traversal, arbitrary
+resource decay or complete death/render parity.
+
+The blanket `felled` obstruction exclusion is removed. Original tree349/411
+controls retain blocking for overlapping positive-height placement in states3–6
+and reject it at7/8;28 controls include disjoint cases. Registration itself is
+retained until final removal. Evidence:
+`tree-death-collision-findings-2026-11-16.json` and
+`tree-death-collision-predicate-controls-oracle-2026-11-16.json`. These prove the
+placement predicate, not exact original path-cache lifecycle.
+
+Native regressions cover the two animation-driven hits, pause, delayed owner
+admission, preparation before gathering, selection through exhaustion,7→8→final
+ID deregistration, and cancel/reassign behavior. Command clearing also resets
+the preparation frame so it cannot leak into a subsequent walking/idle graphic.
+The focused and broad ASan/UBSan suites and combat checks pass. The older
+`test-fixes` suite passes felling and resource continuation but reports five
+failures: instruction-speaker-color, resource-select, upgrades,
+upgraded-drop-site and tech-level-command-center. An isolated build of previous
+commit5c69d99 reproduces exactly those five failures; they remain outstanding,
+not new failures from this change. Logs: `felling-death-{local,bonus,combat,fixes}.log`
+and `felling-baseline-fixes.log`. Desktop menu/preferences and60 dummy-driver
+render/audio frames also pass; this does not constitute a live Windows or
+complete-match comparison.

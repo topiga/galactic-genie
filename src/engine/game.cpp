@@ -1774,7 +1774,7 @@ void Game::rebuildObjectClassification() {
 void Game::classifyObject(size_t index) {
     if (index >= objects_.size()) return;
     const Object &object = objects_[index];
-    if (!object.active || object.hidden || object.felled)
+    if (!object.active || object.hidden)
         return;
     const dat::Unit *obstructionUnit = object.unit;
     if (object.draw && object.spawnId &&
@@ -3321,7 +3321,8 @@ bool Game::isInspectable(const Object &object) const {
     // what is left, like the original (pick requires only state < 7).
     if (object.resourceType >= 0 && object.resourceType <= 3 &&
         (object.resourceAmount > 0.f ||
-         (object.unit->type < dat::UT_Combatant && object.hitPoints >= 1.f)) &&
+         (object.unit->type < dat::UT_Combatant && object.hitPoints >= 1.f) ||
+         object.resourceDeathState == 3) &&
         (object.player == 0 || object.unit->type < dat::UT_Combatant))
         return true;
     return object.player > 0 && object.unit->type >= dat::UT_Combatant;
@@ -4321,7 +4322,9 @@ int Game::objectGraphic(const Object &o,const dat::Unit &base) const {
         } else {
             const dat::Task *task =
                 gatherTask(o, *visualUnit);
-            if (task) {
+            if (o.resourcePreparationState == 12 && visualUnit->attackGraphic >= 0) {
+                gid = visualUnit->attackGraphic;
+            } else if (task) {
                 if (task->workingGraphic >= 0)
                     gid = task->workingGraphic;
                 else if (task->proceedingGraphic >= 0)
@@ -4732,6 +4735,11 @@ std::string Game::unitCommandHelp(
 
 void Game::clearUnitCommandOrder(
     Object &unit) {
+    if (unit.resourcePreparationState) {
+        unit.resourcePreparationState = 0;
+        unit.initialFrame = 0;
+        unit.animTime = 0.f;
+    }
     unit.healTargetId = 0;
     if (unit.state == State::Heal) unit.state = State::Idle;
     unit.rememberedAttackId=0;
@@ -6280,6 +6288,7 @@ bool Game::issueGatherCommand(
     worker.resourceWorkTargetId =
         resource.spawnId;
     worker.resourceWorkTime = 0.0f;
+    worker.resourcePreparationState = 0;
     worker.huntTimer = 0.0f;
     worker.dropOffTargetId = 0;
     worker.manualDropOff = false;
@@ -6613,319 +6622,368 @@ Game::Object *Game::nextResourceLike(const Object &worker) {
     return best;
 }
 
-void Game::updateGathering(float dt,int player) {
-    bool depletedResource = false;
-    for (Object &worker : objects_) {
-        if (worker.player!=player)continue;
-        if (!worker.active || worker.hidden ||
-            !worker.unit ||
-            (!worker.gatherTargetId &&
-             !worker.manualDropOff))
-            continue;
-        const dat::Unit *gatherer =
-            gathererUnit(worker);
-        if (!gatherer) {
-            worker.gatherTargetId = 0;
+void Game::updateGathering(Object &worker, float dt) {
+    if (!worker.active || worker.hidden ||
+        !worker.unit ||
+        (!worker.gatherTargetId &&
+         !worker.manualDropOff))
+        return;
+    const dat::Unit *gatherer =
+        gathererUnit(worker);
+    if (!gatherer) {
+        worker.gatherTargetId = 0;
+        worker.dropOffTargetId = 0;
+        return;
+    }
+    Object *resource =
+        findObject(worker.gatherTargetId);
+    if (resource && !resource->active && resource->carcassId)
+        if (Object *carcass = findObject(resource->carcassId);
+            carcass && carcass->active) {
+            worker.gatherTargetId = carcass->spawnId;
+            resource = carcass;
+        }
+    if (resource && !resource->active && !resource->carcassId &&
+        std::any_of(pendingCarcasses_.begin(), pendingCarcasses_.end(),
+                    [&](const PendingCarcass &p) { return p.animalId == resource->spawnId; }))
+        return; // its carcass appears next frame
+    const float capacity =
+        std::max(
+            1.0f,
+            (float)gatherer->resourceCapacity);
+    if (!worker.manualDropOff &&
+        (!resource ||
+         !isGatherable(*resource)) &&
+        worker.carriedAmount <
+            capacity - 0.001f) {
+        Object *next =
+            nextResourceLike(worker);
+        if (next) {
+            worker.gatherTargetId =
+                next->spawnId;
             worker.dropOffTargetId = 0;
-            continue;
-        }
-        Object *resource =
-            findObject(worker.gatherTargetId);
-        if (resource && !resource->active && resource->carcassId)
-            if (Object *carcass = findObject(resource->carcassId);
-                carcass && carcass->active) {
-                worker.gatherTargetId = carcass->spawnId;
-                resource = carcass;
-            }
-        if (resource && !resource->active && !resource->carcassId &&
-            std::any_of(pendingCarcasses_.begin(), pendingCarcasses_.end(),
-                        [&](const PendingCarcass &p) { return p.animalId == resource->spawnId; }))
-            continue; // its carcass appears next frame
-        const float capacity =
-            std::max(
-                1.0f,
-                (float)gatherer->resourceCapacity);
-        if (!worker.manualDropOff &&
-            (!resource ||
-             !isGatherable(*resource)) &&
-            worker.carriedAmount <
-                capacity - 0.001f) {
-            Object *next =
-                nextResourceLike(worker);
-            if (next) {
-                worker.gatherTargetId =
-                    next->spawnId;
-                worker.dropOffTargetId = 0;
-                worker.state = State::Idle;
-                worker.animTime = 0;
-                continue;
-            }
-        }
-        // Switching to another resource keeps the old load (stashed) instead
-        // of throwing it away.
-        if (!worker.manualDropOff && resource && isGatherable(*resource) &&
-            worker.carriedAmount > 0.001f && worker.carriedResourceType >= 0 &&
-            worker.carriedResourceType != resource->resourceType) {
-            worker.stash[(size_t)worker.carriedResourceType] += worker.carriedAmount;
-            worker.carriedAmount = 0.0f;
-            worker.carriedResourceType = -1;
-        }
-        const bool needsDropOff =
-            worker.manualDropOff ||
-            worker.carriedAmount >=
-                capacity - 0.001f ||
-            (!resource || !isGatherable(*resource));
-        if (needsDropOff && hasCarry(worker)) {
-            worker.farmMoveActive = false;
-            Object *dropSite =
-                findObject(worker.dropOffTargetId);
-            if (!dropSite || !dropSite->active) {
-                dropSite =
-                    nearestDropSite(worker, *gatherer);
-                worker.dropOffTargetId =
-                    dropSite ? dropSite->spawnId : 0;
-            }
-            if (!dropSite) continue;
-            if (!withinInteractionRange(
-                    worker, *dropSite, 0.35f)) {
-                approach(worker, *dropSite, 0.25f);
-                continue;
-            }
-            depositAt(worker, *dropSite);
-            if (const dat::Task *task =
-                    gatherTask(worker, *gatherer))
-                playWorldUnitSound(
-                    worker, task->resourceDepositSound);
-            worker.dropOffTargetId = 0;
-            worker.manualDropOff = false;
             worker.state = State::Idle;
             worker.animTime = 0;
-            if (!resource ||
-                !isGatherable(*resource)) {
-                Object *next = nextResourceLike(worker);
-                worker.gatherTargetId = next ? next->spawnId : 0;
-            }
-            continue;
+            return;
         }
+    }
+    // Switching to another resource keeps the old load (stashed) instead
+    // of throwing it away.
+    if (!worker.manualDropOff && resource && isGatherable(*resource) &&
+        worker.carriedAmount > 0.001f && worker.carriedResourceType >= 0 &&
+        worker.carriedResourceType != resource->resourceType) {
+        worker.stash[(size_t)worker.carriedResourceType] += worker.carriedAmount;
+        worker.carriedAmount = 0.0f;
+        worker.carriedResourceType = -1;
+    }
+    const bool needsDropOff =
+        worker.manualDropOff ||
+        worker.carriedAmount >=
+            capacity - 0.001f ||
+        (!resource || !isGatherable(*resource));
+    if (needsDropOff && hasCarry(worker)) {
+        worker.farmMoveActive = false;
+        Object *dropSite =
+            findObject(worker.dropOffTargetId);
+        if (!dropSite || !dropSite->active) {
+            dropSite =
+                nearestDropSite(worker, *gatherer);
+            worker.dropOffTargetId =
+                dropSite ? dropSite->spawnId : 0;
+        }
+        if (!dropSite) return;
+        if (!withinInteractionRange(
+                worker, *dropSite, 0.35f)) {
+            approach(worker, *dropSite, 0.25f);
+            return;
+        }
+        depositAt(worker, *dropSite);
+        if (const dat::Task *task =
+                gatherTask(worker, *gatherer))
+            playWorldUnitSound(
+                worker, task->resourceDepositSound);
+        worker.dropOffTargetId = 0;
+        worker.manualDropOff = false;
+        worker.state = State::Idle;
+        worker.animTime = 0;
         if (!resource ||
             !isGatherable(*resource)) {
             Object *next = nextResourceLike(worker);
             worker.gatherTargetId = next ? next->spawnId : 0;
-            worker.state = State::Idle;
-            continue;
         }
-        if (worker.resourceWorkTargetId !=
-            resource->spawnId) {
-            worker.resourceWorkTargetId =
-                resource->spawnId;
-            worker.resourceWorkTime = 0.0f;
-            worker.huntTimer = 0.0f;
-        }
-        worker.lastGatherClass = resource->unit->cls;
-        worker.lastGatherType = resource->resourceType;
-        worker.lastGatherX = resource->x;
-        worker.lastGatherY = resource->y;
-        const dat::Task *task =
-            gatherTask(worker, *gatherer);
-        const float workRange =
-            task ? std::max(
-                       0.25f, task->workRange)
-                 : 0.35f;
-        if (!withinInteractionRange(
-                worker, *resource, workRange)) {
-            approach(worker, *resource, workRange);
-            continue;
-        }
-        const bool farming =
-            resource->unit->cls == 7;
-        if (!farming) {
+        return;
+    }
+    if (!resource ||
+        !isGatherable(*resource)) {
+        Object *next = nextResourceLike(worker);
+        worker.gatherTargetId = next ? next->spawnId : 0;
+        worker.state = State::Idle;
+        return;
+    }
+    if (worker.resourceWorkTargetId !=
+        resource->spawnId) {
+        worker.resourceWorkTargetId =
+            resource->spawnId;
+        worker.resourceWorkTime = 0.0f;
+        worker.resourcePreparationState = 0;
+        worker.huntTimer = 0.0f;
+    }
+    worker.lastGatherClass = resource->unit->cls;
+    worker.lastGatherType = resource->resourceType;
+    worker.lastGatherX = resource->x;
+    worker.lastGatherY = resource->y;
+    const dat::Task *task =
+        gatherTask(worker, *gatherer);
+    const float workRange =
+        task ? std::max(
+                   0.25f, task->workRange)
+             : 0.35f;
+    if (!withinInteractionRange(
+            worker, *resource, workRange)) {
+        worker.resourcePreparationState = 0;
+        worker.initialFrame = 0;
+        approach(worker, *resource, workRange);
+        return;
+    }
+    const bool farming =
+        resource->unit->cls == 7;
+    if (!farming) {
+        worker.farmMoveActive = false;
+        worker.farmMoveTime = 0.0f;
+    } else if (worker.farmMoveActive) {
+        const float dx =
+            worker.targetX - worker.x;
+        const float dy =
+            worker.targetY - worker.y;
+        const float distance =
+            std::sqrt(dx * dx + dy * dy);
+        if (distance > 0.05f) {
+            const float step =
+                modifiedUnitAttribute(
+                    worker, 5,
+                    worker.unit->speed) *
+                dt;
+            const float scale =
+                std::min(1.0f, step / distance);
+            const float nextX =
+                worker.x + dx * scale;
+            const float nextY =
+                worker.y + dy * scale;
+            if (positionPassable(
+                    worker, nextX, nextY,
+                    false) &&
+                !unitBlockerAt(
+                    worker, nextX, nextY)) {
+                worker.x = nextX;
+                worker.y = nextY;
+                worker.facing =
+                    std::atan2(dy, dx);
+                worker.state = State::Gather;
+                worker.moveGoalActive = false;
+                worker.path.clear();
+                return;
+            }
             worker.farmMoveActive = false;
-            worker.farmMoveTime = 0.0f;
-        } else if (worker.farmMoveActive) {
-            const float dx =
-                worker.targetX - worker.x;
-            const float dy =
-                worker.targetY - worker.y;
-            const float distance =
-                std::sqrt(dx * dx + dy * dy);
-            if (distance > 0.05f) {
-                const float step =
-                    modifiedUnitAttribute(
-                        worker, 5,
-                        worker.unit->speed) *
-                    dt;
-                const float scale =
-                    std::min(1.0f, step / distance);
-                const float nextX =
-                    worker.x + dx * scale;
-                const float nextY =
-                    worker.y + dy * scale;
-                if (positionPassable(
-                        worker, nextX, nextY,
-                        false) &&
-                    !unitBlockerAt(
-                        worker, nextX, nextY)) {
-                    worker.x = nextX;
-                    worker.y = nextY;
-                    worker.facing =
-                        std::atan2(dy, dx);
-                    worker.state = State::Gather;
-                    worker.moveGoalActive = false;
-                    worker.path.clear();
+            worker.farmMoveTime = 0.75f;
+        } else {
+            worker.farmMoveActive = false;
+            worker.farmMoveTime =
+                2.0f +
+                0.35f *
+                    ((worker.spawnId +
+                      worker.farmMoveStep) %
+                     5);
+        }
+    }
+    if (farming) {
+        worker.farmMoveTime -= dt;
+        if (worker.farmMoveTime <= 0.0f) {
+            static constexpr float
+                kFarmPositions[8][2] = {
+                    {-0.30f, -0.30f},
+                    {0.00f, -0.30f},
+                    {0.30f, -0.30f},
+                    {0.30f, 0.00f},
+                    {0.30f, 0.30f},
+                    {0.00f, 0.30f},
+                    {-0.30f, 0.30f},
+                    {-0.30f, 0.00f},
+                };
+            bool moving = false;
+            for (size_t attempt = 0;
+                 attempt < 8; attempt++) {
+                const size_t position =
+                    (worker.farmMoveStep +
+                     attempt) %
+                    8;
+                const float x =
+                    resource->x +
+                    kFarmPositions[position][0] *
+                        resource->unit
+                            ->collisionSize[0];
+                const float y =
+                    resource->y +
+                    kFarmPositions[position][1] *
+                        resource->unit
+                            ->collisionSize[1];
+                const float dx = x - worker.x;
+                const float dy = y - worker.y;
+                if (dx * dx + dy * dy <
+                        0.16f ||
+                    !positionPassable(
+                        worker, x, y, false) ||
+                    unitBlockerAt(
+                        worker, x, y))
                     continue;
-                }
-                worker.farmMoveActive = false;
-                worker.farmMoveTime = 0.75f;
-            } else {
-                worker.farmMoveActive = false;
-                worker.farmMoveTime =
-                    2.0f +
-                    0.35f *
-                        ((worker.spawnId +
-                          worker.farmMoveStep) %
-                         5);
+                worker.farmMoveStep =
+                    (uint8_t)((position + 1) %
+                              8);
+                worker.targetX = x;
+                worker.targetY = y;
+                worker.farmMoveActive = true;
+                worker.state = State::Gather;
+                worker.moveGoalActive = false;
+                worker.path.clear();
+                moving = true;
+                break;
             }
+            if (moving)
+                return;
+            worker.farmMoveTime = 0.75f;
         }
-        if (farming) {
-            worker.farmMoveTime -= dt;
-            if (worker.farmMoveTime <= 0.0f) {
-                static constexpr float
-                    kFarmPositions[8][2] = {
-                        {-0.30f, -0.30f},
-                        {0.00f, -0.30f},
-                        {0.30f, -0.30f},
-                        {0.30f, 0.00f},
-                        {0.30f, 0.30f},
-                        {0.00f, 0.30f},
-                        {-0.30f, 0.30f},
-                        {-0.30f, 0.00f},
-                    };
-                bool moving = false;
-                for (size_t attempt = 0;
-                     attempt < 8; attempt++) {
-                    const size_t position =
-                        (worker.farmMoveStep +
-                         attempt) %
-                        8;
-                    const float x =
-                        resource->x +
-                        kFarmPositions[position][0] *
-                            resource->unit
-                                ->collisionSize[0];
-                    const float y =
-                        resource->y +
-                        kFarmPositions[position][1] *
-                            resource->unit
-                                ->collisionSize[1];
-                    const float dx = x - worker.x;
-                    const float dy = y - worker.y;
-                    if (dx * dx + dy * dy <
-                            0.16f ||
-                        !positionPassable(
-                            worker, x, y, false) ||
-                        unitBlockerAt(
-                            worker, x, y))
-                        continue;
-                    worker.farmMoveStep =
-                        (uint8_t)((position + 1) %
-                                  8);
-                    worker.targetX = x;
-                    worker.targetY = y;
-                    worker.farmMoveActive = true;
-                    worker.state = State::Gather;
-                    worker.moveGoalActive = false;
-                    worker.path.clear();
-                    moving = true;
-                    break;
-                }
-                if (moving)
-                    continue;
-                worker.farmMoveTime = 0.75f;
-            }
-        }
-        if (worker.state != State::Gather) {
-            worker.animTime = 0;
-            if (task)
-                playWorldUnitSound(
-                    worker,
-                    task->resourceGatheringSound);
-        }
-        // Action 110: a living animal is killed first (nerfs have 7 HP);
-        // its carcass then holds the food.
-        if (isLiveAnimal(*resource)) {
-            worker.state = State::Gather;
-            worker.path.clear();
-            worker.moveGoalActive = false;
-            worker.facing = std::atan2(resource->y - worker.y, resource->x - worker.x);
-            worker.huntTimer += dt;
-            if (worker.huntTimer >= 1.0f) {
-                worker.huntTimer = 0.0f;
-                const int damage = std::max(3, attackDamage(worker, *resource));
-                damageObject(*resource, damage, worker.spawnId);
-            }
-            continue;
-        }
+    }
+    if (worker.state != State::Gather) {
+        worker.animTime = 0;
+        if (task)
+            playWorldUnitSound(
+                worker,
+                task->resourceGatheringSound);
+    }
+    // Action 110: a living animal is killed first (nerfs have 7 HP);
+    // its carcass then holds the food.
+    if (isLiveAnimal(*resource)) {
         worker.state = State::Gather;
         worker.path.clear();
         worker.moveGoalActive = false;
-        worker.facing = std::atan2(
-            resource->y - worker.y,
-            resource->x - worker.x);
-        // The worker performs its initial carbon animation before the tree
-        // falls. The felled object keeps its resources, stops obstructing,
-        // and is then gathered as the carbon pile.
-        if (!resource->felled && resource->unit->cls == 31 &&
-            resource->unit->dyingGraphic >= 0) {
-            worker.resourceWorkTime += dt;
-            const float initialWorkTime =
-                task && task->workValue1 > 0.0f
-                    ? task->workValue1
-                    : 1.0f;
-            if (worker.resourceWorkTime < initialWorkTime)
-                continue;
-            resource->felled = true;
-            resource->hitPoints = 0.0f;
-            resource->animTime = 0.0f;
-            worker.resourceWorkTime = 0.0f;
-            depletedResource = true; // rebuild obstruction/adjacency below
+        worker.facing = std::atan2(resource->y - worker.y, resource->x - worker.x);
+        worker.huntTimer += dt;
+        if (worker.huntTimer >= 1.0f) {
+            worker.huntTimer = 0.0f;
+            const int damage = std::max(3, attackDamage(worker, *resource));
+            damageObject(*resource, damage, worker.spawnId);
         }
-        const float multiplier = task && task->resourceMultiplier >= 0
-            ? playerAttribute(worker.player, task->resourceMultiplier) : 1.f;
-        const GenieGatherResult transfer = genieGather(
-            dt, gatherer->workRate, task ? task->workValue1 : 1.f,
-            multiplier, resource->resourceAmount, worker.carriedAmount, capacity);
-        if (transfer.remaining == resource->resourceAmount &&
-            transfer.carried == worker.carriedAmount) continue;
-        worker.carriedResourceType = resource->resourceType;
-        worker.carriedAmount = transfer.carried;
-        resource->resourceAmount = transfer.remaining;
-        if (resource->resourceAmount <= 0.001f) {
-            if (resource->unit->cls == 7 && resource->player > 0 &&
-                reseedQueue_[(size_t)resource->player] > 0) {
-                // A queued (prepaid) farm: the field turns back into a
-                // foundation and its farmer rebuilds it, then farms again.
-                reseedQueue_[(size_t)resource->player]--;
-                resource->underConstruction = true;
-                resource->constructionTotal = std::max(1.f,unitTrainingTime(resource->player,*resource->unit));
-                resource->constructionRemaining = resource->constructionTotal;
-                resource->hitPoints = 1.0f;
-                resource->resourceAmount = 0.0f;
-                resource->farmStage = -1; // repaint the build terrain
-                syncFarmTerrain(*resource);
-                worker.gatherTargetId = 0;
-                assignBuilder(worker, *resource);
-                continue;
+        return;
+    }
+    worker.state = State::Gather;
+    worker.path.clear();
+    worker.moveGoalActive = false;
+    worker.facing = std::atan2(
+        resource->y - worker.y,
+        resource->x - worker.x);
+    if (task && task->actionType == 110 && resource->unit->cls == 31 &&
+        gatherer->projectileUnitId == -1 && gatherer->id != 1239) {
+        Object job;
+        job.player = worker.player;
+        job.unit = effectiveUnitForPlayer(worker.player, gatherer);
+        const dat::Graphic *graphic = assets_.dat().graphic(job.unit->attackGraphic);
+        const GenieWorkAttackConfig config = graphic
+            ? GenieWorkAttackConfig{graphic->frameCount, graphic->frameDuration,
+                modifiedUnitAttribute(job, 10, job.unit->reloadTime),
+                unsigned(graphic->sequenceType), graphic->speedMultiplier, graphic->replayDelay}
+            : GenieWorkAttackConfig{};
+        if (supportsGenieWorkAttack(config)) {
+            if (!resource->felled) {
+                if (resource->hitPoints < 1.f) {
+                    resource->fellingPending = true;
+                    return; // target's owner admits death first
+                }
+                if (worker.resourcePreparationState != 12) {
+                    // shortcut: In-range task entry uses the verified state7 boundary; initial action setup remains native.
+                    initializeGenieWorkAttackAtState7(config, worker.workAttack);
+                    worker.resourcePreparationState = 12;
+                    worker.animTime = 0.f;
+                    worker.initialFrame = 0;
+                    worker.initialIdleDelay = 0.f;
+                    return;
+                }
+                const auto step = stepGenieWorkAttack(config, worker.workAttack, dt);
+                if (!step.supported) return;
+                worker.animTime = 0.f;
+                worker.initialFrame = uint16_t(worker.workAttack.frame);
+                if (step.hit) {
+                    const int damage = attackDamage(job, *resource);
+                    if (damage > 0) {
+                        resource->hitPoints = std::max(0.f, resource->hitPoints - float(damage));
+                        attacksLanded_++;
+                        if (resource->hitPoints < 1.f) {
+                            resource->hitPoints = 0.f;
+                            resource->fellingPending = true;
+                        }
+                    }
+                    playWorldUnitSound(worker, graphicSound(job.unit->attackGraphic));
+                }
+                return;
             }
-            // Resource subtraction5519b0 does not kill a living base object.
-            if (resource->unit->type < dat::UT_Combatant && resource->hitPoints >= 1.f)
-                continue;
-            // shortcut: Dead resources still need original owner-list lifecycle and final removal.
-            killObject(*resource, false);
-            depletedResource = true;
+            // Completed attack -> movement -> facing -> gather; entering7 does no work.
+            if (worker.resourcePreparationState == 12) {
+                worker.resourcePreparationState = 4;
+                worker.animTime = 0.f; worker.initialFrame = 0;
+                return;
+            }
+            if (worker.resourcePreparationState == 4) { worker.resourcePreparationState = 6; return; }
+            if (worker.resourcePreparationState == 6) { worker.resourcePreparationState = 7; return; }
         }
     }
-    if (depletedResource)
-        rebuildAdjacency();
+    // shortcut: Other attack/sprite modes retain the legacy preparation until their controls are ported.
+    if (!resource->felled && resource->unit->cls == 31 &&
+        resource->unit->dyingGraphic >= 0) {
+        worker.resourceWorkTime += dt;
+        const float initialWorkTime =
+            task && task->workValue1 > 0.0f
+                ? task->workValue1
+                : 1.0f;
+        if (worker.resourceWorkTime < initialWorkTime)
+            return;
+        resource->hitPoints = 0.0f;
+        resource->fellingPending = true;
+        worker.resourceWorkTime = 0.0f;
+        worker.resourcePreparationState = 0;
+        return;
+    }
+    const float multiplier = task && task->resourceMultiplier >= 0
+        ? playerAttribute(worker.player, task->resourceMultiplier) : 1.f;
+    const GenieGatherResult transfer = genieGather(
+        dt, gatherer->workRate, task ? task->workValue1 : 1.f,
+        multiplier, resource->resourceAmount, worker.carriedAmount, capacity);
+    if (transfer.remaining == resource->resourceAmount &&
+        transfer.carried == worker.carriedAmount) return;
+    worker.carriedResourceType = resource->resourceType;
+    worker.carriedAmount = transfer.carried;
+    resource->resourceAmount = transfer.remaining;
+    if (resource->resourceAmount <= 0.001f) {
+        if (resource->unit->cls == 7 && resource->player > 0 &&
+            reseedQueue_[(size_t)resource->player] > 0) {
+            // A queued (prepaid) farm: the field turns back into a
+            // foundation and its farmer rebuilds it, then farms again.
+            reseedQueue_[(size_t)resource->player]--;
+            resource->underConstruction = true;
+            resource->constructionTotal = std::max(1.f,unitTrainingTime(resource->player,*resource->unit));
+            resource->constructionRemaining = resource->constructionTotal;
+            resource->hitPoints = 1.0f;
+            resource->resourceAmount = 0.0f;
+            resource->farmStage = -1; // repaint the build terrain
+            syncFarmTerrain(*resource);
+            worker.gatherTargetId = 0;
+            assignBuilder(worker, *resource);
+            return;
+        }
+        // Resource subtraction5519b0 does not kill a living base object.
+        if (resource->unit->type < dat::UT_Combatant && resource->hitPoints >= 1.f)
+            return;
+        if (resource->resourceDeathState == 3) return; // its owner advances death next step
+        // shortcut: Other dead resources still need original owner-list lifecycle and final removal.
+        killObject(*resource, false);
+    }
 }
 
 uint8_t Game::garrisonCategory(
@@ -7914,6 +7972,7 @@ bool Game::assignBuilder(Object &worker,
     worker.gatherTargetId = 0;
     worker.resourceWorkTargetId = 0;
     worker.resourceWorkTime = 0.0f;
+    worker.resourcePreparationState = 0;
     worker.dropOffTargetId = 0;
     worker.manualDropOff = false;
     worker.attackTargetId = 0;
@@ -9757,6 +9816,7 @@ void Game::syncFarmTerrain(Object &farm, bool dying) {
 }
 
 void Game::killObject(Object &object, bool countKill) {
+    if (object.resourceDeathState == 3) object.resourceDeathState = 7;
     clearUnitCommandOrder(object);
     if (object.unit->cls == 7 && object.unit->type == dat::UT_Building)
         syncFarmTerrain(object, true);
@@ -9858,7 +9918,8 @@ void Game::killObject(Object &object, bool countKill) {
 
     int soundId = object.unit->dyingSound;
     if (soundId < 0) soundId = graphicSound(object.unit->dyingGraphic);
-    playWorldUnitSound(object, soundId);
+    if (!object.dyingSoundPlayed) playWorldUnitSound(object, soundId);
+    object.dyingSoundPlayed = true;
     if (countKill) unitsKilled_++;
     if (wasStatic) rebuildAdjacency();
 }
@@ -14288,7 +14349,6 @@ void Game::updateProductionAndDecay(float dt,int player) {
     updateConstruction(dt,player);
     updateShields(dt,player);
     rebuildMobileOccupancy();
-    updateGathering(dt,player);
     updateRepairing(dt,player);
     // Gate logic, following the original (battlegrounds_x1.exe 0x558390):
     // the gate watches a 0.4-tile-wide corridor between its two end posts.
@@ -14504,7 +14564,32 @@ void Game::updatePlayerObjects(float dt,int player) {
         cohesion.movingMembers++;
     }
     for (Object &o : objects_) {
-        if (o.player!=player || !o.active) continue;
+        if (o.player!=player) continue;
+        if (o.resourceDeathState == 7) { o.resourceDeathState = 8; continue; }
+        if (o.resourceDeathState == 8) {
+            objectIndices_.erase(o.spawnId);
+            o.resourceDeathState = 9;
+            continue;
+        }
+        if (!o.active) continue;
+        if (o.resourceDeathState == 3 && o.resourceAmount <= 0.f) {
+            // shortcut: Dead-unit415 still uses the native remains renderer, not the original object factory.
+            killObject(o, false);
+            continue;
+        }
+        if (o.fellingPending && o.hitPoints < 1.f) {
+            o.fellingPending = false;
+            if ((o.unit->type == dat::UT_EyeCandy || o.unit->type == dat::UT_Trees) &&
+                !o.unit->undeadMode && o.unit->resourceDecay == 0.f && o.garrisonedInId < 0)
+                o.resourceDeathState = 3;
+            o.felled = true;
+            o.animTime = 0.f;
+            int sound = o.unit->dyingSound;
+            if (sound < 0) sound = graphicSound(o.unit->dyingGraphic);
+            playWorldUnitSound(o, sound);
+            o.dyingSoundPlayed = true;
+            rebuildAdjacency();
+        }
         const auto recover = [&](float period) {
             if (period <= 0 || o.hitPoints < 1.f || o.hitPoints >= o.maxHitPoints) return;
             o.recoveryTime += dt;
@@ -14534,6 +14619,7 @@ void Game::updatePlayerObjects(float dt,int player) {
             } else o.initialIdleDelay=0;
         }
         o.animTime += animationDt;
+        updateGathering(o, dt);
         o.approachRetry = std::max(0.0f, o.approachRetry - dt);
         o.flashTime = std::max(0.0f, o.flashTime - dt);
         updateUnitCommandOrder(o, dt);

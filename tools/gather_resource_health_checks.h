@@ -17,6 +17,9 @@ static void gatherResourceHealthChecks(swgb::Assets &assets) {
           "Positive-HP resource fixture");
     const float before=game.objectResourceAmount(deposit);
     check(game.issueGatherForTesting(worker,deposit),"Assign resource work");
+    game.update(.1f,{});
+    check(game.objectCarriedAmount(worker)>0.f && game.objectAnimationForTesting(worker)[0]==0.f,
+          "Stationary worker advances its old sprite before changing to the gathering graphic");
     for(int step=0;step<300 && game.objectCarriedAmount(worker)<.25f;++step)
         game.update(.1f,{});
     check(game.objectResourceAmount(deposit)<before && game.objectCarriedAmount(worker)>0.f,
