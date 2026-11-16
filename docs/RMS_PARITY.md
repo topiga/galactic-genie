@@ -4199,3 +4199,27 @@ Validation:118 retained packaged startup cases and the general/authored suites
 pass under ASan/UBSan, plus strict RMS, production file/archive checks and
 desktop menu/render/audio-stream smoke. Production accepts93 of138 tested
 configurations across31 resources; this is acceptance coverage, not total parity.
+
+### Geonosis expanded borders and maximum-RNG zone endpoint (2026-11-16)
+
+Additional full original comparisons for seeds4000/8000/3717145935 match
+2278/2353/2323 objects and RNG3481714273/472618545/557507208 respectively,
+including ordered records, exact coordinates, all grids and captured poses.
+Together with the first three seeds, these cover all four player-border
+rectangles, equal player zones and additional food/hunt branches. Geonosis now
+retains333 startup pose/health fixtures across six seeds.
+
+The final seed was derived by inverting the original LCG, not found by changing
+the script. Original4e30d1–4e3100 computes floor(rand15*playerCount/32767)+2;
+with two players, the maximum draw32767 produces zone4. Actual parser execution
+confirms zones[0,4,2] at seed3717145935, and the complete original/native startup
+matches without an engine change. Other seeds and world configurations remain
+outside this bounded coverage.
+
+Evidence: `rms-geonosis55018-expanded-seed-inventory-2026-11-16.json`,
+`rms-geonosis55018-zone4-findings-2026-11-16.json`, and
+`rms-geonosis55018-expanded-seed-startup-findings-2026-11-16.json`.
+
+Validation:121 retained packaged startup cases and general/authored regressions
+pass under ASan/UBSan. This change adds fixtures only; production acceptance
+remains93 of138 configurations across31 resources.
