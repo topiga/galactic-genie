@@ -1042,8 +1042,12 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         for(const auto &land:lands)
             if(land.terrain!=6 || land.radius!=13 || land.targetTiles!=7200 || land.leftBorder || land.topBorder ||
                land.rightBorder!=-1 || land.bottomBorder!=-1 || land.clumpingFactor!=8 || land.borderFuzziness!=20 || land.separation) return fail("unsupported owned-building player lands");
-        const bool mixed=resourceRows.size()==3 && resourceRows[0].unitId==87 && resourceRows[0].minDistance==8 &&
+        const bool basicMixed=resourceRows.size()==3 && resourceRows[0].unitId==87 && resourceRows[0].minDistance==8 &&
                          resourceRows[1].unitId==70 && resourceRows[1].mode==1 && resourceRows[2].unitId==50 && resourceRows[2].groups==5 && resourceRows[2].minDistance==2;
+        const bool defendedMixed=resourceRows.size()==4 && resourceRows[0].unitId==79 && resourceRows[0].groups==4 &&
+                                 resourceRows[1].unitId==70 && resourceRows[1].mode==1 && resourceRows[2].unitId==87 && resourceRows[2].minDistance==8 &&
+                                 resourceRows[3].unitId==50 && resourceRows[3].groups==5 && resourceRows[3].minDistance==2;
+        const bool mixed=basicMixed || defendedMixed;
         for(const auto &row:resourceRows) {
             if(!mixed && row.unitId!=ownedBuilding->unitId)return fail("unsupported mixed owned buildings");
             const int buildingId=row.unitId;const bool prefab=buildingId==70,farm=buildingId==50,tower=buildingId==79;
@@ -1487,13 +1491,13 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                             for(const auto &o:generated.resourcesAfterOwned)if(overlap(o.unitId,o.owner,o.x,o.y))return true;
                             return false;
                         };
-                        std::vector<bool> spaced(size_t(width)*height,false);
+                        if(eligibility.empty())eligibility.assign(size_t(width)*height,1);
                         for(const auto &target:targets) {
                             if(target.owner<1 || target.owner>2 || target.landIndex<0)return fail("owned buildings require selected player lands");
                             const auto &center=generated.lands[target.landIndex].center;
                             std::vector<uint32_t> candidates;
                             if(!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,row.maxDistance,rng,candidates,err))return false;
-                            candidates.erase(std::remove_if(candidates.begin(),candidates.end(),[&](uint32_t tile){return spaced[tile];}),candidates.end());
+                            candidates.erase(std::remove_if(candidates.begin(),candidates.end(),[&](uint32_t tile){return !eligibility[tile];}),candidates.end());
                             uint32_t zoneIndex;
                             if(!startZone(center,4,zoneIndex))return false;
                             const auto &zones=startZones.entry(zoneIndex)->zones.tiles;
@@ -1525,6 +1529,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                                     if(blocked(tile))continue;
                                     std::vector<uint32_t> members;
                                     if(!generateRmsObjectCandidatesInArea(width,height,x,y,row.radius,rng,members,err))return false;
+                                    members.erase(std::remove_if(members.begin(),members.end(),[&](uint32_t member){return !eligibility[member];}),members.end());
                                     genieRandomDraw(rng); // Original loose groups consume a quantity draw even with zero variance.
                                     int remaining=row.perGroup;
                                     for(auto member:members) {
@@ -1538,7 +1543,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                                     candidates.erase(std::remove_if(candidates.begin()+candidateIndex+1,candidates.end(),close),candidates.end());
                                     for(int yy=std::max(0,y-row.spacing);yy<=std::min(int(height)-1,y+row.spacing);++yy)
                                         for(int xx=std::max(0,x-row.spacing);xx<=std::min(int(width)-1,x+row.spacing);++xx)
-                                            if(pass[generated.terrain[size_t(yy)*width+xx]]>0)spaced[size_t(yy)*width+xx]=true;
+                                            if(pass[generated.terrain[size_t(yy)*width+xx]]>0)eligibility[size_t(yy)*width+xx]=0;
                                 }
                                 if(!--remainingGroups)break;
                             }

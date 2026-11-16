@@ -11,7 +11,7 @@ static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
 <LAND_GENERATION> base_terrain RMS_6 create_player_lands { terrain_type RMS_6 base_size 13 number_of_tiles 7200 } <CLIFF_GENERATION> <TERRAIN_GENERATION> create_terrain RMS_21 { base_terrain RMS_6 number_of_tiles 6000 number_of_clumps 60 spacing_to_other_terrain_types 2 clumping_factor 20 set_avoid_player_start_areas } <OBJECTS_GENERATION> create_object RMS_109 { set_place_for_every_player number_of_objects 1 min_distance_to_players 0 max_distance_to_players 0 group_placement_radius 18 } create_object RMS_83 { set_place_for_every_player number_of_objects 1 min_distance_to_players 6 max_distance_to_players 6 group_placement_radius 3 } create_object RMS_550 { set_place_for_every_player match_player_civ number_of_objects 1 min_distance_to_players 7 max_distance_to_players 9 group_placement_radius 3 } create_object RMS_87 { set_place_for_every_player number_of_objects 1 min_distance_to_players 8 max_distance_to_players 14 }
 )";
     const std::string extra="create_object RMS_87 { set_place_for_every_player number_of_objects 1 min_distance_to_players 8 max_distance_to_players 14 }";
-    struct Case { uint32_t seed,rows,count,rng,objects,terrain,heights,slopes; bool onCenter=false; int unit=87; bool loose=false; int groups=1; bool mixed=false; };
+    struct Case { uint32_t seed,rows,count,rng,objects,terrain,heights,slopes; bool onCenter=false; int unit=87; bool loose=false; int groups=1,mixed=0,prefabs1=4,prefabs2=4; };
     const Case cases[]={
         {1u,1u,5989u,1745024857u,1456092772u,3952391958u,1017236165u,1017236165u},
         {12345u,1u,5973u,3433587427u,3999233898u,2021000264u,1017236165u,1017236165u},
@@ -39,6 +39,9 @@ static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
         {1u, 1u, 6007u, 659122895u, 2691377374u, 1007834865u, 1017236165u, 1017236165u, false, 87, false, 1, true},
         {12345u, 1u, 5991u, 1730317561u, 1728207720u, 714626033u, 1017236165u, 1017236165u, false, 87, false, 1, true},
         {16160u, 1u, 6083u, 4222011319u, 3212885382u, 1852023360u, 1017236165u, 1017236165u, false, 87, false, 1, true},
+        {1u, 1u, 6014u, 332111031u, 1997371185u, 4155637983u, 1017236165u, 1017236165u, false, 87, false, 1, 2, 4, 3},
+        {12345u, 1u, 5999u, 2037640229u, 1431426170u, 4001648909u, 1017236165u, 1017236165u, false, 87, false, 1, 2, 4, 4},
+        {16160u, 1u, 6091u, 4185843122u, 2633264522u, 2270325818u, 1017236165u, 1017236165u, false, 87, false, 1, 2, 4, 4},
     };
     struct Building { uint32_t seed,rows,id,owner; float x,y; bool onCenter=false; int unit=87; bool loose=false; int groups=1; };
     const Building buildings[]={
@@ -141,9 +144,16 @@ static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
     };
     for(const auto &c:cases) {
         std::string source=baseline+(c.rows==2?extra:"");
-        if(c.mixed)source="#const RMS_70 70\n#const RMS_50 50\n"+source+
-            "create_object RMS_70 { set_place_for_every_player number_of_objects 4 set_loose_grouping min_distance_to_players 10 max_distance_to_players 12 } "
-            "create_object RMS_50 { set_place_for_every_player number_of_objects 5 min_distance_to_players 2 max_distance_to_players 5 }";
+        if(c.mixed) {
+            const auto pos=source.rfind("create_object RMS_87");
+            const auto troop=source.substr(pos);source.resize(pos);
+            if(c.mixed==2)source+="create_object RMS_79 { set_place_for_every_player number_of_objects 4 min_distance_to_players 10 max_distance_to_players 13 min_distance_group_placement 6 } ";
+            else source+=troop;
+            source+="create_object RMS_70 { set_place_for_every_player number_of_objects 4 set_loose_grouping min_distance_to_players 10 max_distance_to_players 12 } ";
+            if(c.mixed==2)source+=troop;
+            source+="create_object RMS_50 { set_place_for_every_player number_of_objects 5 min_distance_to_players 2 max_distance_to_players 5 }";
+            source="#const RMS_79 79\n#const RMS_70 70\n#const RMS_50 50\n"+source;
+        }
         const bool prefab=c.unit==70,farm=c.unit==50,tower=c.unit==79;
         const int foundation=farm?7:27;
         const int quantity=c.mixed?10:(farm && c.onCenter)?0:c.rows*(c.loose?4:c.groups);
@@ -203,7 +213,7 @@ static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
                   "Mixed startup validates later-row prototypes before generation");
         }
         check(swgb::generateRmsMap(script,{"FIXED_POSITIONS"},120,120,assets.dat(),rng,map,&error,2,{1,1}),error.c_str());
-        check(rng==c.rng && map.resourcesAfterOwned.size()==size_t(quantity*2),"Original owned-building row count and completion RNG");
+        check(rng==c.rng && map.resourcesAfterOwned.size()==size_t(c.mixed==2?20+c.prefabs1+c.prefabs2:quantity*2),"Original owned-building row count and completion RNG");
         uint32_t hash=2166136261u,count=0,next=0;
         auto record=[&](uint32_t id,uint32_t owner,int unit,int facet,float x,float y) {
             for(uint32_t v:{id,owner,uint32_t(unit),uint32_t(facet),uint32_t(x*2),uint32_t(y*2)})hash=(hash^v)*16777619u;
@@ -220,10 +230,12 @@ static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
         check(game.initRms(script,{"FIXED_POSITIONS"},120,rng,&error,2,{1,1}),error.c_str());
         check(rng==c.rng && game.activeObjectCount()==c.count,"Owned-building native import count/RNG");
         for(int owner:{1,2}) {
-            check(game.resource(owner,98)==575+(c.mixed?510:(tower?150:farm?50:prefab?25:160)*quantity) && game.resource(owner,164)==200 && game.resource(owner,165)==375+(c.mixed?510:(tower?150:farm?50:prefab?25:160)*quantity) &&
-                  game.resource(owner,4)==1+(c.mixed?20:prefab?5*quantity:0) && game.resource(owner,11)==4 && game.resource(owner,21)==((prefab || farm || tower)?2:3) && game.resource(owner,99)==0,
+            const int prefabCount=owner==1?c.prefabs1:c.prefabs2;
+            const int extraCost=c.mixed==2?1010+25*prefabCount:c.mixed?510:(tower?150:farm?50:prefab?25:160)*quantity;
+            check(game.resource(owner,98)==575+extraCost && game.resource(owner,164)==200 && game.resource(owner,165)==375+extraCost &&
+                  game.resource(owner,4)==1+(c.mixed==2?5*prefabCount:c.mixed?20:prefab?5*quantity:0) && game.resource(owner,11)==4 && game.resource(owner,21)==((prefab || farm || tower)?2:3) && game.resource(owner,99)==0,
                   "Original building cost and research counters without duplicate completion grants");
-            check(game.technologyOrderForTesting(owner)==(c.mixed?std::vector<int>({0,486,22,451,31,85,209,16,20}):tower?std::vector<int>({0,486,22,451,11}):farm?(quantity?std::vector<int>({0,486,22,451,20}):std::vector<int>({0,486,22,451})):prefab?std::vector<int>({0,486,22,451,16}):std::vector<int>({0,486,22,451,31,85,209})) && (prefab || farm || tower || game.unitAvailableForTesting(owner,307)),
+            check(game.technologyOrderForTesting(owner)==(c.mixed==2?std::vector<int>({0,486,22,451,11,16,31,85,209,20}):c.mixed?std::vector<int>({0,486,22,451,31,85,209,16,20}):tower?std::vector<int>({0,486,22,451,11}):farm?(quantity?std::vector<int>({0,486,22,451,20}):std::vector<int>({0,486,22,451})):prefab?std::vector<int>({0,486,22,451,16}):std::vector<int>({0,486,22,451,31,85,209})) && (prefab || farm || tower || game.unitAvailableForTesting(owner,307)),
                   "Original CC then building research chronology and completion unlock");
         }
         for(const auto &b:buildings)if(!c.mixed && b.seed==c.seed && b.rows==c.rows && b.onCenter==c.onCenter && b.unit==c.unit && b.loose==c.loose && b.groups==c.groups) {

@@ -8,7 +8,7 @@ Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
 Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206, allied roads54218, central water54212 and Motherlode54225.
 The shared packaged suite contains68 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
-Gaia resource accounting and deferred foundation rendering. Twenty-six additional authored
+Gaia resource accounting and deferred foundation rendering. Twenty-nine additional authored
 fixtures cover owned Troop Center, Prefab, Farm and defensive-building placement, completion research order, population grants and rejected placement.
 
 The standard production audit accepts54/138 map/seed attempts (eighteen of46 resources,
@@ -3542,3 +3542,37 @@ no native wall generator is enabled by the mixed-building change.
 
 All68 packaged and26 owned-building regressions pass under ASan/UBSan;
 strict integrated RMS checks pass after per-row validation was introduced.
+
+
+### Persistent building-row spacing and partial Prefab groups (2026-11-16)
+
+An authored fixture now follows the packaged building order with the wall row
+omitted: four Defense79, four loose Prefab70, one Troop Center87, five Farm50.
+It exposed a real controller interaction: permanent tower spacing must survive
+into later object rows, including the Prefab group's inner candidate queue.
+The native building path now uses the existing shared row-eligibility grid
+instead of resetting its own spacing mask for each building row.
+
+| Seed | Objects | Final RNG | Prefabs, owners1/2 |
+| --- | --- | --- | --- |
+| 1 | 6014 | 332111031 | 4/3 |
+| 12345 | 5999 | 2037640229 | 4/4 |
+| 16160 | 6091 | 4185843122 | 4/4 |
+
+For seed1, original tower placement excludes1314 cells; that exact eligibility
+grid persists unchanged through the Prefab, Troop Center and Farm rows. The
+second owner's inner Prefab queue exhausts after three placements. No fourth
+Prefab cost or population grant occurs. Native import therefore matches
+resource4=21/16,98=1685/1660,165=1485/1460 for owners1/2 respectively.
+Completion order is11,16,31,85,209,20 after the base Command Center technologies.
+
+All three full comparisons match every ordered object, all grids, animation,
+deferred foundations and RNG; shared native import tests check the partial
+counts and resources. Evidence:
+`rms-owned-mixed-79-70-87-50-findings-2026-11-16.json` and its full/research/native
+captures, including actual before/after eligibility grids for every owned row.
+The29 authored cases remain distinct from the68 packaged cases. Full54208,
+wall insertion and elevated building gates are still not enabled by this change.
+
+All68 packaged and29 authored building regressions pass under ASan/UBSan,
+and strict integrated RMS checks pass after sharing the eligibility grid.
