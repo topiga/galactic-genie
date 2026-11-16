@@ -51,7 +51,10 @@ bool parseRmsObjectRow(const std::vector<RmsToken> &tokens, size_t &index,
     };
     constexpr int32_t limit=std::numeric_limits<int32_t>::max();
     RmsObjectRow row;
-    if(!number(row.unitId,0,32767)) return false;
+    if(cursor<tokens.size() && tokens[cursor].text=="{") {
+        if(out.unitId<0 || out.unitId>32767) return fail("object continuation requires a previous row");
+        row=out;
+    } else if(!number(row.unitId,0,32767)) return false;
     if(cursor==tokens.size() || tokens[cursor].text!="{") return fail("expected object block");
     ++cursor;
     while(cursor<tokens.size() && tokens[cursor].text!="}") {

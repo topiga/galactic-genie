@@ -285,6 +285,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             } else row.targetTiles=tileAmount;
             if (scaling==2) row.clumps=uint64_t(row.clumps)*width*height/10000;
             terrainRows.push_back(row);
+        } else if (stage==3 && command=="{" && !resourceRows.empty()) {
+            --i;
+            if(!parseRmsObjectRow(tokens,i,resourceRows.back(),err)) return false;
         } else if (stage==3 && command=="create_object" && startingScouts) {
             RmsObjectRow row;
             if(!parseRmsObjectRow(tokens,i,row,err)) return false;

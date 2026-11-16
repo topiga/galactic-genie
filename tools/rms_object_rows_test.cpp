@@ -49,6 +49,17 @@ int main() {
     assert(row.landId==2147483647);
     row=parse("350 { number_of_objects 30 set_scaling_to_player_number set_scaling_to_map_size }");
     RmsObjectRow scaled;std::string error;
+    {
+        // Original55019's unresolved ANIMAL_SAARLAC leaves its block on the Womprat row.
+        auto previous=parse("1475 { number_of_objects 6 number_of_groups 1 group_variance 2 set_gaia_object_only min_distance_to_players 10 set_place_for_every_player }");
+        auto input=tokens("{ number_of_objects 1 set_gaia_object_only min_distance_to_players 10 }");size_t index=0;
+        assert(parseRmsObjectRow(input,index,previous,&error) && index==input.size());
+        assert((words(previous)==std::array<int32_t,15>{1475,-1,1,1,2,1,3,0,1,10,-1,0,0,0,0}));
+        input=tokens("{ number_of_objects 5 group_variance -1 }");index=0;const auto before=words(previous);
+        assert(!parseRmsObjectRow(input,index,previous,&error) && index==0 && words(previous)==before);
+        input=tokens("{ }");index=0;RmsObjectRow missing;
+        assert(!parseRmsObjectRow(input,index,missing,&error) && index==0 && missing.unitId==-1);
+    }
     assert(finalizeRmsObjectRow(row,120,120,2,scaled,&error));
     assert(scaled.groups==43 && scaled.perGroup==1 && scaled.mode==0 && scaled.scaling==1);
     row=parse("350 { number_of_objects 30 set_scaling_to_player_number }");

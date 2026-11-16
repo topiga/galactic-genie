@@ -2753,3 +2753,20 @@ checks. The production audit accepts24/138 sampled cases across eight map
 families;114 remain rejected. Native import also preserves zero-HP Gaia fish
 instead of raising them to1HP. The rebuilt desktop passes menu/preferences and
 headless effects/music smoke; audible mixing was not rechecked.
+
+### Object parameters after unresolved labels (2026-11-16)
+
+Original55019 contains `ANIMAL_SAARLAC`, distinct from the defined
+`ANIMAL_SARLAAC`. The reader discards that unresolved create command but keeps
+its parameter block. Original4e3850 applies the block to the previous Womprat1475
+row: per-group count becomes1 while mode1, variance2, one group, Gaia ownership
+and per-player land selection remain. The native reader already discarded the
+command correctly; the object-row controller now continues the previous row
+across the orphan block instead of rejecting it. A missing previous row or
+invalid modifier still rejects atomically. Strict sanitizer object-row and
+integrated map tests pass. This prepares55019; its remaining unit constructors
+and Gaia foundation behavior are not yet enabled.
+
+Evidence: `rms-packaged-object-rows-55019-TINY_MAP-1-2026-11-15.json` and
+`rms-tatooine-new-inventory-2026-11-16.json` retain original parser output and
+source hashes. The malformed shipped script is not rewritten.

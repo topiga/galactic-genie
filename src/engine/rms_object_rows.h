@@ -28,7 +28,8 @@ struct RmsObjectRow {
     int32_t spacing=0, temporarySpacing=0, zoneDistance=0, matchPlayerCiv=0;
 };
 // Index points to the resolved unit argument after create_object. On success it
-// points past }. Failure preserves index/output. No required attributes or RNG.
+// points past }. An opening { instead continues the existing output row, as after
+// an unresolved create_object label. Failure preserves index/output. No RNG.
 // Native bounds reject negative counts/radii/exclusions and distances below -1;
 // they are safety limits, not assertions about original parser rejection.
 bool parseRmsObjectRow(const std::vector<RmsToken> &tokens, size_t &index,
