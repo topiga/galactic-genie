@@ -13,6 +13,7 @@ namespace {
 bool isTree(int unit) { return unit==348 || unit==349 || unit==350 || unit==411 || unit==413; }
 bool isPredator(int unit) { return unit==126 || unit==812 || unit==1197 || unit==1250 || unit==1129 || unit==1252; }
 bool isMountain(int unit) { return unit==1019 || unit==1020 || unit==1165 || unit==1166; }
+bool isCrater(int unit) { return unit>=1329 && unit<=1331; }
 struct ResourceSpec { int id, graphic, type, cls, hp, restriction, angles, resource, amount, doppel; float height; };
 const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
                                     const std::vector<uint8_t> &terrain,std::string *err) {
@@ -36,13 +37,17 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         {1019,5240,10,42,5000,11,1,-1,0,0,3.f},
         {1020,5241,10,42,5000,11,1,-1,0,0,3.f},
         {1165,5276,10,42,5000,11,1,-1,0,0,3.f},
-        {1166,5277,10,42,5000,11,1,-1,0,0,3.f}};
+        {1166,5277,10,42,5000,11,1,-1,0,0,3.f},
+        {1329,5227,10,42,50,29,1,-1,0,0,0.f},
+        {1330,5226,10,42,50,29,1,-1,0,0,0.f},
+        {1331,5225,10,42,50,29,1,-1,0,0,0.f},
+        {1307,1911,80,18,800,4,1,-1,0,0,2.f}};
     const ResourceSpec *match=nullptr;
     for (const auto &candidate:specs) if (candidate.id==unitId) match=&candidate;
     if (!match) return fail("unsupported resource unit");
     const auto &spec=*match;
-    const bool mountain=isMountain(unitId);
-    const float radius=mountain?3.f:.5f;
+    const bool mountain=isMountain(unitId),crater=isCrater(unitId),mine=unitId==1307;
+    const float radius=mountain?3.f:mine?1.f:crater?float(unitId-1327)*.5f:.5f;
     if (data.civs.empty() || data.civs[0].units.size()<=static_cast<size_t>(unitId))
         return fail("missing Gaia resource prototype");
     const auto &u=data.civs[0].units[unitId];
@@ -53,15 +58,23 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         u.clearanceSize[0]!=radius || u.clearanceSize[1]!=radius ||
         u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 ||
         u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
-        u.terrainRestriction!=spec.restriction || u.hillMode || u.flyMode || u.canBeBuiltOn ||
-        u.recyclable || u.lineOfSight!=0 || u.trainSound!=-1 ||
-        u.obstructionType!=(mountain?10:unitId==1123?0:2) || u.obstructionClass!=(unitId==1123?0:(unitId==1170 || unitId==1171)?3:1) || u.civilization ||
-        u.enableAutoGather!=(spec.resource<0?0:1) || !g || g->sequenceType!=(mountain?0:6) || g->angleCount!=spec.angles)
+        u.terrainRestriction!=spec.restriction || u.hillMode || u.flyMode || u.canBeBuiltOn!=int(crater) ||
+        u.recyclable || u.lineOfSight!=(mine?1.f:0.f) || u.trainSound!=-1 ||
+        u.obstructionType!=(mountain?10:(unitId==1123 || crater)?0:2) || u.obstructionClass!=((unitId==1123 || crater)?0:(unitId==1170 || unitId==1171 || mine)?3:1) || u.civilization ||
+        u.enableAutoGather!=(spec.resource<0?0:1) || !g || g->sequenceType!=(mine?5:(mountain || crater)?0:6) || g->angleCount!=spec.angles)
         return fail("unsupported resource prototype or graphic");
-    if ((spec.type==30 || mountain) && (u.createDoppelgangerOnDeath!=spec.doppel || u.speed!=0 ||
+    if ((spec.type==30 || mountain || crater || mine) && (u.createDoppelgangerOnDeath!=spec.doppel || u.speed!=0 ||
         u.trackingUnit!=-1 || u.trackingUnitMode!=0 || u.trackingUnitDensity!=0 ||
-        g->frameCount!=1 || g->soundId!=-1 || !g->angleSounds.empty()))
+        g->frameCount!=(mine?8:1) || g->soundId!=-1 || !g->angleSounds.empty()))
         return fail("unsupported resource movement or sprite metadata");
+    if(mine) {
+        if(u.foundationTerrainId!=-1 || u.oldOverlayId!=-1 || u.techId!=-1 || u.transformUnit!=-1 ||
+           u.headUnit!=-1 || u.stackUnitId!=-1 || u.adjacentMode || u.graphicsAngle || u.disappearsWhenBuilt ||
+           u.trait || u.convertTerrain || u.constructionGraphic!=348 || u.constructionSound!=919 ||
+           u.trainTime!=20 || g->frameDuration!=.3f || g->replayDelay!=0)
+            return fail("unsupported Gaia mine lifecycle metadata");
+        for(const auto &annex:u.annexes)if(annex.unitId!=-1)return fail("Gaia mine annexes are unsupported");
+    }
     int resourceStores=0;
     for (const auto &storage:u.resourceStorages) {
         if (storage.flag || (storage.type>=0 && (storage.type!=spec.resource || storage.amount!=spec.amount)))
@@ -227,7 +240,7 @@ bool generateRmsResourcePlacements(uint32_t width, uint32_t height,
     std::vector<RmsTimberPlacement> &out, std::string *err,
     const std::vector<uint32_t> &occupiedTiles) {
     out.clear();
-    if(isMountain(unitId)) {if(err)*err="RMS mountain requires a verified final object row";return false;}
+    if(isMountain(unitId) || isCrater(unitId) || unitId==1307) {if(err)*err="RMS large scenery requires a verified object row";return false;}
     if (err) err->clear();
     auto fail = [&](const char *reason) {
         if (err) *err = std::string("RMS resource: ") + reason;
@@ -286,7 +299,12 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
        (group.mode!=1 && group.mode!=2 && !((objectRow || isPredator(unitId) || unitId==822 || unitId==1249 || unitId==1364 || isTree(unitId) || unitId==816 || unitId==69 || unitId==1585) && group.mode==0)) || group.groups>count || group.perGroup>count ||
        group.variance>1024 || group.radius>1024)
         return fail("unsupported dimensions or grouping parameters");
-    const bool mountain=isMountain(unitId);
+    const bool mountain=isMountain(unitId),crater=isCrater(unitId),mine=unitId==1307;
+    if(mine && (!objectRow || width!=120 || height!=120 || objectRow->landId!=-2 ||
+        objectRow->minDistance!=35 || objectRow->maxDistance!=-1 || objectRow->terrain!=-1 ||
+        objectRow->spacing!=15 || objectRow->temporarySpacing || objectRow->zoneDistance ||
+        group.mode || group.groups!=20 || group.perGroup!=1 || group.variance || group.radius!=3))
+        return fail("unsupported Gaia mine row");
     if(mountain && (!objectRow || width!=120 || height!=120 || objectRow->landId!=-2 ||
         objectRow->minDistance!=40 || objectRow->maxDistance!=-1 || objectRow->terrain!=-1 ||
         objectRow->spacing || objectRow->temporarySpacing || objectRow->zoneDistance ||
@@ -457,11 +475,12 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         return true;
     };
     auto pass=[&](int tile) {
-        if(mountain) {
-            const int x=tile%width,y=tile/width;
-            if(x<3 || y<3 || x+3>int(width) || y+3>int(height))return false;
-            for(int yy=y-3;yy<y+3;++yy)for(int xx=x-3;xx<x+3;++xx)
-                if(occupied[yy*width+xx] || restriction[terrain[yy*width+xx]]<=.05f)return false;
+        if(mountain || crater || mine) {
+            const float radius=data.civs[0].units[unitId].collisionSize[0];
+            const int low=int(radius),high=int(std::ceil(radius)),x=tile%width,y=tile/width;
+            if(x<low || y<low || x+high>int(width) || y+high>int(height))return false;
+            for(int yy=y-low;yy<y+high;++yy)for(int xx=x-low;xx<x+high;++xx)
+                if((!crater && occupied[yy*width+xx]) || restriction[terrain[yy*width+xx]]<=.05f)return false;
             return true;
         }
         if(!objectRow && unitId==1585 && terrain[tile]!=22)return false;
@@ -482,9 +501,15 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     };
     auto create=[&](int tile) {
         RmsTimberPlacement placement{float(tile%width)+.5f,float(tile/width)+.5f,0,0,unitId};
-        if(mountain) {
-            // Original global placement retains integer centers and static graphics consume no draws.
-            placement.x=float(tile%width);placement.y=float(tile/width);
+        if(mountain || crater || mine) {
+            // Original snaps by fractional radius; static sequence0 graphics consume no draws.
+            const float radius=data.civs[0].units[unitId].collisionSize[0],offset=radius>int(radius)?.5f:0.f;
+            placement.x=float(tile%width)+offset;placement.y=float(tile/width)+offset;
+            if(mine) {
+                // Original5cfad0: six factory draws, two graphic resets, then completion reseeds.
+                for(int draw=0;draw<8;++draw)genieRandomDraw(rng);
+                rng=genieRandomDraw(rng);
+            }
         } else if(bird) {
             const uint32_t heading=genieRandomDraw(rng)*8u/32767u;
             placement.headingRadians=float(double(heading)*3.14159265358979323846/4.);
@@ -506,7 +531,11 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             const auto appearance=drawRmsCarbonAppearance(rng,static_cast<uint8_t>(spec->angles));
             placement.facet=appearance.facet;placement.headingRadians=appearance.headingRadians;
         } else placement.facet=static_cast<uint8_t>(std::min(unsigned(spec->angles-1),genieRandomDraw(rng)*unsigned(spec->angles)/32767u));
-        result.push_back(placement);if(!herd && !bird && unitId!=1123) occupied[tile]=true;
+        result.push_back(placement);
+        if(mine) {
+            const int x=tile%width,y=tile/width;
+            for(int yy=y-1;yy<y+1;++yy)for(int xx=x-1;xx<x+1;++xx)occupied[yy*width+xx]=true;
+        } else if(!herd && !bird && unitId!=1123 && !crater)occupied[tile]=true;
     };
     RmsZoneCache resourceZones;
     for(size_t player=0;player<(perPlayer?novaPlayerStarts.size():1);++player) {

@@ -1225,17 +1225,19 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
             cornerElevation_[size_t(y)*(mapSize_+1)+x]=static_cast<uint8_t>(elevationAt(float(x),float(y)));
         lookAt(mapSize_*.5f,mapSize_*.5f);
     }
-    auto recordStartupCost=[&](const auto &unit,uint16_t owner) {
+    auto recordStartupResources=[&](const auto &unit,uint16_t owner) {
         float cost=0;
         for (const auto &entry:unit.costs)
-            if ((entry.flag&0xff) && entry.type>=0 && entry.type<=3) cost+=entry.amount;
+            if ((entry.flag&0xff)==1 && entry.type>=0) cost+=entry.amount;
         // Original starting objects record their cost without charging the owner.
         resources_[owner][98]+=cost;
         resources_[owner][unit.type==dat::UT_Building?165:164]+=cost;
-        if (unit.cls==58 || unit.cls==47 || unit.cls==59) {
-            resources_[owner][11]+=1;
+        // Original54c395 grants flags1/2; completed buildings grant flags>=4 at5544c8.
+        for(const auto &storage:unit.resourceStorages)
+            if(storage.type>=0 && (storage.flag==1 || storage.flag==2 || (unit.type==dat::UT_Building && storage.flag>=4)))
+                resources_[owner][storage.type]+=storage.amount;
+        if(unit.cls==58 || unit.cls==47 || unit.cls==59)
             resources_[owner][unit.cls==58?37:40]+=1;
-        }
     };
     for (size_t index=0;index<generated.ownedObjects.size();++index) {
         const auto &placement=generated.ownedObjects[index];
@@ -1247,11 +1249,11 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
             object->initialIdleDelay=placement.initialIdleDelay;
             object->heightAboveGround=placement.heightAboveGround;
         }
-        recordStartupCost(unit,placement.owner);
+        recordStartupResources(unit,placement.owner);
     }
     for(size_t index=0;index<generated.resourcesAfterOwned.size();++index) {
         const auto &placement=generated.resourcesAfterOwned[index];
-        if(placement.owner)recordStartupCost(assets_.dat().civs[playerCivilizations[placement.owner-1]].units[placement.unitId],placement.owner);
+        recordStartupResources(assets_.dat().civs[placement.owner?playerCivilizations[placement.owner-1]:0].units[placement.unitId],placement.owner);
         if(auto *object=findObject(resourceIdBase+uint32_t(index))) {
             if(placement.owner)object->pendingFoundation=255;
             const auto *graphic=assets_.dat().graphic(object->unit->standingGraphic[0]);

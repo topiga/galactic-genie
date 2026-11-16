@@ -372,9 +372,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if (base<0 || lands.empty()) return fail("explicit base terrain and at least one land required");
     // shortcut: expand after composed original cliff/terrain/startup comparisons.
     if(cliffStage) {
-        // Verified packaged Reytha/Arid/Hoth geometry; other cliff compositions remain gated.
+        // Verified packaged Reytha/Arid/Hoth/Kessel geometry; other cliff compositions remain gated.
         const bool packagedCliffGeometry=[&]() {
-            const unsigned kind=base==32?3:base==14?1:base==26?2:0;
+            const unsigned kind=base==26 && terrainRows.size()==5 && terrainRows[0].terrain==46?4:base==32?3:base==14?1:base==26?2:0;
             const bool sparseCliffs=kind!=0, hoth=kind==3;
             if(width!=120 || height!=120 || (base!=41 && !sparseCliffs) || !playerLands || playerCount!=2 ||
                 lands.size()!=2 || playerZoneOverride || !ownedObjects || !startingWorkers ||
@@ -391,13 +391,13 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     land.leftBorder || land.topBorder || land.rightBorder!=-1 || land.bottomBorder!=-1 ||
                     placements[i].x!=-1 || placements[i].y!=-1 || placements[i].minPlacementDistance!=-1) return false;
             }
-            const uint32_t terrain[4][5]={{10,9,6,6,44},{50,46,50,45,46},{19,46,19,45,14},{49,49,33,34}}, tiles[4][5]={{1728,2016,720,432,288},{1728,2880,144,288,288},{1728,2880,144,288,288},{1728,144,1440,1440}};
-            const uint32_t clumps[4][5]={{28,50,8,12,10},{17,16,7,24,30},{17,16,7,24,30},{17,7,30,30}}, spacing[4][5]={{5,1,1,1,1},{5,0,3,1,1},{5,0,3,1,1},{5,3,1,1}};
+            const uint32_t terrain[5][5]={{10,9,6,6,44},{50,46,50,45,46},{19,46,19,45,14},{49,49,33,34},{46,19,19,14,14}}, tiles[5][5]={{1728,2016,720,432,288},{1728,2880,144,288,288},{1728,2880,144,288,288},{1728,144,1440,1440},{1440,11520,1440,288,288}};
+            const uint32_t clumps[5][5]={{28,50,8,12,10},{17,16,7,24,30},{17,16,7,24,30},{17,7,30,30},{16,17,7,24,30}}, spacing[5][5]={{5,1,1,1,1},{5,0,3,1,1},{5,0,3,1,1},{5,3,1,1},{0,5,3,10,1}};
             for(size_t i=0;i<terrainRows.size();++i) {
                 const auto &row=terrainRows[i];
-                if(row.terrain!=terrain[kind][i] || row.baseTerrain!=base || row.targetTiles!=tiles[kind][i] ||
+                if(row.terrain!=terrain[kind][i] || row.baseTerrain!=(kind==4 && (i==1 || i==4)?46u:base) || row.targetTiles!=tiles[kind][i] ||
                     row.clumps!=clumps[kind][i] || row.spacing!=spacing[kind][i] || row.clumping!=20 ||
-                    row.avoidPlayerStarts!=(i==0 || (hoth?i==1:sparseCliffs && i==2)) || row.flatTerrainOnly ||
+                    row.avoidPlayerStarts!=(kind==4?(i==1 || i==2):(i==0 || (hoth?i==1:sparseCliffs && i==2))) || row.flatTerrainOnly ||
                     row.minHeight!=0 || row.maxHeight!=255) return false;
             }
             for(size_t i=0;i<elevationRows.size();++i) {
@@ -995,6 +995,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                            return base==32?(later.unitId==1165 || later.unitId==1166):(later.unitId==1019 || later.unitId==1020);
                        }))return fail("mountains require trailing verified cliff-map rows");
                 }
+                if(row.unitId==1307 && (base!=26 || !cliffStage || terrainRows.size()!=5 || terrainRows[0].terrain!=46))
+                    return fail("Gaia mines require the verified Kessel profile");
                 std::vector<RmsObjectTarget> targets;
                 if(!selectRmsObjectTargets(row,generated.lands,playerCount,targets,err))return false;
                 if(targets.empty())continue;
@@ -1008,7 +1010,10 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                         return fail("unsupported additional owned object row");
                     auto staticBlockers=occupied;
                     for(const auto &object:generated.resourcesAfterOwned)
-                        if(!object.owner && (object.unitId==59 || object.unitId==66 || object.unitId==102 || object.unitId==1160 || object.unitId==1170 || isTree(object.unitId)))
+                        if(!object.owner && object.unitId==1307) {
+                            for(int y=int(object.y)-1;y<int(object.y)+1;++y)
+                                for(int x=int(object.x)-1;x<int(object.x)+1;++x)staticBlockers.push_back(uint32_t(y)*width+x);
+                        } else if(!object.owner && (object.unitId==59 || object.unitId==66 || object.unitId==102 || object.unitId==1160 || object.unitId==1170 || isTree(object.unitId)))
                             staticBlockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
                     std::sort(staticBlockers.begin(),staticBlockers.end());
                     staticBlockers.erase(std::unique(staticBlockers.begin(),staticBlockers.end()),staticBlockers.end());
@@ -1041,8 +1046,19 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                             for(int x=int(object.x)-2;x<int(object.x)+2;++x) rowBlockers.push_back(uint32_t(y)*width+x);
                     // Original herd gates ignore mobile units, holocrons and other animals.
                     for(const auto &object:generated.resourcesAfterOwned)
-                        if(object.unitId==59 || object.unitId==66 || object.unitId==102 || object.unitId==1160 || object.unitId==1170 || isTree(object.unitId))
+                        if(object.unitId==1307) {
+                            for(int y=int(object.y)-1;y<int(object.y)+1;++y)
+                                for(int x=int(object.x)-1;x<int(object.x)+1;++x)rowBlockers.push_back(uint32_t(y)*width+x);
+                        } else if(object.unitId==59 || object.unitId==66 || object.unitId==102 || object.unitId==1160 || object.unitId==1170 || isTree(object.unitId))
                             rowBlockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
+                }
+                if(row.unitId==1307) {
+                    rowBlockers=occupied;
+                    for(const auto &object:generated.resourcesAfterOwned) {
+                        const auto &prototype=data.civs[0].units[object.unitId];
+                        if(object.owner || (!prototype.canBeBuiltOn && prototype.collisionSize[2]>0 && prototype.speed<=0))
+                            rowBlockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
+                    }
                 }
                 std::vector<RmsTimberPlacement> placed;
                 if(row.unitId==285) {
@@ -1063,10 +1079,11 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                         RmsResourceDistance::Near,&eligibility,(row.landId==-2 || row.landId>=0)?&global:nullptr,nullptr,&row)) return false;
                 }
                 // Original waves and zero-height plants do not block later objects.
-                for(const auto &object:placed) if(object.unitId!=816 && object.unitId!=1585 && object.unitId!=1123) {
-                    if(object.unitId==1019 || object.unitId==1020 || object.unitId==1165 || object.unitId==1166) {
-                        for(int y=int(object.y)-3;y<int(object.y)+3;++y)
-                            for(int x=int(object.x)-3;x<int(object.x)+3;++x)blockers.push_back(uint32_t(y)*width+x);
+                for(const auto &object:placed) if(object.unitId!=816 && object.unitId!=1585 && object.unitId!=1123 && (object.unitId<1329 || object.unitId>1331)) {
+                    if(object.unitId==1019 || object.unitId==1020 || object.unitId==1165 || object.unitId==1166 || object.unitId==1307) {
+                        const int radius=object.unitId==1307?1:3;
+                        for(int y=int(object.y)-radius;y<int(object.y)+radius;++y)
+                            for(int x=int(object.x)-radius;x<int(object.x)+radius;++x)blockers.push_back(uint32_t(y)*width+x);
                     } else blockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
                 }
                 generated.resourcesAfterOwned.insert(generated.resourcesAfterOwned.end(),placed.begin(),placed.end());

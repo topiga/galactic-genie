@@ -2629,3 +2629,47 @@ cases still reject unsupported rules. Full import regressions, the focused
 mountain-boundary checks and production CLI tests pass. This is acceptance
 coverage for fixed Tiny/two-Empire/default-resource settings, not a percentage
 of overall engine parity.
+
+### Packaged Kessel: Gaia buildings and craters
+
+Kessel55008 now has complete original-runner comparisons for fixed Tiny120,
+two Empire players and default resources:
+
+| Seed | Objects | Final RNG |
+|---|---:|---:|
+| 1 | 2,058 | 2472476762 |
+| 12345 | 2,062 | 1548149991 |
+| 16160 | 2,119 | 158063007 |
+
+Every ordered object, terrain/elevation/slope cell and startup pose matches.
+The native import also checks mine heights on slopes and pending-foundation
+state. Original mine1307 startup consumes nine draws, then reseeds with the
+last15-bit result. It completes at frame0 without terrain painting, research or
+annex effects. The original reference needed its real air-manager initialization
+and previously missing heap-owned damage graphics; failures are retained, and
+no unknown engine callbacks were replaced with successful stubs.
+
+Crater1329/1330/1331 placement uses its actual radius1/1.5/2 and terrain
+restriction29. Small/large centers are integer-aligned; medium centers are
+half-tile aligned. Their zero-height, build-over behavior ignores object
+collisions, while bounds and terrain footprint checks remain. Their static
+constructors consume no random draws.
+
+Gaia accounting exposed an import omission. RMS startup now records Gaia costs
+and original storage grants, including five holocrons granting resource11.
+For seeds1/12345 the Gaia unit/building/total costs are2600/475/3075; for16160
+they are2850/425/3275. Building completion grants flagged population storage;
+owned civilian/military counters remain separate. Original instructions
+54c395,5544c8,55a2c3 and554aad support these rules.
+
+Evidence: `rms-packaged-kessel-full-findings-2026-11-16.json`,
+`rms-kessel-assets-provenance-2026-11-16.json`,
+`rms-kessel-gaia-stats-findings-2026-11-16.json`, and matching native comparison
+files in local research. The shared packaged fixture set now has17 complete
+cases. This does not establish untested building/diplomacy overlap branches,
+all settings or later-game simulation parity.
+
+The Kessel production audit accepts18/138 standard cases;120 remain rejected.
+Complete import/pose/height/resource regressions, all52 general object-row cases
+and production CLI checks pass. The reference comparison remains local and
+configured-world; these figures are not whole-engine completion percentages.
