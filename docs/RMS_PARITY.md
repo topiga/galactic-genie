@@ -8,8 +8,8 @@ Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
 Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206, allied roads54218, central water54212 and Motherlode54225.
 The shared packaged suite contains68 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
-Gaia resource accounting and deferred foundation rendering. Twelve additional authored
-fixtures cover owned Troop Center and Prefab placement, completion research order and population grants.
+Gaia resource accounting and deferred foundation rendering. Seventeen additional authored
+fixtures cover owned Troop Center, Prefab and Farm placement, completion research order, population grants and rejected placement.
 
 The standard production audit accepts54/138 map/seed attempts (eighteen of46 resources,
 three seeds each);84 are explicitly rejected. The allied54218 configuration is
@@ -3404,3 +3404,61 @@ poses and RNG1640586513. The shared68 packaged cases and twelve authored buildin
 fixtures pass under ASan/UBSan; strict integrated RMS and standalone CLI checks
 also pass. This extra seed is retained as a local full comparison, not counted
 as an additional shared regression fixture.
+
+
+### Wall controller investigation (2026-11-16)
+
+Static original-executable evidence shows that class6 walls take a separate
+placement path (`4df5b0`), rather than the ordinary single/group candidate loop.
+It caches per-owner boundary segments produced by `499a60`, using player-start
+ranges, path search, reachable-terrain filtering and a further pruning pass.
+The segment walker can insert gate IDs667,659,64,88, limiting each orientation
+to two insertions and skipping four wall positions for each inserted gate.
+A ring drawn directly from the requested minimum/maximum distances would omit
+this behavior. Gate constructors also require their own annex/head/transform
+asset closure. This is investigation evidence, not enabled wall generation.
+
+The six function records and snapshot are retained locally as
+`rms-wall117-{4df5b0,499a60,49a030,49a660,49abe0,499d10}-rea-2026-11-16.json`
+and `rms-wall117-rea-snapshot-2026-11-16.json`. They identify the original PE
+hash and Ghidra12.1.4 provider. Full original execution, native implementation
+and seed-matched wall/gate tests remain required before enabling that path.
+
+
+### Owned Farm placement and completion (2026-11-16)
+
+Five authored flat120/two-Empire cases now match the complete original runner:
+three single-Farm seeds, the raw54208 five-per-owner row, and a blocked one-tile
+candidate queue over the existing Command Centers. Every comparison covers
+ordered objects, all grids, animation, pending foundations and final RNG.
+
+| Case | Seed | Objects | Final RNG |
+| --- | --- | --- | --- |
+| Single | 1 | 5989 | 1626247642 |
+| Single | 12345 | 5973 | 2524091778 |
+| Single | 16160 | 6065 | 2983090062 |
+| Five per owner | 1 | 5997 | 1477568208 |
+| Blocked over Command Centers | 1 | 5987 | 2551954224 |
+
+The ordinary owned placement loop now continues through the shared candidate
+queue for repeated single objects. Farm50 skips forced last-candidate placement.
+Actual gate controls over existing, unmodified world objects confirm that farms
+ignore moving workers/scouts, but reject overlapping farms and Command Centers;
+zero vertical collision extent does not mean all collisions are ignored.
+The blocked full case produces no farms, no cost or research changes, and no
+constructor random draws.
+
+Completed farms have480HP and fifteen stored food, consume four constructor/
+completion draws including reseeding, and record50 carbon cost each. Tech20
+completes only for the first Farm per owner. Native import checks these values,
+including the repeated five-Farm row, unchanged population, and local/deferred
+enemy3x3 foundation terrain7. The Farm metadata guard rejects altered storage.
+
+Evidence: `rms-owned50-mode0-findings-2026-11-16.json`,
+`rms-owned50-real-gate-controls-2026-11-16.json`, original loader captures and
+`rms-text-full-owned50-{single,five,on-cc}` full/research-v2/native comparisons.
+Only the compared row quantities and geometry are enabled. Mixed building rows,
+slopes, other civilizations, harvesting and depletion remain outside this proof.
+
+The68 packaged cases and seventeen owned-building fixtures pass under
+ASan/UBSan after this change. Strict integrated RMS checks also pass.
