@@ -490,6 +490,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     return fail("cliffs require one verified grass elevation block");
             }
         }
+    }
+    if(cliffStage) {
         if(data.civs.empty() || data.civs[0].units.size()<=273) return fail("missing original cliff units");
         static constexpr float cliffSizes[10][2]={{1.5f,1.5f},{.5f,1.5f},{1.5f,.5f},{1,1.5f},{1,1.5f},
             {1.5f,1},{1.5f,1},{1,1},{1,1},{1.5f,1.5f}};

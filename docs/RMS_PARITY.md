@@ -2869,3 +2869,9 @@ The production audit accepts30/138 cases across ten profiles;108 remain rejected
 Desktop preferences/menu/effects/music smoke passes using dummy video/audio.
 The final explicit marine master-terrain check also passes all three full Endor
 comparisons with full-precision coordinates.
+
+The specialized mixed-land acceptance gates now retain the common cliff-master
+validation. Previously they bypassed that validation along with the older geometry
+gates. A malformed/missing cliff prototype now rejects before generation with
+unchanged RNG and empty output. Both mixed-land profiles have negative fixtures;
+all29 complete packaged startup cases still pass.

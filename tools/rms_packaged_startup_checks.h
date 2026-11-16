@@ -2385,6 +2385,8 @@ static void rmsPackagedStartupChecks(swgb::Assets &assets,const std::string &dat
         check(script.load(int32_t(c.resource),resources,&error),error.c_str());
         swgb::RmsMap map;uint32_t rng=c.seed;
         if((c.resource==54209 || c.resource==54207) && c.seed==1) {
+            swgb::dat::DatFile missingCliffs;missingCliffs.civs.resize(1);missingCliffs.civs[0].units.resize(274);
+            check(!swgb::generateRmsMap(script,defines,120,120,missingCliffs,rng,map,&error,2,{1,1}) && rng==c.seed && map.terrain.empty() && error.find("unsupported original cliff master or graphic")!=std::string::npos,"Mixed-land profiles validate cliff metadata before generation");
             auto unsupported=defines;unsupported.erase("FIXED_POSITIONS");
             check(!swgb::generateRmsMap(script,unsupported,120,120,assets.dat(),rng,map,&error,2,{1,1}) && rng==c.seed,"Uncompared mixed-land random starts reject atomically");
         }
