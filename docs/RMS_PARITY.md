@@ -2,16 +2,16 @@
 
 ## Current comparison coverage: 2026-11-16
 
-Seventeen packaged profiles have complete original-runner comparisons at fixed Tiny120,
+Eighteen packaged profiles have complete original-runner comparisons at fixed Tiny120,
 two Empire players and default resources (54218 uses mutual allies): Forest54204, Reytha54220, Arid54201,
 Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
-Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206 and allied roads54218.
-The shared packaged suite contains62 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
+Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206 allied roads54218 and central water54212.
+The shared packaged suite contains65 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
 Gaia resource accounting and deferred foundation rendering.
 
-The standard production audit accepts48/138 map/seed attempts (sixteen of46 resources,
-three seeds each);90 are explicitly rejected. The allied54218 configuration is
+The standard production audit accepts51/138 map/seed attempts (seventeen of46 resources,
+three seeds each);87 are explicitly rejected. The allied54218 configuration is
 verified separately and is not counted as accepted by this enemy-player audit. This measures supported
 configurations, not an engine completion percentage. New comparisons run the
 original executable locally with modeled host boundaries. Live Windows evidence
@@ -3207,3 +3207,36 @@ packaged fixtures pass with sanitizers, including native import and these counte
 Strict RMS integration, production CLI checks, fixed-start tests and the desktop
 menu/render/audio-streaming smoke also pass. The20-suite algorithm run passed
 before this profile addition; affected integration/startup paths were rerun after it.
+
+
+### Central water and enemy starts sharing a zone (2026-11-16)
+
+Raw54212 at fixed Tiny120/two-Empire/default resources grows a large neutral
+water land before two smaller player lands. Both enemy players explicitly use
+zone11; the water uses zone26. This is separate from allied diplomacy. Ten
+terrain rows, seven elevation levels and cliffs compose without connections.
+
+| Seed | Biome | Objects | Final RNG |
+|---:|---|---:|---:|
+| 1 | Zaloriis26 | 1734 | 3896178188 |
+| 12345 | Zaloriis26 | 1771 | 696640726 |
+| 16160 | Naboo0 | 1712 | 3193406899 |
+
+All ordered records at full coordinate precision, terrain/elevation/slopes,
+startup poses and final RNG match actual original execution. Existing growth,
+resource grouping and three-center holocron exclusion need no algorithm changes.
+The branches cover variable hunt groups, carbon rocks and the repeated Nova
+quantity directive whose last value wins. Uncompared random-position settings
+and missing cliff assets remain rejected transactionally.
+
+Evidence: `rms-packaged-central54212-full-findings-2026-11-16.json` plus the
+`rms-text-full-central54212` original/resource/native-comparison captures. This
+remains bounded startup evidence, not later gameplay or other sizes/settings.
+
+Independent resource replays verify Gaia total/unit costs1550,3950,2350,
+zero building costs and five Gaia units. All65 shared packaged cases pass with
+ASan/UBSan, retained Forest/general-row/holocron/foundation/transport regressions,
+strict RMS integration and production CLI tests. The audit accepts51/138 enemy
+map/seed attempts;87 remain explicitly rejected. The separate allied profile
+adds three full comparisons without changing those audit figures. Desktop
+preferences/menu/render/effects/music-streaming smoke passes with dummy output.
