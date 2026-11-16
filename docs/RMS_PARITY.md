@@ -4141,3 +4141,32 @@ Validation:112 retained packaged cases plus general/authored regressions pass
 under ASan/UBSan, as do strict RMS, production file/archive checks and desktop
 menu/render/audio-stream smoke. Production accepts87 of138 configurations
 across29 resources; acceptance is not a complete-parity percentage.
+
+### Space Satellites54215 specific-land resource placement (2026-11-16)
+
+Actual-derived Tiny/default two-Empire seeds1/12345/16160 match1037/1049/1035
+original objects and final RNG2907172999/1556233438/3567316545. Ordered records,
+exact coordinates, all three grids and captured poses match. Native fixtures
+retain59 animation/health/height records and transport/resource counters.
+
+The four-land profile places two2880-tile player lands followed by two144-tile
+neutral lands with IDs30/33. Its four terrain rows reuse the same27 elevation
+rows as Space Mass/Geddes, but omit both connections and cliffs. The shared
+elevation validation is reused; all profile-specific land and terrain fields
+remain explicit.
+
+Existing general object dispatch places the selected Nova groups on land30 and
+Ore groups on land33 without a new placement algorithm. The full comparison
+covers target selection, same-zone filtering and grouped placement on the small
+islands, followed by transport startup without connected causeways. This is
+additional coverage of the general controller, not just terrain-image similarity.
+
+Evidence: `rms-spacesatellites54215-full-startup-findings-2026-11-16.json`,
+`rms-satellites54215-geometry-findings-2026-11-16.json`, and reused Space Mass
+asset/air-placement provenance. Other sizes, civilizations, arbitrary seeds
+and later gameplay remain unverified.
+
+Validation:115 retained packaged startup cases plus general/authored suites
+pass under ASan/UBSan. Strict RMS, production file/archive checks and desktop
+menu/render/audio-stream smoke pass. Production accepts90 of138 configurations
+across30 resources; this remains acceptance coverage rather than total parity.
