@@ -8,7 +8,7 @@ Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
 Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206, allied roads54218, central water54212 and Motherlode54225.
 The shared packaged suite contains68 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
-Gaia resource accounting and deferred foundation rendering. Four additional authored
+Gaia resource accounting and deferred foundation rendering. Five additional authored
 fixtures cover owned Troop Center placement and completion research order.
 
 The standard production audit accepts54/138 map/seed attempts (eighteen of46 resources,
@@ -3319,8 +3319,8 @@ research or population grants. No startup resource charge is applied.
 research order/unlock, costs, health/animation and deferred foundation rendering.
 Wrong foundation metadata and randomized-position variants reject atomically.
 Support remains limited to the compared flat two-Empire composition. Slopes,
-mixed additional object rows and last-rejected-candidate overlap cleanup remain
-unverified; forced overlap explicitly rejects rather than inventing destruction.
+mixed additional object rows and forced boundary placement remain unverified.
+The subsequently verified last-candidate overlap path is described below.
 
 Evidence: `rms-owned87-bounded-findings-2026-11-16.json`, actual-loader provenance
 `rms-owned87-assets-provenance-2026-11-16.json`, and the original full/resource/
@@ -3334,3 +3334,25 @@ The owned87 guard also rejects quantity-scaling modifiers before generation.
 A dedicated negative fixture prevents a scaled group count from being accepted
 by the currently single-building-per-owner path; the four completion fixtures
 pass again after this admission fix.
+
+
+### Owned87 forced placement retains overlapping objects (2026-11-16)
+
+Separate actual-controller probes force87 onto a forest tree, an existing scout,
+and a local forest tile. All overlapping objects remain registered in state2.
+The local foundation still paints nine tiles27, including four formerforest21
+cells; the enemy foundation remains pending27. Original4de1b0 unlinks candidate
+queue nodes, not world objects. A minimum-distance control exhausts its queue
+without invoking the gate, creating a building, charging cost or granting tech.
+
+An additional authored full map uses the87 row at min0/max0, forcing both
+Troop Centers over their owners' Command Centers. Native output matches all5989
+objects, complete grids/poses and RNG524140293. Import verifies that the existing
+buildings survive and new buildings receive the original research/cost/foundation
+state. The five owned-building regression fixtures pass with sanitizers.
+
+Native placement now uses the original last-rejected candidate after distance
+and zone filtering, preserving overlapping objects. The compared8..14 ring and
+0..0 control are admitted; out-of-map forced footprints still reject atomically.
+Evidence: `rms-owned87-forced-findings-2026-11-16.json` and the
+`rms-text-full-owned87-on-cc` full/research-v2/native comparisons.

@@ -1029,7 +1029,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     }
     const bool troopCenters=std::any_of(resourceRows.begin(),resourceRows.end(),[](const auto &row){return row.unitId==87;});
     if(troopCenters) {
-        // shortcut: flat Empire87 completion; extend slopes, mixed rows and forced cleanup with original traces.
+        // shortcut: flat Empire87 completion; extend slopes, mixed rows and boundary fallback with original traces.
         if(width!=120 || height!=120 || base!=6 || playerCount!=2 || playerCivilizations!=std::vector<uint16_t>{1,1} ||
            !defines.count("FIXED_POSITIONS") || !ownedObjects || !startingWorkers || !startingScouts || startingStalagmites ||
            workerGroups!=1 || scoutGroups!=1 || workerMinDistance!=6 || workerMaxDistance!=6 ||
@@ -1041,7 +1041,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
            cliffSettings.curl!=36 || cliffSettings.waterDistance!=2 || cliffSettings.cliffDistance!=2 ||
            !std::all_of(resourceRows.begin(),resourceRows.end(),[](const auto &row) {
                return row.unitId==87 && row.owner==-1 && row.landId==1 && !row.matchPlayerCiv && !row.mode && !row.scaling && row.groups==1 &&
-                      row.perGroup==1 && !row.variance && row.radius==3 && row.terrain==-1 && row.minDistance==8 && row.maxDistance==14 &&
+                      row.perGroup==1 && !row.variance && row.radius==3 && row.terrain==-1 && ((row.minDistance==8 && row.maxDistance==14) || (!row.minDistance && !row.maxDistance)) &&
                       !row.spacing && !row.temporarySpacing && !row.zoneDistance;
            })) return fail("unsupported owned87 startup composition");
         for(const auto &land:lands)
@@ -1455,7 +1455,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                             if(target.owner<1 || target.owner>2 || target.landIndex<0)return fail("owned87 requires selected player lands");
                             const auto &center=generated.lands[target.landIndex].center;
                             std::vector<uint32_t> candidates;
-                            if(!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,14,rng,candidates,err))return false;
+                            if(!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,row.maxDistance,rng,candidates,err))return false;
                             uint32_t zoneIndex;
                             if(!startZone(center,4,zoneIndex))return false;
                             const auto &zones=startZones.entry(zoneIndex)->zones.tiles;
@@ -1464,10 +1464,11 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                             for(auto tile:candidates) {
                                 const int x=tile%width,y=tile/width;
                                 if(zones[tile]!=zone || std::any_of(generated.lands.begin(),generated.lands.end(),[&](const auto &land) {
-                                    return std::abs(x-land.center.x)<8 && std::abs(y-land.center.y)<8;
+                                    return std::abs(x-land.center.x)<row.minDistance && std::abs(y-land.center.y)<row.minDistance;
                                 }))continue;
                                 const float px=x+.5f,py=y+.5f;
-                                bool blocked=x<1 || y<1 || x+1>=int(width) || y+1>=int(height);
+                                const bool outside=x<1 || y<1 || x+1>=int(width) || y+1>=int(height);
+                                bool blocked=outside;
                                 if(!blocked) for(int yy=y-1;yy<=y+1;++yy)for(int xx=x-1;xx<=x+1;++xx) {
                                     const auto terrain=generated.terrain[size_t(yy)*width+xx];
                                     if(terrain>=pass.size() || !std::isfinite(pass[terrain]))return fail("invalid owned87 terrain restriction");
@@ -1482,10 +1483,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                                 for(const auto &o:generated.scenery)if(o.alive)blocked|=overlap(o.unitId,0,o.x,o.y);
                                 for(const auto &o:generated.ownedObjects)blocked|=overlap(o.unitId,o.owner,o.x,o.y);
                                 for(const auto &o:generated.resourcesAfterOwned)blocked|=overlap(o.unitId,o.owner,o.x,o.y);
-                                if(blocked) {
-                                    if(tile==candidates.back())return fail("forced owned87 overlap cleanup remains unverified");
-                                    continue;
-                                }
+                                if(blocked && tile!=candidates.back())continue;
+                                if(outside)return fail("owned87 forced boundary placement remains unverified");
+                                // Last-candidate fallback retains overlapping world objects;4de1b0 only unlinks queue nodes.
                                 for(int draw=0;draw<3;++draw)genieRandomDraw(rng);
                                 rng=genieRandomDraw(rng); // Actual554951 completion reseeds after the fourth draw.
                                 const uint16_t owner=uint16_t(target.owner);
