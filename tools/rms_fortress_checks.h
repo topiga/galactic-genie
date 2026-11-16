@@ -7,10 +7,12 @@ static void rmsFortressChecks(swgb::Assets &assets,swgb::ResourceSet &resources)
     swgb::RmsScript script;std::string error;
     check(script.load(54208,resources,&error),error.c_str());
     const std::unordered_set<std::string> defines{"TINY_MAP","FIXED_POSITIONS","DEFAULT_RESOURCES"};
-    struct Case {uint32_t seed,count,rng,objects,terrain,heights,slopes,cost1,cost2,ownedHeightHealth,obstruction,directions;};
+    struct Case {uint32_t seed,count,rng,objects,terrain,heights,slopes,cost1,cost2,ownedHeightHealth,obstruction,directions,population1=21,population2=21;};
     const Case cases[]={
         {1u,1852u,472822087u,2066791139u,695987317u,370085139u,2196496358u,2200u,2160u,1319479453u,2795300037u,3497619881u},
         {12345u,1808u,3283216374u,733826055u,917820985u,2894856452u,830763451u,2085u,2160u,337729919u,3530970053u,85941139u},
+        {16160u,1857u,1539544777u,3803719893u,1933540263u,4051794037u,3701867154u,2015u,2140u,551165221u,2355176645u,93798073u,6u,21u},
+        {8000u,1829u,2585261580u,716729200u,686078103u,1708483483u,2844762376u,2010u,2185u,328983822u,1656264133u,956334648u,16u,21u},
     };
     const auto bits=[](float value){uint32_t out;std::memcpy(&out,&value,sizeof out);return out;};
     const auto hash=[](const auto &values){uint32_t out=2166136261u;for(auto v:values)out=(out^uint32_t(v))*16777619u;return out;};
@@ -61,7 +63,9 @@ static void rmsFortressChecks(swgb::Assets &assets,swgb::ResourceSet &resources)
         for(int owner:{1,2}) {
             const auto cost=owner==1?c.cost1:c.cost2;
             check(game.resource(owner,98)==cost && game.resource(owner,165)==cost-200 && game.resource(owner,164)==200 &&
-                  game.resource(owner,4)==21 && game.resource(owner,11)==4 && game.resource(owner,21)==3,"Original Fortress building costs and population");
+                  game.resource(owner,4)==(owner==1?c.population1:c.population2) && game.resource(owner,11)==4 && game.resource(owner,21)==3,"Original Fortress building costs and population");
+            check(game.populationUsedForTesting(owner)==4 && game.populationCapacityForTesting(owner)==4+(owner==1?c.population1:c.population2),
+                  "Original Fortress HUD population includes only completed Prefabs");
             check(game.technologyOrderForTesting(owner)==std::vector<int>({0,486,22,451,11,10,16,31,85,209,20}),"Original Fortress completion research order");
         }
         for(size_t n=0;n<map.resourcesAfterOwned.size();++n) {

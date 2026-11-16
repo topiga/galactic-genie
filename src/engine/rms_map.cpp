@@ -777,20 +777,24 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
            workerMinDistance!=6 || workerMaxDistance!=6 || !cliffStage || !elevationStage || connectionStage ||
            terrainRows.size()!=11 || elevationRows.size()!=8 || cliffSettings.minCount!=5 || cliffSettings.maxCount!=10 ||
            cliffSettings.minLength!=3 || cliffSettings.maxLength!=10 || cliffSettings.curl!=36 || cliffSettings.waterDistance!=2 || cliffSettings.cliffDistance!=2)return false;
+        const uint32_t ground=lands[0].terrain;const bool reytha=ground==41,zaloriis=ground==26;
+        if(ground!=0 && !reytha && !zaloriis)return false;
         for(size_t n=0;n<lands.size();++n) {
             const auto &l=lands[n];const auto &at=placements[n];const auto &m=landMetadata[n];
-            if(l.terrain!=0 || l.radius!=20 || l.targetTiles!=6120 || l.zone!=11 || l.clumpingFactor!=8 || l.borderFuzziness!=15 || l.separation!=7 ||
+            if(l.terrain!=ground || l.radius!=20 || l.targetTiles!=6120 || l.zone!=11 || l.clumpingFactor!=8 || l.borderFuzziness!=15 || l.separation!=7 ||
                l.leftBorder || l.topBorder || l.rightBorder!=-1 || l.bottomBorder!=-1 || at.x!=-1 || at.y!=-1 || at.minPlacementDistance!=-1 || m.id!=1 || m.owner!=int(n+1))return false;
         }
         constexpr uint32_t rows[][6]={{22,1,5760,10,2,0},{22,1,144,30,1,0},{23,22,2880,8,3,0},{23,22,144,30,1,0},{22,23,144,30,1,0},{1,22,144,30,1,0},{18,0,1296,14,1,1},{12,0,1152,14,0,0},{18,0,144,4,1,1},{6,0,288,24,0,0},{45,0,288,30,0,0}};
         for(size_t n=0;n<terrainRows.size();++n) {
             const auto &r=terrainRows[n];const auto &e=rows[n];
-            if(r.terrain!=e[0] || r.baseTerrain!=e[1] || r.targetTiles!=e[2] || r.clumps!=e[3] || r.spacing!=e[4] || r.avoidPlayerStarts!=bool(e[5]) ||
+            constexpr uint32_t zaloriisTerrain[]={19,46,50,45,14};
+            const uint32_t terrain=zaloriis && n>=6?zaloriisTerrain[n-6]:reytha && n>=6?(e[0]==18?10:e[0]==12?9:e[0]==45?44:e[0]):e[0];
+            if(r.terrain!=terrain || r.baseTerrain!=(n>=6?ground:e[1]) || r.targetTiles!=e[2] || r.clumps!=e[3] || r.spacing!=e[4] || r.avoidPlayerStarts!=bool(e[5]) ||
                r.clumping!=20 || r.flatTerrainOnly!=(r.terrain==1) || r.minHeight || r.maxHeight!=255)return false;
         }
         for(size_t n=0;n<elevationRows.size();++n) {
             const auto &r=elevationRows[n];const size_t level=n<3?n+1:n-2;
-            if(r.elevation!=level || r.baseHeight!=level-1 || r.baseTerrain || r.targetTiles!=(n<3?864u:720u) || r.clumps!=(n<3?10u:5u) || r.spacing!=(level==1?2u:1u))return false;
+            if(r.elevation!=level || r.baseHeight!=level-1 || r.baseTerrain!=ground || r.targetTiles!=(n<3?864u:720u) || r.clumps!=(n<3?10u:5u) || r.spacing!=(level==1?2u:1u))return false;
         }
         return true;
     }();
@@ -1097,11 +1101,23 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 {451,-1,0,1,1,0,3,3,-1,-1,-1,-1,0,0,4,0},
                 {69,-1,0,1,1,0,10,3,-1,-1,-1,-1,3,0,0,0},
             };
-            if(defines.count("TINY_MAP"))expected.insert(expected.begin()+6,{{66,-1,2,0,3,0,2,2,-1,-2,40,-1,9,0,0,0},{102,-1,2,0,4,1,1,2,-1,-2,30,-1,9,0,0,0}});
+            if(lands[0].terrain!=0) {
+                const bool reytha=lands[0].terrain==41;
+                expected[1].perGroup=12;expected[2].perGroup=7;
+                expected.insert(expected.begin()+3,{{66,-1,2,0,4,0,1,3,0,1,18,26,0,0,0,0},{66,-1,2,0,4,0,1,3,0,1,25,35,0,0,0,0}});
+                expected[7].unitId=reytha?812:1129;
+                for(auto &row:expected) {
+                    if(row.unitId==348)row.unitId=reytha?411:1161;
+                    if(!reytha && row.unitId==822)row.unitId=1249;
+                }
+                expected.erase(std::remove_if(expected.begin(),expected.end(),[&](const auto &row){return reytha?row.unitId==822:(row.unitId==59 || row.unitId==816);}),expected.end());
+            }
+            const auto extraResources=std::find_if(expected.begin(),expected.end(),[](const auto &row){return row.unitId==816 || row.unitId==1585;});
+            if(defines.count("TINY_MAP"))expected.insert(extraResources,{{66,-1,2,0,3,0,2,2,-1,-2,40,-1,9,0,0,0},{102,-1,2,0,4,1,1,2,-1,-2,30,-1,9,0,0,0}});
             if(resourceRows.size()!=std::size(expected))return fail("unsupported fortress object composition");
             for(size_t n=0;n<resourceRows.size();++n) {
                 const auto &a=resourceRows[n];auto b=expected[n];
-                if(n==5 && a.unitId==812)b.unitId=812;
+                if(b.unitId==126 && a.unitId==812)b.unitId=812;
                 if(b.unitId==822 && a.perGroup==2)b.perGroup=2;
                 if(a.unitId!=b.unitId || a.terrain!=b.terrain || a.mode!=b.mode || a.scaling!=b.scaling || a.perGroup!=b.perGroup || a.variance!=b.variance ||
                    a.groups!=b.groups || a.radius!=b.radius || a.owner!=b.owner || a.landId!=b.landId || a.minDistance!=b.minDistance || a.maxDistance!=b.maxDistance ||

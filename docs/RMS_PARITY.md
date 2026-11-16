@@ -5,14 +5,14 @@
 Twenty packaged profiles have complete original-runner comparisons at fixed120,
 two Empire players and default resources (54218 uses mutual allies): Forest54204, Reytha54220, Arid54201,
 Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
-Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206, allied roads54218, central water54212, Motherlode54225 and the Naboo branch of Fortress54208.
-The shared packaged suite contains70 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
+Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206, allied roads54218, central water54212, Motherlode54225 and Fortress54208 samples from all three biomes.
+The shared packaged suite contains72 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
 Gaia resource accounting and deferred foundation rendering. Twenty-nine additional authored
 fixtures cover owned Troop Center, Prefab, Farm and defensive-building placement, completion research order, population grants and rejected placement. Three separate authored wall/gate fixtures cover complete emission and native import.
 
-The production audit accepts56/138 map/seed attempts (nineteen of46 resources,
-three seeds each);82 are explicitly rejected. The allied54218 configuration is
+The production audit accepts57/138 map/seed attempts (nineteen of46 resources,
+three seeds each);81 are explicitly rejected. The allied54218 configuration is
 verified separately and is not counted as accepted by this enemy-player audit. This measures supported
 configurations, not an engine completion percentage. New comparisons run the
 original executable locally with modeled host boundaries. Live Windows evidence
@@ -3663,7 +3663,7 @@ Every ordered object, all terrain/height/slope bytes and final RNG match. Native
 import additionally checks every owned object's absolute ground height and HP,
 all trailing identities/positions, wall facets, deferred foundations, population,
 costs, and research order22→451→11→10→16→31→85→209→20 after native bootstrap.
-Both players have capacity resource4=21. Gaia startup cost is450.
+Both players have remaining population capacity resource4=21. Gaia startup cost is450.
 
 Two integration fixes were necessary: original ground-building collision uses
 hard and late passes, so zero-height bird816 does not block Prefab70 while
@@ -3695,3 +3695,35 @@ passes its file/archive tests and accepts56/138 audited attempts; both new
 Fortress Tiny cases render successfully. No live Windows UI/audio check was
 performed for this change.
 The desktop rebuild and headless menu/game/render/audio-stream smoke also pass.
+
+
+### Fortress Reytha and Zaloriis branches (2026-11-16)
+
+Two more actual derived-reader Tiny cases match complete ordered objects,
+startup poses, all grids and RNG, and pass native import/height/health/cache checks:
+
+| Seed | Biome | Objects | RNG | Prefabs, owners1/2 | HUD population, owners1/2 |
+| --- | --- | --- | --- | --- | --- |
+| 16160 | Reytha | 1857 | 1539544777 | 1 / 4 | 4/10 / 4/25 |
+| 8000 | Zaloriis | 1829 | 2585261580 | 3 / 4 | 4/20 / 4/25 |
+
+The loose Prefab group stops when its placement candidates are exhausted. The
+native engine does not force the requested fourth building. Remaining capacity
+(resource4) is6/21 and16/21 respectively; total capacity shown in the HUD also
+includes the four existing population. Recorded total costs (resource98) are
+2015/2140 for Reytha and2010/2185 for Zaloriis, with exactly the original research
+order and no grants for absent Prefabs.
+
+The implementation reuses the same terrain, elevation, object and wall controllers.
+Only the evidenced biome metadata and object-row composition admission changed.
+Zaloriis adds the19/46/50/45/14 terrain sequence and1161/1249 object rows; Reytha
+uses10/9/10/6/44 and411. Original caches now match seven fixtures (three authored,
+four packaged), including every direction byte and obstruction word.
+
+Evidence: `rms-fortress54208-tiny-derived-metadata-{16160,8000}-2026-11-16.json`,
+matching full/resource-replay captures, and
+`rms-fortress54208-tiny-cache-{16160,8000}-findings-2026-11-16.json`.
+The shared suite now contains72 packaged cases; strict RMS and native desktop
+smoke checks pass. The production CLI audit accepts57/138 configurations.
+Optional resource rows and other randomized quantities are being compared
+separately; these samples do not establish every seed or setting as1:1.
