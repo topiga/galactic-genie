@@ -782,9 +782,10 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
            playerCivilizations!=std::vector<uint16_t>{1,1} || !defines.count("FIXED_POSITIONS") ||
            cliffStage || !elevationStage || !connectionStage || terrainRows.size()!=6 || elevationRows.size()!=27 ||
            connectionCommands.size()!=1 || connectionCommands[0].kind!=63)return false;
+        const bool geddes=lands[0].targetTiles==1440;
         for(size_t n=0;n<lands.size();++n) {
             const auto &land=lands[n];const auto &position=placements[n];const auto &metadata=landMetadata[n];const bool neutral=n==0;
-            if(land.terrain!=42 || land.radius!=(neutral?7u:9u) || land.targetTiles!=4320u ||
+            if(land.terrain!=42 || land.radius!=(neutral?7u:9u) || land.targetTiles!=(geddes?(neutral?1440u:3600u):4320u) ||
                (neutral?land.zone!=0:(land.zone<2 || land.zone>4)) || land.clumpingFactor!=8 || land.borderFuzziness!=(neutral?20u:10u) ||
                land.separation!=(neutral?0u:5u) || position.x!=-1 || position.y!=-1 || position.minPlacementDistance!=-1 ||
                metadata.id!=(neutral?0:1) || metadata.owner!=int(n))return false;
@@ -798,7 +799,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             }
         }
         const uint32_t terrain[]={50,44,50,14,33,44},bases[]={42,42,44,44,42,14};
-        const uint32_t tiles[]={1008,1152,144,288,1008,576},clumps[]={14,8,4,24,5,30},spacing[]={5,0,3,0,1,0};
+        const uint32_t tiles[]={1008,1152,144,288,1008,geddes?720u:576u},clumps[]={14,8,4,24,5,30},spacing[]={5,0,3,0,1,0};
         for(size_t n=0;n<terrainRows.size();++n) {
             const auto &row=terrainRows[n];
             if(row.terrain!=terrain[n] || row.baseTerrain!=bases[n] || row.targetTiles!=tiles[n] || row.clumps!=clumps[n] ||
@@ -1493,7 +1494,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     }
     const bool airTransport=std::any_of(resourceRows.begin(),resourceRows.end(),[](const auto &row){return row.unitId==1521;});
     if(airTransport) {
-        // shortcut: bounded flat120 and Space Mass profiles; extend with original startup comparisons.
+        // shortcut: bounded flat120 and Space Mass/Geddes profiles; extend with original startup comparisons.
         if(!ownedMixedForest || (base!=6 && !spaceMass) ||
            std::count_if(resourceRows.begin(),resourceRows.end(),[](const auto &row){return row.unitId==1521;})!=1 ||
            data.terrainRestrictions.size()<=23)
@@ -1861,13 +1862,14 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             for(const auto &sourceRow:resourceRows) {
                 RmsObjectRow row;
                 if(!finalizeRmsObjectRow(sourceRow,width,height,playerCount,row,err)) return false;
-                // shortcut: one or two trailing Hoth/Zaloriis mountain rows; extend after mixed later-row comparisons.
+                // shortcut: one or two trailing Hoth/Zaloriis/Geddes mountain rows; extend after mixed later-row comparisons.
                 if(row.unitId==1165 || row.unitId==1166 || row.unitId==1019 || row.unitId==1020) {
                     const auto begin=resourceRows.begin()+(&sourceRow-resourceRows.data());
-                    if((row.unitId<1100?(base!=26 && !(base==14 && row.unitId==1020)):base!=32) || !cliffStage || resourceRows.end()-begin>2 ||
+                    const bool spaceMountain=spaceMass && lands[0].targetTiles==1440 && row.unitId==1019;
+                    if((!spaceMountain && ((row.unitId<1100?(base!=26 && !(base==14 && row.unitId==1020)):base!=32) || !cliffStage)) || resourceRows.end()-begin>2 ||
                        !std::all_of(begin,resourceRows.end(),[&](const auto &later) {
-                           return base==32?(later.unitId==1165 || later.unitId==1166):(later.unitId==1019 || later.unitId==1020);
-                       }))return fail("mountains require trailing verified cliff-map rows");
+                           return spaceMountain?later.unitId==1019:base==32?(later.unitId==1165 || later.unitId==1166):(later.unitId==1019 || later.unitId==1020);
+                       }))return fail("mountains require trailing verified map rows");
                 }
                 if(row.unitId==1307 && (base!=26 || !cliffStage || terrainRows.size()!=5 || terrainRows[0].terrain!=46))
                     return fail("Gaia mines require the verified Kessel profile");

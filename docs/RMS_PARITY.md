@@ -4117,3 +4117,27 @@ pass under ASan/UBSan, including native import ownership and absolute object
 heights. Strict RMS, production file/archive checks and desktop menu/render/
 audio-stream smoke pass. Production accepts84 of138 tested configurations
 across28 resources; this is bounded acceptance coverage, not total parity.
+
+### Geddes55007 coupled land-size variant (2026-11-16)
+
+Actual-derived Tiny/default two-Empire seeds1/12345/16160 match1272/1273/1250
+original objects and final RNG55711408/2109840983/3123251575. All ordered object
+records, exact positions, three terrain grids and captured startup poses match.
+Native fixtures add81 animation/health/height records and transport counters.
+
+Geddes shares Space Mass's elevation, connections, assets and object controllers.
+Its coupled geometry variant changes only the neutral target to1440, each player
+target to3600 and the final terrain patch to720. These values are admitted
+together, not as independently interchangeable choices. One or two trailing
+mountain1019 rows reuse their previously captured master/graphic data and
+existing constructor; full startup confirms both optional-row outcomes.
+
+Evidence: `rms-geddes55007-full-startup-findings-2026-11-16.json`,
+`rms-geddes55007-geometry-findings-2026-11-16.json`, and
+`rms-geddes55007-assets-provenance-2026-11-16.json`. These three Tiny/two-Empire
+startup comparisons do not establish other sizes, civilizations or later gameplay.
+
+Validation:112 retained packaged cases plus general/authored regressions pass
+under ASan/UBSan, as do strict RMS, production file/archive checks and desktop
+menu/render/audio-stream smoke. Production accepts87 of138 configurations
+across29 resources; acceptance is not a complete-parity percentage.

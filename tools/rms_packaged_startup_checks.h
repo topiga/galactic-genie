@@ -105,6 +105,9 @@ static void rmsPackagedStartupChecks(swgb::Assets &assets,const std::string &dat
         {54214u,1u,1291u,3549801262u,2341671814u,4197043885u,2042765165u,2543329373u,1350u},
         {54214u,12345u,1281u,3681008734u,531147263u,2235935194u,244237208u,1483579990u,1250u},
         {54214u,16160u,1266u,3199497979u,633521414u,1528226015u,1116746755u,706997016u,450u},
+        {55007u,1u,1272u,55711408u,3646907120u,872885661u,2000488970u,847681060u,1350u},
+        {55007u,12345u,1273u,2109840983u,918315668u,608337651u,443731331u,1668895233u,1200u},
+        {55007u,16160u,1250u,3123251575u,2977435442u,1736298881u,3842189079u,1273049732u,450u},
     };
     const struct {uint32_t resource,seed,id;int owner,unit,frame;float hold,hp;uint8_t pending;float height=-1;} poses[]={
         {54220u,1u,2001u,1,109,0,0.20000000298023224f,2500.0f,255},
@@ -9775,10 +9778,91 @@ static void rmsPackagedStartupChecks(swgb::Assets &assets,const std::string &dat
         {54214u,16160u,1165u,0,1203,7,0.39552175998687744f,5.0f,255,1.0f},
         {54214u,16160u,1166u,0,1203,4,0.11999999731779099f,5.0f,255,0.0f},
         {54214u,16160u,1167u,0,1203,7,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,1u,1072u,1,109,0,0.20000000298023224f,2500.0f,255,0.0f},
+        {55007u,1u,1073u,2,109,0,0.20000000298023224f,2500.0f,27,0.0f},
+        {55007u,1u,1074u,1,293,4,1.0f,40.0f,255,0.0f},
+        {55007u,1u,1075u,1,293,6,1.0f,40.0f,255,0.0f},
+        {55007u,1u,1076u,1,293,7,1.38956880569458f,40.0f,255,0.0f},
+        {55007u,1u,1077u,2,293,7,3.446760416030884f,40.0f,255,0.0f},
+        {55007u,1u,1078u,2,293,3,1.0f,40.0f,255,0.0f},
+        {55007u,1u,1079u,2,293,2,1.0f,40.0f,255,0.0f},
+        {55007u,1u,1080u,1,550,0,0.20000000298023224f,60.0f,255,0.0f},
+        {55007u,1u,1081u,2,550,0,0.20000000298023224f,60.0f,255,0.0f},
+        {55007u,1u,1161u,1,1036,2,0.8500000238418579f,150.0f,255,1.0f},
+        {55007u,1u,1162u,2,1036,2,0.8500000238418579f,150.0f,255,1.0f},
+        {55007u,1u,1135u,0,1203,4,0.11999999731779099f,5.0f,255,0.5f},
+        {55007u,1u,1136u,0,1203,5,0.11999999731779099f,5.0f,255,1.0f},
+        {55007u,1u,1157u,0,1203,0,0.11999999731779099f,5.0f,255,1.5f},
+        {55007u,1u,1158u,0,1203,1,0.11999999731779099f,5.0f,255,0.5f},
+        {55007u,1u,1159u,0,1203,6,0.11999999731779099f,5.0f,255,2.5f},
+        {55007u,1u,1160u,0,1203,7,0.24010686576366425f,5.0f,255,0.5f},
+        {55007u,1u,1163u,0,1203,7,0.22861114144325256f,5.0f,255,0.5f},
+        {55007u,1u,1164u,0,1203,7,0.4222559928894043f,5.0f,255,1.0f},
+        {55007u,1u,1165u,0,1203,7,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,1u,1166u,0,1203,2,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,1u,1167u,0,1203,0,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,1u,1168u,0,1203,1,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,1u,1169u,0,1203,7,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,1u,1170u,0,1203,3,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,1u,1171u,0,1203,7,0.35697993636131287f,5.0f,255,0.0f},
+        {55007u,1u,1172u,0,1203,7,0.1369573473930359f,5.0f,255,0.0f},
+        {55007u,1u,1173u,0,1203,5,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,1u,1174u,0,1203,1,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,1u,1175u,0,1203,7,0.2461220622062683f,5.0f,255,0.5f},
+        {55007u,1u,1176u,0,1203,3,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,1u,1177u,0,1203,7,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,1u,1178u,0,1203,7,0.31304672360420227f,5.0f,255,1.0f},
+        {55007u,12345u,1066u,1,109,0,0.20000000298023224f,2500.0f,255,0.0f},
+        {55007u,12345u,1067u,2,109,0,0.20000000298023224f,2500.0f,27,0.0f},
+        {55007u,12345u,1068u,1,293,3,1.0f,40.0f,255,0.0f},
+        {55007u,12345u,1069u,1,293,7,1.0f,40.0f,255,0.0f},
+        {55007u,12345u,1070u,1,293,7,2.8240301609039307f,40.0f,255,0.0f},
+        {55007u,12345u,1071u,2,83,7,2.8663289546966553f,40.0f,255,0.0f},
+        {55007u,12345u,1072u,2,293,7,1.2660298347473145f,40.0f,255,0.0f},
+        {55007u,12345u,1073u,2,293,7,2.763267993927002f,40.0f,255,0.0f},
+        {55007u,12345u,1074u,1,550,0,0.20000000298023224f,60.0f,255,0.0f},
+        {55007u,12345u,1075u,2,550,0,0.20000000298023224f,60.0f,255,0.0f},
+        {55007u,12345u,1168u,1,1036,0,0.8500000238418579f,150.0f,255,1.0f},
+        {55007u,12345u,1169u,2,1036,3,0.8500000238418579f,150.0f,255,1.0f},
+        {55007u,12345u,1129u,0,1203,7,0.11999999731779099f,5.0f,255,0.5f},
+        {55007u,12345u,1130u,0,1203,6,0.11999999731779099f,5.0f,255,1.5f},
+        {55007u,12345u,1131u,0,1203,6,0.11999999731779099f,5.0f,255,1.5f},
+        {55007u,12345u,1132u,0,1203,5,0.11999999731779099f,5.0f,255,2.5f},
+        {55007u,12345u,1133u,0,1203,0,0.11999999731779099f,5.0f,255,1.5f},
+        {55007u,12345u,1134u,0,1203,5,0.11999999731779099f,5.0f,255,1.5f},
+        {55007u,12345u,1135u,0,1203,4,0.11999999731779099f,5.0f,255,2.5f},
+        {55007u,12345u,1136u,0,1203,7,0.5344060063362122f,5.0f,255,0.0f},
+        {55007u,12345u,1137u,0,1203,2,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,12345u,1138u,0,1203,6,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,12345u,1139u,0,1203,3,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,12345u,1140u,0,1203,3,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,12345u,1141u,0,1203,7,0.12002567946910858f,5.0f,255,0.0f},
+        {55007u,12345u,1142u,0,1203,7,0.14136849343776703f,5.0f,255,0.0f},
+        {55007u,12345u,1163u,0,1203,4,0.11999999731779099f,5.0f,255,0.5f},
+        {55007u,12345u,1164u,0,1203,7,0.1603052318096161f,5.0f,255,0.5f},
+        {55007u,12345u,1165u,0,1203,7,0.4393213093280792f,5.0f,255,1.5f},
+        {55007u,12345u,1166u,0,1203,6,0.11999999731779099f,5.0f,255,1.0f},
+        {55007u,12345u,1167u,0,1203,0,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,16160u,1059u,1,109,0,0.20000000298023224f,2500.0f,255,0.0f},
+        {55007u,16160u,1060u,2,109,0,0.20000000298023224f,2500.0f,27,0.0f},
+        {55007u,16160u,1061u,1,293,1,1.0f,40.0f,255,0.0f},
+        {55007u,16160u,1062u,1,293,1,1.0f,40.0f,255,0.0f},
+        {55007u,16160u,1063u,1,293,7,2.861964702606201f,40.0f,255,0.0f},
+        {55007u,16160u,1064u,2,83,2,1.0f,40.0f,255,0.0f},
+        {55007u,16160u,1065u,2,83,5,1.0f,40.0f,255,0.0f},
+        {55007u,16160u,1066u,2,83,7,2.3456525802612305f,40.0f,255,0.0f},
+        {55007u,16160u,1067u,1,550,0,0.20000000298023224f,60.0f,255,0.0f},
+        {55007u,16160u,1068u,2,550,0,0.20000000298023224f,60.0f,255,0.0f},
+        {55007u,16160u,1141u,1,1036,4,0.8500000238418579f,150.0f,255,1.0f},
+        {55007u,16160u,1142u,2,1036,4,0.8500000238418579f,150.0f,255,1.0f},
+        {55007u,16160u,1143u,0,1203,7,0.42185497283935547f,5.0f,255,0.0f},
+        {55007u,16160u,1144u,0,1203,0,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,16160u,1145u,0,1203,4,0.11999999731779099f,5.0f,255,0.0f},
+        {55007u,16160u,1146u,0,1203,7,0.44894564151763916f,5.0f,255,0.0f},
     };
     for(const auto &c:cases) {
         auto caseDefines=defines;
-        if(c.resource==54214 || c.resource==55018 || c.resource==55017 || c.resource==55003 || c.resource==54219 || c.resource==54205 || c.resource==54211 || c.resource==54202){caseDefines.erase("RANDOM_MAP");caseDefines.erase("2_PLAYERS");}
+        if(c.resource==55007 || c.resource==54214 || c.resource==55018 || c.resource==55017 || c.resource==55003 || c.resource==54219 || c.resource==54205 || c.resource==54211 || c.resource==54202){caseDefines.erase("RANDOM_MAP");caseDefines.erase("2_PLAYERS");}
         check(script.load(int32_t(c.resource),resources,&error),error.c_str());
         swgb::RmsMap map;uint32_t rng=c.seed;
         const std::vector<std::vector<uint8_t>> diplomacy=c.resource==54218?std::vector<std::vector<uint8_t>>{{0,3,3},{0,0,0},{0,0,0}}:std::vector<std::vector<uint8_t>>{};
@@ -9788,7 +9872,7 @@ static void rmsPackagedStartupChecks(swgb::Assets &assets,const std::string &dat
             auto unsupported=caseDefines;unsupported.erase("FIXED_POSITIONS");
             check(!swgb::generateRmsMap(script,unsupported,120,120,assets.dat(),rng,map,&error,2,{1,1},diplomacy) && rng==c.seed,"Uncompared packaged random starts reject atomically");
         }
-        if((c.resource==55014 || c.resource==54217 || c.resource==54225 || c.resource==54211 || c.resource==54202 || c.resource==54214) && c.seed==1) {
+        if((c.resource==55014 || c.resource==54217 || c.resource==54225 || c.resource==54211 || c.resource==54202 || c.resource==54214 || c.resource==55007) && c.seed==1) {
             auto unsupported=caseDefines;unsupported.erase("FIXED_POSITIONS");
             check(!swgb::generateRmsMap(script,unsupported,120,120,assets.dat(),rng,map,&error,2,{1,1},diplomacy) && rng==c.seed && map.terrain.empty(),"Uncompared packaged random starts reject atomically");
         }
@@ -9798,7 +9882,7 @@ static void rmsPackagedStartupChecks(swgb::Assets &assets,const std::string &dat
                       rng==c.seed && map.terrain.empty(),"Unverified enemy or directed allied roads reject atomically");
             }
         }
-        if(c.resource==54214 && c.seed==1) {
+        if((c.resource==54214 || c.resource==55007) && c.seed==1) {
             for(int unit:{615,1117,1203,1332,1333,1334}) {
                 auto bad=assets.dat();++bad.civs[0].units[unit].hitPoints;rng=c.seed;
                 check(!swgb::generateRmsMap(script,caseDefines,120,120,bad,rng,map,&error,2,{1,1},diplomacy) && rng==c.seed && map.terrain.empty(),
@@ -9844,7 +9928,7 @@ static void rmsPackagedStartupChecks(swgb::Assets &assets,const std::string &dat
             check(game.resource(0,11)==5 && game.resource(0,4)==0 && game.playerAttributeForTesting(0,84)==3,"original Gaia flagged storage and tech attribute");
             for(int owner:{1,2})check(game.resource(owner,4)==1 && game.resource(owner,11)==4 && game.resource(owner,98)==575 && game.resource(owner,164)==200 && game.resource(owner,165)==375,"original player startup storage and costs remain intact");
         }
-        if(c.resource==54214) {
+        if(c.resource==54214 || c.resource==55007) {
             check(game.resource(0,98)==c.gaiaCost && game.resource(0,164)==c.gaiaCost && game.resource(0,165)==0 &&
                   game.resource(0,4)==0 && game.resource(0,11)==5,"Original Space Mass Gaia costs and storage");
             for(int owner:{1,2})check(game.resource(owner,98)==735 && game.resource(owner,164)==360 && game.resource(owner,165)==375 &&
@@ -10037,7 +10121,7 @@ static void rmsPackagedStartupChecks(swgb::Assets &assets,const std::string &dat
             bytes.assign(source.begin(),source.end());return true;
         },swgb::RmsScript::Limits{},&error),error.c_str());
         swgb::RmsMap map;uint32_t state=extra.seed;
-        check(!swgb::generateRmsMap(script,defines,120,120,assets.dat(),state,map,&error,2,{1,1}) && state==extra.seed && map.terrain.empty() && error.find("trailing verified cliff-map rows")!=std::string::npos,"mixed later rows and three mountains remain gated atomically");
+        check(!swgb::generateRmsMap(script,defines,120,120,assets.dat(),state,map,&error,2,{1,1}) && state==extra.seed && map.terrain.empty() && error.find("trailing verified map rows")!=std::string::npos,"mixed later rows and three mountains remain gated atomically");
     }
     uint32_t rng=1;const swgb::RmsResourcePlayerRange range{19,-1};
     check(!swgb::generateRmsGroupedResourcePlacements(120,120,terrain,assets.dat(),1363,{1,1,4,1,3},rng,output,&error,{},1,starts,swgb::RmsResourceDistance::Far,&eligibility,nullptr,&range) && rng==1 && eligibility==before && output.empty(),"Resource range work limit preserves RNG and eligibility");
