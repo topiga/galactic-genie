@@ -4,7 +4,8 @@
 #include <fstream>
 // Original 4df9b0 full runner, authored cliff/forest geometry, seed1, two Empire owners.
 // Private rms-general-rows-*-1-1-1-oracle-2026-11-15.json records every original object.
-static void rmsGeneralObjectChecks(const swgb::dat::DatFile &data) {
+static void rmsGeneralObjectChecks(swgb::Assets &assets) {
+    const auto &data=assets.dat();
     std::ifstream input(std::filesystem::path(__FILE__).parent_path()/"fixtures/cliff-full-start.rms");
     check(bool(input),"authored general-object fixture opens");
     const std::string source((std::istreambuf_iterator<char>(input)),{});
@@ -19,7 +20,7 @@ static void rmsGeneralObjectChecks(const swgb::dat::DatFile &data) {
         start=source.find("create_object",end+1);
     }
     check(rows.size()==23,"authored fixture retains23 rows");
-    const struct {uint32_t count,rng,records;} cases[]={
+    const struct {uint32_t count,rng,records,terrain=742396127u;} cases[]={
         {6203,4194478548u,780067774u}, {6206,4166862475u,3404087702u},
         {6210,885130658u,1156138209u}, {6203,502114030u,4034934607u},
         {6219,170179477u,316708715u}, {6217,2876734422u,1883431379u},
@@ -28,12 +29,17 @@ static void rmsGeneralObjectChecks(const swgb::dat::DatFile &data) {
         {6213,1186593183u,3238364985u},
         {6221,707435866u,2827731819u},
         {6202,664476888u,374431829u},
+        {6144,472243236u,535885288u,2643218578u},
+        {6144,101811930u,3017554391u,2643218578u},
+        {6157,2212104137u,1995093907u,726499856u},
+        {6145,778134838u,1629751366u,980235455u},
+        {6147,1759471658u,3491954245u,398166423u},
     };
     auto replace=[](std::string &text,const std::string &from,const std::string &to) {
         const auto at=text.find(from);check(at!=std::string::npos,"authored variation finds directive");
         text.replace(at,from.size(),to);
     };
-    for(size_t variant=0;variant<12;++variant) {
+    for(size_t variant=0;variant<17;++variant) {
         auto changed=rows;
         switch(variant) {
         case 0: std::reverse(changed.begin()+4,changed.end());break;
@@ -56,6 +62,22 @@ static void rmsGeneralObjectChecks(const swgb::dat::DatFile &data) {
         case 11: changed.insert(changed.begin()+4,"create_object 66 { number_of_objects 7 place_on_specific_land_id 7 }");break;
         }
         std::string text=source.substr(0,first);
+        if(variant>=12) {
+            replace(text,"<CLIFF_GENERATION>","");
+            std::string neutral;
+            std::vector<std::pair<int,int>> positions;
+            if(variant==12 || variant==14)positions.push_back({50,50});
+            if(variant==13 || variant==14)positions.push_back({25,25});
+            if(variant==15)positions.push_back({75,28});
+            if(variant==16)positions.push_back({0,0});
+            for(const auto &position:positions)
+                neutral+="create_land { terrain_type 6 base_size 0 number_of_tiles 0 land_position "+
+                    std::to_string(position.first)+" "+std::to_string(position.second)+" land_id 7 }\n";
+            replace(text,"<TERRAIN_GENERATION>",neutral+"<TERRAIN_GENERATION>");
+            changed.assign(rows.begin(),rows.begin()+3);
+            changed.push_back("create_object 66 { number_of_objects 5 set_tight_grouping number_of_groups 3 place_on_specific_land_id 7 min_distance_to_players 6 max_distance_to_players 12 min_distance_group_placement 3 }");
+            changed.push_back("create_object 413 { number_of_objects 10 }");
+        }
         for(const auto &row:changed)text+=row+'\n';
         swgb::RmsScript script;std::string error;swgb::RmsMap map;uint32_t rng=1;
         check(script.load(60000,[&](int32_t,std::vector<uint8_t> &bytes) {
@@ -64,9 +86,21 @@ static void rmsGeneralObjectChecks(const swgb::dat::DatFile &data) {
         check(swgb::generateRmsMap(script,{"FIXED_POSITIONS","TINY_MAP","RANDOM_MAP","2_PLAYERS","DEFAULT_RESOURCES"},
             120,120,data,rng,map,&error,2,{1,1}),error.c_str());
         check(map.objects.empty(),"general rows have no pre-owned records");
+        swgb::Game game(assets);
+        if(variant>=12) {
+            uint32_t importedState=1;
+            check(game.initRms(script,{"FIXED_POSITIONS","TINY_MAP","RANDOM_MAP","2_PLAYERS","DEFAULT_RESOURCES"},
+                120,importedState,&error,2,{1,1}),error.c_str());
+            check(importedState==rng && game.activeObjectCount()==cases[variant].count,"selected-land native import count/RNG");
+        }
         uint32_t ordinal=0,count=0,hash=2166136261u;
         auto record=[&](int unit,int owner,int facet,float x,float y) {
             for(uint32_t word:{ordinal,uint32_t(owner),uint32_t(unit),uint32_t(facet),uint32_t(x*2),uint32_t(y*2)})hash=(hash^word)*16777619u;
+            if(variant>=12) {
+                const uint32_t id=ordinal+1;const auto position=game.objectPosition(id);
+                check(game.objectUnitId(id)==unit && game.objectPlayer(id)==owner && position[0]==y && position[1]==120-x,
+                    "selected-land native IDs, ownership and positions");
+            }
             ++count;
         };
         for(const auto &o:map.cliffs){ordinal=o.creationOrdinal;record(o.unit,0,o.facet,o.x,o.y);++ordinal;}
@@ -80,8 +114,8 @@ static void rmsGeneralObjectChecks(const swgb::dat::DatFile &data) {
             for(size_t i=0;i<14400;++i)value=(value^(grid.empty()?0:grid[i]))*16777619u;
             return value;
         };
-        check(gridHash(map.terrain)==742396127u && gridHash(map.elevation)==1017236165u && gridHash(map.slopes)==1017236165u,
+        check(gridHash(map.terrain)==cases[variant].terrain && gridHash(map.elevation)==1017236165u && gridHash(map.slopes)==1017236165u,
             "general rows preserve original terrain/elevation/slopes");
     }
-    std::puts("PASS: twelve general object-row variations match complete original runner");
+    std::puts("PASS: seventeen general object-row variations match complete original runner");
 }

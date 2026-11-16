@@ -84,9 +84,26 @@ The original `4dad80` civilization mapper was also executed for every unit ID
 `rms-object-civilization-map-oracle-2026-11-16.json`. This is research evidence,
 not a newly implemented general native constructor.
 
-Arbitrary owned rows, mixed-land owned startup and new unit constructors still
-reject explicitly. The existing supported startup callbacks retain their prior
-bounds. Dispatch matching alone does not establish full terrain/gameplay parity.
+Five further complete runner comparisons now cover matched neutral ID7→17,
+duplicate IDs, a neutral center next to starting workers, and clipping at the
+map edge. The native importer also checks every resulting object's ID, owner,
+type and position. Workers and scouts now exclude every land center when
+applying their inner placement distance, as the original does.
+
+| Selected neutral lands | Objects | Final RNG |
+|---|---:|---:|
+| Center50%,50% | 6,144 | 472243236 |
+| Center25%,25% | 6,144 | 101811930 |
+| Both centers, duplicate ID7 | 6,157 | 2212104137 |
+| Center75%,28%, near worker area | 6,145 | 778134838 |
+| Center0%,0%, clipped queue | 6,147 | 1759471658 |
+
+This enables the bounded fixed120/two-Empire profile with one or two fixed neutral
+seed lands (zero radius/growth, base terrain6), without cliffs, elevation or
+connections. These five cases also match all original startup poses and grids.
+Arbitrary owned rows, broader mixed-land startup and new unit constructors still
+reject explicitly. Dispatch matching alone does not establish full terrain or
+gameplay parity.
 
 ## General object-row controller: 2026-11-15
 

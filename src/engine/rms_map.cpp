@@ -484,7 +484,20 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if(allies && ownedObjects) return fail("allied owned-object startup remains unverified");
     // shortcut: explicit player zones need an original owned-object replay before enabling their startup.
     if(playerZoneOverride && ownedObjects) return fail("owned startup with explicit player zones remains unverified");
-    if(ownedObjects && lands.size()!=playerCount) return fail("mixed-land owned-object startup remains unverified");
+    if(ownedObjects && lands.size()!=playerCount) {
+        // shortcut: fixed neutral seed lands only; broaden after original mixed-land startup comparisons.
+        if(width!=120 || height!=120 || base!=6 || playerLandBegin!=0 || playerCount!=2 ||
+           lands.size()>playerCount+2 || cliffStage || elevationStage || connectionStage ||
+           playerZoneOverride || !defines.count("FIXED_POSITIONS") ||
+           playerCivilizations!=std::vector<uint16_t>{1,1} || !startingWorkers || !startingScouts)
+            return fail("mixed-land owned-object startup remains unverified");
+        for(size_t n=playerCount;n<lands.size();++n) {
+            const auto &land=lands[n];const auto &position=placements[n];
+            if(land.terrain!=6 || land.radius || land.targetTiles || land.zone || land.separation ||
+               position.x<0 || position.y<0 || landMetadata[n].owner)
+                return fail("mixed-land owned startup requires fixed neutral seed lands");
+        }
+    }
     const bool ownedForest=ownedObjects && playerLands && base==41 && lands[0].terrain==9;
     const bool ownedMixedForest=ownedObjects && playerLands && (base==6 || base==12 || base==14 || base==26 || base==41) && lands[0].terrain==base &&
         width==120 && height==120 && playerCount==2 && playerCivilizations.size()==2 &&
@@ -834,8 +847,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             for (const auto tile:candidates) {
                 if(zones[tile]!=zone) continue;
                 const int x=tile%width,y=tile/width;
-                if (std::any_of(generated.playerStarts.begin(),generated.playerStarts.end(),[&](const auto &start) {
-                    return std::abs(x-start.x)<workerMinDistance && std::abs(y-start.y)<workerMinDistance;
+                if (std::any_of(generated.lands.begin(),generated.lands.end(),[&](const auto &land) {
+                    return std::abs(x-land.center.x)<workerMinDistance && std::abs(y-land.center.y)<workerMinDistance;
                 })) continue;
                 const float px=x+.5f,py=y+.5f;
                 // Original RMS placement ignores existing workers, but blocks every owner's CC.
@@ -875,8 +888,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             for (const auto tile:candidates) {
                 if(zones[tile]!=zone) continue;
                 const int x=tile%width,y=tile/width;
-                if (std::any_of(generated.playerStarts.begin(),generated.playerStarts.end(),[&](const auto &start) {
-                    return std::abs(x-start.x)<7 && std::abs(y-start.y)<7;
+                if (std::any_of(generated.lands.begin(),generated.lands.end(),[&](const auto &land) {
+                    return std::abs(x-land.center.x)<7 && std::abs(y-land.center.y)<7;
                 })) continue;
                 const float px=x+.5f,py=y+.5f;
                 const bool blocked=pass[generated.terrain[tile]]<=.05f || std::any_of(generated.ownedObjects.begin(),generated.ownedObjects.end(),[&](const auto &o) {

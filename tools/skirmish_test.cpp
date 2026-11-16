@@ -313,7 +313,7 @@ int main(int argc, char **argv) {
         checkRmsCliffImport(assets);
         rmsPackagedForestChecks(assets,argv[1]);
         rmsPackagedStartupChecks(assets,argv[1]);
-        rmsGeneralObjectChecks(assets.dat());
+        rmsGeneralObjectChecks(assets);
         rmsHuntProfileChecks(assets,argv[1]);
         rmsWaveChecks(assets.dat());
         checkRmsForest21Owned(assets);
