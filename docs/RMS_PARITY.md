@@ -4834,3 +4834,77 @@ API currently returns generation RNG only. Desktop menus still launch the
 existing custom skirmish; RMS session UI, multiplayer victory, special modes and
 runtime RNG handoff remain separate work. Malformed cyclic technology data may
 fail after world import; option/script preflight is not a whole-world rollback.
+
+
+### Upgrade RNG handoff and whole-program PER evaluation (2026-11-16)
+
+Original executable probes now distinguish the building upgrade wrapper from
+its base graphic callbacks. A live building type-3 upgrade refreshes a selected
+construction graphic first, saves a CRT draw, replaces its snow overlay, then
+reseeds with that saved 15-bit result. Overlay draws are discarded by the reseed;
+subsequent base graphic initialization can consume further draws. Mobile units
+skip the building wrapper. Self-upgrading a building still reseeds; an unchanged
+mobile graphic and a prototype without matching live objects consume no draws.
+Ordinary HP/stat effects use separate callbacks and must not reseed.
+
+Thirty-three controls cover seeds1,12345 and UINT32_MAX, normal/construction/snow
+states, randomized target graphics, building/mobile self-upgrades, absent live
+objects and changed mobile graphics. The actual player upgrade callback,
+masters, object callbacks and sprite constructors execute. Altered graphic flags
+and construction/snow states are explicit discriminating inputs, not claims of
+naturally captured gameplay. Local evidence: `rms-upgrade-rng-findings-2026-11-16.json`,
+`rms-upgrade-rng-controls-summary-2026-11-16.json` and both referenced full oracles.
+
+Native upgrades now consume the shared legacy stream in the live-object effect
+path, never while replaying prototype caches. Renderer and upgrade handling use
+the same active-graphic selection. Changed graphics reset animation and implement
+the original random-frame/phase draws; unchanged graphics preserve their state.
+Construction precedes the building reseed, followed by attack, movement and base
+graphic stages. Alternatives within each stage are mutually exclusive. The
+stream enters scenario reconstruction immediately before post-RMS civilization
+bonuses: placement/completion draws already accounted for by generation are not
+replayed. Diagnostic `initRms` still returns generation RNG; `initRmsSession`
+returns the stream after starting-age research, which the AI then continues.
+
+The previous binary fails the new original age-RNG regression. Goldens retain
+pre-age state3895143042 and post-age states19483,2618,28080,28080 for raw ages3–6.
+Full visual callback parity remains incomplete: snow/delta visuals, foreign-civ
+substitution and arbitrary object-list ordering need further comparison. Native
+initial replay holds still follow the standing/idle update path; non-idle
+randomized replay holds are not yet preserved through later updates. Other
+world RNG consumers still use native behavior, so this is not whole-match
+randomness parity.
+
+AI investigation also found a separate shared mismatch: original PER evaluation
+scans the entire ordered program. Actual original `40f910` controls visit every
+record in programs of0,1,96,97,200 and1423 no-op rules. Native evaluation now
+removes the arbitrary96-rule slice and persistent cursor; an authored201-rule
+regression checks that the last rule sees earlier actions in the same pass.
+
+Timing remains explicitly bounded. Sixty-eight original gate controls establish
+first-update flag handling, the20-eligible-call PER counter, outer authority
+branches and world-delta conversion. PER has no additional elapsed-time gate;
+its constructor argument2000 is rule capacity, not milliseconds. Local host-step
+admission accepts whole elapsed intervals of50–100ms, skips shorter intervals,
+and caps longer ones without a50ms catch-up loop. Replacing the native0.25s
+interval with20 render frames would therefore introduce another approximation.
+The interval is retained and marked until world-step admission is integrated.
+Original player updates also save/reseed around their AI branch; that outer
+wrapper is not yet mapped into native world updates. The two-draw AI regression
+proves direct PER-action stream continuity, not full original player-tick RNG.
+See `rms-ai-timing-findings-2026-11-16.json`,
+`rms-ai-timing-gates-oracle-2026-11-16.json` and
+`rms-ai-localstep-per-scan-oracle-2026-11-16.json` for executed/static boundaries.
+
+
+Validation: the ASan/UBSan suite passes21 native/original upgrade controls, the
+mutually exclusive graphic-branch regression, all starting-age RNG goldens and
+two consecutive AI draws from each returned post-age state. Existing research,
+HP, allied bonuses, healing and controller checks also pass. Shipped714-rule
+programs execute initialization rules with three and eight configured players.
+Packaged map/import and broad combat regressions pass, and the rebuilt desktop passes menu
+navigation plus60 render/audio frames. Local logs in the build directory:
+`session-upgrade-rng-before.log`, `session-runtime-after.log`,
+`session-runtime-original-ai.log`, `session-runtime-packaged.log` and
+`session-runtime-desktop.log` (combat: `session-runtime-combat.log`). The21 native controls exclude the12 original
+construction/snow controls pending equivalent native state fixtures.
