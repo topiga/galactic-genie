@@ -615,6 +615,7 @@ public:
     static constexpr int kTileHalfH = 24;
 
 private:
+    bool initScenario(const Scenario &scenario, std::string *err, bool rmsCompletionOrder);
     enum class State : uint8_t {
         Idle,
         Walk,

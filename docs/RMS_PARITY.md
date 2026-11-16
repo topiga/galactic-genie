@@ -3284,3 +3284,47 @@ cases pass with ASan/UBSan, together with the retained Forest/general-row,
 holocron, foundation and transport regressions. Strict RMS and production CLI
 checks pass. The audit accepts54/138 enemy configurations;84 remain rejected.
 The desktop menu/render/effects/music-streaming smoke passes with dummy output.
+
+### Owned Troop Center placement and completion order (2026-11-16)
+
+A separate authored flat120 cliff/forest fixture appends the original54208
+Troop Center87 row after Command Centers, workers and scouts. Three seeds and
+a duplicate-row control run the actual owned controller and constructors with
+captured Empire87 master/header/graphics/sound assets. This does not enable the
+whole54208 map, its other buildings or its wall controller.
+
+| Seed | Troop Center rows | Objects | Final RNG |
+|---:|---:|---:|---:|
+| 1 | 1 | 5989 | 1745024857 |
+| 12345 | 1 | 5973 | 3433587427 |
+| 16160 | 1 | 6065 | 3908054248 |
+| 1 | 2 | 5991 | 2727130514 |
+
+All ordered objects at full coordinate precision, map grids, captured poses and
+RNG match. Four constructor draws precede completion reseeding. Local87 paints
+its3×3 foundation immediately; enemy87 retains pending27 until visible rendering.
+Placement uses strict footprint overlap, including mobiles and earlier buildings.
+The duplicate fixture directly exercises rejection against the first87.
+
+RMS import now completes each building's technology refresh in creation order.
+Previously, importing all completed buildings together could grant marker31
+before the Command Center's dependent451. The original per-owner sequence is
+0,486,22,451,31,85,209; effect70 enables307. Ordinary scenario import retains its
+existing initialization path. The first87 raises research counter21 from2 to3;
+additional87 buildings add160carbon to recorded building cost without repeating
+research or population grants. No startup resource charge is applied.
+
+`tools/rms_owned_building_checks.h` verifies these four full fixtures, native
+research order/unlock, costs, health/animation and deferred foundation rendering.
+Wrong foundation metadata and randomized-position variants reject atomically.
+Support remains limited to the compared flat two-Empire composition. Slopes,
+mixed additional object rows and last-rejected-candidate overlap cleanup remain
+unverified; forced overlap explicitly rejects rather than inventing destruction.
+
+Evidence: `rms-owned87-bounded-findings-2026-11-16.json`, actual-loader provenance
+`rms-owned87-assets-provenance-2026-11-16.json`, and the original full/resource/
+research-v2/native comparison captures under `rms-text-full-owned87`.
+All68 packaged cases plus the four authored87 fixtures and retained regression
+suite pass with ASan/UBSan; strict RMS and production CLI checks also pass.
+The rebuilt desktop preferences/menu/render/effects/music-streaming smoke passes
+with dummy output; no fresh live Windows visual/audio comparison was performed.

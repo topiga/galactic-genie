@@ -911,6 +911,10 @@ void Game::updateSkirmish(float dt) {
 }
 
 bool Game::initScenario(const Scenario &scenario, std::string *err) {
+    return initScenario(scenario,err,false);
+}
+
+bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsCompletionOrder) {
     if (!scenario.map.width || scenario.map.width != scenario.map.height) {
         if (err) *err = "only square scenario maps are currently supported";
         return false;
@@ -1116,6 +1120,9 @@ bool Game::initScenario(const Scenario &scenario, std::string *err) {
                 if (partId && parentId && source.spawnId) objects_.back().annexParentId = parentId;
             }
         }
+        // RMS completes each building before later building markers become visible.
+        if(rmsCompletionOrder && unit->type==dat::UT_Building && !hidden)
+            refreshAutomaticTechnologies(source.player);
     }
     for (Object &object : objects_)
         configureGate(object);
@@ -1213,7 +1220,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     for (const auto &placement:generated.resourcesAfterOwned)
         placeResource(placement.unitId,placement.x,placement.y,placement.facet,nextId++,placement.owner);
     scenario.nextUnitId=nextId;
-    if (!initScenario(scenario,err)) return false;
+    if (!initScenario(scenario,err,true)) return false;
     if(!generated.elevation.empty()) {
         for(int y=0;y<mapSize;++y) for(int x=0;x<mapSize;++x) {
             const size_t source=size_t(x)*mapSize+mapSize-1-y,destination=size_t(y)*mapSize+x;
@@ -1255,7 +1262,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         const auto &placement=generated.resourcesAfterOwned[index];
         recordStartupResources(assets_.dat().civs[placement.owner?playerCivilizations[placement.owner-1]:0].units[placement.unitId],placement.owner);
         if(auto *object=findObject(resourceIdBase+uint32_t(index))) {
-            if(placement.owner)object->pendingFoundation=255;
+            if(placement.owner)object->pendingFoundation=placement.pendingFoundation;
             else if(object->unit->type==dat::UT_Building && object->unit->foundationTerrainId>=0)
                 object->pendingFoundation=uint8_t(object->unit->foundationTerrainId);
             const auto *graphic=assets_.dat().graphic(object->unit->standingGraphic[0]);
