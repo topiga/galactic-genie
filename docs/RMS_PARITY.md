@@ -5237,3 +5237,13 @@ pass under ASan/UBSan, including the 93 arithmetic goldens. Combat checks pass
 resource work, automatic gathering, drop-off, construction, repair and garrison.
 Logs: `gather-local.log`, `gather-bonus.log`, `gather-combat.log` in the external
 build directory. These do not establish full-match or awake-list equivalence.
+The rebuilt desktop also passes preference/menu checks and 60 smoke frames with
+rendering and effects/music decoding (`gather-desktop.log`). SDL dummy drivers
+were used; this is not a new visual or audible comparison with Windows.
+Four additional original reload/readiness controls confirm worker123 reload2.0,
+with `444da0` decrementing/clamping its counter before `409870`, and `444ae0`
+accepting counter<=0. The remaining timed-path prerequisite is actual graphic7245
+and sprite/controller release followed by attack-to-parent-gather transition.
+Evidence is frozen in `tree-worker-reload-controls-v1-oracle-2026-11-16.json`
+and `tree-worker-task-reload-findings-2026-11-16.json`; worker83 fallback remains
+untested. No native felling timing change is inferred from reload alone.
