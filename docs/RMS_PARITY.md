@@ -3767,3 +3767,42 @@ three actual preset symbols still accepts57/138 attempts (19 resources);
 acceptance is not full-original comparison coverage. CLI file/archive tests,
 strict RMS tests and desktop headless menu/game/render/audio-stream smoke passed.
 No live Windows UI or audio comparison was performed in this continuation.
+
+### Shoreline54205 mixed land, cliffs and water connections (2026-11-16)
+
+Six full original comparisons use the actual derived-reader Tiny/fixed/default
+presets. Private evidence files use the label `coastal54205`.
+
+| Seed | Biome | Objects | RNG | Gaia unit costs |
+| --- | --- | --- | --- | --- |
+| 1 | Zaloriis | 1733 | 1818769083 | 2300 |
+| 12345 | Reytha | 1715 | 3269173345 | 2000 |
+| 16160 | Yavin | 1723 | 31752613 | 1600 |
+| 4000 | Kashyyyk | 1689 | 622934016 | 1950 |
+| 5000 | Krant | 1713 | 1581241569 | 1450 |
+| 8000 | Naboo | 1704 | 1841981369 | 1250 |
+
+The existing land/elevation/terrain/cliff/connection/object algorithms reproduce
+every ordered object, XY position, facet, startup pose, grid byte and final RNG
+in these references. Native import also matches all823 retained owned/Gaia
+poses and health values, deferred foundations, player costs and population.
+Player costs remain575 (200 units,375 buildings), population used4 with remaining
+capacity1. Gaia costs are observed directly in each full reference; seed1 also
+has an independent complete replay matching objects, poses, grids and resources.
+
+The admission predicate checks the six exact biome terrain profiles, seven
+height rows, all99 connection settings, and original cliff settings
+5..8/4..10/curl10/water2/cliff3. It admits three per-player land targets
+3744/4320/4680 and four original border arrangements, keeping both player rows
+consistent. A34-case original parser sweep covers every biome and11 of the12
+land-target/border combinations; the six full references cover each individual
+choice. This is not an exhaustive cross-product or arbitrary-seed proof.
+
+Evidence: `rms-coastal54205-derived-original-findings-2026-11-16.json`,
+`rms-coastal54205-derived-geometry-sweep-findings-2026-11-16.json`,
+`rms-coastal54205-six-biome-matrix-2026-11-16.json`, and
+`rms-coastal54205-branches-4000-5000-8000-findings-2026-11-16.json`.
+Shared packaged coverage is83 cases. ASan/UBSan regressions, strict RMS checks,
+CLI file/archive checks and rebuilt desktop headless smoke pass. The rebuilt
+production audit accepts60/138 configurations across20 resources; acceptance
+alone is not original parity evidence. No live Windows/UI/audio comparison.
