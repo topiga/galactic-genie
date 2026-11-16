@@ -851,7 +851,33 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         }
         return true;
     }();
-    const bool spaceStartup=spaceMass || spaceSatellites;
+    const bool spacePlanets=[&]() {
+        if(width!=120 || height!=120 || base!=16 || !playerLands || playerLandBegin || lands.size()!=3 ||
+           playerCount!=2 || playerZoneOverride || !ownedObjects || !startingWorkers || !startingScouts ||
+           workerGroups!=1 || scoutGroups!=1 || workerMinDistance!=6 || workerMaxDistance!=6 || startingStalagmites ||
+           playerCivilizations!=std::vector<uint16_t>{1,1} || !defines.count("FIXED_POSITIONS") ||
+           cliffStage || !spaceElevation || connectionStage || terrainRows.size()!=6)return false;
+        for(size_t n=0;n<lands.size();++n) {
+            const auto &land=lands[n];const auto &position=placements[n];const auto &metadata=landMetadata[n];const bool neutral=n==2;
+            if(land.terrain!=42 || land.radius!=(neutral?3u:9u) || land.targetTiles!=(neutral?8640u:2160u) ||
+               land.zone!=(neutral?0:int(n+1)) || land.clumpingFactor!=(neutral?8:15) || land.borderFuzziness!=(neutral?10u:7u) ||
+               land.separation!=2 || position.x!=-1 || position.y!=-1 || position.minPlacementDistance!=-1 ||
+               metadata.id!=(neutral?31:1) || metadata.owner!=(neutral?0:int(n+1)))return false;
+            if(neutral) {
+                if(!((land.leftBorder==15 && land.rightBorder==108) || (land.leftBorder==12 && land.rightBorder==105)) ||
+                   !((land.topBorder==15 && land.bottomBorder==108) || (land.topBorder==12 && land.bottomBorder==105)))return false;
+            } else if(land.leftBorder || land.topBorder || land.rightBorder!=-1 || land.bottomBorder!=-1)return false;
+        }
+        const uint32_t terrain[]={50,44,50,14,33,44},tiles[]={864,1296,144,288,1008,288},clumps[]={20,8,4,24,5,30},spacing[]={5,0,3,0,1,0};
+        for(size_t n=0;n<terrainRows.size();++n) {
+            const auto &row=terrainRows[n];
+            if(row.terrain!=terrain[n] || row.baseTerrain!=42 || row.targetTiles!=tiles[n] || row.clumps!=clumps[n] ||
+               row.spacing!=spacing[n] || row.clumping!=20 || row.avoidPlayerStarts!=(n==0 || n==2) ||
+               row.flatTerrainOnly || row.minHeight || row.maxHeight!=255)return false;
+        }
+        return true;
+    }();
+    const bool spaceStartup=spaceMass || spaceSatellites || spacePlanets;
     const bool geonosisCliffs=[&]() {
         if(width!=120 || height!=120 || base!=26 || !playerLands || playerLandBegin!=1 || lands.size()!=3 ||
            playerCount!=2 || !playerZoneOverride || !ownedObjects || !startingWorkers || !startingScouts ||
@@ -2154,7 +2180,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                         appendFootprint(object,rowBlockers);
                 std::vector<RmsTimberPlacement> placed;
                 if(row.unitId==285) {
-                    const bool selected=migrationCliffs && row.landId==31 && selectedStarts.size()==1;
+                    const bool selected=(migrationCliffs || spacePlanets) && row.landId==31 && selectedStarts.size()==1;
                     if(row.mode || row.groups!=5 || row.perGroup!=1 || row.variance || row.radius!=3 ||
                        (!selected && row.landId!=-2) || row.minDistance!=(arenaForest?30:25) || row.terrain!=(arenaForest?int(lands[0].terrain):-1) || row.spacing!=(arenaForest?5:0) ||
                        row.temporarySpacing!=(arenaForest?0:20) || row.zoneDistance)

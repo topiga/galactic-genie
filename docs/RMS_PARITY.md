@@ -4170,3 +4170,32 @@ Validation:115 retained packaged startup cases plus general/authored suites
 pass under ASan/UBSan. Strict RMS, production file/archive checks and desktop
 menu/render/audio-stream smoke pass. Production accepts90 of138 configurations
 across30 resources; this remains acceptance coverage rather than total parity.
+
+### Planets and Moons54213 selected-land holocrons and wildlife (2026-11-16)
+
+Actual-derived Tiny/default two-Empire seeds1/12345/16160 match1207/1214/1230
+original objects and final RNG108857928/3607444516/1775171975. Ordered object
+records, exact positions, terrain/elevation/slope grids and captured startup
+poses match. Native import fixtures add56 animation/health/height records plus
+resource and transport counters.
+
+Two2160-tile player lands precede an8640-tile neutral rock42 land with ID31.
+The bounded profile checks asymmetric neutral borders, six terrain rows and the
+shared27 space elevation rows. Neither cliffs nor connections are present.
+
+The original selected-holocron row has precisely the same parameters as the
+previously compared Migration row:land31, five single holocrons, minimum25,
+temporary spacing20. Only the profile admission changes; the existing selected
+zone and distance controller remains intact. Full comparisons also cover
+selected loose Mynock groups of1/2/4 and player-scaled Nova/Ore groups on land31.
+No separate algorithm or fabricated object metadata was introduced.
+
+Evidence: `rms-planets54213-full-startup-findings-2026-11-16.json`,
+`rms-planets54213-geometry-summary-2026-11-16.json`, and reused Space Mass asset
+and air-placement provenance. Other sizes, civilizations, arbitrary seeds and
+later gameplay remain outside these startup comparisons.
+
+Validation:118 retained packaged startup cases and the general/authored suites
+pass under ASan/UBSan, plus strict RMS, production file/archive checks and
+desktop menu/render/audio-stream smoke. Production accepts93 of138 tested
+configurations across31 resources; this is acceptance coverage, not total parity.
