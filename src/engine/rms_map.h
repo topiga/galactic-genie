@@ -40,7 +40,8 @@ struct RmsMap {
 // is supported. A bounded120-square Empire Forest21 profile supports elevated
 // CC/worker/scout startup, with terrain connectivity and final placement gates.
 // Player/team-land connections execute after terrain. Optional diplomacy includes
-// Gaia row/column0; allies currently require randomized starts and no owned rows.
+// Gaia row/column0; owned allied startup is bounded to the compared two-Empire
+// Tiny54218 road profile. Other allied profiles require randomized starts and no owned rows.
 // Cliffs support bounded120-square DIRT1 profiles: one explicit zero-growth
 // neutral land with verified elevation/terrain combinations, or two randomized
 // player lands (radius<=10, target<=8000) with grass/forest18/20/21 painting and optional

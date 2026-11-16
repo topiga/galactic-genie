@@ -2,16 +2,17 @@
 
 ## Current comparison coverage: 2026-11-16
 
-Sixteen packaged profiles have complete original-runner comparisons at fixed Tiny120,
-two Empire players and default resources: Forest54204, Reytha54220, Arid54201,
+Seventeen packaged profiles have complete original-runner comparisons at fixed Tiny120,
+two Empire players and default resources (54218 uses mutual allies): Forest54204, Reytha54220, Arid54201,
 Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
-Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217 and central basin54206.
-The shared packaged suite contains59 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
+Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206 and allied roads54218.
+The shared packaged suite contains62 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
 Gaia resource accounting and deferred foundation rendering.
 
 The standard production audit accepts48/138 map/seed attempts (sixteen of46 resources,
-three seeds each);90 are explicitly rejected. This measures supported
+three seeds each);90 are explicitly rejected. The allied54218 configuration is
+verified separately and is not counted as accepted by this enemy-player audit. This measures supported
 configurations, not an engine completion percentage. New comparisons run the
 original executable locally with modeled host boundaries. Live Windows evidence
 below remains a separate, earlier baseline. Later gameplay and other map settings
@@ -3162,3 +3163,47 @@ holocron, foundation and transport regressions pass. The strict RMS suite and
 production CLI checks pass; the desktop smoke verifies60 render frames and
 audio streaming without a live display or listening comparison. The production
 audit accepts48/138 attempts, with90 unsupported attempts rejected.
+
+### Two-player allied roads (2026-11-16)
+
+Raw54218 is compared with mutual owner1/owner2 alliances, Gaia enemies, fixed
+Tiny120, two Empire players and default resources. The original alliance check,
+fixed-position routine, team finalizer and route worker execute unchanged.
+This is an active road comparison: the two player lands form one kind64 record,
+not two singleton enemy records that would produce no route.
+
+The original fixed-position routine traverses the shuffled owner list twice,
+placing each unassigned ally of the current owner. For exactly two mutual allies,
+this produces the same placement order and RNG draws as the existing enemy
+helper. Twelve bounded executions verify that equivalence across three seeds
+and two border rectangles. Native regression fixtures retain the resulting six
+coordinate/RNG cases. Larger allied groups remain rejected.
+
+The profile preserves literal script asymmetries: Alaris paints forests50/20
+but replaces terrain10 with road25; Naboo paints forests10/18 but replaces18
+with road24. Road terrains24/25/38 now pass the bounded holocron validation;
+placement, route search and random-number algorithms remain unchanged.
+
+Evidence: `rms-two-player-allied-fixed-starts-proof-2026-11-16.json`,
+`rms-two-player-allied-fixed-starts-oracle-2026-11-16.json` and
+`rms-packaged-allied54218-full-findings-2026-11-16.json`. This establishes RMS
+startup with captured prototypes and restriction initialization. Complete team
+bonuses, shared sight and later allied gameplay are outside this comparison.
+
+| Seed | Biome | Objects | Final RNG | Route draws | Changed route tiles |
+|---:|---|---:|---:|---:|---:|
+| 1 | Zaloriis26 | 1550 | 3127025553 | 208 | 105 |
+| 5000 | Alaris12 | 1577 | 2171223389 | 264 | 243 |
+| 16160 | Naboo0 | 1441 | 3058030090 | 244 | 327 |
+
+All three native captures match ordered objects at full coordinate precision,
+complete terrain/elevation/slope grids, startup poses and final RNG. The active
+route counts and changed tiles above are trace observations from the original.
+
+Independent original resource replays verify Gaia unit/total costs2450,1200,1400
+for seeds1,5000,16160 respectively, zero building costs and five Gaia units.
+Both player accounts retain575 total/200 unit/375 building costs. All62 shared
+packaged fixtures pass with sanitizers, including native import and these counters.
+Strict RMS integration, production CLI checks, fixed-start tests and the desktop
+menu/render/audio-streaming smoke also pass. The20-suite algorithm run passed
+before this profile addition; affected integration/startup paths were rerun after it.

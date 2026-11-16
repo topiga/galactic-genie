@@ -100,6 +100,25 @@ int main() {
             check(out[i].x == c.centers[i].x && out[i].y == c.centers[i].y,
                 "original fixed player-start coordinates mismatch");
     }
+    // Actual 4e76a0/4c0450: two mutual allies preserve the enemy permutation and draws.
+    // rms-two-player-allied-fixed-starts-oracle-2026-11-16.json; translated border rectangles.
+    struct BorderedCase { uint32_t w,h,seed,finalState; int32_t left,top,x1,y1,x2,y2; };
+    const BorderedCase borderedCases[] = {
+        {102, 102, 1u, 2800339366u, 10, 8, 90, 37, 42, 85},
+        {100, 104, 1u, 2800339366u, 10, 8, 89, 38, 41, 87},
+        {102, 102, 5000u, 125209764u, 10, 8, 61, 85, 74, 20},
+        {100, 104, 5000u, 125209764u, 10, 8, 60, 87, 74, 20},
+        {102, 102, 16160u, 3249354450u, 10, 8, 27, 40, 47, 88},
+        {100, 104, 16160u, 3249354450u, 10, 8, 27, 40, 46, 90},
+    };
+    for(const auto &c:borderedCases) {
+        uint32_t state=c.seed;
+        check(generateRmsFixedPlayerStarts(c.w,c.h,12,2,state,out,&error),error);
+        check(state==c.finalState && out.size()==2 &&
+              out[0].x+c.left==c.x1 && out[0].y+c.top==c.y1 &&
+              out[1].x+c.left==c.x2 && out[1].y+c.top==c.y2,
+              "two-player allied bordered fixed starts mismatch");
+    }
     const Case invalid[] = {{0,7,0,0,0,0,0,0,0}, {1025,7,0,0,0,0,0,0,0},
         {7,7,-1,0,0,0,0,0,0}, {7,7,4,0,0,0,0,0,0}, {1,1,0,0,0,0,0,0,0},
         {7,7,2147483647,0,0,0,0,0,0}, {32,2,0,0,0,0,0,0,0}};
@@ -134,5 +153,5 @@ int main() {
         check(!generateRmsPlayerStarts(32,32,3,players,state,out,&error) &&
               state==123 && out.empty() && !error.empty(),"invalid player count must fail atomically");
     }
-    std::cout << "288 randomized and 29 fixed original player-start fixtures and invalid-input checks passed\n";
+    std::cout << "288 randomized and 35 fixed original player-start fixtures and invalid-input checks passed\n";
 }

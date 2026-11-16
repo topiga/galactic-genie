@@ -50,7 +50,6 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         for(uint32_t player=1;player<=playerCount;++player)
             for(uint32_t other=1;other<=playerCount;++other)
                 allies|=player!=other && diplomacy[player][other]==0;
-        if(allies && defines.count("FIXED_POSITIONS")) return fail("allied fixed-position starts remain unverified");
     }
     // Zone draws must precede later script random branches, including overwritten zones.
     std::unordered_map<size_t,std::vector<int>> randomLandZones;
@@ -553,6 +552,62 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         }
         return true;
     }();
+    const bool alliedRoads=[&]() {
+        if(width!=120 || height!=120 || base!=1 || !playerLands || playerLandBegin || lands.size()!=2 ||
+           playerCount!=2 || !playerZoneOverride || !ownedObjects || !startingWorkers || !startingScouts ||
+           workerGroups!=1 || scoutGroups!=1 || workerMinDistance!=6 || workerMaxDistance!=6 || startingStalagmites ||
+           playerCivilizations!=std::vector<uint16_t>{1,1} || !defines.count("FIXED_POSITIONS") ||
+           diplomacy!=std::vector<std::vector<uint8_t>>{{0,3,3},{0,0,0},{0,0,0}} ||
+           !cliffStage || !elevationStage || !connectionStage || terrainRows.size()!=11 || elevationRows.size()!=7 ||
+           connectionCommands.size()!=1 || connectionCommands[0].kind!=64 ||
+           cliffSettings.minCount!=3 || cliffSettings.maxCount!=5 || cliffSettings.minLength!=4 || cliffSettings.maxLength!=8 ||
+           cliffSettings.curl!=10 || cliffSettings.waterDistance!=2 || cliffSettings.cliffDistance!=3)return false;
+        const uint32_t ground=lands[0].terrain;
+        if(ground!=26 && ground!=12 && ground!=0)return false;
+        for(size_t n=0;n<lands.size();++n) {
+            const auto &land=lands[n];const auto &position=placements[n];const auto &metadata=landMetadata[n];
+            if(land.terrain!=ground || land.radius!=12 || land.targetTiles!=3240 || land.zone!=2 ||
+               land.clumpingFactor!=8 || land.borderFuzziness!=15 || land.separation!=22 ||
+               position.x!=-1 || position.y!=-1 || position.minPlacementDistance!=-1 || metadata.id!=1 || metadata.owner!=int(n+1) ||
+               !((land.leftBorder==10 && land.rightBorder==112) || (land.leftBorder==8 && land.rightBorder==110)) ||
+               !((land.topBorder==10 && land.bottomBorder==112) || (land.topBorder==8 && land.bottomBorder==110)))return false;
+        }
+        const uint32_t firstForest=ground==26?19:ground==12?50:10,secondForest=ground==26?50:ground==12?20:18;
+        const uint32_t patch=ground==26?46:ground==12?9:12;
+        const uint32_t terrain[]={22,22,23,23,22,1,firstForest,patch,secondForest,ground==26?45u:6u,ground==26?14u:45u};
+        const uint32_t tiles[]={5760,144,2880,144,144,144,1152,1296,144,288,288},clumps[]={10,30,8,30,30,30,11,10,4,24,30},spacing[]={2,1,3,1,1,1,5,1,3,1,1};
+        const uint32_t bases[]={1,1,22,22,23,22,ground,ground,ground,ground,ground};
+        for(size_t n=0;n<terrainRows.size();++n) {
+            const auto &row=terrainRows[n];
+            if(row.terrain!=terrain[n] || row.baseTerrain!=bases[n] || row.targetTiles!=tiles[n] || row.clumps!=clumps[n] ||
+               row.spacing!=spacing[n] || row.clumping!=20 || row.avoidPlayerStarts!=(n==6 || n==8) ||
+               row.flatTerrainOnly || row.minHeight || row.maxHeight!=255)return false;
+        }
+        for(size_t n=0;n<elevationRows.size();++n) {
+            const auto &row=elevationRows[n];
+            if(row.elevation!=n+1 || row.baseHeight!=n || row.baseTerrain!=ground || row.targetTiles!=1200 ||
+               row.clumps!=20 || row.spacing!=(n==0?2u:1u))return false;
+        }
+        RmsConnectionSettings expected{};
+        const int road=ground==26?38:ground==12?25:24;
+        for(int terrain:{int(ground),int(patch),ground==26?14:6,45,ground==26?50:ground==12?10:18})expected[terrain].replacement=road;
+        for(int terrain:{1,22,23,2})expected[terrain].replacement=ground;
+        expected[1].cost=5;expected[22].cost=7;expected[23].cost=15;expected[45].cost=5;expected[2].cost=4;
+        for(int terrain:{18,20,50})expected[terrain].cost=7;
+        for(int terrain:{0,12,9,6,14,46,26})expected[terrain].cost=2;
+        for(int terrain:{24,25,38})expected[terrain].cost=1;
+        for(int terrain:{1,23}){expected[terrain].width=6;expected[terrain].variance=1;}
+        for(int terrain:{0,12,9,26}){expected[terrain].width=1;expected[terrain].variance=0;}
+        for(int terrain:{18,20,50}){expected[terrain].width=3;expected[terrain].variance=1;}
+        for(int terrain:{6,14,46,45,24,25,38}){expected[terrain].width=0;expected[terrain].variance=0;}
+        for(size_t n=0;n<expected.size();++n) {
+            const auto &a=expected[n],&b=connectionCommands[0].settings[n];
+            if(a.cost!=b.cost || a.width!=b.width || a.variance!=b.variance || a.replacement!=b.replacement)return false;
+        }
+        return true;
+    }();
+    // Two mutual allies use the same fixed permutation; larger teams remain unverified.
+    if(allies && defines.count("FIXED_POSITIONS") && !alliedRoads) return fail("allied fixed-position starts remain unverified");
     const bool basinCliffs=[&]() {
         if(width!=120 || height!=120 || base!=1 || !playerLands || playerLandBegin!=1 || lands.size()!=3 ||
            playerCount!=2 || !playerZoneOverride || !ownedObjects || !startingWorkers || !startingScouts ||
@@ -647,7 +702,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         return true;
     }();
     // shortcut: expand after composed original cliff/terrain/startup comparisons.
-    if(cliffStage && !mixedLandCliffs && !lakeCliffs && !migrationCliffs && !basinCliffs && !connectedCliffs) {
+    if(cliffStage && !mixedLandCliffs && !lakeCliffs && !migrationCliffs && !basinCliffs && !alliedRoads && !connectedCliffs) {
         // Verified packaged Reytha/Arid/Hoth/Kessel geometry; other cliff compositions remain gated.
         const bool packagedCliffGeometry=[&]() {
             const unsigned kind=base==26 && terrainRows.size()==5 && terrainRows[0].terrain==46?4:base==32?3:base==14?1:base==26?2:0;
@@ -742,8 +797,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 return fail("unsupported original cliff master or graphic");
         }
     }
-    if(allies && ownedObjects) return fail("allied owned-object startup remains unverified");
-    if(playerZoneOverride && ownedObjects && !mixedLandCliffs && !lakeCliffs && !migrationCliffs && !basinCliffs && !connectedCliffs) {
+    if(allies && ownedObjects && !alliedRoads) return fail("allied owned-object startup remains unverified");
+    if(playerZoneOverride && ownedObjects && !mixedLandCliffs && !lakeCliffs && !migrationCliffs && !basinCliffs && !alliedRoads && !connectedCliffs) {
         // shortcut: explicit zones on the compared flat120 Forest profile; extend geometry with original startup replays.
         if(width!=120 || height!=120 || base!=6 || playerCount!=2 || lands.size()!=2 ||
            elevationStage || connectionStage || !defines.count("FIXED_POSITIONS") ||
@@ -773,7 +828,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         }
     }
     const bool ownedForest=ownedObjects && playerLands && base==41 && lands[0].terrain==9;
-    const bool ownedMixedForest=mixedLandCliffs || lakeCliffs || migrationCliffs || basinCliffs || connectedCliffs || connectedIslands || (ownedObjects && playerLands && (base==6 || base==12 || base==14 || base==26 || base==32 || base==41) && lands[0].terrain==base &&
+    const bool ownedMixedForest=mixedLandCliffs || lakeCliffs || migrationCliffs || basinCliffs || alliedRoads || connectedCliffs || connectedIslands || (ownedObjects && playerLands && (base==6 || base==12 || base==14 || base==26 || base==32 || base==41) && lands[0].terrain==base &&
         width==120 && height==120 && playerCount==2 && playerCivilizations.size()==2 &&
         std::all_of(playerCivilizations.begin(),playerCivilizations.end(),[](uint16_t civ){return civ>=1 && civ<=8;}) &&
         startingWorkers && startingScouts && workerMinDistance==6 && workerMaxDistance==6 &&
@@ -975,8 +1030,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         const int right=land.rightBorder<0?int(width):land.rightBorder;
         const int bottom=land.bottomBorder<0?int(height):land.bottomBorder;
         if(right<=land.leftBorder || bottom<=land.topBorder) return fail("empty player-land border rectangle");
-        // shortcut: bordered owned startup is compared only for the connected five-land and central-basin profiles.
-        if(ownedObjects && !connectedIslands && !basinCliffs && (land.leftBorder || land.topBorder || right!=int(width) || bottom!=int(height)))
+        // shortcut: bordered owned startup is compared only for the connected five-land, central-basin and two-allied road profiles.
+        if(ownedObjects && !connectedIslands && !basinCliffs && !alliedRoads && (land.leftBorder || land.topBorder || right!=int(width) || bottom!=int(height)))
             return fail("owned startup on bordered player lands remains unverified");
         const auto placeStarts=defines.count("FIXED_POSITIONS")?generateRmsFixedPlayerStarts:generateRmsPlayerStarts;
         if (!placeStarts(uint32_t(right-land.leftBorder),uint32_t(bottom-land.topBorder),
@@ -1088,7 +1143,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 return fail("owned forest starts require dry terrain and live411 scenery");
         } else if (ownedMixedForest) {
             for(auto tile:generated.terrain)
-                if(tile!=0 && tile!=1 && tile!=2 && tile!=4 && tile!=5 && tile!=6 && tile!=9 && tile!=10 && tile!=12 && tile!=18 && tile!=20 && tile!=21 && tile!=22 && tile!=23 && tile!=41 && tile!=44 && tile!=14 && tile!=45 && tile!=46 && tile!=50 && tile!=19 && tile!=26 && tile!=32 && tile!=33 && tile!=34 && tile!=49)
+                if(!(alliedRoads && (tile==24 || tile==25 || tile==38)) && tile!=0 && tile!=1 && tile!=2 && tile!=4 && tile!=5 && tile!=6 && tile!=9 && tile!=10 && tile!=12 && tile!=18 && tile!=20 && tile!=21 && tile!=22 && tile!=23 && tile!=41 && tile!=44 && tile!=14 && tile!=45 && tile!=46 && tile!=50 && tile!=19 && tile!=26 && tile!=32 && tile!=33 && tile!=34 && tile!=49)
                     return fail("unsupported Forest startup terrain "+std::to_string(tile));
             for(const auto &tree:generated.scenery)
                 if((!isTree(tree.unitId) && tree.unitId!=217 && tree.unitId!=1341) || !tree.alive) return fail("Forest startup requires live348/349/411/413 scenery");

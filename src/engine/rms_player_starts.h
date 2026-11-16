@@ -15,8 +15,8 @@ bool generateRmsPlayerStarts(uint32_t width, uint32_t height, int32_t radius, ui
     uint32_t &randomState, std::vector<RmsPlayerStart> &out,
     std::string *err = nullptr);
 // Original 0x4e76a0 when randomizePositions is disabled. Bounded to mutually
-// enemy players, one equal-radius land per owner and default borders; allied
-// grouping and mixed/nonplayer land rows require the original general path.
+// enemy players (or exactly two mutual allies), one equal-radius land per owner
+// and a shared border rectangle. Larger allied groups require the general path.
 // Same output order and failure/RNG contract as generateRmsPlayerStarts.
 bool generateRmsFixedPlayerStarts(uint32_t width, uint32_t height, int32_t radius, uint32_t playerCount,
     uint32_t &randomState, std::vector<RmsPlayerStart> &out,
