@@ -6,7 +6,7 @@ Eleven packaged profiles have complete original-runner comparisons at fixed Tiny
 two Empire players and default resources: Forest54204, Reytha54220, Arid54201,
 Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
 Tatooine New55019, Endor54207 and four-biome connections54210.
-The shared packaged suite contains34 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
+The shared packaged suite contains41 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
 Gaia resource accounting and deferred foundation rendering.
 
@@ -2918,3 +2918,34 @@ Validation passes all34 shared packaged cases,52 general object rows, Forest,
 Gaia/owned-foundation rendering and the strict integrated RMS test. The production
 audit accepts33/138 cases across eleven profiles;105 remain rejected. Desktop
 preferences/menu/effects/music smoke passes using dummy video/audio.
+
+### Connection-map boundary seeds (2026-11-16)
+
+Seven additional fixed Tiny120/two-Empire runs of raw54210 match the complete
+original runner and independent resource replay:
+
+| Seed | Objects | Final RNG | Gaia unit/total cost |
+|---:|---:|---:|---:|
+| 0 | 2796 | 3947895317 | 1650 |
+| 2 | 2860 | 1434243024 | 2200 |
+| 3 | 2810 | 807623464 | 1250 |
+| 4 | 2792 | 892659483 | 2800 |
+| 42 | 2834 | 313647106 | 1400 |
+| 99999 | 2777 | 2364668520 | 2550 |
+| 4294967295 | 2772 | 1897108669 | 650 |
+
+The original harness initially stopped on missing animal1197. Its previously
+captured master/header referenced uncaptured task graphic39; that graphic was
+loaded through the original loader before rerunning. Original probe sources
+remain intact, with a separate expanded probe and asset-provenance ledger.
+All ordered objects, full grids and captured poses agree; four1197 poses each
+are additionally covered at seeds0/2/3/4294967295. Gaia building cost stays0 and
+storage counter11 stays5. Seed4 retains its earlier full capture, independently
+checked by the expanded resource replay. Evidence:
+`rms-packaged-composed54210-expanded-findings-2026-11-16.json` and
+`rms-composed54210-expanded-assets-provenance-2026-11-16.json`.
+
+All41 shared packaged cases pass with ASan/UBSan, including native import and
+startup resource checks, alongside the retained Forest/general-row/foundation
+suites. Strict integrated RMS checks pass. No fresh live Windows session was
+used for this expansion.
