@@ -4253,3 +4253,31 @@ Validation:124 packaged startup cases and general/authored regressions pass
 under ASan/UBSan; strict map checks, production CLI build and desktop dummy-driver
 smoke pass. The production acceptance audit accepts96 of138 configurations across
 32 resources; this is acceptance coverage, not a whole-engine parity percentage.
+
+### Naboo Swamp54222 plants and team connections (2026-11-16)
+
+Actual-derived Tiny/default two-Empire seeds1/12345/16160 match5334/5355/5309
+original objects and final RNG3553018566/4134424987/1844835132. Ordered object
+IDs, owners, types, facets and exact positions match, as do terrain, elevation,
+slope grids and captured poses.
+
+Two6840-tile grass player lands precede nine terrain rows. The original includes
+a self-replacement grass row and a dirt-forest replacement row even when that
+source terrain is absent; neither is simplified away. Two authored connection
+commands expand to three finalized records: the enemy-team command produces two
+singleton records. Existing native team expansion matches without a new controller.
+The new profile checks all99 terrain settings for both source commands.
+
+Original plants1121/1125/1127 use graphics5247/5251/5253, with6/6/12 facets.
+They share the existing zero-height, nonblocking plant placement path. Mutated
+plant metadata and unverified random starts reject atomically.
+
+Evidence: `rms-nabooswamp54222-full-startup-findings-2026-11-16.json`,
+`rms-nabooswamp54222-geometry-summary-2026-11-16.json` and
+`rms-nabooswamp54222-assets-provenance-2026-11-16.json`. Other seeds, map sizes,
+civilizations and later gameplay remain outside this bounded comparison.
+
+Validation:127 packaged startup cases and general/authored regressions pass
+under ASan/UBSan, including274 new pose/health/height fixtures. Strict map checks,
+production CLI checks and desktop dummy-driver smoke pass. Production acceptance
+is99 of138 configurations across33 resources, not a parity percentage.

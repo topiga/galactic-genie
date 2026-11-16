@@ -10,6 +10,7 @@
 
 namespace swgb {
 namespace {
+bool isPlant(int unit) { return unit==1120 || unit==1121 || unit==1122 || unit==1123 || unit==1125 || unit==1127; }
 bool isTree(int unit) { return unit==348 || unit==349 || unit==350 || unit==351 || unit==411 || unit==413 || unit==414; }
 bool isPredator(int unit) { return unit==1459 || unit==1461 || unit==1463 || unit==126 || unit==812 || unit==1197 || unit==1250 || unit==1129 || unit==1252 || unit==1251 || unit==1465 || unit==998 || unit==1033; }
 bool isMountain(int unit) { return unit==589 || unit==1017 || unit==1018 || unit==1019 || unit==1020 || unit==1165 || unit==1166; }
@@ -49,6 +50,9 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         {1296,1958,10,42,2100,4,1,-1,0,0,3.f},
         {1122,5248,10,42,50,1,6,-1,0,0,0.f},
         {1120,5246,10,42,50,1,6,-1,0,0,0.f},
+        {1121,5247,10,42,50,1,6,-1,0,0,0.f},
+        {1125,5251,10,42,50,1,6,-1,0,0,0.f},
+        {1127,5253,10,42,50,1,12,-1,0,0,0.f},
         {1172,5316,10,42,50,13,2,-1,0,0,1.f},
         {1173,5315,10,42,50,13,2,-1,0,0,1.f},
         {1295,1949,80,18,3000,4,1,-1,0,0,4.f},
@@ -96,7 +100,7 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
         u.terrainRestriction!=spec.restriction || u.hillMode!=(unitId==1295?3:0) || u.flyMode || u.canBeBuiltOn!=int((crater && unitId!=1332) || stalagmite || vent) ||
         u.recyclable || u.lineOfSight!=(unitId==1295?6.f:unitId==1296?1.f:(unitId==1184 || unitId==1185 || unitId==519 || unitId==524 || unitId==537)?2.f:building?1.f:0.f) || u.trainSound!=-1 ||
-        u.obstructionType!=(mountain?10:(unitId==1120 || unitId==1122 || unitId==1123 || crater || vent)?0:2) || u.obstructionClass!=((unitId==1120 || unitId==1122 || unitId==1123 || crater || vent)?0:(unitId==1170 || unitId==1171 || unitId==1172 || unitId==1173 || unitId==1296 || stalagmite || building)?3:1) || u.civilization ||
+        u.obstructionType!=(mountain?10:(isPlant(unitId) || crater || vent)?0:2) || u.obstructionClass!=((isPlant(unitId) || crater || vent)?0:(unitId==1170 || unitId==1171 || unitId==1172 || unitId==1173 || unitId==1296 || stalagmite || building)?3:1) || u.civilization ||
         u.enableAutoGather!=(spec.resource<0?0:1) || !g || g->sequenceType!=(mine?5:(mountain || crater || stalagmite || vent || unitId==1295)?0:6) || g->angleCount!=spec.angles)
         return fail("unsupported resource prototype or graphic");
     if ((spec.type==20 || spec.type==30 || mountain || crater || stalagmite || vent || unitId==1296 || building) && (u.createDoppelgangerOnDeath!=spec.doppel || u.speed!=0 ||
@@ -604,7 +608,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
                 for(int xx=x-1;xx<=x+1;++xx)
                     if(occupied[yy*width+xx] || restriction[terrain[yy*width+xx]]<=.05f)return false;
         }
-        return (bird || aquatic || unitId==1120 || unitId==1122 || unitId==1123 || !occupied[tile]) && restriction[terrain[tile]]>.05f;
+        return (bird || aquatic || isPlant(unitId) || !occupied[tile]) && restriction[terrain[tile]]>.05f;
     };
     auto create=[&](int tile) {
         RmsTimberPlacement placement{float(tile%width)+(largeFish?0.f:.5f),float(tile/width)+(largeFish?0.f:.5f),0,0,unitId};
@@ -656,7 +660,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             for(int yy=int(std::floor(placement.y-radius));yy<int(std::ceil(placement.y+radius));++yy)
                 for(int xx=int(std::floor(placement.x-radius));xx<int(std::ceil(placement.x+radius));++xx)
                     if(xx>=0 && yy>=0 && xx<int(width) && yy<int(height))occupied[yy*width+xx]=true;
-        } else if(!data.civs[0].units[unitId].canBeBuiltOn && !herd && !bird && !aquatic && unitId!=1120 && unitId!=1122 && unitId!=1123 && !crater)occupied[tile]=true;
+        } else if(!data.civs[0].units[unitId].canBeBuiltOn && !herd && !bird && !aquatic && !isPlant(unitId) && !crater)occupied[tile]=true;
     };
     RmsZoneCache resourceZones;
     for(size_t player=0;player<(perPlayer?novaPlayerStarts.size():1);++player) {
