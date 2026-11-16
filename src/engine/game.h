@@ -101,6 +101,15 @@ struct MovingObjectInfo {
     bool selected = false;
 };
 
+struct RmsSessionOptions {
+    uint32_t resourceTier = 0;
+    uint32_t startingAge = 2; // Original setup value: 2 is the base age.
+    uint32_t mapId = 0;
+    // One entry per player; empty means no script. Player one is human.
+    std::vector<std::string> aiScripts;
+    std::unordered_set<std::string> aiDefines{"DIFFICULTY-MODERATE"};
+};
+
 class Game {
 public:
     explicit Game(Assets &assets) : assets_(assets) {}
@@ -129,6 +138,12 @@ public:
                  int mapSize, uint32_t &randomState, std::string *err = nullptr, uint32_t playerCount = 2,
                  const std::vector<uint16_t> &playerCivilizations = {},
                  const std::vector<std::vector<uint8_t>> &diplomacy = {});
+    // Normal-mode startup; generation RNG is returned, not yet upgrade-animation RNG.
+    bool initRmsSession(const RmsScript &script, const std::unordered_set<std::string> &defines,
+                        int mapSize, uint32_t &randomState,
+                        const std::vector<uint16_t> &civilizations, const RmsSessionOptions &options,
+                        std::string *err = nullptr,
+                        const std::vector<std::vector<uint8_t>> &diplomacy = {});
     bool loadAiScript(
         int player, const std::string &path,
         const std::unordered_set<std::string> &defines,
@@ -648,6 +663,7 @@ public:
 
 private:
     bool initScenario(const Scenario &scenario, std::string *err, bool rmsCompletionOrder);
+    bool initializeStartingAge(int player,int rawAge);
     enum class State : uint8_t {
         Idle,
         Walk,

@@ -1,0 +1,20 @@
+#load-if-defined DIFFICULTY-MODERATE
+(defrule
+    (food-amount >= 200)
+    (carbon-amount >= 175)
+    (current-age == 1)
+=>
+    (set-goal 901 1)
+    (disable-self))
+#end-if
+
+(defrule (current-age >= 2)
+=>
+    (set-goal 903 1)
+    (disable-self))
+
+(defrule (can-train UNIT-WORKER)
+=>
+    (train UNIT-WORKER)
+    (set-goal 902 1)
+    (disable-self))

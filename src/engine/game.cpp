@@ -1293,6 +1293,44 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     return true;
 }
 
+bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std::string> &defines,
+                          int mapSize, uint32_t &randomState,
+                          const std::vector<uint16_t> &civilizations, const RmsSessionOptions &options,
+                          std::string *err, const std::vector<std::vector<uint8_t>> &diplomacy) {
+    const auto fail=[&](const char *message) {if(err)*err=message;return false;};
+    if(civilizations.empty() || civilizations.size()>8 || options.resourceTier>3 ||
+       options.startingAge<2 || options.startingAge>6)
+        return fail("RMS session requires 1..8 players, resource tier 0..3 and starting age 2..6");
+    if(!options.aiScripts.empty() && (options.aiScripts.size()!=civilizations.size() || !options.aiScripts[0].empty()))
+        return fail("RMS AI scripts must match player slots and leave human player one empty");
+    std::array<AiPlayerState,17> computers;
+    for(size_t i=1;i<options.aiScripts.size();++i) {
+        if(options.aiScripts[i].empty())continue;
+        auto &state=computers[i+1];
+        if(!state.program.load(options.aiScripts[i],options.aiDefines,err))return false;
+        state.loaded=state.scripted=true;
+    }
+    if(!initRms(script,defines,mapSize,randomState,err,uint32_t(civilizations.size()),civilizations,diplomacy))
+        return false;
+    static constexpr float grants[][4]={{200,200,250,100},{200,200,250,100},
+                                        {500,500,450,300},{1000,1000,850,700}};
+    for(size_t player=1;player<=civilizations.size();++player) {
+        for(int type=0;type<4;++type)
+            resources_[player][type]=playerAttribute(int(player),91+type)+grants[options.resourceTier][type];
+        if(options.mapId==37) {
+            resources_[player][1]=std::max(resources_[player][1],475.f);
+            resources_[player][2]+=100.f;
+        }
+    }
+    for(size_t player=1;player<=civilizations.size();++player)
+        if(!initializeStartingAge(int(player),int(options.startingAge)))
+            return fail("RMS starting-age research could not be initialized");
+    for(size_t player=1;player<=civilizations.size();++player)
+        computers[player].age=aiTechLevel(int(player));
+    aiPlayers_=std::move(computers);
+    return true;
+}
+
 bool Game::populateRmsTimber(uint32_t count, uint32_t &randomState, std::string *err) {
     if (err) err->clear();
     if (!objects_.empty() || mapSize_ <= 0 || cornerElevation_.empty() ||
@@ -2114,6 +2152,64 @@ bool Game::researchTechnology(int player, int technologyId) {
     techGeneration_++;
     refreshAutomaticTechnologies(player);
     recordResearchStatistics(player,assets_.dat().techs[size_t(technologyId)]);
+    return true;
+}
+
+bool Game::initializeStartingAge(int player,int rawAge) {
+    if(player<=0 || size_t(player)>players_.size() || !players_[size_t(player)-1].active ||
+       rawAge<2 || rawAge>6)return false;
+    // Original60260f dispatches only advanced starting ages; base age changes nothing.
+    if(rawAge==2)return true;
+    const auto &techs=assets_.dat().techs;
+    const int attributes[]={59,60,61,63};
+    const auto selected=[&](int level) {
+        const float value=playerAttribute(player,attributes[level]);
+        return std::isfinite(value) && value>=0 && value<techs.size()?int(value):-1;
+    };
+    const auto enabled=[&](int id) {
+        return id>=0 && size_t(id)<techs.size() && !disabledTechs_[size_t(player)].count(id) &&
+            (techs[size_t(id)].civ<=0 || techs[size_t(id)].civ==civilizationForPlayer(player));
+    };
+    const auto complete=[&](int id) {
+        if(enabled(id) && !researchedTechs_[size_t(player)].count(id))
+            researchTechnology(player,id);
+    };
+    std::set<int> visiting;
+    std::function<bool(int)> prerequisites=[&](int id) {
+        if(id<0 || size_t(id)>=techs.size())return true;
+        if(!visiting.insert(id).second)return false;
+        // Original5c134a follows all six slots, not only requiredTechCount.
+        // A disabled dependent can still grant its enabled prerequisites.
+        for(int required:techs[size_t(id)].requiredTechs)
+            if(required>=0 && size_t(required)<techs.size() && enabled(required) &&
+               !researchedTechs_[size_t(player)].count(required) && !prerequisites(required))return false;
+        visiting.erase(id);
+        complete(id);
+        return true;
+    };
+    const auto dependents=[&](int id) {
+        if(id<0 || size_t(id)>=techs.size())return true;
+        complete(id);
+        // Original5c13f1 scans ascending IDs and each prerequisite slot; tech62 is excluded.
+        for(size_t next=0;next<techs.size();++next)
+            for(int required:techs[next].requiredTechs)
+                if(required==id && next!=62 && !prerequisites(int(next)))return false;
+        return true;
+    };
+    for(int level=1;level<=std::min(3,rawAge-2);++level) {
+        const int next=selected(level);
+        // Original5d0e80 suppresses the next age while completing the previous age's upgrades.
+        if(next>=0 && !researchedTechs_[size_t(player)].count(next))disabledTechs_[size_t(player)].insert(next);
+        if(!dependents(selected(level-1)))return false;
+        // Original reloads the resource-selected ID after effects, rather than retaining an alias.
+        disabledTechs_[size_t(player)].erase(selected(level));
+        complete(selected(level));
+        resources_[size_t(player)][99]=0;
+    }
+    if(rawAge==6) {
+        if(!dependents(selected(3)))return false;
+        resources_[size_t(player)][99]=0;
+    }
     return true;
 }
 
