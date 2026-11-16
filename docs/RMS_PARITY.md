@@ -4908,3 +4908,95 @@ navigation plus60 render/audio frames. Local logs in the build directory:
 `session-runtime-original-ai.log`, `session-runtime-packaged.log` and
 `session-runtime-desktop.log` (combat: `session-runtime-combat.log`). The21 native controls exclude the12 original
 construction/snow controls pending equivalent native state fixtures.
+
+
+### Local simulation admission and player/world RNG wrappers (2026-11-16)
+
+`LocalSimulationClock` now implements the verified normal-local host-time branch.
+It takes absolute unsigned32-bit host milliseconds, skips intervals below50ms,
+accepts the actual50–100ms interval, caps larger gaps at100ms and discards excess
+rather than running catch-up ticks. It preserves the original zero-timestamp
+sentinel and unsigned wraparound. A fresh clock admits a zero-time first step.
+Suspension preserves the last accepted timestamp and sets the original rebase
+flag: the next eligible timestamp advances neither simulation nor AI. Short
+rejected samples do not consume that flag. Queue-forced and synchronized/network
+admission are deliberately outside this path.
+
+Evidence includes32 additional original admission controls, pause/resume and
+wrap sequences, and the original delta/body-gate instructions. The raw contexts
+are explicit, with actual conversion instructions; this is not a captured full
+Windows event loop. See `rms-normal-local-admission-findings-2026-11-16.json` and
+its linked probes. The clock is neutral about speed. `Game::updateLocal` uses the
+original new-game default1.5: independent writes at61e61f and4247da both store
+0x3fc00000. Accepted66 host milliseconds therefore become99 simulation milliseconds.
+No native speed-selection UI is added here.
+
+Desktop live play now uses this entry point. Input/HUD handling and camera
+movement run between admitted steps; production, triggers, AI, movement and
+combat do not. The original order of the existing native phases is retained by
+extracting the production/decay phase and gating both simulation blocks. Direct
+`Game::update` remains an explicitly admitted simulation-step API for tools.
+Pause, menu and focus transitions mark clock suspension immediately, including
+transitions within one SDL event batch. Events received after Resume in the same
+batch are no longer discarded by the old `wasPlaying` guard. The desktop smoke
+loop uses deterministic33ms host samples through the same admission API.
+Native commands still take effect immediately in the input phase; original
+command-manager queuing and SDL multi-event coalescing are not proven1:1.
+
+AI's arbitrary0.25s timer is replaced by its original normal first/periodic gate:
+the first admitted call evaluates once, and the counter evaluates again on calls
+20,40,etc. Initial zero-time steps count; skipped and resume-rebase samples do
+not. This ports the normal local gate, not the original nonzero world+29 or
+network authority branches. Native economy/tactical policy remains separate.
+
+Actual executable controls establish234 player-wrapper cases and45 world-tail
+cases with controlled object/AI callbacks that invoke the real CRT generator.
+Gaia has no normal-player reseed. Every instantiated normal player, including
+humans and inactive status values, saves one15-bit draw before its AI branch and
+restores it afterward. After players, the original world saves/restores another
+draw around auxiliary passes and consumes a final draw without reseeding.
+See `player-world-rng-wrapper-findings-2026-11-16.json` and its two v2 oracles.
+These execute original wrappers with explicit callback bodies; they do not
+establish full original AI or active-object gameplay execution.
+
+Native AI updates now apply the normal-player wrapper to configured slots,
+including slots without a loaded script, then apply the world-tail RNG steps.
+Serialized SCX secondary-player record count is retained independently of
+active-player flags; authored diagnostic scenarios infer slots when no table
+exists, while RMS supplies the explicit configured count. Malformed counts fail
+before replacing the world. Six native regressions match original empty-world
+seed1 outcomes for1/2/8 slots with0/4 discarded AI draws, including inactive
+normal records. Outcomes are observed through the next real PER draws; script
+reload preserves each player's previous random result. Existing upgrade and
+starting-age regressions now account for the player wrapper before observing
+PER draws, rather than assuming PER is called directly from map generation.
+
+Whole-world parity remains open. Original active objects run per player before
+that player's wrapper, whereas native production and object phases still use
+global passes. Original secondary-list/manager callbacks and victory-time RNG
+consumers are not fully mapped. The verified empty-world wrapper state must not
+be generalized to arbitrary moving/combat worlds or null holes in a player table.
+
+
+The admission integration also exposed an observable integer-clock defect:
+1,000 accepted66ms host intervals at1.5x should reach99,000 world milliseconds,
+but accumulating float0.099 seconds made native PER `game-time` report98.
+The before-build regression fails this exact boundary. Host-driven updates now
+recover integer milliseconds, apply unsigned32-bit addition, and pass the exact
+absolute time separately from float physics delta. The regression then reports99;
+a near-UINT32_MAX control checks wraparound. Direct diagnostic steps retain their
+existing elapsed-time API; switching to host admission rounds its sub-millisecond
+remainder at the integer-clock boundary.
+
+Validation logs are local in the build directory: `local-step-gameplay-v2.log`
+(full resource/upgrade/research/AI suite), `local-step-focused-final.log`
+(normal-speed integration), `local-step-integer-before.log` and
+`local-step-integer-final.log` (clock regression), `local-step-packaged.log`,
+`local-step-combat.log`, `local-step-original-ai.log`, and desktop smoke logs.
+Sanitizer suites cover the normal clock, between-step camera/selection/orders,
+frozen production/movement/AI on rejected samples, pause/rebase, calls1/20/40,
+inactive configured slots and malformed-count preservation. Packaged maps and
+combat pass; shipped714-rule scripts still initialize with three/eight players.
+The desktop smoke exercises60 timestamp-driven render/audio frames. These are
+bounded executable/static comparisons and native regressions, not a new live
+Windows screen or full-world deterministic replay comparison.
