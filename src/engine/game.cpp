@@ -1236,7 +1236,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         for(const auto &storage:unit.resourceStorages)
             if(storage.type>=0 && (storage.flag==1 || storage.flag==2 || (unit.type==dat::UT_Building && storage.flag>=4)))
                 resources_[owner][storage.type]+=storage.amount;
-        if(unit.cls==58 || unit.cls==47 || unit.cls==59)
+        if(unit.cls==58 || unit.cls==47 || unit.cls==59 || unit.cls==54)
             resources_[owner][unit.cls==58?37:40]+=1;
     };
     for (size_t index=0;index<generated.ownedObjects.size();++index) {

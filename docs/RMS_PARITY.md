@@ -2673,3 +2673,40 @@ The Kessel production audit accepts18/138 standard cases;120 remain rejected.
 Complete import/pose/height/resource regressions, all52 general object-row cases
 and production CLI checks pass. The reference comparison remains local and
 configured-world; these figures are not whole-engine completion percentages.
+
+### Packaged Tatooine: settlements and Sandcrawlers
+
+Tatooine55009 now matches three complete original runs at the same fixed
+Tiny120/two-Empire/default-resource settings:
+
+| Seed | Objects | Final RNG |
+|---|---:|---:|
+| 1 | 2,175 | 778802560 |
+| 12345 | 2,199 | 524660488 |
+| 16160 | 2,206 | 890442689 |
+
+The comparison includes all ordered objects, terrain/elevation/slopes and
+startup poses. All five Gaia building types1184–1188 are exercised, including
+towers in12345. Their completed constructors consume seven draws and reseed;
+they retain frame0 and no pending foundation. Houses use half-tile centers,
+while integer-radius buildings retain integer centers. The vaporator's zero
+clearance remains distinct from its half-tile collision radius. Shared footprint
+handling now carries these buildings into later placement rows.
+
+Sandcrawler938 uses six constructor draws and a nonanimated standing sequence;
+its resource grants contribute population−1, unit count+1 and military count+1.
+Predator1251 keeps its distinct speed, restriction and animation timing. Gaia
+unit/building/total cost counters match3150/450/3600,3050/575/3625 and
+3350/475/3825 respectively; each case has two Sandcrawlers and five holocrons.
+
+The packaged fixture suite now contains20 complete cases, with Gaia building
+height, animation, health, pending-foundation and resource checks at import.
+Evidence: `rms-packaged-tatooine-full-findings-2026-11-16.json`,
+`rms-tatooine-assets-provenance-2026-11-16.json` and matching comparisons.
+These remain bounded original-executable tests, not all-settings or subsequent
+AI/gameplay parity.
+
+The Tatooine production audit accepts21/138 standard cases, with117 unsupported
+cases still rejected. All20 shared packaged startup cases,52 general object-row
+cases, production CLI checks and desktop smoke pass. Desktop smoke uses dummy
+video/audio and verifies effects/music streaming rather than audible mixing.
