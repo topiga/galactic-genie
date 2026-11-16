@@ -37,6 +37,11 @@ static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
         check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes){if(id)return false;bytes.assign(source.begin(),source.end());return true;},{},&error),error.c_str());
         swgb::RmsMap map;uint32_t rng=c.seed;
         if(c.seed==1 && c.rows==1) {
+            auto scaled=source;scaled.insert(scaled.rfind('}')," set_scaling_to_player_number ");
+            swgb::RmsScript scaledScript;
+            check(scaledScript.load(0,[&](int32_t id,std::vector<uint8_t> &bytes){if(id)return false;bytes.assign(scaled.begin(),scaled.end());return true;},{},&error),error.c_str());
+            check(!swgb::generateRmsMap(scaledScript,{"FIXED_POSITIONS"},120,120,assets.dat(),rng,map,&error,2,{1,1}) && rng==c.seed && map.terrain.empty(),
+                  "Unverified scaled owned87 quantity rejects atomically");
             auto bad=assets.dat();bad.civs[1].units[87].foundationTerrainId=7;
             check(!swgb::generateRmsMap(script,{"FIXED_POSITIONS"},120,120,bad,rng,map,&error,2,{1,1}) && rng==c.seed && map.terrain.empty(),
                   "Unsupported owned87 foundation rejects atomically");

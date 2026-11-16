@@ -5,10 +5,11 @@
 Nineteen packaged profiles have complete original-runner comparisons at fixed Tiny120,
 two Empire players and default resources (54218 uses mutual allies): Forest54204, Reytha54220, Arid54201,
 Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
-Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206 allied roads54218 central water54212 and Motherlode54225.
+Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206, allied roads54218, central water54212 and Motherlode54225.
 The shared packaged suite contains68 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
-Gaia resource accounting and deferred foundation rendering.
+Gaia resource accounting and deferred foundation rendering. Four additional authored
+fixtures cover owned Troop Center placement and completion research order.
 
 The standard production audit accepts54/138 map/seed attempts (eighteen of46 resources,
 three seeds each);84 are explicitly rejected. The allied54218 configuration is
@@ -3328,3 +3329,8 @@ All68 packaged cases plus the four authored87 fixtures and retained regression
 suite pass with ASan/UBSan; strict RMS and production CLI checks also pass.
 The rebuilt desktop preferences/menu/render/effects/music-streaming smoke passes
 with dummy output; no fresh live Windows visual/audio comparison was performed.
+
+The owned87 guard also rejects quantity-scaling modifiers before generation.
+A dedicated negative fixture prevents a scaled group count from being accepted
+by the currently single-building-per-owner path; the four completion fixtures
+pass again after this admission fix.

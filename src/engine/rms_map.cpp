@@ -1040,7 +1040,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
            cliffSettings.minCount!=3 || cliffSettings.maxCount!=9 || cliffSettings.minLength!=5 || cliffSettings.maxLength!=9 ||
            cliffSettings.curl!=36 || cliffSettings.waterDistance!=2 || cliffSettings.cliffDistance!=2 ||
            !std::all_of(resourceRows.begin(),resourceRows.end(),[](const auto &row) {
-               return row.unitId==87 && row.owner==-1 && row.landId==1 && !row.matchPlayerCiv && !row.mode && row.groups==1 &&
+               return row.unitId==87 && row.owner==-1 && row.landId==1 && !row.matchPlayerCiv && !row.mode && !row.scaling && row.groups==1 &&
                       row.perGroup==1 && !row.variance && row.radius==3 && row.terrain==-1 && row.minDistance==8 && row.maxDistance==14 &&
                       !row.spacing && !row.temporarySpacing && !row.zoneDistance;
            })) return fail("unsupported owned87 startup composition");
