@@ -2547,3 +2547,26 @@ lands, elevation/connections and additional cliff neutral lands remain excluded.
 Evidence is retained locally in `rms-selected-cliff-findings-2026-11-16.json`
 and `rms-selected-cliff-source-provenance-2026-11-16.json`. This is bounded
 original-executable evidence, not universal RMS or live Windows parity.
+
+### Packaged Hoth: snow, carbon and predators
+
+The fixed Tiny120, two-Empire, default-resource Hoth55004 seed1 case matches
+the complete original runner:2,334 ordered objects, all terrain/elevation/slope
+cells, owned and animated Gaia poses, and final RNG1985962519. This includes
+explicit carbon1160, rocks1170, Wampa1252 and automatic carbon1341. Their
+validators use captured original DAT loader metadata;1341 remains distinct from
+explicit1160. The packaged startup regression imports the result into Game.
+
+Hoth reuses the existing cliff controller with its exact four terrain rows and
+seven elevation levels. Original554953 classifies snow by the building's center
+tile in{32,33,34,36,47};557d8c replaces raw foundation27 with36 for the whole
+footprint before civilization overrides. The native RMS startup now follows that
+rule. This does not yet replace the later gameplay construction heuristic.
+
+Original full runs and independent resource replays also exist for seeds12345
+and16160, including optional mountains1166/1165. Those mountain rows remain
+unsupported in native generation pending placement and footprint comparison.
+Private evidence: `rms-packaged-hoth-full-findings-2026-11-16.json`,
+`rms-hoth-assets-provenance-2026-11-16.json`, and the matching Hoth comparison
+and snow-flag disassembly files. This is configured-world original executable
+evidence, not a new live Windows UI/settings comparison.

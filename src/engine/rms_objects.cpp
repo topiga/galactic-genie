@@ -11,7 +11,7 @@
 namespace swgb {
 namespace {
 bool isTree(int unit) { return unit==348 || unit==349 || unit==350 || unit==411 || unit==413; }
-bool isPredator(int unit) { return unit==126 || unit==812 || unit==1197 || unit==1250 || unit==1129; }
+bool isPredator(int unit) { return unit==126 || unit==812 || unit==1197 || unit==1250 || unit==1129 || unit==1252; }
 struct ResourceSpec { int id, graphic, type, cls, hp, restriction, angles, resource, amount, doppel; float height; };
 const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
                                     const std::vector<uint8_t> &terrain,std::string *err) {
@@ -27,7 +27,9 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         {413,5301,10,31,50,11,12,1,125,2,2.f},
         {59,5192,10,27,0,8,6,0,125,1,1.f},
         {66,5134,30,29,0,8,10,3,800,1,1.f},
-        {102,5232,30,30,0,8,10,2,350,1,1.f}};
+        {102,5232,30,30,0,8,10,2,350,1,1.f},
+        {1160,5147,30,31,50,11,12,1,100,2,2.f},
+        {1170,5266,10,42,50,1,3,-1,0,0,1.f}};
     const ResourceSpec *match=nullptr;
     for (const auto &candidate:specs) if (candidate.id==unitId) match=&candidate;
     if (!match) return fail("unsupported resource unit");
@@ -44,8 +46,8 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
         u.terrainRestriction!=spec.restriction || u.hillMode || u.flyMode || u.canBeBuiltOn ||
         u.recyclable || u.lineOfSight!=0 || u.trainSound!=-1 ||
-        u.obstructionType!=2 || u.obstructionClass!=1 || u.civilization ||
-        u.enableAutoGather!=1 || !g || g->sequenceType!=6 || g->angleCount!=spec.angles)
+        u.obstructionType!=2 || u.obstructionClass!=(unitId==1170?3:1) || u.civilization ||
+        u.enableAutoGather!=(unitId==1170?0:1) || !g || g->sequenceType!=6 || g->angleCount!=spec.angles)
         return fail("unsupported resource prototype or graphic");
     if (spec.type==30 && (u.createDoppelgangerOnDeath!=spec.doppel || u.speed!=0 ||
         u.trackingUnit!=-1 || u.trackingUnitMode!=0 || u.trackingUnitDensity!=0 ||
@@ -55,9 +57,9 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
     for (const auto &storage:u.resourceStorages) {
         if (storage.flag || (storage.type>=0 && (storage.type!=spec.resource || storage.amount!=spec.amount)))
             return fail("unsupported resource storage");
-        resourceStores+=storage.type==spec.resource;
+        resourceStores+=storage.type>=0;
     }
-    if (resourceStores!=1) return fail("expected one resource storage");
+    if (resourceStores!=(spec.resource>=0?1:0)) return fail("unexpected resource storage count");
     if (data.terrainRestrictions.size()<=static_cast<size_t>(spec.restriction))
         return fail("missing terrain restriction");
     const auto &restriction=data.terrainRestrictions[spec.restriction].passableBuildableDmgMultiplier;
@@ -74,6 +76,7 @@ const ResourceSpec *validateHerd(const dat::DatFile &data,int16_t unitId,const s
     static constexpr ResourceSpec rancor{126,70,70,5,150,26,8,-1,0,0,2.f};
     const bool bigHunt=unitId==822 || unitId==1249 || unitId==1364;
     const bool predator=isPredator(unitId);
+    static constexpr ResourceSpec predator1252{1252,94,70,5,150,19,8,-1,0,0,2.f};
     static constexpr ResourceSpec predator1250{1250,41,70,5,30,1,8,-1,0,0,2.f};
     static constexpr ResourceSpec predator1129{1129,51,70,5,100,26,8,-1,0,0,2.f};
     static constexpr ResourceSpec predator812{812,84,70,5,40,1,8,-1,0,0,2.f};
@@ -81,7 +84,7 @@ const ResourceSpec *validateHerd(const dat::DatFile &data,int16_t unitId,const s
     static constexpr ResourceSpec hunt822{822,31,70,60,50,1,8,0,300,0,2.f};
     static constexpr ResourceSpec hunt1249{1249,17,70,60,75,26,8,0,340,0,2.f};
     static constexpr ResourceSpec ronto{1364,75,70,60,100,19,8,0,400,0,2.f};
-    const auto &spec=unitId==1250?predator1250:unitId==1129?predator1129:unitId==1364?ronto:unitId==833?bantha:unitId==822?hunt822:unitId==1249?hunt1249:unitId==812?predator812:unitId==1197?predator1197:predator?rancor:unitId==1363?kaadu:unitId==1365?eopie:nerf;
+    const auto &spec=unitId==1252?predator1252:unitId==1250?predator1250:unitId==1129?predator1129:unitId==1364?ronto:unitId==833?bantha:unitId==822?hunt822:unitId==1249?hunt1249:unitId==812?predator812:unitId==1197?predator1197:predator?rancor:unitId==1363?kaadu:unitId==1365?eopie:nerf;
     const bool hunt=unitId==1363 || unitId==1365;
     auto fail=[&]()->const ResourceSpec* {if(err)*err="RMS herd: unsupported original animal metadata";return nullptr;};
     if(data.civs.empty() || data.civs[0].units.size()<=size_t(unitId) || data.terrainRestrictions.size()<=size_t(spec.restriction)) return fail();
@@ -90,10 +93,10 @@ const ResourceSpec *validateHerd(const dat::DatFile &data,int16_t unitId,const s
     const float clearance=unitId==1364?.3f:bigHunt?1.f:predator?.5f:radius;
     if(!u.exists || u.id!=unitId || u.type!=70 || u.cls!=spec.cls || u.hitPoints!=spec.hp || u.standingGraphic[0]!=spec.graphic || u.standingGraphic[1]!=-1 ||
        u.collisionSize[0]!=radius || u.collisionSize[1]!=radius || u.collisionSize[2]!=2.f || u.clearanceSize[0]!=clearance || u.clearanceSize[1]!=clearance ||
-       u.lineOfSight!=(unitId==1250?5.f:unitId==1129?8.f:bigHunt?4.f:unitId==812?6.f:unitId==1197?10.f:predator?7.f:2.f) || u.speed!=(unitId==1250?.7f:unitId==1129?.95f:unitId==1364?.85f:bigHunt?.9f:unitId==812?.9f:unitId==1197?.85f:hunt?.74f:.7f) || u.terrainRestriction!=spec.restriction || u.obstructionType!=5 || u.obstructionClass!=2 ||
+       u.lineOfSight!=((unitId==1250 || unitId==1252)?5.f:unitId==1129?8.f:bigHunt?4.f:unitId==812?6.f:unitId==1197?10.f:predator?7.f:2.f) || u.speed!=(unitId==1250?.7f:unitId==1129?.95f:unitId==1364?.85f:bigHunt?.9f:unitId==812?.9f:unitId==1197?.85f:hunt?.74f:.7f) || u.terrainRestriction!=spec.restriction || u.obstructionType!=5 || u.obstructionClass!=2 ||
        u.hillMode || u.flyMode || u.canBeBuiltOn || u.recyclable || u.civilization || u.enableAutoGather || u.createDoppelgangerOnDeath ||
        u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 || u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
-       u.trainSound!=(unitId==1250?636:unitId==1129?836:unitId==1364?624:unitId==833?615:unitId==822?612:unitId==1249?562:unitId==812?642:unitId==1197?639:predator?37:unitId==1363?421:unitId==1365?609:630) || !g || g->sequenceType!=7 || g->frameCount!=(unitId==833?11:unitId==1364?8:bigHunt?10:unitId==1363?11:unitId==1365?12:8) || g->angleCount!=8 || g->frameDuration!=((unitId==812 || unitId==1197)?.1f:(hunt || predator || bigHunt)?.12f:.275f) ||
+       u.trainSound!=(unitId==1252?619:unitId==1250?636:unitId==1129?836:unitId==1364?624:unitId==833?615:unitId==822?612:unitId==1249?562:unitId==812?642:unitId==1197?639:predator?37:unitId==1363?421:unitId==1365?609:630) || !g || g->sequenceType!=7 || g->frameCount!=(unitId==833?11:unitId==1364?8:bigHunt?10:unitId==1363?11:unitId==1365?12:8) || g->angleCount!=8 || g->frameDuration!=((unitId==812 || unitId==1197)?.1f:(hunt || predator || bigHunt)?.12f:.275f) ||
        g->replayDelay!=((unitId==812 || unitId==1197)?1.f:(hunt || predator || bigHunt)?.5f:0.f) || g->soundId!=-1 || !g->angleSounds.empty()) return fail();
     int stores=0;for(const auto &storage:u.resourceStorages) {
         if(storage.flag || (storage.type>=0 && (predator || storage.type!=0 || storage.amount!=spec.amount))) return fail();
@@ -604,7 +607,7 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
     for(const auto &start:playerStarts)
         if(start.x<2 || start.y<2 || start.x>int(width)-2 || start.y>int(height)-2) return fail("invalid player start");
     if(std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
-        return t!=0 && t!=27 && (width!=120 || (t!=1 && t!=2 && t!=4 && t!=5 && t!=6 && t!=9 && t!=10 && t!=12 && t!=18 && t!=20 && t!=21 && t!=22 && t!=41 && t!=44 && t!=14 && t!=45 && t!=46 && t!=50 && t!=19 && t!=26));
+        return t!=0 && t!=27 && (width!=120 || (t!=1 && t!=2 && t!=4 && t!=5 && t!=6 && t!=9 && t!=10 && t!=12 && t!=18 && t!=20 && t!=21 && t!=22 && t!=41 && t!=44 && t!=14 && t!=45 && t!=46 && t!=50 && t!=19 && t!=26 && t!=32 && t!=33 && t!=34 && t!=36 && t!=49));
     }) || (width==64 && !occupiedTiles.empty()))
         return fail("requires verified grass or120-square forest terrain");
     if(rowEligibility && !rowEligibility->empty() &&
