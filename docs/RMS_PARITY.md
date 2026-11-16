@@ -5055,3 +5055,88 @@ Local build logs: `local-command-check.log`, `owner-order-bonus.log`,
 `owner-order-combat.log`, `owner-order-packaged.log`,
 `owner-order-original-ai.log`, `owner-order-desktop.log`. This validation does
 not establish a complete-match equivalence or a new live Windows UI comparison.
+
+### HUD command dispatch and object sleep/wake evidence (2026-11-16)
+
+Stop, stance, formation movement, alarm/return-to-work, gate locking, rally
+removal, garrison ejection, training and production cancellation now enter the
+same admitted-step queue as context commands. Payloads retain actor/building
+IDs, unit IDs, formation and desired alarm/lock states. Cursor activation and
+formation preference remain immediate UI state. Dispatch resolves live owned
+objects and retains existing affordability, capacity, eligibility and refund
+checks. Individual garrison portraits capture passenger IDs, not changing
+portrait indices. Training resolves the captured unit ID again against current
+production options rather than replaying a menu index.
+
+Static original-code evidence identifies Stop1 (`44d2e0/44ac50`), stance18
+(`44e680/44c310`), training119 (`5bdd30/5bc530`), alarm127 (`5be190`), and
+return128 (`5be1e0`) as queued snapshots. This does not establish all native
+handler semantics or exact packet serialization. In particular, original Stop
+also has last-identical-command suppression within500 host milliseconds;
+that submission layer is not yet ported. Formation/ejection/cancellation use
+the shared native admission contract, without a claim of complete original
+opcode equivalence. See local `rms-hud-command-queue-findings-2026-11-16.json`.
+
+Research is not blindly deferred: original emitter `5bd0c0` immediately marks
+the building and reserves pending costs through `5d4f60`; dispatcher `5ba460`
+reverses these through `5d5010` before execution. Native research still follows
+its previous direct path pending that accounting integration. Target-cursor
+orders, construction placement, deletion, cheats and AI emitters also remain
+outside this batch. Mixed direct/queued paths are not full command-order parity.
+
+The original awake/sleep investigation now has21 executed flag/counter controls
+and12 executed target-reference transitions. Animated/moving units do not sleep
+merely because they are idle. `40ad40/40adc0` release the old task **target** and
+acquire the new target; an unchanged target is a no-op. Static target acquisition
+wakes it, and releasing its final reference requests deferred sleep for the
+verified state/HP conditions. Animated release `422e50` decrements its counter
+without requesting sleep; combat/building release extends it with notification.
+Death wakes the object; destruction/removal occurs later through the update
+return and virtual destructor. The native immediate-inactivation/separate
+Remains model does not yet represent those original list transitions.
+
+One bounded behavior is corrected now: native base/static types10/15 no longer
+advance sprite animation timers. Original base update `54ef00` has no animated
+sprite update; animated `422cd0` supplies elapsed time, and drawing reads the
+stored frame rather than a wall-clock animation phase. Tests use actual Gaia
+base10 decoration/tree411 plus animated20 and mobile70 prototypes. Gaia trees
+348/349/411 are type10 in retained original master-loader controls. Type15 is a
+separate specialized class, and the inspected original load path does not map
+native compatibility type90 to15. No type90 behavior is changed.
+
+Local evidence: `object-sleep-lifecycle-{findings,controls-v1-oracle}-2026-11-16.json`,
+`object-task-reference-controls-v1-oracle-2026-11-16.json`,
+`object-factory-animation-findings-2026-11-16.json`, and
+`object-disk-runtime-type-findings-2026-11-16.json`. Flag/counter and action-setter
+controls execute original instructions with explicit ID lookup/registration
+boundaries; factory and drawing conclusions are static analysis, not a new live
+Windows UI or pixel-rendering comparison. Exact persistent list membership,
+deferred migration and dying-object destruction order remain unimplemented.
+
+Validation for this batch: ASan/UBSan passes real HUD press/release controls for
+Stop/stance actor capture, deferred formation movement, duplicate desired alarm
+state, rally removal, paid training/cancellation/refund, and individual passenger
+ejection after selection changes. Static/animated clocks and paused animation
+also pass. The full cost/bonus/research/healing/AI suite, owner-barrier/RNG checks
+and combat/garrison/formation regressions pass; desktop menu/navigation and
+60 render/audio frames pass. Build logs: `hud-queue-local.log`,
+`hud-queue-bonus.log`, `hud-queue-combat.log`, `hud-queue-desktop.log`.
+
+A further13 original-code death-boundary controls establish the base-class
+sequence needed before list removal can be ported safely. With no remaining
+resource and undead mode disabled, state5 advances to7 and invokes dead-unit
+creation; the next update advances7→8; only a later update returns nonzero for
+iterator removal. Decaying a positive resource to zero adds another update
+before that sequence. Animated overrides add dying-graphic states and inspect
+sprite completion before advancing its animation. Pending sleep/containment,
+descendant overrides, actual dead-unit creation and final destructor effects
+remain separate boundaries. See `object-death-boundary-findings-2026-11-16.json`
+and `object-death-boundary-controls-v1-oracle-2026-11-16.json`. These controls do
+not make the native Remains lifecycle equivalent to those original objects.
+
+Cancellation has two original paths: training119 calls `557440`, scanning
+backward for the last matching unit-ID group and cancelling only within that
+group; opcode117/submode4 calls `5575a0` with a flattened queue index. The exact
+binding of each original UI cancellation control is still unresolved. Native
+queue-cell cancellation keeps its existing indexed semantics, now deferred;
+it is not silently changed to a type-based cancellation on incomplete evidence.
