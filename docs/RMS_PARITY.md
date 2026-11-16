@@ -4323,8 +4323,8 @@ RNG, pose differences, input hashes and native executable hash. Output directori
 must be new; original captures may be replayed with `--existing` only when their
 seed, civilizations, probe hash and RMS source hash agree.
 
-The current adapter deliberately tests Tiny120, fixed/default, two enemy Empire
-players. It compares ordered object ID/owner/type/facet/XY, complete terrain,
+The adapter tests Tiny120/default resources, two enemy Empire players, with
+fixed or randomized placement selected explicitly per case. It compares ordered object ID/owner/type/facet/XY, complete terrain,
 elevation and slope grids, final RNG and captured poses. It does not compare
 health, absolute object height, runtime simulation or UI. Wider map sizes and
 player/civilization combinations require independently verified original probe
@@ -4337,8 +4337,8 @@ the Apple Clang build is the tested route. Run the asset-independent comparator
 checks with `python3 script/test_compare_rms_original.py`.
 
 A local manifest is a JSON array. Each entry contains `id` (unique safe name),
-`resource` (DRS RMS ID), `seed` (uint32), and absolute paths `probe`, `oracle`,
-`source`. The probe is a retained controlled-original Python runner; `oracle` is
+`resource` (DRS RMS ID), `seed` (uint32), optional `positions` (`fixed`, the
+default, or `random`), and absolute paths `probe`, `oracle`, `source`. The probe is a retained controlled-original Python runner; `oracle` is
 its expected full JSON capture, and `source` is the matching extracted RMS file.
 No original executable, game assets or private capture files are committed.
 
@@ -4397,8 +4397,9 @@ not a claim that shipped RMS independently specifies each player's rectangle.
 
 The shared fixed-start implementation now computes those aggregates. The existing
 map pipeline uses it and no longer has a map-name allowlist for fixed bordered
-starts. Random owned bordered starts remain rejected pending separate evidence;
-multiple authored player-land blocks remain unsupported. Other world, prototype,
+starts. This fixed-mode checkpoint retained the random owned-border rejection; the next
+section establishes that mode separately. Multiple authored player-land blocks
+remain unsupported. Other world, prototype,
 terrain and lifecycle checks are retained.54 direct original fixtures cover the
 aggregate path, alongside existing single-region starts and invalid-input checks.
 
@@ -4418,3 +4419,38 @@ and the two new complete bordered-start fixtures pass under ASan/UBSan. The54
 aggregate fixtures, existing288 randomized/35 fixed start fixtures and invalid
 inputs pass. Strict integrated map checks, production CLI checks and desktop
 dummy-driver smoke pass. All24 new packaged comparisons match unchanged.
+
+### Randomized starts through the same aggregate rule (2026-11-16)
+
+108 original cases verify random4e0740 directly and through full finalization,
+with equal/unequal player regions and neutral-first layouts. Original5ef140 reads
+the byte at game+0x1438; nonzero dispatches4e76a0 to4e0740. Both complete authored
+random-start runs explicitly record this call path and original preset registration
+without FIXED_POSITIONS. This is a verified runtime selector, not an inferred label.
+
+The shared map pipeline now uses aggregate regions for both positioning modes.
+The separate blanket rejection of random owned bordered starts is removed; other
+profile/context limits remain.54 additional random region fixtures cover the
+minimum-span/maximum-origin behavior, including split-edge and translation
+discriminators. Invalid inputs preserve RNG in both modes.
+
+The same authored bordered map matches complete original startup for seeds1 and
+20261116 with10 objects and final RNG2756937157/3500518525 in random mode.
+The four full bordered-start fixtures now cover both modes. All24 unseen packaged
+fixed-mode cases continue to match. This does not admit every packaged map in
+random mode or establish other world-size/civilization/player-count contexts.
+
+The snapshot adapter supports `tiny-random`; comparison manifests use
+`positions: "random"`. The comparator checks placement mode against original
+preset registrations and rejects mismatched contexts rather than comparing them.
+
+Evidence: `rms-random-player-border-structural-oracle-2026-11-16.json`,
+`rms-random-player-mode-selector-static-2026-11-16.txt`,
+`rms-common-border-random-startup-report-2026-11-16.json`, and
+`rms-unseen-seeds-random-region-report-2026-11-16.json`.
+
+Validation:131 retained packaged startup cases and general/authored regressions,
+including all four complete bordered-start fixtures, pass under ASan/UBSan.
+The108 aggregate-region fixtures, existing288 randomized/35 fixed fixtures,
+invalid-input checks, eight comparator tests (including placement-mode mismatch),
+strict map checks, production CLI checks and desktop dummy-driver smoke pass.

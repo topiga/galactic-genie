@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Tiny120 fixed two-player RMS snapshot for original-engine comparisons.
+// Tiny120 two-player RMS snapshot for original-engine comparisons.
 #include "../src/engine/rms_map.h"
 #include "../src/core/genie_dat.h"
 #include "../src/core/drs.h"
 #include <iostream>
 #include <fstream>
 int main(int argc,char **argv) {
-    if(argc!=9 || std::string(argv[8])!="tiny"){std::cerr<<"usage: swgb-rms-snapshot DAT SEED TERRAIN CIV1 CIV2 DRS RESOURCE tiny\n";return 2;}
+    if(argc!=9 || (std::string(argv[8])!="tiny" && std::string(argv[8])!="tiny-random")){std::cerr<<"usage: swgb-rms-snapshot DAT SEED TERRAIN CIV1 CIV2 DRS RESOURCE tiny|tiny-random\n";return 2;}
     try {
     swgb::dat::DatFile data;std::string error;
     if(!data.load(argv[1],&error)){std::cerr<<error;return 1;}
@@ -14,7 +14,7 @@ int main(int argc,char **argv) {
     if(!resources.add(argv[6],&error)){std::cerr<<error;return 1;}
     swgb::RmsScript script;swgb::RmsMap map;uint32_t rng=uint32_t(std::stoul(argv[2]));
     if(!script.load(std::stoi(argv[7]),resources,&error) ||
-        !swgb::generateRmsMap(script,argc==9?std::unordered_set<std::string>{"FIXED_POSITIONS","TINY_MAP","DEFAULT_RESOURCES"}:std::unordered_set<std::string>{"FIXED_POSITIONS"},120,120,data,rng,map,&error,2,{uint16_t(std::stoi(argv[4])),uint16_t(std::stoi(argv[5]))})){std::cerr<<error;return 1;}
+        !swgb::generateRmsMap(script,std::string(argv[8])=="tiny"?std::unordered_set<std::string>{"FIXED_POSITIONS","TINY_MAP","DEFAULT_RESOURCES"}:std::unordered_set<std::string>{"TINY_MAP","DEFAULT_RESOURCES"},120,120,data,rng,map,&error,2,{uint16_t(std::stoi(argv[4])),uint16_t(std::stoi(argv[5]))})){std::cerr<<error;return 1;}
     if(!map.objects.empty()){std::cerr<<"unexpected pre-owned object rows";return 1;}
     std::cout.precision(17);std::cout<<"rng "<<rng<<'\n';uint32_t next=0;
     for(const auto &o:map.cliffs){std::cout<<o.creationOrdinal<<" 0 "<<o.unit<<' '<<o.facet<<' '<<o.x<<' '<<o.y<<'\n';next=o.creationOrdinal+1;}

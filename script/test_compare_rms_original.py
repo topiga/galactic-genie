@@ -63,7 +63,7 @@ class RunnerTests(unittest.TestCase):
             for name in ('genie_x1.dat', 'gamedata_x1.drs'):(work/name).write_bytes(b'fixture')
             oracle = work/'oracle.json'
             oracle.write_text(json.dumps(dict(seed=42, civs=[1,1], probeSha256=hashlib.sha256(probe.read_bytes()).hexdigest(),
-                sourceFileSha256=hashlib.sha256(source.read_bytes()).hexdigest(), exeSha256='fixture', rng=42,
+                presetRegistrations=[dict(name='FIXED_POSITIONS')], sourceFileSha256=hashlib.sha256(source.read_bytes()).hexdigest(), exeSha256='fixture', rng=42,
                 objects=[], poses=[], gaiaPoses=[], terrain=[0]*14400, heights=[0]*14400, slopes=[0]*14400)))
             manifest = work/'manifest.json'
             manifest.write_text(json.dumps([dict(id='fixture', resource=1, seed=42, probe=str(probe),
@@ -71,9 +71,13 @@ class RunnerTests(unittest.TestCase):
             command = [sys.executable, str(Path(__file__).with_name('compare_rms_original.py')),
                        '--manifest', str(manifest), '--native', str(native), '--data', str(work),
                        '--python', sys.executable, '--existing']
-            for stale in (False, True):
-                if stale:source.write_text('changed')
-                output = work/('stale' if stale else 'good')
+            for problem in ('good', 'source', 'mode'):
+                stale = problem != 'good'
+                source.write_text('changed' if problem == 'source' else 'original fixture')
+                cases = json.loads(manifest.read_text())
+                cases[0]['positions'] = 'random' if problem == 'mode' else 'fixed'
+                manifest.write_text(json.dumps(cases))
+                output = work/problem
                 run = subprocess.run(command + ['--output', str(output)], capture_output=True, text=True)
                 self.assertEqual(run.returncode, int(stale), run.stderr)
                 report = json.loads((output/'report.json').read_text())

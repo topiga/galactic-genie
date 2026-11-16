@@ -97,6 +97,11 @@ bool generateRmsFixedPlayerStarts(uint32_t width, uint32_t height, int32_t radiu
     uint32_t &randomState, std::vector<RmsPlayerStart> &out, std::string *err) {
     return generatePlayerStarts(width, height, radius, playerCount, randomState, out, err, true);
 }
+bool generateRmsPlayerStartsForLands(uint32_t width, uint32_t height,
+    const std::vector<RmsPlayerStartRegion> &lands, uint32_t playerCount,
+    uint32_t &randomState, std::vector<RmsPlayerStart> &out, std::string *err) {
+    return generatePlayerStarts(width,height,0,playerCount,randomState,out,err,false,&lands);
+}
 bool generateRmsFixedPlayerStartsForLands(uint32_t width, uint32_t height,
     const std::vector<RmsPlayerStartRegion> &lands, uint32_t playerCount,
     uint32_t &randomState, std::vector<RmsPlayerStart> &out, std::string *err) {

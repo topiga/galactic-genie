@@ -21,8 +21,11 @@ bool generateRmsPlayerStarts(uint32_t width, uint32_t height, int32_t radius, ui
 bool generateRmsFixedPlayerStarts(uint32_t width, uint32_t height, int32_t radius, uint32_t playerCount,
     uint32_t &randomState, std::vector<RmsPlayerStart> &out,
     std::string *err = nullptr);
-// Original fixed-start aggregation scans owned lands; neutral regions do not constrain starts.
+// Original start aggregation scans owned lands; neutral regions do not constrain starts.
 struct RmsPlayerStartRegion { int32_t owner, left, top, right, bottom, radius; };
+bool generateRmsPlayerStartsForLands(uint32_t width, uint32_t height,
+    const std::vector<RmsPlayerStartRegion> &lands, uint32_t playerCount,
+    uint32_t &randomState, std::vector<RmsPlayerStart> &out, std::string *err = nullptr);
 bool generateRmsFixedPlayerStartsForLands(uint32_t width, uint32_t height,
     const std::vector<RmsPlayerStartRegion> &lands, uint32_t playerCount,
     uint32_t &randomState, std::vector<RmsPlayerStart> &out, std::string *err = nullptr);

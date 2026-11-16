@@ -102,13 +102,16 @@ def run_case(case, args):
         result['sourceSha256'] = digest(case['source'])
         if oracle['sourceFileSha256'] != result['sourceSha256']:
             raise ValueError('oracle RMS source hash does not match requested resource')
+        original_fixed = any(v['name'] == 'FIXED_POSITIONS' for v in oracle['presetRegistrations'])
+        if original_fixed != (case['positions'] == 'fixed'):
+            raise ValueError('oracle placement mode does not match requested case')
         result['oracleSha256'] = digest(oracle_path)
         result['originalExeSha256'] = oracle['exeSha256']
         if digest(args.native) != args.native_sha:
             raise ValueError('native executable changed during matrix')
         terrain = work / 'terrain.bin'
         command = [str(args.native), str(args.data / 'genie_x1.dat'), str(case['seed']),
-                   str(terrain), '1', '1', str(args.data / 'gamedata_x1.drs'), str(case['resource']), 'tiny']
+                   str(terrain), '1', '1', str(args.data / 'gamedata_x1.drs'), str(case['resource']), 'tiny' if case['positions'] == 'fixed' else 'tiny-random']
         with (work / 'native.records').open('w') as records, (work / 'native.log').open('w') as log:
             run = subprocess.run(command, stdout=records, stderr=log, timeout=args.timeout)
         if digest(args.native) != args.native_sha:
@@ -140,6 +143,10 @@ def main():
     for name in ('manifest', 'native', 'data', 'python'):
         setattr(args, name, getattr(args, name).absolute())
     cases = json.loads(args.manifest.read_text())
+    for case in cases:
+        case.setdefault('positions', 'fixed')
+        if case['positions'] not in ('fixed', 'random'):
+            parser.error('positions must be fixed or random')
     ids = [case['id'] for case in cases]
     if not cases or len(ids) != len(set(ids)) or any(not name or any(c not in 'abcdefghijklmnopqrstuvwxyz0123456789-_' for c in name) for name in ids):
         parser.error('case IDs must be unique safe names')
@@ -148,7 +155,7 @@ def main():
     args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=False)
     args.native_sha = digest(args.native)
-    report = dict(context='Tiny120, fixed positions, default resources, two enemy Empire players',
+    report = dict(context='Tiny120, default resources, two enemy Empire players; placement mode per case',
                   limitations=['No other sizes, civilizations or player counts tested.',
                                'Compares ordered object identity/XY/facet, grids, final RNG and captured initial poses.',
                                'Does not compare HP, absolute object height, runtime gameplay or UI.'],
