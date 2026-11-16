@@ -5443,3 +5443,30 @@ dummy-driver render/audio frames. Logs: `owner-list-local.log`,
 caught and fixed an early-return regression that would have left highlighted
 felled resources flashing indefinitely; their presentation timer remains ahead
 of lifecycle dispatch.
+
+### Resource task-reference boundary (2026-11-17)
+
+Combined original controls now execute the parent110 constructor, state12
+attack-child construction, child clearing and parent destruction. Parent primary,
+parent secondary and child primary target slots each hold independent references;
+assigning an unchanged pointer to one slot is a no-op. The healthy cancellation
+control returns to zero references and requests deferred sleep.
+
+The lethal-cancel control is especially important: actual5517f0 leaves HP0/state2;
+clearing the child leaves one reference, destroying the parent leaves zero and
+sets sleep59/pending5b while the object is still in the awake list. The next
+actual Gaia update migrates it to sleep before considering death, leaving
+state2/HP0. Native `fellingPending` must not override this migration when reference
+events are integrated. Evidence: `tree-action-references-v2-oracle-2026-11-17.json`
+and `tree-action-references-lethal-v2-oracle-2026-11-17.json`.
+
+Native integration audit: `gatherTargetId` is the parent work target and persists
+through drop-off; cached `pathGoalId` can survive arrival and is not proof of a
+live child action. `issueGarrisonCommand` calls `issueMove` on a copied `Object`
+for feasibility before adopting the accepted route, so inserting reference
+side effects into every `issueMove` call would mutate the world during a trial.
+Likewise, `gathererUnit`/`nextResourceLike` use target-bearing probe copies.
+`resourcePreparationState`12/4/6/7 supplies explicit attack/movement completion
+boundaries, while accepted cancellation, reassignment and garrison adoption must
+release the corresponding live action references. These hooks, not a per-frame
+count of cached target IDs, are the next prerequisite for enabling sleep lists.
