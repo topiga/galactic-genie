@@ -3952,3 +3952,53 @@ pass, including native import and invalid-metadata checks. Strict RMS,
 production file/archive tests and desktop menu/render/audio-stream smoke pass.
 The production audit accepts72 of138 configurations across24 map resources;
 acceptance is not a whole-engine parity percentage.
+
+### Yavin55003 temples, ruins and hill placement (2026-11-16)
+
+Actual-derived Tiny/default two-Empire starts match the complete original
+runner at seeds1/12345/16160:7881/7917/7891 objects with final RNG
+2948084886/449702241/1053053069. Comparisons cover all ordered IDs, owners,
+units, facets and exact positions; all14400 terrain/elevation/slope cells; and
+captured owned/Gaia animation state. Both mountain1017/1018 alternatives occur.
+The geometry uses existing land, elevation, terrain and object controllers.
+
+New catalog entries are Main Temple1295, static Temple1296, Ruins1052,
+Plant B1120, water rocks1172/1173 and mountains1017/1018. Their actual master,
+graphic, sound and applicable task-header records were loaded through original
+readers with exact consumption and relocation checks.1296 is type10 despite
+sharing artwork with the type80 ruins; it has no building completion callback.
+
+The full reference exposed two behavioral gaps. Main Temple1295 consumes three
+constructor draws followed by a completion draw/reseed; ordinary Ruins1052
+consume six plus the completion draw/reseed. An independent authored original
+control confirmed both and the single non-reseeded draw for1296. The temple's
+hillMode3 gate checks only the footprint's left column and last row against
+their shared corner's elevation, allowing a difference of one. This is the
+48e697–48e6b6 rule, not an all-flat requirement. Native grouped placement now
+accepts an elevation raster for that check and rejects missing/malformed data.
+Every captured original temple height-gate success/failure matches the rule.
+
+Native import fixtures include222 startup animation/health records, building
+heights and deferred foundation27 for1295. Gaia building costs are4550 in all
+three references (4500 temple plus two25-cost ruins); unit costs vary. Both
+players retain575 startup cost and population4/5. Negative checks reject
+modified new-scenery prototypes and absent/malformed temple elevation while
+preserving caller RNG and output state.
+
+The dense forest's original zone calculations exceed the earlier500-million
+instruction allowance. The harness retains all guards and executes bounded
+500-million-instruction chunks (maximum three), saving progress at each limit;
+these runs completed after the first checkpoint. No cache or constructor was
+skipped to obtain a result.
+
+Evidence: `rms-yavin55003-full-startup-findings-2026-11-16.json`,
+`rms-yavin55003-assets-provenance-2026-11-16.json`,
+`rms-yavin-constructor-control-findings-2026-11-16.json`, and
+`rms-yavin1295-hillmode3-gate-checks-2026-11-16.json`. These startup cases do
+not establish all sizes, civilizations, later terrain changes or gameplay as1:1.
+
+Validation:100 retained packaged startup cases plus the general/authored
+regressions pass. Strict integrated RMS, production file/archive checks and
+desktop menu/render/audio-stream smoke also pass. The production audit accepts
+75 of138 configurations across25 map resources; this is acceptance coverage,
+not a percentage of complete engine parity.

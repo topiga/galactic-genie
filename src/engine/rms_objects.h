@@ -100,9 +100,10 @@ struct RmsGlobalGroupPlacement {
 // Flying birds ignore occupied ground tiles and retain the eligibility mask.
 // Herd occupancy includes blocking deposits/trees/buildings only: original Nerfs
 // ignore workers/scouts/holocrons/other Nerfs, and do not block later herd groups.
-// Aquatic69 supports four scaled single placements with cardinal shore2/35 contact;
+// Aquatic69 supports four scaled single placements with cardinal shore2/35/37 contact;
 // wave1585 supports eight single placements on terrain22, including animation frames.
 // Full rows also support large fish450/451/455/456 with integer centers and2x2 footprints.
+// Temple1295 requires elevation for the original hill-mode3 edge check.
 // Optional rowEligibility preserves original spacing exclusions across rows; an
 // empty vector starts all-eligible. Failure preserves it and RNG and clears output.
 bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
@@ -115,7 +116,8 @@ bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
     std::vector<uint8_t> *rowEligibility=nullptr,
     const RmsGlobalGroupPlacement *globalPlacement=nullptr,
     const RmsResourcePlayerRange *playerRange=nullptr,
-    const RmsObjectRow *objectRow=nullptr);
+    const RmsObjectRow *objectRow=nullptr,
+    const std::vector<uint8_t> *elevation=nullptr);
 // Original stock holocron285 row: five placements, land-center exclusion25,
 // temporary spacing20. Bounded to64-square grass or120-square dry/Forest21 terrain
 // with two land centers (or three to five at120). Slopes do not restrict it; occupiedTiles

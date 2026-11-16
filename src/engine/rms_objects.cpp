@@ -12,9 +12,9 @@ namespace swgb {
 namespace {
 bool isTree(int unit) { return unit==348 || unit==349 || unit==350 || unit==351 || unit==411 || unit==413; }
 bool isPredator(int unit) { return unit==126 || unit==812 || unit==1197 || unit==1250 || unit==1129 || unit==1252 || unit==1251 || unit==1465 || unit==998 || unit==1033; }
-bool isMountain(int unit) { return unit==1019 || unit==1020 || unit==1165 || unit==1166; }
+bool isMountain(int unit) { return unit==1017 || unit==1018 || unit==1019 || unit==1020 || unit==1165 || unit==1166; }
 bool isCrater(int unit) { return unit>=1329 && unit<=1331; }
-bool isGaiaBuilding(int unit) { return unit==1307 || (unit>=1184 && unit<=1188) || unit==275 || unit==518 || unit==519 || unit==524 || unit==536 || unit==537; }
+bool isGaiaBuilding(int unit) { return unit==1295 || unit==1052 || unit==1307 || (unit>=1184 && unit<=1188) || unit==275 || unit==518 || unit==519 || unit==524 || unit==536 || unit==537; }
 struct ResourceSpec { int id, graphic, type, cls, hp, restriction, angles, resource, amount, doppel; float height; };
 const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
                                     const std::vector<uint8_t> &terrain,std::string *err) {
@@ -37,6 +37,14 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         {1170,5266,10,42,50,1,3,-1,0,0,1.f},
         {1171,5267,10,42,50,1,3,-1,0,0,1.f},
         {1123,5249,10,42,50,1,10,-1,0,0,0.f},
+        {1017,5238,10,42,5000,11,1,-1,0,0,3.f},
+        {1018,5239,10,42,5000,11,1,-1,0,0,3.f},
+        {1296,1958,10,42,2100,4,1,-1,0,0,3.f},
+        {1120,5246,10,42,50,1,6,-1,0,0,0.f},
+        {1172,5316,10,42,50,13,2,-1,0,0,1.f},
+        {1173,5315,10,42,50,13,2,-1,0,0,1.f},
+        {1295,1949,80,18,3000,4,1,-1,0,0,4.f},
+        {1052,1958,80,18,2100,4,1,-1,0,0,3.f},
         {1019,5240,10,42,5000,11,1,-1,0,0,3.f},
         {1020,5241,10,42,5000,11,1,-1,0,0,3.f},
         {1165,5276,10,42,5000,11,1,-1,0,0,3.f},
@@ -61,7 +69,7 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
     if (!match) return fail("unsupported resource unit");
     const auto &spec=*match;
     const bool mountain=isMountain(unitId),crater=isCrater(unitId),mine=unitId==1307,building=isGaiaBuilding(unitId);
-    const float radius=(mountain || unitId==275 || unitId==518)?3.f:(unitId==1184 || unitId==1185)?1.5f:(unitId==1186 || unitId==519 || unitId==524)?2.f:(mine || unitId==1187 || unitId==536 || unitId==537)?1.f:crater?float(unitId-1327)*.5f:.5f;
+    const float radius=unitId==1295?4.f:(mountain || unitId==1296 || unitId==1052 || unitId==275 || unitId==518)?3.f:(unitId==1184 || unitId==1185)?1.5f:(unitId==1186 || unitId==519 || unitId==524)?2.f:(mine || unitId==1187 || unitId==536 || unitId==537)?1.f:crater?float(unitId-1327)*.5f:.5f;
     const float clearance=unitId==1188?0.f:radius;
     if (data.civs.empty() || data.civs[0].units.size()<=static_cast<size_t>(unitId))
         return fail("missing Gaia resource prototype");
@@ -73,24 +81,31 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         u.clearanceSize[0]!=clearance || u.clearanceSize[1]!=clearance ||
         u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 ||
         u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
-        u.terrainRestriction!=spec.restriction || u.hillMode || u.flyMode || u.canBeBuiltOn!=int(crater) ||
-        u.recyclable || u.lineOfSight!=((unitId==1184 || unitId==1185 || unitId==519 || unitId==524 || unitId==537)?2.f:building?1.f:0.f) || u.trainSound!=-1 ||
-        u.obstructionType!=(mountain?10:(unitId==1123 || crater)?0:2) || u.obstructionClass!=((unitId==1123 || crater)?0:(unitId==1170 || unitId==1171 || building)?3:1) || u.civilization ||
-        u.enableAutoGather!=(spec.resource<0?0:1) || !g || g->sequenceType!=(mine?5:(mountain || crater)?0:6) || g->angleCount!=spec.angles)
+        u.terrainRestriction!=spec.restriction || u.hillMode!=(unitId==1295?3:0) || u.flyMode || u.canBeBuiltOn!=int(crater) ||
+        u.recyclable || u.lineOfSight!=(unitId==1295?6.f:unitId==1296?1.f:(unitId==1184 || unitId==1185 || unitId==519 || unitId==524 || unitId==537)?2.f:building?1.f:0.f) || u.trainSound!=-1 ||
+        u.obstructionType!=(mountain?10:(unitId==1120 || unitId==1123 || crater)?0:2) || u.obstructionClass!=((unitId==1120 || unitId==1123 || crater)?0:(unitId==1170 || unitId==1171 || unitId==1172 || unitId==1173 || unitId==1296 || building)?3:1) || u.civilization ||
+        u.enableAutoGather!=(spec.resource<0?0:1) || !g || g->sequenceType!=(mine?5:(mountain || crater || unitId==1295)?0:6) || g->angleCount!=spec.angles)
         return fail("unsupported resource prototype or graphic");
-    if ((spec.type==20 || spec.type==30 || mountain || crater || building) && (u.createDoppelgangerOnDeath!=spec.doppel || u.speed!=0 ||
+    if ((spec.type==20 || spec.type==30 || mountain || crater || unitId==1296 || building) && (u.createDoppelgangerOnDeath!=spec.doppel || u.speed!=0 ||
         u.trackingUnit!=-1 || u.trackingUnitMode!=0 || u.trackingUnitDensity!=0 ||
         g->frameCount!=(mine?8:1) || g->soundId!=-1 || !g->angleSounds.empty()))
         return fail("unsupported resource movement or sprite metadata");
     if(building) {
-        const int construction=(unitId==275 || unitId==518)?373:unitId==1186?367:unitId==1188?342:348;
-        const int sound=mine?919:(unitId==519 || unitId==537)?930:(unitId==1184 || unitId==1185 || unitId==524)?591:2;
-        if(((unitId==519 || unitId==537) && u.fogVisibility!=1) || u.foundationTerrainId!=((unitId==519 || unitId==537)?27:-1) || u.oldOverlayId!=-1 || u.techId!=-1 || u.transformUnit!=-1 ||
+        const int construction=unitId==1295?373:unitId==1052?367:(unitId==275 || unitId==518)?373:unitId==1186?367:unitId==1188?342:348;
+        const int sound=unitId==1295?602:unitId==1052?920:mine?919:(unitId==519 || unitId==537)?930:(unitId==1184 || unitId==1185 || unitId==524)?591:2;
+        if(((unitId==519 || unitId==537) && u.fogVisibility!=1) || u.foundationTerrainId!=((unitId==1295 || unitId==519 || unitId==537)?27:-1) || u.oldOverlayId!=-1 || u.techId!=-1 || u.transformUnit!=-1 ||
            u.headUnit!=-1 || u.stackUnitId!=-1 || u.adjacentMode || u.graphicsAngle || u.disappearsWhenBuilt ||
-           u.trait || u.convertTerrain || u.constructionGraphic!=construction || u.constructionSound!=sound ||
-           u.trainTime!=20 || g->frameDuration!=(mine?.3f:0.f) || g->replayDelay!=0)
+           u.trait!=(unitId==1295?2:0) || u.convertTerrain || u.constructionGraphic!=construction || u.constructionSound!=sound ||
+           u.trainTime!=(unitId==1295?4000:20) || g->frameDuration!=(mine?.3f:0.f) || g->replayDelay!=0)
             return fail("unsupported Gaia building lifecycle metadata");
         for(const auto &annex:u.annexes)if(annex.unitId!=-1)return fail("Gaia building annexes are unsupported");
+        if(unitId==1295 || unitId==1052) {
+            for(size_t n=0;n<u.costs.size();++n) {
+                const auto &cost=u.costs[n];const int type=unitId==1295?(n==0?1:n==1?3:2):(n==0?1:-1);
+                if(cost.type!=type || cost.amount!=(unitId==1295?1500:n==0?25:0) || cost.flag!=(type<0?0:1))
+                    return fail("unsupported temple completion costs");
+            }
+        }
     }
     int resourceStores=0;
     for (const auto &storage:u.resourceStorages) {
@@ -292,7 +307,7 @@ bool generateRmsResourcePlacements(uint32_t width, uint32_t height,
     std::vector<RmsTimberPlacement> &out, std::string *err,
     const std::vector<uint32_t> &occupiedTiles) {
     out.clear();
-    if(isMountain(unitId) || isCrater(unitId) || isGaiaBuilding(unitId)) {if(err)*err="RMS large scenery requires a verified object row";return false;}
+    if(isMountain(unitId) || unitId==1296 || isCrater(unitId) || isGaiaBuilding(unitId)) {if(err)*err="RMS large scenery requires a verified object row";return false;}
     if (err) err->clear();
     auto fail = [&](const char *reason) {
         if (err) *err = std::string("RMS resource: ") + reason;
@@ -340,7 +355,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     const std::vector<uint32_t> &occupiedTiles,size_t maxWork,
     const std::vector<RmsPlayerStart> &novaPlayerStarts,RmsResourceDistance distance,
     std::vector<uint8_t> *rowEligibility,const RmsGlobalGroupPlacement *globalPlacement,
-    const RmsResourcePlayerRange *playerRange,const RmsObjectRow *objectRow) {
+    const RmsResourcePlayerRange *playerRange,const RmsObjectRow *objectRow,const std::vector<uint8_t> *elevation) {
     out.clear(); if(err) err->clear();
     auto fail=[&](const char *reason) {
         if(err) *err=std::string("RMS grouped resource: ")+reason;
@@ -352,11 +367,12 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
        group.variance>1024 || group.radius>1024)
         return fail("unsupported dimensions or grouping parameters");
     const bool mountain=isMountain(unitId),crater=isCrater(unitId),mine=unitId==1307,building=isGaiaBuilding(unitId);
-    const bool settlement=building && unitId<1000;
+    const bool settlement=building && unitId<1000,temple=unitId==1295 || unitId==1052;
+    if(unitId==1295 && (!elevation || elevation->size()!=count))return fail("temple hill placement requires an elevation raster");
     if(building && (!objectRow || width!=120 || height!=120 || objectRow->landId!=-2 ||
         objectRow->minDistance!=(settlement?((unitId==275 || unitId==537)?12:unitId==536?8:10):35) || objectRow->maxDistance!=-1 || objectRow->terrain!=-1 ||
-        objectRow->spacing!=(settlement?0:15) || objectRow->temporarySpacing || objectRow->zoneDistance ||
-        group.mode!=((unitId==1184 || unitId==1185)?1:0) || group.groups!=(settlement?(unitId==275?2u:(unitId==536 || unitId==537)?4u:unitId==524?5u:1u):mine?20u:unitId==1186?1u:unitId==1188?5u:10u) || group.perGroup!=1 || group.variance || group.radius!=3))
+        objectRow->spacing!=((settlement || temple)?0:15) || objectRow->temporarySpacing || objectRow->zoneDistance ||
+        group.mode!=((temple || unitId==1184 || unitId==1185)?1:0) || group.groups!=(temple?(unitId==1295?1u:2u):settlement?(unitId==275?2u:(unitId==536 || unitId==537)?4u:unitId==524?5u:1u):mine?20u:unitId==1186?1u:unitId==1188?5u:10u) || group.perGroup!=1 || group.variance || group.radius!=3))
         return fail("unsupported Gaia building row");
     if(mountain && (!objectRow || width!=120 || height!=120 || objectRow->landId!=-2 ||
         objectRow->minDistance!=40 || objectRow->maxDistance!=-1 || objectRow->terrain!=-1 ||
@@ -537,7 +553,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     auto pass=[&](int tile) {
         const auto &placementTerrain=data.civs[0].units[unitId].placementTerrain;
         if(placementTerrain[0]>=0 && terrain[tile]!=placementTerrain[0] && terrain[tile]!=placementTerrain[1]) return false;
-        if(mountain || crater || building || largeFish) {
+        if(mountain || crater || building || unitId==1296 || largeFish) {
             const auto &prototype=data.civs[0].units[unitId];
             const float radius=prototype.collisionSize[0],clearance=prototype.clearanceSize[0];
             const float offset=radius>int(radius)?.5f:0.f;
@@ -545,6 +561,12 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             if(x+low<0 || y+low<0 || x+high>int(width) || y+high>int(height))return false;
             for(int yy=y+low;yy<y+high;++yy)for(int xx=x+low;xx<x+high;++xx)
                 if((!crater && !aquatic && occupied[yy*width+xx]) || restriction[terrain[yy*width+xx]]<=.05f)return false;
+            if(unitId==1295) {
+                // Original48e697 checks only the left column and last row of the footprint, within one height of their shared corner.
+                const int reference=(*elevation)[(y+high-1)*width+x+low];
+                for(int yy=y+low;yy<y+high;++yy)for(int xx=x+low;xx<x+high;++xx)
+                    if((xx==x+low || yy==y+high-1) && std::abs(int((*elevation)[yy*width+xx])-reference)>1)return false;
+            }
             return true;
         }
         if(!objectRow && unitId==1585 && terrain[tile]!=22)return false;
@@ -562,17 +584,18 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
                 for(int xx=x-1;xx<=x+1;++xx)
                     if(occupied[yy*width+xx] || restriction[terrain[yy*width+xx]]<=.05f)return false;
         }
-        return (bird || aquatic || unitId==1123 || !occupied[tile]) && restriction[terrain[tile]]>.05f;
+        return (bird || aquatic || unitId==1120 || unitId==1123 || !occupied[tile]) && restriction[terrain[tile]]>.05f;
     };
     auto create=[&](int tile) {
         RmsTimberPlacement placement{float(tile%width)+(largeFish?0.f:.5f),float(tile/width)+(largeFish?0.f:.5f),0,0,unitId};
-        if(mountain || crater || building) {
+        if(mountain || crater || building || unitId==1296) {
             // Original snaps by fractional radius; static sequence0 graphics consume no draws.
             const float radius=data.civs[0].units[unitId].collisionSize[0],offset=radius>int(radius)?.5f:0.f;
             placement.x=float(tile%width)+offset;placement.y=float(tile/width)+offset;
+            if(unitId==1296)genieRandomDraw(rng);
             if(building) {
-                // Original5cfad0 completion reseeds after seven static or nine animated draws.
-                for(int draw=0;draw<(mine?8:6);++draw)genieRandomDraw(rng);
+                // Original5cfad0 reseeds after completion; sequence0 temple skips sprite draws.
+                for(int draw=0;draw<(unitId==1295?3:mine?8:6);++draw)genieRandomDraw(rng);
                 rng=genieRandomDraw(rng);
             }
         } else if(bird) {
@@ -608,12 +631,12 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             placement.facet=appearance.facet;placement.headingRadians=appearance.headingRadians;
         } else placement.facet=static_cast<uint8_t>(std::min(unsigned(spec->angles-1),genieRandomDraw(rng)*unsigned(spec->angles)/32767u));
         result.push_back(placement);
-        if(building) {
+        if(building || unitId==1296) {
             const float radius=data.civs[0].units[unitId].collisionSize[0];
             for(int yy=int(std::floor(placement.y-radius));yy<int(std::ceil(placement.y+radius));++yy)
                 for(int xx=int(std::floor(placement.x-radius));xx<int(std::ceil(placement.x+radius));++xx)
                     if(xx>=0 && yy>=0 && xx<int(width) && yy<int(height))occupied[yy*width+xx]=true;
-        } else if(!herd && !bird && !aquatic && unitId!=1123 && !crater)occupied[tile]=true;
+        } else if(!herd && !bird && !aquatic && unitId!=1120 && unitId!=1123 && !crater)occupied[tile]=true;
     };
     RmsZoneCache resourceZones;
     for(size_t player=0;player<(perPlayer?novaPlayerStarts.size():1);++player) {

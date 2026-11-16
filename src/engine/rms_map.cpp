@@ -23,7 +23,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     const std::vector<uint16_t> &playerCivilizations,
                     const std::vector<std::vector<uint8_t>> &diplomacy) {
     const auto isTree=[](int unit){return unit==348 || unit==349 || unit==350 || unit==351 || unit==411 || unit==413;};
-    const auto isGaiaBuilding=[](int unit){return unit==1307 || (unit>=1184 && unit<=1188) || unit==275 || unit==518 || unit==519 || unit==524 || unit==536 || unit==537;};
+    const auto isGaiaBuilding=[](int unit){return unit==1295 || unit==1052 || unit==1307 || (unit>=1184 && unit<=1188) || unit==275 || unit==518 || unit==519 || unit==524 || unit==536 || unit==537;};
     const auto isBigHunt=[](int unit){return unit==822 || unit==1249 || unit==1364;};
     const auto isPredator=[](int unit){return unit==126 || unit==812 || unit==1197 || unit==1250 || unit==1129 || unit==1252 || unit==1251 || unit==1465 || unit==998 || unit==1033;};
     out = {};
@@ -1761,7 +1761,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 }
                 if(row.unitId==1307 && (base!=26 || !cliffStage || terrainRows.size()!=5 || terrainRows[0].terrain!=46))
                     return fail("Gaia mines require the verified Kessel profile");
-                if(isGaiaBuilding(row.unitId) && row.unitId!=1307 && (base!=14 || (!cliffStage && !flatTatooine)))
+                if(isGaiaBuilding(row.unitId) && row.unitId!=1307 &&
+                   ((row.unitId==1295 || row.unitId==1052)?(base!=12 || cliffStage || !elevationStage || terrainRows.size()!=7):(base!=14 || (!cliffStage && !flatTatooine))))
                     return fail("Gaia Tatooine buildings require a verified profile");
                 if(row.unitId==938 && (base!=14 || (!cliffStage && !flatTatooine)))
                     return fail("Sandcrawler startup requires the verified Tatooine profile");
@@ -1994,15 +1995,15 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                             for(int x=int(object.x)-2;x<int(object.x)+2;++x) rowBlockers.push_back(uint32_t(y)*width+x);
                     // Original herd gates ignore mobile units, holocrons and other animals.
                     for(const auto &object:generated.resourcesAfterOwned)
-                        if(isGaiaBuilding(object.unitId))appendFootprint(object,rowBlockers); else if(object.unitId==59 || object.unitId==66 || object.unitId==102 || object.unitId==1160 || object.unitId==1161 || object.unitId==1170 || object.unitId==1171 || isTree(object.unitId))
+                        if(isGaiaBuilding(object.unitId) || object.unitId==1296)appendFootprint(object,rowBlockers); else if(object.unitId==59 || object.unitId==66 || object.unitId==102 || object.unitId==1160 || object.unitId==1161 || object.unitId==1170 || object.unitId==1171 || isTree(object.unitId))
                             rowBlockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
                 }
-                if(isGaiaBuilding(row.unitId)) {
+                if(isGaiaBuilding(row.unitId) || row.unitId==1296) {
                     rowBlockers=occupied;
                     for(const auto &object:generated.resourcesAfterOwned) {
                         const auto &prototype=data.civs[0].units[object.unitId];
                         if(object.owner || (!prototype.canBeBuiltOn && prototype.collisionSize[2]>0)) {
-                            if(isGaiaBuilding(object.unitId))appendFootprint(object,rowBlockers);
+                            if(isGaiaBuilding(object.unitId) || object.unitId==1296)appendFootprint(object,rowBlockers);
                             else rowBlockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
                         }
                     }
@@ -2029,11 +2030,11 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     }
                     if(!generateRmsGroupedResourcePlacements(width,height,generated.terrain,data,int16_t(row.unitId),group,rng,
                         placed,err,rowBlockers,16000000,selectedStarts,
-                        RmsResourceDistance::Near,&eligibility,(row.landId==-2 || row.landId>=0)?&global:nullptr,nullptr,&row)) return false;
+                        RmsResourceDistance::Near,&eligibility,(row.landId==-2 || row.landId>=0)?&global:nullptr,nullptr,&row,&generated.elevation)) return false;
                 }
                 // Original zero-height aquatic objects and plants do not block later objects.
-                for(const auto &object:placed) if(object.unitId!=816 && object.unitId!=1585 && object.unitId!=69 && object.unitId!=456 && object.unitId!=450 && object.unitId!=451 && object.unitId!=455 && object.unitId!=1123 && (object.unitId<1329 || object.unitId>1331)) {
-                    if(object.unitId==1019 || object.unitId==1020 || object.unitId==1165 || object.unitId==1166 || isGaiaBuilding(object.unitId))
+                for(const auto &object:placed) if(object.unitId!=816 && object.unitId!=1585 && object.unitId!=69 && object.unitId!=456 && object.unitId!=450 && object.unitId!=451 && object.unitId!=455 && object.unitId!=1120 && object.unitId!=1123 && (object.unitId<1329 || object.unitId>1331)) {
+                    if(object.unitId==1017 || object.unitId==1018 || object.unitId==1296 || object.unitId==1019 || object.unitId==1020 || object.unitId==1165 || object.unitId==1166 || isGaiaBuilding(object.unitId))
                         appendFootprint(object,blockers);
                     else blockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
                 }
