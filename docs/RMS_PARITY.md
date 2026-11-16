@@ -4223,3 +4223,33 @@ Evidence: `rms-geonosis55018-expanded-seed-inventory-2026-11-16.json`,
 Validation:121 retained packaged startup cases and general/authored regressions
 pass under ASan/UBSan. This change adds fixtures only; production acceptance
 remains93 of138 configurations across31 resources.
+
+### Swamp54221 wet connections, forests and Faamba (2026-11-16)
+
+Actual-derived Tiny/default two-Empire seeds1/12345/16160 match1873/2332/1757
+original objects and final RNG2762582302/3056218634/225713344. Ordered IDs,
+owners, units, facets and exact positions match, as do the three grids and
+captured poses. Native fixtures retain467 animation/health/height records and
+original startup cost/population counters.
+
+Two4680-tile dirt11 player lands precede three144-tile neutral lands (IDs30/35/35).
+The bounded profile includes randomized player zones, one excluded map border,
+twelve terrain rows and exact kind63 wet connection settings. It has no elevation
+or cliffs. The existing connection and automatic forest algorithms already match:
+terrain17 creates tree414, while terrain19 creates350. The water base means this
+case does not enable the still-unverified early-forest wet-connection lifecycle.
+
+Actual prototype captures add explicit414 tree placement and Faamba48. Faamba
+is hunting class4 with radius0.5, clearance1, speed0.8, food250 and cost200 food;
+it reuses the validated hunting constructor, not the class60 large-hunt branch.
+Invalid tree/Faamba metadata and unverified random-start settings reject atomically.
+
+Evidence: `rms-swamp54221-full-startup-findings-2026-11-16.json`,
+`rms-swamp54221-geometry-summary-2026-11-16.json`, and
+`rms-swamp54221-assets-provenance-2026-11-16.json`. Other sizes, civilizations,
+arbitrary seeds and later gameplay remain outside these comparisons.
+
+Validation:124 packaged startup cases and general/authored regressions pass
+under ASan/UBSan; strict map checks, production CLI build and desktop dummy-driver
+smoke pass. The production acceptance audit accepts96 of138 configurations across
+32 resources; this is acceptance coverage, not a whole-engine parity percentage.
