@@ -4035,3 +4035,44 @@ Validation:103 retained packaged startup cases and the general/authored
 regressions pass, plus strict RMS, production file/archive tests and desktop
 menu/render/audio-stream smoke. The production audit accepts78 of138
 configurations across26 resources; acceptance is not whole-engine parity.
+
+### Geonosis55018 cliffs, wildlife and buildable scenery (2026-11-16)
+
+Actual-derived Tiny/default two-Empire seeds1/12345/16160 match the original
+runner:2377/2392/2382 objects and final RNG3421012888/1724592410/1712025059.
+Ordered IDs, owners, units, facets and exact positions match, as do all three
+terrain/elevation/slope grids and captured startup poses. Native import retains
+194 original animation/health records plus startup resource/population checks.
+
+The bounded geometry profile reuses existing land and cliff algorithms for a
+central neutral desert land followed by two bordered player lands with randomized
+zones. Cliff settings are5/10/8/25/1/2/2. The secondary carbon row deliberately
+retains the shipped script's base44 even though the map starts on terrain26.
+No elevation or connection stage is enabled for this profile.
+
+Captured masters/graphics/sounds/task headers add Orray1471, Acklay1459,
+Nexu1461, Reek1463, stalagmites573/582/583, vent616, mountain589 and ore1159.
+Orray retains its original hunting class and one-tile clearance. Ore uses its
+original twelve-angle graphic. Static scenery uses the original radius-based
+position snap and consumes no animation draws for sequence0 graphics.
+
+The third seed exposed an existing collision-rule gap: Nova66 overlaps
+stalagmite583 at116.5,7.5 in the original. Original placement48e180 skips
+blockers whose master canBeBuiltOn byte is1 at48e8b0, before dimension checks.
+The actual master vtables confirm that deposits and these stalagmites share
+that gate. The shared native controller now omits buildable-over scenery from
+both later-row and within-row blockers. This does not broaden the separately
+overridden building placement controller.
+
+Evidence: `rms-geonosis55018-full-startup-findings-2026-11-16.json`,
+`rms-geonosis55018-geometry-findings-2026-11-16.json`,
+`rms-geonosis55018-assets-provenance-2026-11-16.json`, and
+`rms-geonosis55018-buildable-collision-findings-2026-11-16.json`.
+Other sizes, civilizations, arbitrary seeds and later gameplay remain outside
+these three complete startup comparisons.
+
+Validation:106 retained packaged startup cases plus the general/authored
+regressions pass under ASan/UBSan. Strict integrated RMS, production file/archive
+checks and desktop menu/render/audio-stream smoke pass. The production audit
+accepts81 of138 configurations across27 resources; this measures acceptance,
+not whole-engine parity.
