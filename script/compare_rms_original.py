@@ -86,7 +86,7 @@ def run_case(case, args):
         result['probeSha256'] = digest(probe)
         if not args.existing:
             before = oracle_path.stat().st_mtime_ns if oracle_path.exists() else None
-            env = dict(os.environ, SWGB_CLIFF_SEED=str(case['seed']), SWGB_OWNER_CIVS='1,1')
+            env = dict(os.environ, SWGB_CLIFF_SEED=str(case['seed']), SWGB_OWNER_CIVS=','.join(map(str, case['civilizations'])))
             env.pop('SWGB_PARSE_ONLY', None)
             with (work / 'original.log').open('w') as log:
                 run = subprocess.run([str(args.python), str(probe)], env=env, stdout=log,
@@ -97,7 +97,7 @@ def run_case(case, args):
             if not oracle_path.exists() or oracle_path.stat().st_mtime_ns == before:
                 raise ValueError('original run did not produce a fresh oracle')
         oracle = json.loads(oracle_path.read_text())
-        if oracle['seed'] != case['seed'] or oracle['civs'] != [1, 1] or oracle['probeSha256'] != result['probeSha256']:
+        if oracle['seed'] != case['seed'] or oracle['civs'] != case['civilizations'] or oracle['probeSha256'] != result['probeSha256']:
             raise ValueError('oracle seed, civilizations or probe hash does not match requested case')
         result['sourceSha256'] = digest(case['source'])
         if oracle['sourceFileSha256'] != result['sourceSha256']:
@@ -107,11 +107,12 @@ def run_case(case, args):
             raise ValueError('oracle placement mode does not match requested case')
         result['oracleSha256'] = digest(oracle_path)
         result['originalExeSha256'] = oracle['exeSha256']
+        result['originalLimitations'] = oracle.get('limitations', [])
         if digest(args.native) != args.native_sha:
             raise ValueError('native executable changed during matrix')
         terrain = work / 'terrain.bin'
         command = [str(args.native), str(args.data / 'genie_x1.dat'), str(case['seed']),
-                   str(terrain), '1', '1', str(args.data / 'gamedata_x1.drs'), str(case['resource']), 'tiny' if case['positions'] == 'fixed' else 'tiny-random']
+                   str(terrain), *map(str, case['civilizations']), str(args.data / 'gamedata_x1.drs'), str(case['resource']), 'tiny' if case['positions'] == 'fixed' else 'tiny-random']
         with (work / 'native.records').open('w') as records, (work / 'native.log').open('w') as log:
             run = subprocess.run(command, stdout=records, stderr=log, timeout=args.timeout)
         if digest(args.native) != args.native_sha:
@@ -145,18 +146,21 @@ def main():
     cases = json.loads(args.manifest.read_text())
     for case in cases:
         case.setdefault('positions', 'fixed')
+        case.setdefault('civilizations', [1, 1])
+        if not isinstance(case['civilizations'], list) or len(case['civilizations']) != 2 or any(type(c) is not int or not 1 <= c <= 8 for c in case['civilizations']):
+            parser.error('this full-map adapter requires two civilizations in1..8')
         if case['positions'] not in ('fixed', 'random'):
             parser.error('positions must be fixed or random')
     ids = [case['id'] for case in cases]
     if not cases or len(ids) != len(set(ids)) or any(not name or any(c not in 'abcdefghijklmnopqrstuvwxyz0123456789-_' for c in name) for name in ids):
         parser.error('case IDs must be unique safe names')
-    if any(not isinstance(c['seed'], int) or not 0 <= c['seed'] <= 0xffffffff for c in cases):
+    if any(type(c['seed']) is not int or not 0 <= c['seed'] <= 0xffffffff for c in cases):
         parser.error('seeds must be uint32')
     args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=False)
     args.native_sha = digest(args.native)
-    report = dict(context='Tiny120, default resources, two enemy Empire players; placement mode per case',
-                  limitations=['No other sizes, civilizations or player counts tested.',
+    report = dict(context='Tiny120, default resources, two enemy players; civilizations and placement mode per case',
+                  limitations=['Full-map adapter remains Tiny120/two players; only listed civilizations and modes are tested.',
                                'Compares ordered object identity/XY/facet, grids, final RNG and captured initial poses.',
                                'Does not compare HP, absolute object height, runtime gameplay or UI.'],
                   nativeSha256=args.native_sha, manifestSha256=digest(args.manifest),
