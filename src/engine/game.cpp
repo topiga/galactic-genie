@@ -428,7 +428,7 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     automaticTargetsAcquired_ = retaliationOrders_ = armedBuildingsEngaged_ = 0;
     attackModeChanges_ = 0;
     objects_.clear();
-    ownerUpdateLists_ = {};
+    ownerUpdateLists_ = {}; ownerSleepLists_ = {}; ownerAuxiliaryLists_ = {};
     shieldGeneratorIndices_.clear();
     shieldGeneratorCacheSize_=size_t(-1);
     unitPrototypes_ = {}; unitPrototypeEffects_ = {}; unitPrototypesReady_ = {};
@@ -1080,7 +1080,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     }
 
     objects_.clear();
-    ownerUpdateLists_ = {};
+    ownerUpdateLists_ = {}; ownerSleepLists_ = {}; ownerAuxiliaryLists_ = {};
     shieldGeneratorIndices_.clear();
     shieldGeneratorCacheSize_=size_t(-1);
     unitPrototypes_ = {}; unitPrototypeEffects_ = {}; unitPrototypesReady_ = {};
@@ -1618,21 +1618,69 @@ const dat::Unit *Game::findUnit(int civ, int id) const {
     return id >= 0 && (size_t)id < units.size() && units[(size_t)id].exists ? &units[(size_t)id] : nullptr;
 }
 
+GenieUpdateList &Game::objectUpdateList(int owner, uint8_t list) {
+    return list == 1 ? ownerSleepLists_[size_t(owner)] :
+           list == 2 ? ownerAuxiliaryLists_[size_t(owner)] : ownerUpdateLists_[size_t(owner)];
+}
+
 void Game::registerObjectUpdate(size_t index) {
     Object &object = objects_[index];
     if (object.player < 0 || size_t(object.player) >= ownerUpdateLists_.size()) return;
-    // shortcut: Unported target-reference/frozen-building events retain legacy primary ticking.
     object.updateOwner = object.player;
-    object.updateSlot = ownerUpdateLists_[size_t(object.player)].append(index);
+    object.updateList = object.sleepRequested ? 1 : object.auxiliaryUpdate ? 2 : 0;
+    object.updateSlot = objectUpdateList(object.player,object.updateList).append(index);
 }
 
 void Game::unregisterObjectUpdate(Object &object) {
     if (object.updateOwner < 0) return;
     const size_t slot = object.updateSlot;
-    const size_t moved = ownerUpdateLists_[size_t(object.updateOwner)].remove(slot);
+    const size_t moved = objectUpdateList(object.updateOwner,object.updateList).remove(slot);
     if (moved != GenieUpdateList::npos) objects_[moved].updateSlot = slot;
     object.updateOwner = -1;
     object.updateSlot = GenieUpdateList::npos;
+}
+
+void Game::wakeObject(Object &object) {
+    if (!object.sleepRequested) return;
+    object.sleepRequested = false;
+    if (object.pendingSleep) {
+        object.pendingSleep = false;
+        if (object.updateList != 1) return;
+    }
+    if (object.updateOwner < 0) return;
+    const size_t index = size_t(&object - objects_.data());
+    unregisterObjectUpdate(object);
+    registerObjectUpdate(index);
+}
+
+void Game::setTaskReference(uint32_t &slot, uint32_t target) {
+    if (slot == target) return;
+    if (Object *old = findObject(slot)) {
+        if (old->taskReferences) --old->taskReferences;
+        const uint8_t state = old->resourceDeathState ? old->resourceDeathState : old->active ? 2 : 7;
+        if (!old->taskReferences && old->unit->type < dat::UT_Flag &&
+            ((state == 2 && old->hitPoints >= 0.f) || state == 6) && !old->sleepRequested) {
+            old->sleepRequested = true;
+            old->pendingSleep = true;
+        }
+    }
+    slot = target;
+    if (Object *next = findObject(target)) {
+        if (next->taskReferences < 250) ++next->taskReferences;
+        wakeObject(*next);
+    }
+}
+
+void Game::setGatherTarget(Object &worker, uint32_t target) {
+    if (worker.gatherPrimaryReference != target) setTaskReference(worker.gatherChildReference,0);
+    setTaskReference(worker.gatherPrimaryReference,target);
+    worker.gatherTargetId = target;
+}
+
+void Game::setDropOffTarget(Object &worker, uint32_t target) {
+    if (worker.gatherSecondaryReference != target) setTaskReference(worker.gatherChildReference,0);
+    setTaskReference(worker.gatherSecondaryReference,target);
+    worker.dropOffTargetId = target;
 }
 
 void Game::setObjectOwner(Object &object, int player) {
@@ -1678,6 +1726,9 @@ Game::Object *Game::addObject(const dat::Unit *unit, int player, float x, float 
                   unit->name.rfind("OBJ-FLAG", 0) != 0;
     object.garrisonedInId = garrisonedInId;
     object.triggerAddressable = triggerAddressable;
+    object.sleepRequested = unit->type < dat::UT_Flag && object.hitPoints > 0.f;
+    object.auxiliaryUpdate = unit->type == dat::UT_25;
+    // shortcut: Frozen-building manager callbacks still use native primary updates.
     objects_.push_back(object);
     registerObjectUpdate(objects_.size() - 1);
     if (spawnId) objectIndices_[spawnId] = objects_.size() - 1;
@@ -4763,7 +4814,13 @@ std::string Game::unitCommandHelp(
 }
 
 void Game::clearUnitCommandOrder(
-    Object &unit) {
+    Object &unit, bool preserveGather) {
+    setTaskReference(unit.gatherChildReference,0);
+    if (!preserveGather) {
+        setGatherTarget(unit,0);
+        setDropOffTarget(unit,0);
+        unit.manualDropOff = false;
+    }
     if (unit.resourcePreparationState) {
         unit.resourcePreparationState = 0;
         unit.initialFrame = 0;
@@ -4784,8 +4841,8 @@ void Game::stopUnit(Object &unit) {
     if (isWorker(unit))
         clearConstructionAssignment(unit);
     clearUnitCommandOrder(unit);
-    unit.gatherTargetId = 0;
-    unit.dropOffTargetId = 0;
+    setGatherTarget(unit, 0);
+    setDropOffTarget(unit, 0);
     unit.repairTargetId = 0;
     unit.garrisonTargetId = 0;
     unit.attackTargetId = 0;
@@ -6305,21 +6362,21 @@ bool Game::issueGatherCommand(
         return false;
     clearUnitCommandOrder(worker);
     clearConstructionAssignment(worker);
-    worker.gatherTargetId = 0;
-    worker.dropOffTargetId = 0;
+    setGatherTarget(worker, 0);
+    setDropOffTarget(worker, 0);
     worker.attackTargetId = 0;
     worker.attackAutomatic = false;
     worker.attackGroundActive = false;
     worker.attackShotPending = false;
     worker.garrisonTargetId = 0;
     worker.repairTargetId = 0;
-    worker.gatherTargetId = resource.spawnId;
+    setGatherTarget(worker, resource.spawnId);
     worker.resourceWorkTargetId =
         resource.spawnId;
     worker.resourceWorkTime = 0.0f;
     worker.resourcePreparationState = 0;
     worker.huntTimer = 0.0f;
-    worker.dropOffTargetId = 0;
+    setDropOffTarget(worker, 0);
     worker.manualDropOff = false;
     worker.farmMoveTime =
         resource.unit->cls == 7 ? 1.0f : 0.0f;
@@ -6388,7 +6445,6 @@ bool Game::issueDropOffCommand(
         !building.unit ||
         building.unit->type != dat::UT_Building)
         return false;
-    clearUnitCommandOrder(worker);
     // Only a building that takes something the worker holds (the command
     // center takes everything, processing centers their own resource).
     bool accepts = false;
@@ -6398,6 +6454,7 @@ bool Game::issueDropOffCommand(
             siteAcceptsType(worker, building, type))
             accepts = true;
     if (!accepts) return false;
+    clearUnitCommandOrder(worker,true);
     clearConstructionAssignment(worker);
     worker.attackTargetId = 0;
     worker.attackAutomatic = false;
@@ -6405,7 +6462,7 @@ bool Game::issueDropOffCommand(
     worker.attackShotPending = false;
     worker.garrisonTargetId = 0;
     worker.repairTargetId = 0;
-    worker.dropOffTargetId = building.spawnId;
+    setDropOffTarget(worker, building.spawnId);
     worker.manualDropOff = true;
     worker.wander = false;
     worker.moveGoalActive = false;
@@ -6485,8 +6542,8 @@ bool Game::issueRepairCommand(
         return false;
     clearUnitCommandOrder(worker);
     clearConstructionAssignment(worker);
-    worker.gatherTargetId = 0;
-    worker.dropOffTargetId = 0;
+    setGatherTarget(worker, 0);
+    setDropOffTarget(worker, 0);
     worker.attackTargetId = 0;
     worker.attackAutomatic = false;
     worker.attackGroundActive = false;
@@ -6660,8 +6717,8 @@ void Game::updateGathering(Object &worker, float dt) {
     const dat::Unit *gatherer =
         gathererUnit(worker);
     if (!gatherer) {
-        worker.gatherTargetId = 0;
-        worker.dropOffTargetId = 0;
+        setGatherTarget(worker, 0);
+        setDropOffTarget(worker, 0);
         return;
     }
     Object *resource =
@@ -6669,7 +6726,7 @@ void Game::updateGathering(Object &worker, float dt) {
     if (resource && !resource->active && resource->carcassId)
         if (Object *carcass = findObject(resource->carcassId);
             carcass && carcass->active) {
-            worker.gatherTargetId = carcass->spawnId;
+            setGatherTarget(worker, carcass->spawnId);
             resource = carcass;
         }
     if (resource && !resource->active && !resource->carcassId &&
@@ -6688,9 +6745,8 @@ void Game::updateGathering(Object &worker, float dt) {
         Object *next =
             nextResourceLike(worker);
         if (next) {
-            worker.gatherTargetId =
-                next->spawnId;
-            worker.dropOffTargetId = 0;
+            setGatherTarget(worker, next->spawnId);
+            setDropOffTarget(worker, 0);
             worker.state = State::Idle;
             worker.animTime = 0;
             return;
@@ -6717,35 +6773,36 @@ void Game::updateGathering(Object &worker, float dt) {
         if (!dropSite || !dropSite->active) {
             dropSite =
                 nearestDropSite(worker, *gatherer);
-            worker.dropOffTargetId =
-                dropSite ? dropSite->spawnId : 0;
+            setDropOffTarget(worker, dropSite ? dropSite->spawnId : 0);
         }
         if (!dropSite) return;
         if (!withinInteractionRange(
                 worker, *dropSite, 0.35f)) {
+            setTaskReference(worker.gatherChildReference,dropSite->spawnId);
             approach(worker, *dropSite, 0.25f);
             return;
         }
+        setTaskReference(worker.gatherChildReference,0);
         depositAt(worker, *dropSite);
         if (const dat::Task *task =
                 gatherTask(worker, *gatherer))
             playWorldUnitSound(
                 worker, task->resourceDepositSound);
-        worker.dropOffTargetId = 0;
+        setDropOffTarget(worker, 0);
         worker.manualDropOff = false;
         worker.state = State::Idle;
         worker.animTime = 0;
         if (!resource ||
             !isGatherable(*resource)) {
             Object *next = nextResourceLike(worker);
-            worker.gatherTargetId = next ? next->spawnId : 0;
+            setGatherTarget(worker, next ? next->spawnId : 0);
         }
         return;
     }
     if (!resource ||
         !isGatherable(*resource)) {
         Object *next = nextResourceLike(worker);
-        worker.gatherTargetId = next ? next->spawnId : 0;
+        setGatherTarget(worker, next ? next->spawnId : 0);
         worker.state = State::Idle;
         return;
     }
@@ -6771,9 +6828,11 @@ void Game::updateGathering(Object &worker, float dt) {
             worker, *resource, workRange)) {
         worker.resourcePreparationState = 0;
         worker.initialFrame = 0;
+        setTaskReference(worker.gatherChildReference,resource->spawnId);
         approach(worker, *resource, workRange);
         return;
     }
+    if (worker.resourcePreparationState != 12) setTaskReference(worker.gatherChildReference,0);
     const bool farming =
         resource->unit->cls == 7;
     if (!farming) {
@@ -6929,6 +6988,7 @@ void Game::updateGathering(Object &worker, float dt) {
                 if (worker.resourcePreparationState != 12) {
                     // shortcut: In-range task entry uses the verified state7 boundary; initial action setup remains native.
                     initializeGenieWorkAttackAtState7(config, worker.workAttack);
+                    setTaskReference(worker.gatherChildReference,resource->spawnId);
                     worker.resourcePreparationState = 12;
                     worker.animTime = 0.f;
                     worker.initialFrame = 0;
@@ -6945,6 +7005,7 @@ void Game::updateGathering(Object &worker, float dt) {
                         resource->hitPoints = std::max(0.f, resource->hitPoints - float(damage));
                         attacksLanded_++;
                         if (resource->hitPoints < 1.f) {
+                            wakeObject(*resource);
                             resource->hitPoints = 0.f;
                             resource->fellingPending = true;
                         }
@@ -6955,6 +7016,7 @@ void Game::updateGathering(Object &worker, float dt) {
             }
             // Completed attack -> movement -> facing -> gather; entering7 does no work.
             if (worker.resourcePreparationState == 12) {
+                setTaskReference(worker.gatherChildReference,0);
                 worker.resourcePreparationState = 4;
                 worker.animTime = 0.f; worker.initialFrame = 0;
                 return;
@@ -6973,6 +7035,7 @@ void Game::updateGathering(Object &worker, float dt) {
                 : 1.0f;
         if (worker.resourceWorkTime < initialWorkTime)
             return;
+        wakeObject(*resource);
         resource->hitPoints = 0.0f;
         resource->fellingPending = true;
         worker.resourceWorkTime = 0.0f;
@@ -7002,7 +7065,7 @@ void Game::updateGathering(Object &worker, float dt) {
             resource->resourceAmount = 0.0f;
             resource->farmStage = -1; // repaint the build terrain
             syncFarmTerrain(*resource);
-            worker.gatherTargetId = 0;
+            setGatherTarget(worker, 0);
             assignBuilder(worker, *resource);
             return;
         }
@@ -7292,8 +7355,8 @@ bool Game::issueGarrisonOrder(
     clearUnitCommandOrder(unit);
     if (isWorker(unit))
         clearConstructionAssignment(unit);
-    unit.gatherTargetId = 0;
-    unit.dropOffTargetId = 0;
+    setGatherTarget(unit, 0);
+    setDropOffTarget(unit, 0);
     unit.repairTargetId = 0;
     unit.attackTargetId = 0;
     unit.attackAutomatic = false;
@@ -7998,11 +8061,11 @@ bool Game::assignBuilder(Object &worker,
         return false;
     clearUnitCommandOrder(worker);
     clearConstructionAssignment(worker);
-    worker.gatherTargetId = 0;
+    setGatherTarget(worker, 0);
     worker.resourceWorkTargetId = 0;
     worker.resourceWorkTime = 0.0f;
     worker.resourcePreparationState = 0;
-    worker.dropOffTargetId = 0;
+    setDropOffTarget(worker, 0);
     worker.manualDropOff = false;
     worker.attackTargetId = 0;
     worker.attackAutomatic = false;
@@ -8973,8 +9036,8 @@ void Game::executeContextCommand(const ContextCommand &command) {
         clearUnitCommandOrder(*object);
         if (isWorker(*object))
             clearConstructionAssignment(*object);
-        object->gatherTargetId = 0;
-        object->dropOffTargetId = 0;
+        setGatherTarget(*object,0);
+        setDropOffTarget(*object,0);
         object->attackTargetId = 0;
         object->attackAutomatic = false;
     }
@@ -9249,8 +9312,10 @@ void Game::updateAmbience(float dt, int screenW, int screenH) {
 void Game::defeatCheatPlayer(int player) {
     if (player <= 0 || player > 8) return;
     for (Object &object : objects_) {
-        if (object.active && object.player == player)
+        if (object.active && object.player == player) {
+            clearUnitCommandOrder(object);
             object.active = false;
+        }
     }
     syncSelectionOrder();
     rebuildAdjacency();
@@ -9458,8 +9523,8 @@ bool Game::issueAttackGround(
     if (!canAttackGround(source))
         return false;
     clearUnitCommandOrder(source);
-    source.gatherTargetId = 0;
-    source.dropOffTargetId = 0;
+    setGatherTarget(source, 0);
+    setDropOffTarget(source, 0);
     source.garrisonTargetId = 0;
     source.repairTargetId = 0;
     source.attackTargetId = 0;
@@ -9494,8 +9559,8 @@ void Game::issueAttack(Object &source, Object &target, float approachAngle,
     source.rememberedAttackId=0;
     if (!automatic)
         clearUnitCommandOrder(source);
-    source.gatherTargetId = 0;
-    source.dropOffTargetId = 0;
+    setGatherTarget(source, 0);
+    setDropOffTarget(source, 0);
     if (approachDistance <= 0) {
         const float contact =
             collisionRadius(source) + collisionRadius(target) +
@@ -9845,6 +9910,7 @@ void Game::syncFarmTerrain(Object &farm, bool dying) {
 }
 
 void Game::killObject(Object &object, bool countKill, bool retainRemains) {
+    wakeObject(object);
     if (object.resourceDeathState == 3) object.resourceDeathState = 7;
     clearUnitCommandOrder(object);
     if (object.unit->cls == 7 && object.unit->type == dat::UT_Building)
@@ -12686,7 +12752,15 @@ void Game::executeEffect(const ScenarioEffect &effect) {
             targetY = (float)mapSize_ - x;
             hasTarget = true;
         }
-        if (hasTarget) issueGroupMove(effectTargets(effect), targetX, targetY);
+        if (hasTarget) {
+            auto targets = effectTargets(effect);
+            for (Object *object : targets) {
+                if (object->hidden || object->unit->speed <= 0) continue;
+                clearUnitCommandOrder(*object);
+                if (isWorker(*object)) clearConstructionAssignment(*object);
+            }
+            issueGroupMove(std::move(targets), targetX, targetY);
+        }
         break;
     }
     case 13:
@@ -12700,7 +12774,10 @@ void Game::executeEffect(const ScenarioEffect &effect) {
         break;
     case 14:
     case 15:
-        for (Object *object : effectTargets(effect)) object->active = false;
+        for (Object *object : effectTargets(effect)) {
+            clearUnitCommandOrder(*object);
+            object->active = false;
+        }
         rebuildAdjacency();
         break;
     case 16:
@@ -14517,7 +14594,8 @@ void Game::updateProductionAndDecay(float dt,int player) {
     }
 }
 
-void Game::updatePlayerObjects(float dt,int player) {
+void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
+    if (objectUpdateList(player,auxiliary ? 2 : 0).empty()) return;
     std::uniform_real_distribution<float> r01(0, 1);
     auto spreadBlockedMoveGoal = [&](Object &object) {
         const float originalX = object.moveAnchorX;
@@ -14597,7 +14675,12 @@ void Game::updatePlayerObjects(float dt,int player) {
     const auto updateObject = [&](size_t index) {
         Object &o = objects_[index];
         if (o.player!=player) return false;
-        if (o.active) o.flashTime = std::max(0.f, o.flashTime - dt);
+        if (o.pendingSleep) {
+            o.pendingSleep = false;
+            unregisterObjectUpdate(o);
+            registerObjectUpdate(index);
+            return false; // original false-return migration skips the swapped tail
+        }
         if (o.resourceDeathState == 7) { o.resourceDeathState = 8; return false; }
         if (o.resourceDeathState == 8) {
             return true;
@@ -15123,7 +15206,7 @@ void Game::updatePlayerObjects(float dt,int player) {
         }
         return false;
     };
-    ownerUpdateLists_[size_t(player)].traverse([&](size_t index) {
+    objectUpdateList(player,auxiliary ? 2 : 0).traverse([&](size_t index) {
         const bool finalize = updateObject(index);
         // Release all callback borrows before addObject can reallocate backing storage.
         if (pendingDead) {
@@ -15986,6 +16069,8 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
     // shortcut: Other HUD/AI emitters remain direct until their opcode payloads are ported.
     localCommands_.drain();
 
+    for (Object &object : objects_)
+        if (object.active) object.flashTime = std::max(0.f,object.flashTime-dt);
     updateTriggers(dt);
     commandMarkerTime_ = std::max(0.0f, commandMarkerTime_ - dt);
     commandTargetTime_ = std::max(0.0f, commandTargetTime_ - dt);
@@ -16023,8 +16108,11 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
     updateRemains(dt);
     refreshVisibility();
     // Original world tail restores its auxiliary-pass draw, then consumes a final draw.
-    // shortcut: Owner barriers are original; intra-owner phases and auxiliary lists still need callback-order parity.
-    legacyRandomState_=genieRandomDraw(legacyRandomState_);
+    // shortcut: Intra-owner phases and the original manager90 callbacks remain native.
+    const uint32_t auxiliaryRandom = genieRandomDraw(legacyRandomState_);
+    for(uint32_t player=0;player<=worldPlayerCount_;++player)
+        updatePlayerObjects(dt,int(player),true);
+    legacyRandomState_=auxiliaryRandom;
     genieRandomDraw(legacyRandomState_);
 }
 

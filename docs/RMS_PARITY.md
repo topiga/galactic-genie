@@ -5470,3 +5470,49 @@ Likewise, `gathererUnit`/`nextResourceLike` use target-bearing probe copies.
 boundaries, while accepted cancellation, reassignment and garrison adoption must
 release the corresponding live action references. These hooks, not a per-frame
 count of cached target IDs, are the next prerequisite for enabling sleep lists.
+
+### Routed owner lists and explicit gather references (2026-11-17)
+
+The primary-only bridge above is superseded by persistent primary, sleeping and
+auxiliary lists. Base10/15 constructors with positive HP start sleeping;
+animated ancestry remains awake, with type25 routed to auxiliary. Pending sleep
+migrates before local state/death processing, retaining the original false-return
+swap-tail skip. Acquire cancels pending sleep or removes an already sleeping
+object and appends it awake. Ownership transfer preserves routing and repairs
+slots. The world tail visits all auxiliary owner lists under its saved RNG
+interval; sleeping lists do not tick. Frozen-building manager callbacks and the
+separate original manager90 pass remain unported.
+
+Gather controllers now explicitly own primary, secondary and child target IDs.
+Their setters resolve targets through world IDs, release/acquire per slot, and
+leave same-slot reassignment unchanged. The counter saturates at250. Base
+release requests sleep only at zero references in state2/HP>=0 or state6;
+animated and combat release do not inherit this sleep behavior. Accepted order
+replacement, Stop, garrison and death release live gather slots. Probe copies,
+route planning, saved return-to-work IDs and cached navigation targets own no
+references. Drop-off keeps the primary target and validates cargo acceptance
+before changing the worker's action.
+
+The original lethal-cancellation control is represented explicitly: HP0 with
+pending felling can sleep after cancellation before Gaia admits death. A later
+acquire wakes it and allows death admission. This deliberately does not force
+felling ahead of pending migration. Dead but registered targets can still receive
+release; lookup of an unregistered target skips it.
+
+Evidence: `tree-action-reference-lifecycle-findings-2026-11-17.json`,
+`object-sleep-lifecycle-findings-2026-11-16.json` and
+`sleep-routing-followup-findings-2026-11-17.json` in the local reference ledger.
+Parent/attack-child cancellation and list controls execute original code;
+drop-off structure and auxiliary world order are static evidence. Complete
+movement/deposit timing, arbitrary action families, combat release notification
+callbacks, frozen buildings and whole-match equivalence remain unverified.
+
+Focused ASan/UBSan checks pass for the original per-slot count sequence,
+same-slot no-op, two-worker sharing, pending-sleep cancellation, pause,
+HP0 cancellation before death, state3 release, saturation/underflow, owner
+transfer and reset. Native integration checks also pass for rejected/accepted
+drop-off, trigger move/kill/remove cleanup and exactly-once auxiliary ticking.
+The auxiliary fixture deliberately changes an animated prototype to type25
+before session initialization; it validates routing, not an original type25
+factory or graphics comparison. Existing felling/dead-child, command queue,
+animation and local-clock checks pass. Log: `sleep-reference-final-local.log`.

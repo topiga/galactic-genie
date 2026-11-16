@@ -277,6 +277,22 @@ public:
     }
     bool objectActive(uint32_t spawnId) const;
     bool objectRegisteredForTesting(uint32_t id) const { return findObject(id) != nullptr; }
+    bool setGatherReferenceForTesting(uint32_t actor, uint32_t target, int slot) {
+        Object *o=findObject(actor);
+        if (!o || (target && !findObject(target)) || slot<0 || slot>2) return false;
+        setTaskReference(slot==0 ? o->gatherPrimaryReference :
+                         slot==1 ? o->gatherSecondaryReference : o->gatherChildReference,target);
+        return true;
+    }
+    int objectTaskReferencesForTesting(uint32_t id) const {
+        const Object *o=findObject(id); return o ? o->taskReferences : -1;
+    }
+    int objectUpdateListForTesting(uint32_t id) const {
+        const Object *o=findObject(id); return o ? o->updateList : -1;
+    }
+    bool objectPendingSleepForTesting(uint32_t id) const {
+        const Object *o=findObject(id); return o && o->pendingSleep;
+    }
     bool transferObjectForTesting(uint32_t id, int player) {
         Object *object=findObject(id);
         if (!object || player<0 || uint32_t(player)>worldPlayerCount_) return false;
@@ -817,6 +833,14 @@ private:
         float flashTime = 0;
         float gateOpenAmount = 0;
         float gateCloseTimer = 0;
+        uint32_t gatherPrimaryReference = 0;
+        uint32_t gatherSecondaryReference = 0;
+        uint32_t gatherChildReference = 0;
+        uint8_t taskReferences = 0;
+        uint8_t updateList = 0; // actual membership: primary, sleep, auxiliary
+        bool sleepRequested = false;
+        bool pendingSleep = false;
+        bool auxiliaryUpdate = false;
         int updateOwner = -1;
         size_t updateSlot = GenieUpdateList::npos;
         uint8_t resourceDeathState = 0;
@@ -977,6 +1001,11 @@ private:
     void registerObjectUpdate(size_t index);
     void unregisterObjectUpdate(Object &object);
     void setObjectOwner(Object &object, int player);
+    GenieUpdateList &objectUpdateList(int owner, uint8_t list);
+    void wakeObject(Object &object);
+    void setTaskReference(uint32_t &slot, uint32_t target);
+    void setGatherTarget(Object &worker, uint32_t target);
+    void setDropOffTarget(Object &worker, uint32_t target);
     Object *addObject(const dat::Unit *unit, int player, float x, float y, float facing,
                       uint32_t spawnId, uint16_t initialFrame = 0, bool hidden = false,
                       int32_t garrisonedInId = -1, bool triggerAddressable = true);
@@ -1107,7 +1136,7 @@ private:
     void executeUnitCommand(UnitCommand command);
     void enqueueSelectedCommand(bool mobileOnly, std::function<void(const std::vector<Object *> &)> command);
     bool issueUnloadOrder(Object &unit, float x, float y);
-    void clearUnitCommandOrder(Object &unit);
+    void clearUnitCommandOrder(Object &unit, bool preserveGather = false);
     void stopUnit(Object &unit);
     void updateUnitCommandOrder(Object &unit, float dt);
     const dat::Task *healingTask(const Object &unit) const;
@@ -1361,7 +1390,7 @@ private:
     void updateFrame(float dt,float uiDt,const InputState &in,bool advanceWorld,double worldTime);
     void updateProductionAndDecay(float dt,int player);
     void updateAi(int player,float dt);
-    void updatePlayerObjects(float dt,int player);
+    void updatePlayerObjects(float dt,int player, bool auxiliary = false);
     void updateAiPlayer(
         int player, AiPlayerState &state);
     void updateAiGatherers(
@@ -1447,7 +1476,7 @@ private:
     std::vector<uint8_t> tileSlope_;
     bool rmsTileElevation_=false;
     std::vector<Object> objects_;
-    std::array<GenieUpdateList,17> ownerUpdateLists_;
+    std::array<GenieUpdateList,17> ownerUpdateLists_, ownerSleepLists_, ownerAuxiliaryLists_;
     std::unordered_map<uint32_t, size_t> objectIndices_;
     std::vector<Projectile> projectiles_;
     std::vector<Remains> remains_;
