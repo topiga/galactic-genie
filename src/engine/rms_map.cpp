@@ -987,10 +987,14 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             for(const auto &sourceRow:resourceRows) {
                 RmsObjectRow row;
                 if(!finalizeRmsObjectRow(sourceRow,width,height,playerCount,row,err)) return false;
-                // shortcut: mountains are verified only as the final Hoth row; extend after later-row collision comparisons.
-                if((row.unitId==1165 || row.unitId==1166) &&
-                   (base!=32 || !cliffStage || &sourceRow!=&resourceRows.back()))
-                    return fail("mountains require the final verified Hoth row");
+                // shortcut: one or two trailing Hoth/Zaloriis mountain rows; extend after mixed later-row comparisons.
+                if(row.unitId==1165 || row.unitId==1166 || row.unitId==1019 || row.unitId==1020) {
+                    const auto begin=resourceRows.begin()+(&sourceRow-resourceRows.data());
+                    if(base!=(row.unitId<1100?26:32) || !cliffStage || resourceRows.end()-begin>2 ||
+                       !std::all_of(begin,resourceRows.end(),[&](const auto &later) {
+                           return base==32?(later.unitId==1165 || later.unitId==1166):(later.unitId==1019 || later.unitId==1020);
+                       }))return fail("mountains require trailing verified cliff-map rows");
+                }
                 std::vector<RmsObjectTarget> targets;
                 if(!selectRmsObjectTargets(row,generated.lands,playerCount,targets,err))return false;
                 if(targets.empty())continue;
@@ -1058,9 +1062,13 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                         placed,err,rowBlockers,16000000,selectedStarts,
                         RmsResourceDistance::Near,&eligibility,(row.landId==-2 || row.landId>=0)?&global:nullptr,nullptr,&row)) return false;
                 }
-                // Original waves are nonblocking decorations; fish may share their tile.
-                for(const auto &object:placed) if(object.unitId!=816 && object.unitId!=1585)
-                    blockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
+                // Original waves and zero-height plants do not block later objects.
+                for(const auto &object:placed) if(object.unitId!=816 && object.unitId!=1585 && object.unitId!=1123) {
+                    if(object.unitId==1019 || object.unitId==1020 || object.unitId==1165 || object.unitId==1166) {
+                        for(int y=int(object.y)-3;y<int(object.y)+3;++y)
+                            for(int x=int(object.x)-3;x<int(object.x)+3;++x)blockers.push_back(uint32_t(y)*width+x);
+                    } else blockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
+                }
                 generated.resourcesAfterOwned.insert(generated.resourcesAfterOwned.end(),placed.begin(),placed.end());
             }
         }

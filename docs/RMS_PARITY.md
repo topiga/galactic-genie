@@ -2582,3 +2582,50 @@ cases reject unsupported rules. Full startup/import regressions, the algorithm
 suites, production CLI include/define/rejection checks and desktop smoke pass.
 The smoke uses dummy video/audio; it verifies the audio pipeline, not listening
 or original sound-mixing parity. Audit and PNGs remain local.
+
+### Packaged Zaloriis and consecutive mountains
+
+Zaloriis55011 reuses Arid's verified base26 geometry. Three complete original
+runs and independent resource replays now match native ordered objects, terrain,
+elevation, slopes, owned/Gaia startup poses and RNG:
+
+| Seed | Objects | Final RNG |
+|---|---:|---:|
+| 1 | 2,405 | 3103567552 |
+| 12345 | 2,485 | 786711914 |
+| 16160 | 2,514 | 2011336731 |
+
+Actual DAT loader captures supply plants1123, rocks1171 and mountains1019/1020.
+The original48e180 collision gate excludes zero-height1123 both as a candidate
+and as an existing blocker. Its terrain checks and random facet draw remain.
+This matters: treating the plant like rocks preserved counts and RNG while
+placing the plants at incorrect coordinates. Complete ordered comparisons
+expose that error; final-count checks alone would miss it.
+
+Zaloriis16160 and Hoth4 exercise two consecutive mountain rows. Hoth4 matches
+2,415 objects and RNG2003801244. Native collision occupancy includes the first
+mountain's6×6 footprint for the second row. The supported bound is now one or
+two trailing mountain rows, one object per row, within the compared Hoth or
+Zaloriis geometry. Three rows, multi-object rows and mixed later objects remain
+rejected. This supersedes the earlier final-row-only Hoth restriction.
+
+The shared packaged regression has14 complete cases, plus the separate Forest
+suite and52 general object-row cases. Evidence stays local in
+`rms-packaged-zaloriis-full-findings-2026-11-16.json`, the Hoth ledger,
+`rms-zaloriis-assets-provenance-2026-11-16.json` and
+`rms-zaloriis-plant-collision-findings-2026-11-16.json`. These bounded cases do
+not establish all-seed, all-size, all-civilization or live Windows parity.
+
+A separate original48e180 matrix isolates one real mountain: candidate offsets
+0/±5 collide and±6/±7 pass on both axes, without RNG changes. Native regression
+checks preserve all14 outcomes and integer centers. This supports the footprint
+propagation independently of the two complete-map cases, whose successful
+mountains happen to be farther apart. Ledger:
+`rms-consecutive-mountain-findings-2026-11-16.json`.
+
+The subsequent production audit accepts15/138 standard combinations: Forest,
+Reytha, Arid, Hoth and Zaloriis across the three audit seeds. The remaining123
+cases still reject unsupported rules. Full import regressions, the focused
+mountain-boundary checks and production CLI tests pass. This is acceptance
+coverage for fixed Tiny/two-Empire/default-resource settings, not a percentage
+of overall engine parity.

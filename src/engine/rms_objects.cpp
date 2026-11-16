@@ -12,6 +12,7 @@ namespace swgb {
 namespace {
 bool isTree(int unit) { return unit==348 || unit==349 || unit==350 || unit==411 || unit==413; }
 bool isPredator(int unit) { return unit==126 || unit==812 || unit==1197 || unit==1250 || unit==1129 || unit==1252; }
+bool isMountain(int unit) { return unit==1019 || unit==1020 || unit==1165 || unit==1166; }
 struct ResourceSpec { int id, graphic, type, cls, hp, restriction, angles, resource, amount, doppel; float height; };
 const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
                                     const std::vector<uint8_t> &terrain,std::string *err) {
@@ -30,13 +31,17 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         {102,5232,30,30,0,8,10,2,350,1,1.f},
         {1160,5147,30,31,50,11,12,1,100,2,2.f},
         {1170,5266,10,42,50,1,3,-1,0,0,1.f},
+        {1171,5267,10,42,50,1,3,-1,0,0,1.f},
+        {1123,5249,10,42,50,1,10,-1,0,0,0.f},
+        {1019,5240,10,42,5000,11,1,-1,0,0,3.f},
+        {1020,5241,10,42,5000,11,1,-1,0,0,3.f},
         {1165,5276,10,42,5000,11,1,-1,0,0,3.f},
         {1166,5277,10,42,5000,11,1,-1,0,0,3.f}};
     const ResourceSpec *match=nullptr;
     for (const auto &candidate:specs) if (candidate.id==unitId) match=&candidate;
     if (!match) return fail("unsupported resource unit");
     const auto &spec=*match;
-    const bool mountain=unitId==1165 || unitId==1166;
+    const bool mountain=isMountain(unitId);
     const float radius=mountain?3.f:.5f;
     if (data.civs.empty() || data.civs[0].units.size()<=static_cast<size_t>(unitId))
         return fail("missing Gaia resource prototype");
@@ -50,7 +55,7 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
         u.terrainRestriction!=spec.restriction || u.hillMode || u.flyMode || u.canBeBuiltOn ||
         u.recyclable || u.lineOfSight!=0 || u.trainSound!=-1 ||
-        u.obstructionType!=(mountain?10:2) || u.obstructionClass!=(unitId==1170?3:1) || u.civilization ||
+        u.obstructionType!=(mountain?10:unitId==1123?0:2) || u.obstructionClass!=(unitId==1123?0:(unitId==1170 || unitId==1171)?3:1) || u.civilization ||
         u.enableAutoGather!=(spec.resource<0?0:1) || !g || g->sequenceType!=(mountain?0:6) || g->angleCount!=spec.angles)
         return fail("unsupported resource prototype or graphic");
     if ((spec.type==30 || mountain) && (u.createDoppelgangerOnDeath!=spec.doppel || u.speed!=0 ||
@@ -222,7 +227,7 @@ bool generateRmsResourcePlacements(uint32_t width, uint32_t height,
     std::vector<RmsTimberPlacement> &out, std::string *err,
     const std::vector<uint32_t> &occupiedTiles) {
     out.clear();
-    if(unitId==1165 || unitId==1166) {if(err)*err="RMS mountain requires a verified final object row";return false;}
+    if(isMountain(unitId)) {if(err)*err="RMS mountain requires a verified final object row";return false;}
     if (err) err->clear();
     auto fail = [&](const char *reason) {
         if (err) *err = std::string("RMS resource: ") + reason;
@@ -248,7 +253,7 @@ bool generateRmsResourcePlacements(uint32_t width, uint32_t height,
     out.reserve(requested);
     for (uint32_t tile : candidates) {
         if (out.size() == requested) break;
-        if (occupied[tile]) continue;
+        if (occupied[tile] && unitId!=1123) continue;
         if (restriction[terrain[tile]] <= .05f) continue;
         // Distinct tile centers cannot strictly overlap these half-tile radii.
         if (spec.type==30) {
@@ -281,7 +286,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
        (group.mode!=1 && group.mode!=2 && !((objectRow || isPredator(unitId) || unitId==822 || unitId==1249 || unitId==1364 || isTree(unitId) || unitId==816 || unitId==69 || unitId==1585) && group.mode==0)) || group.groups>count || group.perGroup>count ||
        group.variance>1024 || group.radius>1024)
         return fail("unsupported dimensions or grouping parameters");
-    const bool mountain=unitId==1165 || unitId==1166;
+    const bool mountain=isMountain(unitId);
     if(mountain && (!objectRow || width!=120 || height!=120 || objectRow->landId!=-2 ||
         objectRow->minDistance!=40 || objectRow->maxDistance!=-1 || objectRow->terrain!=-1 ||
         objectRow->spacing || objectRow->temporarySpacing || objectRow->zoneDistance ||
@@ -473,7 +478,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
                 for(int xx=x-1;xx<=x+1;++xx)
                     if(occupied[yy*width+xx] || restriction[terrain[yy*width+xx]]<=.05f)return false;
         }
-        return (bird || !occupied[tile]) && restriction[terrain[tile]]>.05f;
+        return (bird || unitId==1123 || !occupied[tile]) && restriction[terrain[tile]]>.05f;
     };
     auto create=[&](int tile) {
         RmsTimberPlacement placement{float(tile%width)+.5f,float(tile/width)+.5f,0,0,unitId};
@@ -501,7 +506,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             const auto appearance=drawRmsCarbonAppearance(rng,static_cast<uint8_t>(spec->angles));
             placement.facet=appearance.facet;placement.headingRadians=appearance.headingRadians;
         } else placement.facet=static_cast<uint8_t>(std::min(unsigned(spec->angles-1),genieRandomDraw(rng)*unsigned(spec->angles)/32767u));
-        result.push_back(placement);if(!herd && !bird) occupied[tile]=true;
+        result.push_back(placement);if(!herd && !bird && unitId!=1123) occupied[tile]=true;
     };
     RmsZoneCache resourceZones;
     for(size_t player=0;player<(perPlayer?novaPlayerStarts.size():1);++player) {
