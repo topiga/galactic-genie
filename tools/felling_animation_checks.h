@@ -44,13 +44,34 @@ static void fellingAnimationChecks(swgb::Assets &assets) {
         depletion.update(.1f,{});
     check(depletion.objectResourceAmount(smallTree)==0.f && depletion.objectActive(smallTree) &&
           depletion.objectSelected(smallTree),"Gather exhaustion retains dying resource until its owner update");
+    const auto child=smallTree+1;
+    const auto treePosition=depletion.objectPosition(smallTree);
     depletion.update(.1f,{});
     check(!depletion.objectActive(smallTree) && depletion.objectRegisteredForTesting(smallTree) &&
           !depletion.objectSelected(smallTree),"State7 removes actionability and selection but preserves registration");
+    check(depletion.objectUnitId(child)==415 && depletion.objectPlayer(child)==0 &&
+          depletion.objectResourceAmount(child)==180.f && depletion.objectPosition(child)==treePosition &&
+          depletion.objectFacing(child)==0.f,"Original dead master creates a separate lifetime object at its parent's position");
     depletion.update(.1f,{});
     check(depletion.objectRegisteredForTesting(smallTree),"State8 remains registered for one further owner update");
+    check(depletion.objectResourceAmount(child)==float(180.0-double(.1f)),
+          "New child was admitted in the creation pass and decays on the following update");
     depletion.update(.1f,{});
     check(!depletion.objectRegisteredForTesting(smallTree),"Final owner update deregisters the dead resource");
+    const float lifetime=depletion.objectResourceAmount(child);
+    for(int tick=1;tick<=180;++tick) {
+        depletion.update(1.f,{});
+        check(depletion.objectActive(child) &&
+              depletion.objectResourceAmount(child)==std::max(0.f,lifetime-float(tick)),
+              "Dead unit decays through its resource lifetime, not a fixed remains timer");
+    }
+    depletion.update(1.f,{});
+    check(!depletion.objectActive(child) && depletion.objectRegisteredForTesting(child),
+          "Expired dead unit enters7 while retaining registration");
+    depletion.update(1.f,{});
+    check(depletion.objectRegisteredForTesting(child),"Expired dead unit enters8 before final removal");
+    depletion.update(1.f,{});
+    check(!depletion.objectRegisteredForTesting(child),"Expired dead unit is removed by live-list finalization");
 
     swgb::Game canceled(assets);
     check(canceled.init(7,96,&error,1,1),error.c_str());
@@ -64,5 +85,18 @@ static void fellingAnimationChecks(swgb::Assets &assets) {
     check(canceled.issueGatherForTesting(interrupted,uncut),"Reassign the same tree after Stop");
     for(int tick=0;tick<5;++tick)canceled.update(.1f,{});
     check(canceled.objectHitPoints(uncut)==25.f,"Reassigned preparation starts a fresh attack phase");
+
+    auto &dead=const_cast<swgb::dat::DatFile &>(assets.dat()).civs.at(0).units.at(415);
+    Restore restoreDead{dead,dead};
+    dead.resourceStorages[1]={12,2.f,0};
+    swgb::Game storageOrder(assets);
+    check(storageOrder.init(7,96,&error,1,1),error.c_str());
+    const auto lastWorker=storageOrder.spawnObjectForTesting(1,83,1,27.f,40.5f);
+    const auto lastTree=storageOrder.spawnObjectForTesting(0,349,0,27.5f,40.5f);
+    check(storageOrder.issueGatherForTesting(lastWorker,lastTree),"Assign last-storage factory fixture");
+    for(int tick=0;tick<200 && !storageOrder.objectRegisteredForTesting(lastTree+1);++tick)
+        storageOrder.update(.1f,{});
+    check(storageOrder.objectUnitId(lastTree+1)==415 && storageOrder.objectResourceAmount(lastTree+1)==2.f,
+          "Original base constructor retains the last mode0 resource storage");
 
 }

@@ -9,6 +9,7 @@
 #include "pathfinding.h"
 #include "../core/scenario.h"
 #include "../core/genie_work_attack.h"
+#include "../core/genie_update_list.h"
 
 #include <array>
 #include <cstdint>
@@ -276,6 +277,11 @@ public:
     }
     bool objectActive(uint32_t spawnId) const;
     bool objectRegisteredForTesting(uint32_t id) const { return findObject(id) != nullptr; }
+    bool transferObjectForTesting(uint32_t id, int player) {
+        Object *object=findObject(id);
+        if (!object || player<0 || uint32_t(player)>worldPlayerCount_) return false;
+        setObjectOwner(*object,player);return true;
+    }
     float resource(int player, int resourceId) const;
     bool researchTechnology(int player, int technologyId);
     const std::string &currentInstruction() const { return currentInstruction_; }
@@ -811,6 +817,8 @@ private:
         float flashTime = 0;
         float gateOpenAmount = 0;
         float gateCloseTimer = 0;
+        int updateOwner = -1;
+        size_t updateSlot = GenieUpdateList::npos;
         uint8_t resourceDeathState = 0;
         bool fellingPending = false;
         bool dyingSoundPlayed = false;
@@ -966,6 +974,9 @@ private:
     const dat::Unit *findUnit(int civ, const std::string &name) const;
     const dat::Unit *findUnit(int civ, int id) const;
     Object *spawn(int civ, const std::string &name, int player, float x, float y, float facing);
+    void registerObjectUpdate(size_t index);
+    void unregisterObjectUpdate(Object &object);
+    void setObjectOwner(Object &object, int player);
     Object *addObject(const dat::Unit *unit, int player, float x, float y, float facing,
                       uint32_t spawnId, uint16_t initialFrame = 0, bool hidden = false,
                       int32_t garrisonedInId = -1, bool triggerAddressable = true);
@@ -1322,7 +1333,7 @@ private:
     void updateProjectiles(float dt);
     void updateRemains(float dt);
     void damageObject(Object &object, int damage, uint32_t attackerId);
-    void killObject(Object &object, bool countKill = true);
+    void killObject(Object &object, bool countKill = true, bool retainRemains = true);
     void objectScreenPosition(const Object &object, int screenW, int screenH,
                               float &screenX, float &screenY) const;
     void screenToWorld(float screenX, float screenY, int screenW, int screenH,
@@ -1436,6 +1447,7 @@ private:
     std::vector<uint8_t> tileSlope_;
     bool rmsTileElevation_=false;
     std::vector<Object> objects_;
+    std::array<GenieUpdateList,17> ownerUpdateLists_;
     std::unordered_map<uint32_t, size_t> objectIndices_;
     std::vector<Projectile> projectiles_;
     std::vector<Remains> remains_;

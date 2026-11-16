@@ -35,5 +35,17 @@ static void objectAnimationLifecycleChecks(swgb::Assets &assets) {
     const auto beforePause=game.objectAnimationForTesting(3);
     game.updatePaused(1,{});
     check(game.objectAnimationForTesting(3)==beforePause,"Pause freezes animated sprite clocks without pretending idle means sleep");
-    std::puts("PASS: original base/static versus animated sprite clocks and pause");
+    for (int owner : {1,1,0}) {
+        const float before=game.objectAnimationForTesting(3)[0];
+        check(game.transferObjectForTesting(3,owner),"Transfer animated fixture between owner lists");
+        game.update(.25f,{});
+        check(std::abs(game.objectAnimationForTesting(3)[0]-before-.25f)<.00001f,
+              "Transferred object updates once, including repeated same-owner assignment");
+    }
+    check(game.initScenario(scenario,&error),error.c_str());
+    const float restarted=game.objectAnimationForTesting(3)[0];
+    game.update(.25f,{});
+    check(std::abs(game.objectAnimationForTesting(3)[0]-restarted-.25f)<.00001f,
+          "Session reset discards previous owner-list registrations");
+    std::puts("PASS: original base/static versus animated sprite clocks, owner transfer, reset and pause");
 }

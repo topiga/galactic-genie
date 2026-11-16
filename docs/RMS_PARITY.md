@@ -5384,3 +5384,62 @@ not new failures from this change. Logs: `felling-death-{local,bonus,combat,fixe
 and `felling-baseline-fixes.log`. Desktop menu/preferences and60 dummy-driver
 render/audio frames also pass; this does not constitute a live Windows or
 complete-match comparison.
+
+### Persistent owner traversal and original base dead-unit creation (2026-11-17)
+
+Owner updates now traverse persistent lists of backing-storage indices, registered
+by `addObject` and cleared on session reset. Ownership changes remove the old
+entry and append to the new owner's list. Finalization swap-removes the entry,
+repairs the moved object's slot and revisits that position; ordinary callbacks
+advance even if they migrated themselves. The shared live-count list passes all
+eight original mutation traces plus4096 callback appends/reallocations and zero
+payload checks. Native tests also cover transfer, same-owner no-op and reset.
+Objects are not erased from backing storage during this pass.
+
+This is the primary traversal bridge: all current registrations still enter
+the primary list. Constructor sleep/auxiliary routing remains disabled until
+the corresponding target-reference and frozen-building events are ported. This
+preserves legacy ticking rather than inferring membership from `active` or idle
+state. Full awake/sleeping membership and auxiliary/world-manager routing remain
+explicit gaps.
+
+The supported Gaia base dead-master family now creates a separate native world
+object instead of a `Remains` sprite. The factory uses the resolved dead
+prototype, original mode0-storage overwrite order, parent position and a new
+identity; it does not copy the parent's facing or remaining carbon. Creation is
+staged only until the executing callback returns, then appended before traversal
+advances, so reallocation cannot invalidate that callback and the child receives
+its first update in the same owner pass.
+
+Real dead master415 initializes HP0, resource12=180, decay1 and standing graphic5171.
+It consumes one constructor RNG draw, then its first admitted update enters3,
+retains the standing graphic and consumes another. At dt1, actual controls retain
+amount0/state3 at update181, enter7 at182,8 at183 and remove at184. Native tests
+exercise the same resource-based lifetime and deferred removal, including the
+creation-pass admission and final swap-last visit. Tree death admission itself
+also consumes a separate original facet draw, even for a single-angle graphic.
+Native creation is guarded to the verified static, single-facet, non-undead,
+zero-HP, resource12 family without owner-storage effects; other dead masters
+retain the existing adapter. Original placement adjustment, world/count registry
+side effects, arbitrary facing/sprite cases and non-Gaia master lookup remain
+outside this proof.
+
+Evidence: `tree-dead415-creation-lifecycle-findings-2026-11-16.json`,
+`tree-dead415-factory-v4-oracle-2026-11-16.json`,
+`tree-dead415-same-owner-pass-matrix-oracle-2026-11-16.json` and
+`tree349-death-admission-rng-v1-oracle-2026-11-16.json`. The six seed/lookup controls
+execute original constructors, owner lists and lifecycle/destruction, with the
+explicit allocator, placement and external world-registry boundaries retained
+in the findings ledger. They are not a complete live Windows match comparison.
+
+Validation: focused ASan/UBSan checks pass for live lists, owner transfer/reset,
+separate child identity/position, creation-pass admission, resource lifetime,
+last-mode0 storage initialization, deferred finalization, felling and command
+cancellation. Broad bonus/research/healing/AI and combat/gather/garrison suites
+pass. The compatibility suite reproduces the same five baseline failures listed
+above, with no new failures. The rebuilt desktop passes menu/preferences and60
+dummy-driver render/audio frames. Logs: `owner-list-local.log`,
+`dead-factory-{local,final-local,bonus,combat,fixes,desktop}.log`. Review also
+caught and fixed an early-return regression that would have left highlighted
+felled resources flashing indefinitely; their presentation timer remains ahead
+of lifecycle dispatch.

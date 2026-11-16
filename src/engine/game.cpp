@@ -15,6 +15,7 @@
 #include <iomanip>
 #include <limits>
 #include <map>
+#include <optional>
 #include <queue>
 #include <set>
 #include <sstream>
@@ -427,6 +428,7 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     automaticTargetsAcquired_ = retaliationOrders_ = armedBuildingsEngaged_ = 0;
     attackModeChanges_ = 0;
     objects_.clear();
+    ownerUpdateLists_ = {};
     shieldGeneratorIndices_.clear();
     shieldGeneratorCacheSize_=size_t(-1);
     unitPrototypes_ = {}; unitPrototypeEffects_ = {}; unitPrototypesReady_ = {};
@@ -1078,6 +1080,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     }
 
     objects_.clear();
+    ownerUpdateLists_ = {};
     shieldGeneratorIndices_.clear();
     shieldGeneratorCacheSize_=size_t(-1);
     unitPrototypes_ = {}; unitPrototypeEffects_ = {}; unitPrototypesReady_ = {};
@@ -1615,6 +1618,31 @@ const dat::Unit *Game::findUnit(int civ, int id) const {
     return id >= 0 && (size_t)id < units.size() && units[(size_t)id].exists ? &units[(size_t)id] : nullptr;
 }
 
+void Game::registerObjectUpdate(size_t index) {
+    Object &object = objects_[index];
+    if (object.player < 0 || size_t(object.player) >= ownerUpdateLists_.size()) return;
+    // shortcut: Unported target-reference/frozen-building events retain legacy primary ticking.
+    object.updateOwner = object.player;
+    object.updateSlot = ownerUpdateLists_[size_t(object.player)].append(index);
+}
+
+void Game::unregisterObjectUpdate(Object &object) {
+    if (object.updateOwner < 0) return;
+    const size_t slot = object.updateSlot;
+    const size_t moved = ownerUpdateLists_[size_t(object.updateOwner)].remove(slot);
+    if (moved != GenieUpdateList::npos) objects_[moved].updateSlot = slot;
+    object.updateOwner = -1;
+    object.updateSlot = GenieUpdateList::npos;
+}
+
+void Game::setObjectOwner(Object &object, int player) {
+    if (object.player == player) return;
+    const size_t index = size_t(&object - objects_.data());
+    unregisterObjectUpdate(object);
+    object.player = player;
+    registerObjectUpdate(index);
+}
+
 Game::Object *Game::addObject(const dat::Unit *unit, int player, float x, float y, float facing,
                               uint32_t spawnId, uint16_t initialFrame, bool hidden,
                               int32_t garrisonedInId, bool triggerAddressable) {
@@ -1651,6 +1679,7 @@ Game::Object *Game::addObject(const dat::Unit *unit, int player, float x, float 
     object.garrisonedInId = garrisonedInId;
     object.triggerAddressable = triggerAddressable;
     objects_.push_back(object);
+    registerObjectUpdate(objects_.size() - 1);
     if (spawnId) objectIndices_[spawnId] = objects_.size() - 1;
     return &objects_.back();
 }
@@ -1891,7 +1920,7 @@ void Game::updateLivestockOwnership() {
         }
         if (closestPlayer > 0 &&
             closestPlayer != livestock.player) {
-            livestock.player = closestPlayer;
+            setObjectOwner(livestock, closestPlayer);
             if (closestPlayer == localPlayer_)
                 playInterfaceFeedback(
                     kInterfaceCaptureAnimalSound);
@@ -9815,7 +9844,7 @@ void Game::syncFarmTerrain(Object &farm, bool dying) {
     farm.farmStage = stage;
 }
 
-void Game::killObject(Object &object, bool countKill) {
+void Game::killObject(Object &object, bool countKill, bool retainRemains) {
     if (object.resourceDeathState == 3) object.resourceDeathState = 7;
     clearUnitCommandOrder(object);
     if (object.unit->cls == 7 && object.unit->type == dat::UT_Building)
@@ -9914,7 +9943,7 @@ void Game::killObject(Object &object, bool countKill) {
             break;
         }
     }
-    if (remains.dyingGraphic >= 0 || remains.deadUnit) remains_.push_back(remains);
+    if (retainRemains && (remains.dyingGraphic >= 0 || remains.deadUnit)) remains_.push_back(remains);
 
     int soundId = object.unit->dyingSound;
     if (soundId < 0) soundId = graphicSound(object.unit->dyingGraphic);
@@ -12681,7 +12710,7 @@ void Game::executeEffect(const ScenarioEffect &effect) {
         break;
     }
     case 18:
-        for (Object *object : effectTargets(effect)) object->player = targetPlayer;
+        for (Object *object : effectTargets(effect)) setObjectOwner(*object, targetPlayer);
         refreshAllAutomaticTechnologies();
         rebuildAdjacency();
         break;
@@ -14563,19 +14592,49 @@ void Game::updatePlayerObjects(float dt,int player) {
             std::min(cohesion.nearestRemaining, remaining);
         cohesion.movingMembers++;
     }
-    for (Object &o : objects_) {
-        if (o.player!=player) continue;
-        if (o.resourceDeathState == 7) { o.resourceDeathState = 8; continue; }
+    struct DeadCreation { const dat::Unit *unit; int owner; float x, y, amount; };
+    std::optional<DeadCreation> pendingDead;
+    const auto updateObject = [&](size_t index) {
+        Object &o = objects_[index];
+        if (o.player!=player) return false;
+        if (o.active) o.flashTime = std::max(0.f, o.flashTime - dt);
+        if (o.resourceDeathState == 7) { o.resourceDeathState = 8; return false; }
         if (o.resourceDeathState == 8) {
-            objectIndices_.erase(o.spawnId);
-            o.resourceDeathState = 9;
-            continue;
+            return true;
         }
-        if (!o.active) continue;
-        if (o.resourceDeathState == 3 && o.resourceAmount <= 0.f) {
-            // shortcut: Dead-unit415 still uses the native remains renderer, not the original object factory.
-            killObject(o, false);
-            continue;
+        if (!o.active) return false;
+        if (o.resourceDeathState == 2) {
+            // Base constructor's zero-HP child enters3 on its first same-owner pass.
+            o.resourceDeathState = 3;
+            genieRandomDraw(legacyRandomState_); // flags4 still draws a facet with one angle
+            o.facing = 0.f;
+            return false;
+        }
+        if (o.resourceDeathState == 3) {
+            if (o.resourceAmount > 0.f) {
+                if (o.unit->resourceDecay > 0.f)
+                    o.resourceAmount = std::max(0.f, float(double(o.resourceAmount) - double(dt)*o.unit->resourceDecay));
+                return false; // reaching zero does not advance death until the next update
+            }
+            const dat::Unit *dead = o.player == 0 ? findUnit(0, o.unit->deadUnitId) : nullptr;
+            const dat::Graphic *graphic = dead ? assets_.dat().graphic(dead->standingGraphic[0]) : nullptr;
+            const dat::ResourceStorage *lifetime = nullptr;
+            bool storageEffects = false;
+            if (dead) for (const auto &storage : dead->resourceStorages) {
+                if (storage.type < 0) continue;
+                if (storage.flag == 0) lifetime = &storage; // original constructor keeps the last mode0 storage
+                else storageEffects = true;
+            }
+            // Verified base-factory family: single-facet static lifetime objects, not an ID-specific replacement.
+            const bool originalChild = dead && dead->type == dat::UT_EyeCandy && dead->hitPoints == 0 &&
+                !dead->undeadMode && dead->deadUnitId < 0 && dead->dyingGraphic < 0 &&
+                !storageEffects && lifetime && lifetime->type == 12 && lifetime->amount > 0.f &&
+                dead->resourceDecay > 0.f &&
+                graphic && graphic->sequenceType == 6 && graphic->frameCount == 1 && graphic->angleCount == 1;
+            if (originalChild) pendingDead = DeadCreation{dead,o.player,o.x,o.y,lifetime->amount};
+            // shortcut: Other dead-master families retain the native remains adapter until their factories are ported.
+            killObject(o, false, !originalChild);
+            return false;
         }
         if (o.fellingPending && o.hitPoints < 1.f) {
             o.fellingPending = false;
@@ -14583,6 +14642,12 @@ void Game::updatePlayerObjects(float dt,int player) {
                 !o.unit->undeadMode && o.unit->resourceDecay == 0.f && o.garrisonedInId < 0)
                 o.resourceDeathState = 3;
             o.felled = true;
+            const dat::Graphic *dying = assets_.dat().graphic(o.unit->dyingGraphic);
+            if ((o.unit->type == dat::UT_EyeCandy || o.unit->type == dat::UT_Trees) &&
+                dying && (dying->sequenceType & 4) && dying->angleCount == 1) {
+                genieRandomDraw(legacyRandomState_);
+                o.facing = 0.f;
+            }
             o.animTime = 0.f;
             int sound = o.unit->dyingSound;
             if (sound < 0) sound = graphicSound(o.unit->dyingGraphic);
@@ -14621,7 +14686,6 @@ void Game::updatePlayerObjects(float dt,int player) {
         o.animTime += animationDt;
         updateGathering(o, dt);
         o.approachRetry = std::max(0.0f, o.approachRetry - dt);
-        o.flashTime = std::max(0.0f, o.flashTime - dt);
         updateUnitCommandOrder(o, dt);
         updateHealing(o, dt);
         // Passengers and garrisoned units don't fight from inside (a
@@ -14640,27 +14704,27 @@ void Game::updatePlayerObjects(float dt,int player) {
         } else if (!o.healTargetId) {
             updateAttack(o, dt);
         }
-        if (!o.active) continue;
+        if (!o.active) return false;
         if (o.hidden || o.unit->type < dat::UT_DeadFish || o.unit->speed <= 0 ||
             o.unit->type == dat::UT_Building)
-            continue;
+            return false;
         o.stateTime -= dt;
         if (o.state == State::Attack ||
             o.state == State::Build ||
             o.state == State::Gather ||
             o.state == State::Repair ||
             o.state == State::Heal)
-            continue;
+            return false;
         if (o.state == State::Idle) {
             if (o.moveGoalActive) {
-                if (o.marchGroupId) continue; // the march update steers it
+                if (o.marchGroupId) return false; // the march update steers it
                 o.moveRetryTime -= dt;
                 if (o.moveRetryTime <= 0) {
                     o.moveRetryTime =
                         0.35f + (o.spawnId % 5) * 0.04f;
                     issueMove(o, o.targetX, o.targetY);
                 }
-                continue;
+                return false;
             }
         } else {
             // Original arrival rule (0x4a45a0): a unit walking to an object
@@ -14680,7 +14744,7 @@ void Game::updatePlayerObjects(float dt,int player) {
                     o.moveGoalActive = false;
                     o.moveSpeedLimit = 0;
                     o.facing = std::atan2(goal->y - o.y, goal->x - o.x);
-                    continue;
+                    return false;
                 }
             }
             if (o.moveGoalActive && !o.attackTargetId) {
@@ -14708,14 +14772,14 @@ void Game::updatePlayerObjects(float dt,int player) {
                     o.stateTime =
                         1.5f + r01(rng_) * 5.0f;
                     o.animTime = 0;
-                    continue;
+                    return false;
                 }
             }
             if (o.pathIndex >= o.path.size()) {
                 if (o.marchGroupId &&
                     o.moveGoalActive) {
                     o.state = State::Walk;
-                    continue;
+                    return false;
                 }
                 o.state = State::Idle;
                 o.stateTime = 1.5f + r01(rng_) * 5.0f;
@@ -14729,7 +14793,7 @@ void Game::updatePlayerObjects(float dt,int player) {
                     o.moveGoalActive = false;
                     o.moveSpeedLimit = 0;
                 }
-                continue;
+                return false;
             }
             const auto &waypoint = o.path[o.pathIndex];
             float dx = waypoint[0] - o.x, dy = waypoint[1] - o.y;
@@ -14897,7 +14961,7 @@ void Game::updatePlayerObjects(float dt,int player) {
                         o.wander = wander;
                         o.moveBestDistance = bestDistance;
                         o.detourTime = 1.0f;
-                        continue;
+                        return false;
                     }
                 }
                 // Reached (or passed) the waypoint.
@@ -14955,7 +15019,7 @@ void Game::updatePlayerObjects(float dt,int player) {
                     o.pathIndex = 0;
                     o.moveGoalActive = false;
                     o.moveSpeedLimit = 0;
-                    continue;
+                    return false;
                 }
                 // Jammed by other units just short of the goal: take a free
                 // spot nearby (or stop there) instead of pushing forever.
@@ -14967,7 +15031,7 @@ void Game::updatePlayerObjects(float dt,int player) {
                     o.moveStallTime = 0.0f;
                     if (targetDistance < 2.5f && o.moveSpreadRetries < 3 &&
                         spreadBlockedMoveGoal(o))
-                        continue;
+                        return false;
                     o.state = State::Idle;
                     o.stateTime = 1.5f + r01(rng_) * 5.0f;
                     o.animTime = 0;
@@ -14975,7 +15039,7 @@ void Game::updatePlayerObjects(float dt,int player) {
                     o.pathIndex = 0;
                     o.moveGoalActive = false;
                     o.moveSpeedLimit = 0;
-                    continue;
+                    return false;
                 }
                 if (blocker && o.pathGoalId && o.blockedTime >= 0.4f &&
                     o.detourTime <= 0.0f) {
@@ -15001,7 +15065,7 @@ void Game::updatePlayerObjects(float dt,int player) {
                             issueMove(o, fx, fy, goal, o.pathGoalClearance);
                             o.wander = wander;
                             o.detourTime = 0.75f;
-                            continue;
+                            return false;
                         }
                     }
                 }
@@ -15016,7 +15080,7 @@ void Game::updatePlayerObjects(float dt,int player) {
                     }
                     o.detourTime = 0.75f;
                     if (detourAround(o, o.path[rejoin][0], o.path[rejoin][1]))
-                        continue;
+                        return false;
                 }
                 if (!staticOk && o.blockedTime >= 0.25f && o.detourTime <= 0.0f) {
                     // The static world changed under the path: re-plan.
@@ -15027,13 +15091,13 @@ void Game::updatePlayerObjects(float dt,int player) {
                               o.pathGoalClearance);
                     o.wander = wander;
                     o.repathCount++;
-                    continue;
+                    return false;
                 }
                 if (o.blockedTime >= 2.0f) {
                     o.blockedTime = 0.0f;
                     if (o.attackTargetId) {
                         retryAttackApproach(o);
-                        continue;
+                        return false;
                     }
                     if (++o.repathCount > 4) {
                         // Give up, like the original does after repeated
@@ -15044,11 +15108,11 @@ void Game::updatePlayerObjects(float dt,int player) {
                         o.moveGoalActive = false;
                         o.moveSpeedLimit = 0;
                         o.repathCount = 0;
-                        continue;
+                        return false;
                     }
                     if (o.moveGoalActive && targetDistance < 2.5f &&
                         spreadBlockedMoveGoal(o))
-                        continue;
+                        return false;
                     const Object *goalObject = findObject(o.pathGoalId);
                     const bool wander = o.wander;
                     issueMove(o, o.targetX, o.targetY, goalObject,
@@ -15057,7 +15121,30 @@ void Game::updatePlayerObjects(float dt,int player) {
                 }
             }
         }
-    }
+        return false;
+    };
+    ownerUpdateLists_[size_t(player)].traverse([&](size_t index) {
+        const bool finalize = updateObject(index);
+        // Release all callback borrows before addObject can reallocate backing storage.
+        if (pendingDead) {
+            const DeadCreation creation = *pendingDead;
+            pendingDead.reset();
+            genieRandomDraw(legacyRandomState_);
+            Object *child = addObject(creation.unit,creation.owner,creation.x,creation.y,0.f,nextSpawnId_++);
+            if (child) {
+                child->resourceType = 12;
+                child->resourceAmount = creation.amount;
+                child->resourceDeathState = 2;
+                classifyObject(objects_.size()-1);
+            }
+        }
+        return finalize;
+    }, [&](size_t index) {
+        Object &object = objects_[index];
+        objectIndices_.erase(object.spawnId);
+        object.resourceDeathState = 9;
+        unregisterObjectUpdate(object);
+    });
 }
 
 void Game::update(float dt,const InputState &in) {
