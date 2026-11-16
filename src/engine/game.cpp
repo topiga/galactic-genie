@@ -2846,8 +2846,12 @@ bool Game::engagedWithCurrentTarget(const Object &object) const {
 bool Game::technologyCommandApplies(
     const dat::EffectCommand &command,
     const Object &object) const {
-    return (command.a < 0 || command.a == object.unit->id) &&
-           (command.b < 0 || command.b == object.unit->cls);
+    const int civ=civilizationForPlayer(object.player);
+    if(civ<0 || size_t(civ)>=assets_.dat().civs.size())return false;
+    // Original4c2730 prioritizes an in-range unit index, otherwise tries the class.
+    if(command.a>=0 && size_t(command.a)<assets_.dat().civs[size_t(civ)].units.size())
+        return command.a==object.unit->id;
+    return command.b>=0 && command.b==object.unit->cls;
 }
 
 float Game::modifiedUnitAttribute(const Object &object,

@@ -20,6 +20,16 @@ static void unitCostChecks(swgb::Assets &assets) {
         command.type=type; command.a=83; command.b=-1; command.c=attribute; command.d=value;
         return command;
     };
+    // Original dispatcher controls: explicit unit wins, invalid unit falls back to class.
+    const struct {int16_t unit,cls;float duration;} selectors[]={
+        {83,55,11},{-1,-1,10},{int16_t(data.civs[1].units.size()),unit.cls,11},{109,unit.cls,10}
+    };
+    for(const auto &selector:selectors) {
+        auto command=effect(4,101,1);command.a=selector.unit;command.b=selector.cls;
+        commands={command};
+        check(game.unitTrainingTimeForTesting(1,unit)==selector.duration,
+              "Original unit-selector priority and class fallback use the full master count");
+    }
     commands={effect(5,100,1.05f),effect(5,100,1.05f),effect(5,101,1.05f),effect(5,101,1.05f)};
     auto costs=game.unitCostsForTesting(1,unit);
     check(costs[0].amount==10 && costs[1].amount==22 && costs[2].amount==30,
