@@ -2,16 +2,16 @@
 
 ## Current comparison coverage: 2026-11-16
 
-Eleven packaged profiles have complete original-runner comparisons at fixed Tiny120,
+Twelve packaged profiles have complete original-runner comparisons at fixed Tiny120,
 two Empire players and default resources: Forest54204, Reytha54220, Arid54201,
 Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
-Tatooine New55019, Endor54207 and four-biome connections54210.
-The shared packaged suite contains41 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
+Tatooine New55019, Endor54207, four-biome connections54210 and inland54203.
+The shared packaged suite contains45 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
 Gaia resource accounting and deferred foundation rendering.
 
-The standard production audit accepts33/138 map/seed attempts (eleven of46 resources,
-three seeds each);105 are explicitly rejected. This measures supported
+The standard production audit accepts36/138 map/seed attempts (twelve of46 resources,
+three seeds each);102 are explicitly rejected. This measures supported
 configurations, not an engine completion percentage. New comparisons run the
 original executable locally with modeled host boundaries. Live Windows evidence
 below remains a separate, earlier baseline. Later gameplay and other map settings
@@ -2949,3 +2949,49 @@ All41 shared packaged cases pass with ASan/UBSan, including native import and
 startup resource checks, alongside the retained Forest/general-row/foundation
 suites. Strict integrated RMS checks pass. No fresh live Windows session was
 used for this expansion.
+
+### Inland mixed-land and large fish (2026-11-16)
+
+Raw54203 composes one growing neutral shallow-water land with two player lands,
+40 border fuzziness on the neutral land, eight terrain rows, cliffs and two
+successive elevation passes over the same ground. The first pass creates five
+levels; the second creates seven. Original finalizer arrays independently confirm
+the expanded terrain/elevation parameters, including the script's last-wins
+scaling directives. Native generation uses the existing algorithms with a bounded
+admission profile for fixed Tiny120/two-Empire/default resources.
+
+| Seed | Biome | Objects | Final RNG | Gaia unit/total cost |
+|---:|---|---:|---:|---:|
+| 1 | Naboo Grass | 1717 | 3082523881 | 1900 |
+| 12345 | Naboo Grass | 1724 | 3299116862 | 3750 |
+| 16160 | Reytha | 1752 | 682418526 | 2300 |
+| 8000 | Zaloriis | 1703 | 147225625 | 1800 |
+
+Full ordered objects, terrain/elevation/slopes, captured startup poses and final
+RNG match. Independent original resource replays also agree. Holocron exclusion
+now handles the three land centers; large fish450/451/455 reuse456's integer
+centers,2x2 terrain footprint, nonblocking collision and three-draw construction.
+Their metadata and graphics were loaded through original loaders. Fish450/451
+have35 frames at.1s and350 food;455 has30 frames at.13s and225 food.
+
+Zaloriis explicitly creates43 type20 carbon rocks1161 after map-size scaling.
+Unlike type10 resources or type30 moving resources, they consume two draws and
+retain object facet0. The base constructor's random facet is cleared at54fe56
+following sprite creation. The second draw selects the sole sprite frame and
+still consumes RNG. Static sprite/render tracing confirms the temporary angle
+is not retained;54a0f0 only dispatches graphic sounds, which are absent for5158.
+Native placement now follows this distinct constructor path and preserves HP100.
+The new resource remains a blocker for subsequent resource and herd placement.
+
+Evidence: `rms-packaged-inland54203-full-findings-2026-11-16.json`,
+`rms-inland54203-startup-ledger-findings-2026-11-16.json`,
+`rms-inland54203-assets-provenance-2026-11-16.json`,
+`rms-inland54203-carbon1161-factory-findings-2026-11-16.json`, and the individual
+`rms-text-full-inland54203-1-1-SEED-oracle/resources-2026-11-16.json` captures.
+This establishes bounded startup behavior; it does not certify later fishing,
+resource depletion, all settings or live rendered-frame parity.
+
+All45 shared packaged cases pass with ASan/UBSan. The retained full Forest,
+52 general rows, foundation and transport checks also pass, as do strict RMS
+integration, production CLI tests and the desktop dummy-video/audio smoke.
+The production audit accepts36/138 attempts across twelve profiles;102 reject.

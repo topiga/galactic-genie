@@ -32,6 +32,7 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         {66,5134,30,29,0,8,10,3,800,1,1.f},
         {102,5232,30,30,0,8,10,2,350,1,1.f},
         {1160,5147,30,31,50,11,12,1,100,2,2.f},
+        {1161,5158,20,31,100,8,10,1,100,2,2.f},
         {1170,5266,10,42,50,1,3,-1,0,0,1.f},
         {1171,5267,10,42,50,1,3,-1,0,0,1.f},
         {1123,5249,10,42,50,1,10,-1,0,0,0.f},
@@ -76,7 +77,7 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         u.obstructionType!=(mountain?10:(unitId==1123 || crater)?0:2) || u.obstructionClass!=((unitId==1123 || crater)?0:(unitId==1170 || unitId==1171 || building)?3:1) || u.civilization ||
         u.enableAutoGather!=(spec.resource<0?0:1) || !g || g->sequenceType!=(mine?5:(mountain || crater)?0:6) || g->angleCount!=spec.angles)
         return fail("unsupported resource prototype or graphic");
-    if ((spec.type==30 || mountain || crater || building) && (u.createDoppelgangerOnDeath!=spec.doppel || u.speed!=0 ||
+    if ((spec.type==20 || spec.type==30 || mountain || crater || building) && (u.createDoppelgangerOnDeath!=spec.doppel || u.speed!=0 ||
         u.trackingUnit!=-1 || u.trackingUnitMode!=0 || u.trackingUnitDensity!=0 ||
         g->frameCount!=(mine?8:1) || g->soundId!=-1 || !g->angleSounds.empty()))
         return fail("unsupported resource movement or sprite metadata");
@@ -190,11 +191,15 @@ const ResourceSpec *validateBird(const dat::DatFile &data,const std::vector<uint
     return &bird;
 }
 const ResourceSpec *validateAquatic(const dat::DatFile &data,int16_t unitId,const std::vector<uint8_t> &terrain,std::string *err) {
+    static constexpr ResourceSpec fish450{450,5269,30,23,0,9,1,17,350,1,0};
+    static constexpr ResourceSpec fish451{451,5270,30,23,0,9,1,17,350,1,0};
+    static constexpr ResourceSpec fish455{455,5271,30,23,0,9,1,17,225,1,0};
     static constexpr ResourceSpec deepFish{456,5272,30,23,0,9,1,17,225,1,0};
     static constexpr ResourceSpec fish{69,5268,30,25,0,9,1,17,200,1,0};
     static constexpr ResourceSpec wave{1585,10295,30,42,1000,31,1,-1,0,0,0};
-    const auto &spec=unitId==456?deepFish:unitId==69?fish:wave;
-    const float radius=unitId==456?1.f:.5f;
+    const auto &spec=unitId==450?fish450:unitId==451?fish451:unitId==455?fish455:unitId==456?deepFish:unitId==69?fish:wave;
+    const bool largeFish=unitId==450 || unitId==451 || unitId==455 || unitId==456;
+    const float radius=largeFish?1.f:.5f;
     auto fail=[&]()->const ResourceSpec* {if(err)*err="RMS aquatic: unsupported original profile";return nullptr;};
     if(data.civs.empty() || data.civs[0].units.size()<=size_t(unitId) || data.terrainRestrictions.size()<=size_t(spec.restriction))return fail();
     const auto &u=data.civs[0].units[unitId];const auto *g=data.graphic(spec.graphic);
@@ -203,7 +208,7 @@ const ResourceSpec *validateAquatic(const dat::DatFile &data,int16_t unitId,cons
        u.lineOfSight!=0 || u.speed!=(unitId==69?1.32f:0.f) || u.terrainRestriction!=spec.restriction || u.obstructionType || u.obstructionClass ||
        u.hillMode || u.flyMode || u.canBeBuiltOn || u.recyclable || u.civilization || u.enableAutoGather!=(unitId!=1585) || u.createDoppelgangerOnDeath!=spec.doppel ||
        u.placementSideTerrain[0]!=(unitId==69?2:-1) || u.placementSideTerrain[1]!=(unitId==69?35:-1) || u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
-       u.trainSound!=-1 || !g || g->sequenceType!=7 || g->frameCount!=(unitId==456?30:unitId==69?12:48) || g->angleCount!=1 || g->frameDuration!=.13f ||
+       u.trainSound!=-1 || !g || g->sequenceType!=7 || g->frameCount!=((unitId==450 || unitId==451)?35:largeFish?30:unitId==69?12:48) || g->angleCount!=1 || g->frameDuration!=((unitId==450 || unitId==451)?.1f:.13f) ||
        g->replayDelay!=0 || g->soundId!=-1 || !g->angleSounds.empty())return fail();
     int stores=0;for(const auto &storage:u.resourceStorages){if(storage.flag || (storage.type>=0 && (storage.type!=spec.resource || storage.amount!=spec.amount)))return fail();stores+=storage.type>=0;}
     if(stores!=(unitId==1585?0:1))return fail();
@@ -365,7 +370,8 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     const bool hunt=unitId==1363 || unitId==1365 || unitId==1475;
     const bool predator=isPredator(unitId);
     if(!objectRow && (unitId==349 || unitId==350 || unitId==411 || unitId==413) && group.mode!=0)return fail("tree species requires verified mode0 rows");
-    const bool tree=isTree(unitId) && group.mode==0,bird=unitId==816,aquatic=unitId==69 || unitId==1585 || unitId==456;
+    const bool tree=isTree(unitId) && group.mode==0,bird=unitId==816,largeFish=unitId==450 || unitId==451 || unitId==455 || unitId==456,
+        aquatic=unitId==69 || unitId==1585 || largeFish;
     const bool bigHunt=unitId==822 || unitId==1249 || unitId==1364;
     const bool herd=crawler || unitId==594 || unitId==833 || hunt || predator || bigHunt;
     const auto *spec=crawler?validateSandcrawler(data,terrain,err):aquatic?validateAquatic(data,unitId,terrain,err):bird?validateBird(data,terrain,err):herd?validateHerd(data,unitId,terrain,err):validateResource(data,unitId,terrain,err);
@@ -529,7 +535,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     auto pass=[&](int tile) {
         const auto &placementTerrain=data.civs[0].units[unitId].placementTerrain;
         if(placementTerrain[0]>=0 && terrain[tile]!=placementTerrain[0] && terrain[tile]!=placementTerrain[1]) return false;
-        if(mountain || crater || building || unitId==456) {
+        if(mountain || crater || building || largeFish) {
             const auto &prototype=data.civs[0].units[unitId];
             const float radius=prototype.collisionSize[0],clearance=prototype.clearanceSize[0];
             const float offset=radius>int(radius)?.5f:0.f;
@@ -556,7 +562,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         return (bird || aquatic || unitId==1123 || !occupied[tile]) && restriction[terrain[tile]]>.05f;
     };
     auto create=[&](int tile) {
-        RmsTimberPlacement placement{float(tile%width)+(unitId==456?0.f:.5f),float(tile/width)+(unitId==456?0.f:.5f),0,0,unitId};
+        RmsTimberPlacement placement{float(tile%width)+(largeFish?0.f:.5f),float(tile/width)+(largeFish?0.f:.5f),0,0,unitId};
         if(mountain || crater || building) {
             // Original snaps by fractional radius; static sequence0 graphics consume no draws.
             const float radius=data.civs[0].units[unitId].collisionSize[0],offset=radius>int(radius)?.5f:0.f;
@@ -591,6 +597,9 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             placement.headingRadians=float(double(heading)*3.14159265358979323846/4.);
             placement.facet=uint8_t((heading+7)%8);
             if(!aquatic)for(int timer=0;timer<((hunt || predator) && unitId!=1465?4:3);++timer)genieRandomDraw(rng);
+        } else if(spec->type==20) {
+            // Original54fe56 clears the base facet after sprite creation consumes its frame draw.
+            genieRandomDraw(rng);genieRandomDraw(rng);
         } else if(spec->type==30) {
             const auto appearance=drawRmsCarbonAppearance(rng,static_cast<uint8_t>(spec->angles));
             placement.facet=appearance.facet;placement.headingRadians=appearance.headingRadians;
@@ -723,8 +732,8 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
         if(err) *err=std::string("RMS holocron: ")+reason;
         return false;
     };
-    if((width!=64 && width!=120) || height!=width || terrain.size()!=size_t(width)*height || (landCenters.size()!=2 && (width!=120 || landCenters.size()!=4)))
-        return fail("requires64/120-square terrain and two land centers (or four at120)");
+    if((width!=64 && width!=120) || height!=width || terrain.size()!=size_t(width)*height || (landCenters.size()!=2 && (width!=120 || (landCenters.size()!=3 && landCenters.size()!=4))))
+        return fail("requires64/120-square terrain and two land centers (or three/four at120)");
     for(const auto &start:landCenters)
         if(start.x<2 || start.y<2 || start.x>int(width)-2 || start.y>int(height)-2) return fail("invalid land center");
     if(std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {

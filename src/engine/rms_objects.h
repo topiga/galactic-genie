@@ -100,6 +100,7 @@ struct RmsGlobalGroupPlacement {
 // ignore workers/scouts/holocrons/other Nerfs, and do not block later herd groups.
 // Aquatic69 supports four scaled single placements with cardinal shore2/35 contact;
 // wave1585 supports eight single placements on terrain22, including animation frames.
+// Full rows also support large fish450/451/455/456 with integer centers and2x2 footprints.
 // Optional rowEligibility preserves original spacing exclusions across rows; an
 // empty vector starts all-eligible. Failure preserves it and RNG and clears output.
 bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
@@ -115,7 +116,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width, uint32_t height,
     const RmsObjectRow *objectRow=nullptr);
 // Original stock holocron285 row: five global placements, land-center exclusion25,
 // temporary spacing20. Bounded to64-square grass or120-square dry/Forest21 terrain
-// with two land centers (or four at120). Slopes do not restrict it; occupiedTiles
+// with two land centers (or three/four at120). Slopes do not restrict it; occupiedTiles
 // supplies retained static obstacles, including forest trees and starting buildings.
 // This helper does not import holocrons or implement their pickup/gameplay.
 // Partial placement when the candidate queue exhausts is successful.
