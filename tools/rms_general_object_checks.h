@@ -37,12 +37,15 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         {6209,1555457656u,1303879948u,742396127u},
         {6208,1935763599u,3019999758u,742396127u},
         {6215,3226277433u,3720278662u,742396127u},
+        {6204,3734544698u,521501797u,742396127u},
+        {6204,1377182600u,950845333u,742396127u},
+        {6206,3096183411u,124473770u,742396127u},
     };
     auto replace=[](std::string &text,const std::string &from,const std::string &to) {
         const auto at=text.find(from);check(at!=std::string::npos,"authored variation finds directive");
         text.replace(at,from.size(),to);
     };
-    for(size_t variant=0;variant<20;++variant) {
+    for(size_t variant=0;variant<23;++variant) {
         auto changed=rows;
         switch(variant) {
         case 0: std::reverse(changed.begin()+4,changed.end());break;
@@ -81,7 +84,7 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
             changed.push_back("create_object 66 { number_of_objects 5 set_tight_grouping number_of_groups 3 place_on_specific_land_id 7 min_distance_to_players 6 max_distance_to_players 12 min_distance_group_placement 3 }");
             changed.push_back("create_object 413 { number_of_objects 10 }");
         }
-        if(variant>=17) {
+        if(variant>=17 && variant<=19) {
             const std::string workers="create_object 83 { set_place_for_every_player number_of_objects 1 min_distance_to_players 6 max_distance_to_players 6 group_placement_radius 3 }";
             if(variant==17)changed.insert(changed.begin()+3,workers);
             else if(variant==18)changed.push_back(workers);
@@ -90,6 +93,18 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
                 for(const auto &row:rows) {
                     changed.push_back(row);
                     if(row.find("create_object 66 ")==0 && (++nova==1 || nova==4))changed.push_back(workers);
+                }
+            }
+        }
+        if(variant>=20) {
+            const std::string scouts="create_object 550 { set_place_for_every_player match_player_civ number_of_objects 1 min_distance_to_players 7 max_distance_to_players 9 group_placement_radius 3 }";
+            if(variant==20)changed.insert(changed.begin()+3,scouts);
+            else if(variant==21)changed.push_back(scouts);
+            else {
+                changed.clear();unsigned nova=0;
+                for(const auto &row:rows) {
+                    changed.push_back(row);
+                    if(row.find("create_object 66 ")==0 && (++nova==1 || nova==4))changed.push_back(scouts);
                 }
             }
         }
@@ -110,15 +125,16 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         }
         if(variant>=17) {
             const int ids[]={4,11,21,37,40,84,98,164,165};
-            const float values[2][9]={{-2,7,2,6,1,3,725,350,375},{-5,10,2,9,1,3,875,500,375}};
-            const int extra=variant==19;
+            const float values[4][9]={{-2,7,2,6,1,3,725,350,375},{-5,10,2,9,1,3,875,500,375},
+                {0,5,2,3,2,3,625,250,375},{-1,6,2,3,3,3,675,300,375}};
+            const int extra=variant>=20?2+(variant==22):int(variant==19);
             for(int owner=1;owner<=2;++owner) {
-                check(game.populationUsedForTesting(owner)==(extra?10:7) && game.populationCapacityForTesting(owner)==5,
-                    "additional workers preserve original population usage/capacity");
+                check(game.populationUsedForTesting(owner)==values[extra][1] && game.populationCapacityForTesting(owner)==5,
+                    "additional owned units preserve original population usage/capacity");
                 for(size_t i=0;i<9;++i) {
                     const float actual=ids[i]==4?game.populationCapacityForTesting(owner)-game.populationUsedForTesting(owner):
                         ids[i]==84?game.playerAttributeForTesting(owner,84):game.resource(owner,ids[i]);
-                    check(actual==values[extra][i],("additional worker resource "+std::to_string(ids[i])+" owner "+std::to_string(owner)+
+                    check(actual==values[extra][i],("additional owned resource "+std::to_string(ids[i])+" owner "+std::to_string(owner)+
                         " got "+std::to_string(actual)+" expected "+std::to_string(values[extra][i])).c_str());
                 }
             }
@@ -178,6 +194,44 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         {19,6115u,2,4,255,1.0f,40.0f},
         {19,6116u,2,4,255,1.0f,40.0f},
         {19,6117u,2,6,255,1.0f,40.0f},
+        {20,6011u,1,0,255,0.20000000298023224f,2500.0f},
+        {20,6012u,2,0,27,0.20000000298023224f,2500.0f},
+        {20,6013u,1,6,255,1.0f,40.0f},
+        {20,6014u,1,5,255,1.0f,40.0f},
+        {20,6015u,1,7,255,1.0f,40.0f},
+        {20,6016u,2,7,255,1.5916622877120972f,40.0f},
+        {20,6017u,2,5,255,1.0f,40.0f},
+        {20,6018u,2,7,255,2.6373791694641113f,40.0f},
+        {20,6019u,1,0,255,0.20000000298023224f,60.0f},
+        {20,6020u,2,0,255,0.20000000298023224f,60.0f},
+        {20,6021u,1,0,255,0.20000000298023224f,60.0f},
+        {20,6022u,2,0,255,0.20000000298023224f,60.0f},
+        {21,6011u,1,0,255,0.20000000298023224f,2500.0f},
+        {21,6012u,2,0,27,0.20000000298023224f,2500.0f},
+        {21,6013u,1,6,255,1.0f,40.0f},
+        {21,6014u,1,5,255,1.0f,40.0f},
+        {21,6015u,1,7,255,1.0f,40.0f},
+        {21,6016u,2,7,255,1.5916622877120972f,40.0f},
+        {21,6017u,2,5,255,1.0f,40.0f},
+        {21,6018u,2,7,255,2.6373791694641113f,40.0f},
+        {21,6019u,1,0,255,0.20000000298023224f,60.0f},
+        {21,6020u,2,0,255,0.20000000298023224f,60.0f},
+        {21,6236u,1,0,255,0.20000000298023224f,60.0f},
+        {21,6237u,2,0,255,0.20000000298023224f,60.0f},
+        {22,6011u,1,0,255,0.20000000298023224f,2500.0f},
+        {22,6012u,2,0,27,0.20000000298023224f,2500.0f},
+        {22,6013u,1,6,255,1.0f,40.0f},
+        {22,6014u,1,5,255,1.0f,40.0f},
+        {22,6015u,1,7,255,1.0f,40.0f},
+        {22,6016u,2,7,255,1.5916622877120972f,40.0f},
+        {22,6017u,2,5,255,1.0f,40.0f},
+        {22,6018u,2,7,255,2.6373791694641113f,40.0f},
+        {22,6019u,1,0,255,0.20000000298023224f,60.0f},
+        {22,6020u,2,0,255,0.20000000298023224f,60.0f},
+        {22,6046u,1,0,255,0.20000000298023224f,60.0f},
+        {22,6047u,2,0,255,0.20000000298023224f,60.0f},
+        {22,6108u,1,0,255,0.20000000298023224f,60.0f},
+        {22,6109u,2,0,255,0.20000000298023224f,60.0f},
         };
         for(const auto &pose:ownedPoses)if(pose.variant==variant) {
             const int unit=game.objectUnitId(pose.id);
@@ -212,6 +266,18 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         };
         check(gridHash(map.terrain)==cases[variant].terrain && gridHash(map.elevation)==1017236165u && gridHash(map.slopes)==1017236165u,
             "general rows preserve original terrain/elevation/slopes");
+        if(variant==22) {
+            const auto retained=game.activeObjectCount();
+            for(const char *row:{"create_object 83 { set_place_for_every_player number_of_objects 2 min_distance_to_players 6 max_distance_to_players 6 }",
+                "create_object 550 { set_place_for_every_player match_player_civ number_of_objects 2 min_distance_to_players 7 max_distance_to_players 9 }"}) {
+                const std::string unsupported=text+row;swgb::RmsScript invalid;uint32_t unchanged=1;
+                check(invalid.load(60000,[&](int32_t,std::vector<uint8_t> &bytes){bytes.assign(unsupported.begin(),unsupported.end());return true;},
+                    swgb::RmsScript::Limits{},&error),error.c_str());
+                check(!game.initRms(invalid,{"FIXED_POSITIONS","TINY_MAP","RANDOM_MAP","2_PLAYERS","DEFAULT_RESOURCES"},120,unchanged,&error,2,{1,1}) &&
+                    unchanged==1 && game.activeObjectCount()==retained && game.populationUsedForTesting(1)==6,
+                    "unsupported owned-row quantities preserve the running world and caller RNG");
+            }
+        }
     }
-    std::puts("PASS: twenty general object-row variations match complete original runner");
+    std::puts("PASS: twenty-three general object-row variations match complete original runner");
 }

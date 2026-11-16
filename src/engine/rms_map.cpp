@@ -286,7 +286,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         } else if (stage==3 && command=="create_object" && startingScouts) {
             RmsObjectRow row;
             if(!parseRmsObjectRow(tokens,i,row,err)) return false;
-            if(row.matchPlayerCiv || row.owner>0)
+            if((row.matchPlayerCiv && row.unitId!=550) || row.owner>0)
                 return fail("unsupported resource owner or land selector");
             if(row.landId < -2) return fail("unsupported resource land selector");
             holocrons |= row.unitId==285;
@@ -878,12 +878,14 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         if (startingWorkers) for (const auto &target:startupTargets)
             if(!placeWorkers(uint16_t(target.owner),generated.lands[target.landIndex].center,workerMinDistance,workerMaxDistance,
                 occupied,nullptr,[&](const auto &object){generated.ownedObjects.push_back(object);}))return false;
-        if (startingScouts) for (const auto &target:startupTargets) {
-            const auto owner=uint16_t(target.owner);
+        auto placeScout=[&](uint16_t owner,const RmsPlayerStart &center,const std::vector<uint32_t> &blockedTiles,
+                            const std::vector<uint8_t> *eligibility,auto emit) {
             const auto civ=playerCivilizations[owner-1];const int id=scoutIds[civ-1];
             const auto &u=data.civs[civ].units[id];const auto &g=*data.graphic(u.standingGraphic[0]);
-            const auto &center=generated.playerStarts[owner-1];std::vector<uint32_t> candidates;
+            std::vector<uint32_t> candidates;
             if (!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,9,rng,candidates,err)) return false;
+            if(eligibility && !eligibility->empty())candidates.erase(std::remove_if(candidates.begin(),candidates.end(),
+                [&](uint32_t tile){return !(*eligibility)[tile];}),candidates.end());
             uint32_t zoneIndex;
             const auto restriction=data.civs[civ].units[id].terrainRestriction;
             if(!startZone(center,restriction,zoneIndex)) return false;
@@ -899,7 +901,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 const float px=x+.5f,py=y+.5f;
                 const bool blocked=pass[generated.terrain[tile]]<=.05f || std::any_of(generated.ownedObjects.begin(),generated.ownedObjects.end(),[&](const auto &o) {
                     return o.unitId==109 && std::abs(px-o.x)<2.25f && std::abs(py-o.y)<2.25f;
-                }) || std::binary_search(occupied.begin(),occupied.end(),tile);
+                }) || std::binary_search(blockedTiles.begin(),blockedTiles.end(),tile);
                 if (blocked && tile!=candidates.back()) continue;
                 // Original type70 construction: sprite/facing, action timers, then military timer41e410.
                 genieRandomDraw(rng);genieRandomDraw(rng);
@@ -916,10 +918,14 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 }
                 const uint8_t facet=uint8_t((genieRandomDraw(rng)*8u/32767u+7)%8);
                 for (int draw=0;draw<4;++draw) genieRandomDraw(rng);
-                generated.ownedObjects.push_back({px,py,owner,civ,int16_t(id),255,facet,frame,delay});
+                emit(RmsOwnedPlacement{px,py,owner,civ,int16_t(id),255,facet,frame,delay});
                 break;
             }
-        }
+            return true;
+        };
+        if (startingScouts) for (const auto &target:startupTargets)
+            if(!placeScout(uint16_t(target.owner),generated.lands[target.landIndex].center,occupied,nullptr,
+                [&](const auto &object){generated.ownedObjects.push_back(object);}))return false;
         if (!resourceRows.empty()) {
             auto blockers=occupied;
             for(const auto &object:generated.ownedObjects) {
@@ -940,24 +946,28 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(targets.empty())continue;
                 const bool ownedRow=std::any_of(targets.begin(),targets.end(),[](const auto &target){return target.owner>0;});
                 if(ownedRow) {
-                    // shortcut: additional worker83/count1 rows; other owned constructors need original comparisons.
-                    if(row.unitId!=83 || row.mode || row.groups!=1 || row.perGroup!=1 || row.variance || row.radius!=3 ||
-                       row.terrain!=-1 || row.minDistance!=6 || row.maxDistance!=6 || row.spacing || row.temporarySpacing || row.zoneDistance)
+                    // shortcut: additional worker/scout startup profiles; other owned constructors need original comparisons.
+                    const bool scout=row.unitId==550 && row.matchPlayerCiv;
+                    if((row.unitId!=83 && !scout) || row.mode || row.groups!=1 || row.perGroup!=1 || row.variance || row.radius!=3 ||
+                       row.terrain!=-1 || row.minDistance!=(scout?7:6) || row.maxDistance!=(scout?9:6) || row.spacing || row.temporarySpacing || row.zoneDistance)
                         return fail("unsupported additional owned object row");
-                    auto workerBlockers=occupied;
+                    auto staticBlockers=occupied;
                     for(const auto &object:generated.resourcesAfterOwned)
                         if(!object.owner && (object.unitId==59 || object.unitId==66 || object.unitId==102 || isTree(object.unitId)))
-                            workerBlockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
-                    std::sort(workerBlockers.begin(),workerBlockers.end());
-                    workerBlockers.erase(std::unique(workerBlockers.begin(),workerBlockers.end()),workerBlockers.end());
+                            staticBlockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
+                    std::sort(staticBlockers.begin(),staticBlockers.end());
+                    staticBlockers.erase(std::unique(staticBlockers.begin(),staticBlockers.end()),staticBlockers.end());
                     for(const auto &target:targets) {
-                        if(target.owner<=0 || target.landIndex<0)return fail("additional workers require owned selected lands");
-                        if(!placeWorkers(uint16_t(target.owner),generated.lands[target.landIndex].center,6,6,workerBlockers,&eligibility,
-                            [&](const auto &object) {
-                                generated.resourcesAfterOwned.push_back({object.x,object.y,object.facet,0,object.unitId,
-                                    object.animationFrame,object.initialIdleDelay,object.owner});
-                                blockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
-                            }))return false;
+                        if(target.owner<=0 || target.landIndex<0)return fail("additional units require owned selected lands");
+                        auto emit=[&](const auto &object) {
+                            generated.resourcesAfterOwned.push_back({object.x,object.y,object.facet,0,object.unitId,
+                                object.animationFrame,object.initialIdleDelay,object.owner});
+                            blockers.push_back(uint32_t(object.y)*width+uint32_t(object.x));
+                        };
+                        const auto &center=generated.lands[target.landIndex].center;
+                        const bool placed=scout?placeScout(uint16_t(target.owner),center,staticBlockers,&eligibility,emit):
+                            placeWorkers(uint16_t(target.owner),center,6,6,staticBlockers,&eligibility,emit);
+                        if(!placed)return false;
                     }
                     continue;
                 }

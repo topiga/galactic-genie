@@ -120,10 +120,20 @@ to its civilization attribute, alongside the stored counters:
 | One | 7/5 | -2/7/2/6/1/3 | 725/350/375 |
 | Two | 10/5 | -5/10/2/9/1/3 | 875/500/375 |
 
+Additional scout550 rows with `match_player_civ` now reuse the verified scout
+callback and preserve their positions among Gaia rows. Three more original
+comparisons (early/late/interleaved) match6,204/6,204/6,206 ordered objects and
+RNG3734544698/1377182600/3096183411. Native import checks38 original owned poses
+and the corresponding population/cost counters: one added scout gives5/5
+population and costs625/250/375; two give6/5 and675/300/375. These new full
+constructor comparisons use two Empire owners; the exhaustive mapper research
+alone is not full constructor coverage for every civilization.
+
 Other arbitrary owned rows, broader mixed-land startup and new unit constructors
-still reject explicitly. Additional workers currently require the verified
-ungrouped83/count1/radius3/min6/max6 profile without spacing/terrain modifiers.
-This does not establish full terrain or gameplay parity.
+still reject explicitly. Additional workers require the verified ungrouped83/count1/
+radius3/min6/max6 profile; scouts require550/count1/radius3/min7/max9 with civilization
+mapping, both without spacing/terrain modifiers. This does not establish full
+terrain or gameplay parity.
 
 ## General object-row controller: 2026-11-15
 
