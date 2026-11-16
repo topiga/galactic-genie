@@ -2952,6 +2952,11 @@ float Game::researchDuration(int player,const dat::Tech &technology) const {
     return std::max(0.f,technology.researchTime*(multiplier>0?multiplier:1.f)+researchTimeDelta(player,technology));
 }
 
+float Game::unitSearchRadius(int player,const dat::Unit &unit) const {
+    Object candidate;candidate.unit=&unit;candidate.player=player;
+    return modifiedUnitAttribute(candidate,23,unit.searchRadius);
+}
+
 float Game::unitTrainingTime(int player,const dat::Unit &unit) const {
     int16_t duration=unit.trainTime;
     Object candidate; candidate.unit=&unit; candidate.player=player;
@@ -4609,7 +4614,8 @@ void Game::updateHealing(Object &source, float dt) {
         !source.guardTargetId && !source.followTargetId && !source.patrolActive &&
         !source.garrisonTargetId && !source.unloadActive && !source.attackTargetId) {
         Object *nearest=nullptr;
-        float best=source.unit->searchRadius*source.unit->searchRadius;
+        const float radius=unitSearchRadius(source.player,*source.unit);
+        float best=radius*radius;
         for (auto &candidate:objects_) {
             const float dx=candidate.x-source.x, dy=candidate.y-source.y;
             const float distance=dx*dx+dy*dy;
@@ -5891,8 +5897,7 @@ bool Game::assignAutomaticWorkerTask(
     const float searchRange =
         std::max(
             0.0f,
-            builder ? builder->searchRadius
-                    : worker.unit->searchRadius);
+            unitSearchRadius(worker.player,builder ? *builder : *worker.unit));
     const float searchRangeSquared =
         searchRange * searchRange;
     // Unfinished buildings in range come first: builders keep moving from
@@ -6263,7 +6268,7 @@ Game::Object *Game::nextResourceLike(const Object &worker) {
     const float range =
         std::max(
             0.0f,
-            currentGatherer->searchRadius);
+            unitSearchRadius(worker.player,*currentGatherer));
     Object *best = nullptr;
     float bestDistance =
         std::numeric_limits<float>::max();
@@ -9170,7 +9175,7 @@ float Game::automaticAcquisitionRadius(const Object &source) const {
         source.attackMode == AttackMode::StandGround)
         return std::max(weaponRange + 0.5f, attackRange(source, source));
     if (source.attackMode == AttackMode::Aggressive)
-        return std::max(6.0f, std::max(sight, source.unit->searchRadius));
+        return std::max(6.0f, std::max(sight, unitSearchRadius(source.player,*source.unit)));
     if (source.attackMode == AttackMode::Defensive)
         return std::max(4.0f, std::max(weaponRange + 2.0f, sight * 0.75f));
     return 0;

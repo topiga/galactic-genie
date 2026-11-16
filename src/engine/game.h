@@ -588,6 +588,13 @@ public:
         const auto *object=findObject(id);
         return object?modifiedUnitAttribute(*object,attribute,base):base;
     }
+    float unitAttributeForTesting(int player,const dat::Unit &unit,int attribute,float base) const {
+        Object candidate;candidate.unit=&unit;candidate.player=player;
+        return modifiedUnitAttribute(candidate,attribute,base);
+    }
+    float unitSearchRadiusForTesting(int player,const dat::Unit &unit) const {
+        return unitSearchRadius(player,unit);
+    }
     bool researchTechnologyForTesting(
         int player, int technologyId) {
         return researchTechnology(
@@ -1002,6 +1009,7 @@ private:
     float researchDuration(int player,const dat::Tech &technology) const;
     std::array<dat::ResourceCost,3> unitCosts(int player,const dat::Unit &unit) const;
     float unitTrainingTime(int player,const dat::Unit &unit) const;
+    float unitSearchRadius(int player,const dat::Unit &unit) const;
     float modifiedUnitAttribute(const Object &object,
                                 int attribute,
                                 float baseValue) const;

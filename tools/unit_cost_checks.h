@@ -30,6 +30,12 @@ static void unitCostChecks(swgb::Assets &assets) {
         check(game.unitTrainingTimeForTesting(1,unit)==selector.duration,
               "Original unit-selector priority and class fallback use the full master count");
     }
+    commands={effect(4,1,2)};
+    check(game.unitSearchRadiusForTesting(1,unit)==unit.searchRadius,"LOS effects do not implicitly change search radius");
+    commands={effect(0,23,7),effect(5,23,2)};
+    check(game.unitSearchRadiusForTesting(1,unit)==14 &&
+          game.unitAttributeForTesting(1,unit,1,unit.lineOfSight)==unit.lineOfSight,
+          "Independent search-radius effects preserve original order without altering LOS");
     commands={effect(5,100,1.05f),effect(5,100,1.05f),effect(5,101,1.05f),effect(5,101,1.05f)};
     auto costs=game.unitCostsForTesting(1,unit);
     check(costs[0].amount==10 && costs[1].amount==22 && costs[2].amount==30,

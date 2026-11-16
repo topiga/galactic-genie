@@ -13,6 +13,19 @@ static void civilizationBonusChecks(swgb::Assets &assets) {
         check(id && std::abs(game.unitAttributeForTesting(id,attributes[civ-1],100)-expected[civ-1])<.001f,
               "Each original civilization applies its own unit-stat bonus");
     }
+    check(game.init(0x5A17,64,&error,6,1),error.c_str());
+    const auto &fortressType=assets.dat().civs[6].units[933];
+    check(game.unitAttributeForTesting(1,fortressType,0,fortressType.hitPoints)==5500 &&
+          game.unitAttributeForTesting(1,fortressType,1,fortressType.lineOfSight)==15,
+          "Original full-table civ6 tree9 HP and LOS mutations");
+    // Actual original team15 mutation set across all 1,446 nonnull master records.
+    const int teamTargets[]={4,8,23,172,174,238,280,282,286,287,289,292,295,297,301,303,305,307,309,315,329,331,344,346,352,359,361,370,376,378,381,383,385,387,389,391,393,395,397,399,401,403,405,407,409,412,418,420,422,424,426,428,430,432,436,438,440,442,444,446,448,452,454,460,462,481,605,606,607,608,680,686,688,690,699,701,703,718,720,724,843,847,849,850,854,859,860,861,863,871,875,879,883,887,891,899,921,971,977,981,993,999,1015,1034,1037,1043,1047,1065,1066,1067,1068,1069,1070,1071,1072,1073,1074,1086,1087,1088,1089,1090,1091,1092,1093,1094,1096,1097,1098,1099,1100,1101,1102,1103,1104,1105,1106,1107,1108,1110,1113,1114,1115,1196,1198,1199,1204,1236,1239,1253,1254,1255,1257,1258,1265,1267,1318,1319,1320,1321,1322,1323,1357,1361,1368,1478,1482,1486,1490,1494,1498,1502,1506,1510,1514,1540,1544,1548,1552,1556,1560,1584,1593};
+    for(int id:teamTargets) {
+        const auto &unit=assets.dat().civs[6].units[size_t(id)];
+        check(game.unitAttributeForTesting(1,unit,1,unit.lineOfSight)==unit.lineOfSight+2 &&
+              game.unitSearchRadiusForTesting(1,unit)==unit.searchRadius+2,
+              "Original team15 changes LOS and independent search radius for all 183 targets");
+    }
     check(game.initSkirmish(0x5A17,&error,false,5,1,75),error.c_str());
     check(game.populationCapacityForTesting(1)==75,
           "Trade Federation population bonus reaches setup cap without extra housing");
