@@ -265,6 +265,42 @@ packaged-map regressions, transport render checks, RMS validation/CLI tests and
 desktop menu/audio smoke checks pass. The new audit is retained separately as
 `rms-packaged-generation-audit-transport-production-2026-11-16.json`.
 
+## Explicit player zones with owned startup: 2026-11-16
+
+Owned startup now accepts explicit shared, team-based and random player zones
+on the compared fixed120/base6 Forest profile, with or without cliffs. Six
+complete original replays match all ordered objects, terrain/elevation/slopes,
+owned/Gaia startup poses and final RNG:
+
+| Zones | No cliffs: objects / RNG | Cliffs: objects / RNG |
+|---|---|---|
+| Shared `zone 0` | 6,336 / 3578249443 | 6,202 / 664476888 |
+| `set_zone_by_team` | 6,336 / 3578249443 | 6,202 / 664476888 |
+| `set_zone_randomly` | 6,322 / 1025370822 | 6,330 / 2120920959 |
+
+The original shared zone is stored as10/10; team zones are2/3 for these enemy
+players. Random zones consume their draws during parsing and change the later
+starts to87/89 and43/30. The original team selector runs with actual enemy
+diplomacy arrays, not an assumed team result. Each case retains ten owned objects;
+independent original replays verify their population and cost counters.
+
+Support remains limited to two Empire owners, radius13/7200-tile base6 lands,
+one6000-tile terrain21 row (60clumps, spacing2, clumping20 and start avoidance),
+fixed positions, and no elevations/connections. Allied or other-civilization
+startup remains rejected; a native import regression checks that rejection
+preserves the running world and caller RNG. Existing unowned cliff restrictions
+remain in place. The general suite now contains50 full-map cases.
+
+Local provenance is in `rms-owned-zone-findings-2026-11-16.json` and
+`rms-owned-zone-cliff-findings-2026-11-16.json`. These are configured original
+executable replays, not fresh live Windows comparisons or general map parity.
+
+All50 general cases, packaged-map regressions, transport render checks, RMS map/
+CLI validation and desktop menu/audio smoke checks pass. A fresh packaged audit
+still accepts9/138 configurations; the other zone-bearing packaged maps need
+additional geometry and object-profile work. Its separate record is
+`rms-packaged-generation-audit-owned-zone-production-2026-11-16.json`.
+
 ## General object-row controller: 2026-11-15
 
 Gaia resources after owned startup now execute in source order from parsed rows,

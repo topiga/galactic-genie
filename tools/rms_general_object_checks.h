@@ -61,12 +61,18 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         {6202,1530472592u,374431829u,742396127u},
         {6206,4238084908u,4013083760u,742396127u},
         {6316,2174457350u,2143467900u,742396127u},
+        {6336,3578249443u,164514819u,980235455u},
+        {6336,3578249443u,164514819u,980235455u},
+        {6322,1025370822u,2327484671u,458682992u},
+        {6202,664476888u,374431829u,742396127u},
+        {6202,664476888u,374431829u,742396127u},
+        {6330,2120920959u,1363971012u,3073990882u},
     };
     auto replace=[](std::string &text,const std::string &from,const std::string &to) {
         const auto at=text.find(from);check(at!=std::string::npos,"authored variation finds directive");
         text.replace(at,from.size(),to);
     };
-    for(size_t variant=0;variant<44;++variant) {
+    for(size_t variant=0;variant<std::size(cases);++variant) {
         auto changed=rows;
         std::vector<uint16_t> civilizations={1,1};
         if(variant>=37 && variant<=40)civilizations={uint16_t(1+2*(variant-37)),uint16_t(2+2*(variant-37))};
@@ -142,10 +148,15 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
             for(size_t i=1;i<=2;++i)replace(changed[i],"number_of_objects 1",
                 "number_of_objects "+std::to_string(variant==33?0:2));
         }
-        if(variant>=35) {
+        if(variant>=35 && variant<=43) {
             const int quantity=variant==41?0:variant==42?2:variant==43?99:1;
             const std::string air="create_object 1521 { set_place_for_every_player match_player_civ number_of_objects "+std::to_string(quantity)+" min_distance_to_players 3 max_distance_to_players 6 }";
             if(variant==35 || variant==37 || variant==38)changed.insert(changed.begin()+3,air);else changed.push_back(air);
+        }
+        if(variant>=44) {
+            const char *zones[]={"zone 0","set_zone_by_team","set_zone_randomly"};
+            if(variant<47)replace(text,"<CLIFF_GENERATION>","");
+            replace(text,"number_of_tiles 7200",std::string("number_of_tiles 7200 ")+zones[(variant-44)%3]);
         }
         for(const auto &row:changed)text+=row+'\n';
         swgb::RmsScript script;std::string error;swgb::RmsMap map;uint32_t rng=1;
@@ -166,7 +177,7 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
             const int ids[]={4,11,21,37,40,84,98,164,165};
             const float values[4][9]={{-2,7,2,6,1,3,725,350,375},{-5,10,2,9,1,3,875,500,375},
                 {0,5,2,3,2,3,625,250,375},{-1,6,2,3,3,3,675,300,375}};
-            const float quantityValues[21][2][9]={
+            const float quantityValues[27][2][9]={
                 {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
                 {{-1.0f,6.0f,2.0f,5.0f,1.0f,3.0f,675.0f,300.0f,375.0f},{-1.0f,6.0f,2.0f,5.0f,1.0f,3.0f,675.0f,300.0f,375.0f}},
                 {{-3.0f,8.0f,2.0f,7.0f,1.0f,3.0f,775.0f,400.0f,375.0f},{-3.0f,8.0f,2.0f,7.0f,1.0f,3.0f,775.0f,400.0f,375.0f}},
@@ -188,6 +199,12 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
                 {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
                 {{-1.0f,6.0f,2.0f,3.0f,3.0f,3.0f,895.0f,520.0f,375.0f},{-1.0f,6.0f,2.0f,3.0f,3.0f,3.0f,895.0f,520.0f,375.0f}},
                 {{-62.0f,67.0f,2.0f,3.0f,64.0f,3.0f,10655.0f,10280.0f,375.0f},{-50.0f,55.0f,2.0f,3.0f,52.0f,3.0f,8735.0f,8360.0f,375.0f}},
+                {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
+                {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
+                {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
+                {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
+                {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
+                {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
             };
             const int extra=variant>=20?2+(variant==22):int(variant==19);
             const float *expectedCounters=values[extra];
@@ -458,6 +475,66 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         {43,6298u,1,4,255,0.8500000238418579f,150.0f},
         {43,6299u,2,4,255,0.8500000238418579f,150.0f},
         {43,6349u,2,2,255,0.8500000238418579f,150.0f},
+        {44,6111u,1,0,255,0.20000000298023224f,2500.0f},
+        {44,6112u,2,0,27,0.20000000298023224f,2500.0f},
+        {44,6113u,1,5,255,1.0f,40.0f},
+        {44,6114u,1,1,255,1.0f,40.0f},
+        {44,6115u,1,6,255,1.0f,40.0f},
+        {44,6116u,2,6,255,1.0f,40.0f},
+        {44,6117u,2,2,255,1.0f,40.0f},
+        {44,6118u,2,1,255,1.0f,40.0f},
+        {44,6119u,1,0,255,0.20000000298023224f,60.0f},
+        {44,6120u,2,0,255,0.20000000298023224f,60.0f},
+        {45,6111u,1,0,255,0.20000000298023224f,2500.0f},
+        {45,6112u,2,0,27,0.20000000298023224f,2500.0f},
+        {45,6113u,1,5,255,1.0f,40.0f},
+        {45,6114u,1,1,255,1.0f,40.0f},
+        {45,6115u,1,6,255,1.0f,40.0f},
+        {45,6116u,2,6,255,1.0f,40.0f},
+        {45,6117u,2,2,255,1.0f,40.0f},
+        {45,6118u,2,1,255,1.0f,40.0f},
+        {45,6119u,1,0,255,0.20000000298023224f,60.0f},
+        {45,6120u,2,0,255,0.20000000298023224f,60.0f},
+        {46,6096u,1,0,255,0.20000000298023224f,2500.0f},
+        {46,6097u,2,0,27,0.20000000298023224f,2500.0f},
+        {46,6098u,1,7,255,1.0f,40.0f},
+        {46,6099u,1,6,255,1.0f,40.0f},
+        {46,6100u,1,1,255,1.0f,40.0f},
+        {46,6101u,2,7,255,2.9559617042541504f,40.0f},
+        {46,6102u,2,1,255,1.0f,40.0f},
+        {46,6103u,2,7,255,1.0f,40.0f},
+        {46,6104u,1,0,255,0.20000000298023224f,60.0f},
+        {46,6105u,2,0,255,0.20000000298023224f,60.0f},
+        {47,6011u,1,0,255,0.20000000298023224f,2500.0f},
+        {47,6012u,2,0,27,0.20000000298023224f,2500.0f},
+        {47,6013u,1,6,255,1.0f,40.0f},
+        {47,6014u,1,5,255,1.0f,40.0f},
+        {47,6015u,1,7,255,1.0f,40.0f},
+        {47,6016u,2,7,255,1.5916622877120972f,40.0f},
+        {47,6017u,2,5,255,1.0f,40.0f},
+        {47,6018u,2,7,255,2.6373791694641113f,40.0f},
+        {47,6019u,1,0,255,0.20000000298023224f,60.0f},
+        {47,6020u,2,0,255,0.20000000298023224f,60.0f},
+        {48,6011u,1,0,255,0.20000000298023224f,2500.0f},
+        {48,6012u,2,0,27,0.20000000298023224f,2500.0f},
+        {48,6013u,1,6,255,1.0f,40.0f},
+        {48,6014u,1,5,255,1.0f,40.0f},
+        {48,6015u,1,7,255,1.0f,40.0f},
+        {48,6016u,2,7,255,1.5916622877120972f,40.0f},
+        {48,6017u,2,5,255,1.0f,40.0f},
+        {48,6018u,2,7,255,2.6373791694641113f,40.0f},
+        {48,6019u,1,0,255,0.20000000298023224f,60.0f},
+        {48,6020u,2,0,255,0.20000000298023224f,60.0f},
+        {49,6147u,1,0,255,0.20000000298023224f,2500.0f},
+        {49,6148u,2,0,27,0.20000000298023224f,2500.0f},
+        {49,6149u,1,5,255,1.0f,40.0f},
+        {49,6150u,1,0,255,1.0f,40.0f},
+        {49,6151u,1,6,255,1.0f,40.0f},
+        {49,6152u,2,2,255,1.0f,40.0f},
+        {49,6153u,2,5,255,1.0f,40.0f},
+        {49,6154u,2,7,255,1.0f,40.0f},
+        {49,6155u,1,0,255,0.20000000298023224f,60.0f},
+        {49,6156u,2,0,255,0.20000000298023224f,60.0f},
         };
         for(const auto &pose:ownedPoses)if(pose.variant==variant) {
             const int unit=game.objectUnitId(pose.id);
@@ -512,6 +589,12 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         };
         check(gridHash(map.terrain)==cases[variant].terrain && gridHash(map.elevation)==1017236165u && gridHash(map.slopes)==1017236165u,
             "general rows preserve original terrain/elevation/slopes");
+        if(variant==44) {
+            const auto retained=game.activeObjectCount();uint32_t unchanged=1;
+            check(!game.initRms(script,{"FIXED_POSITIONS","TINY_MAP","RANDOM_MAP","2_PLAYERS","DEFAULT_RESOURCES"},
+                120,unchanged,&error,2,{1,2}) && unchanged==1 && game.activeObjectCount()==retained,
+                "unverified explicit-zone civilization profile preserves the running world and RNG");
+        }
         if(variant==22) {
             const auto retained=game.activeObjectCount();
             for(const char *row:{"create_object 1521 { set_place_for_every_player match_player_civ number_of_objects 2 group_variance 1 min_distance_to_players 3 max_distance_to_players 6 }",
@@ -526,5 +609,5 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
             }
         }
     }
-    std::puts("PASS: forty-four general object-row variations match complete original runner");
+    std::printf("PASS: %zu general object-row variations match complete original runner\n",std::size(cases));
 }

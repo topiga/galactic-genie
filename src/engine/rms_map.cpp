@@ -421,7 +421,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 ((elevationRows[0].targetTiles==400 && elevationRows[0].clumps==8) ||
                  (elevationRows[0].targetTiles==8000 && elevationRows[0].clumps==30));
             if(width!=120 || height!=120 || base!=6 ||
-                (playerLands ? (playerCount!=2 || lands.size()!=2 || playerZoneOverride ||
+                (playerLands ? (playerCount!=2 || lands.size()!=2 || (playerZoneOverride && !ownedCliff) ||
                     (elevationStage && !ownedCliffElevation && (hasObjects || !terrainRows.empty()))) : lands.size()!=1) ||
                 (hasObjects && !ownedCliff) || connectionStage || terrainRows.size()>1 ||
                 (elevationStage && (elevationRows.empty() || elevationRows.size()>7 ||
@@ -436,7 +436,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(land.terrain!=6 || (!playerLands && (placements[index].x<0 || placements[index].y<0)) ||
                     (ownedCliff ? (land.radius!=13 || land.targetTiles!=7200) :
                         playerLands ? (land.radius>10 || land.targetTiles>8000) : (land.radius || land.targetTiles)) ||
-                    land.zone!=(playerLands?int(index+1):0) ||
+                    (!playerZoneOverride && land.zone!=(playerLands?int(index+1):0)) ||
                     land.clumpingFactor!=8 || land.borderFuzziness!=20 || land.separation ||
                     land.leftBorder || land.topBorder || land.rightBorder!=-1 || land.bottomBorder!=-1)
                     return fail("cliffs require verified land size and growth defaults");
@@ -465,8 +465,21 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         }
     }
     if(allies && ownedObjects) return fail("allied owned-object startup remains unverified");
-    // shortcut: explicit player zones need an original owned-object replay before enabling their startup.
-    if(playerZoneOverride && ownedObjects) return fail("owned startup with explicit player zones remains unverified");
+    if(playerZoneOverride && ownedObjects) {
+        // shortcut: explicit zones on the compared flat120 Forest profile; extend geometry with original startup replays.
+        if(width!=120 || height!=120 || base!=6 || playerCount!=2 || lands.size()!=2 ||
+           elevationStage || connectionStage || !defines.count("FIXED_POSITIONS") ||
+           playerCivilizations!=std::vector<uint16_t>{1,1} || !startingWorkers || !startingScouts ||
+           workerMinDistance!=6 || workerMaxDistance!=6 || startingStalagmites || terrainRows.size()!=1)
+            return fail("unsupported explicit-zone owned startup profile");
+        for(const auto &land:lands)if(land.terrain!=6 || land.radius!=13 || land.targetTiles!=7200)
+            return fail("unsupported explicit-zone player land profile");
+        const auto &row=terrainRows.front();
+        if(row.terrain!=21 || row.baseTerrain!=6 || row.targetTiles!=6000 || row.clumps!=60 ||
+           row.spacing!=2 || row.clumping!=20 || !row.avoidPlayerStarts || row.flatTerrainOnly ||
+           row.minHeight || row.maxHeight!=255)
+            return fail("unsupported explicit-zone terrain profile");
+    }
     if(ownedObjects && lands.size()!=playerCount) {
         // shortcut: fixed neutral seed lands only; broaden after original mixed-land startup comparisons.
         if(width!=120 || height!=120 || base!=6 || playerLandBegin!=0 || playerCount!=2 ||
