@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
-// Actual4de830/5cfad0, captured Empire87; rms-owned87-bounded-findings-2026-11-16.json.
+// Actual4de830/5cfad0, captured Empire87/70; local rms-owned{87,70} findings, 2026-11-16.
 static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &renderer) {
     const std::string baseline=R"(#const RMS_6 6
 #const RMS_21 21
@@ -11,15 +11,22 @@ static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
 <LAND_GENERATION> base_terrain RMS_6 create_player_lands { terrain_type RMS_6 base_size 13 number_of_tiles 7200 } <CLIFF_GENERATION> <TERRAIN_GENERATION> create_terrain RMS_21 { base_terrain RMS_6 number_of_tiles 6000 number_of_clumps 60 spacing_to_other_terrain_types 2 clumping_factor 20 set_avoid_player_start_areas } <OBJECTS_GENERATION> create_object RMS_109 { set_place_for_every_player number_of_objects 1 min_distance_to_players 0 max_distance_to_players 0 group_placement_radius 18 } create_object RMS_83 { set_place_for_every_player number_of_objects 1 min_distance_to_players 6 max_distance_to_players 6 group_placement_radius 3 } create_object RMS_550 { set_place_for_every_player match_player_civ number_of_objects 1 min_distance_to_players 7 max_distance_to_players 9 group_placement_radius 3 } create_object RMS_87 { set_place_for_every_player number_of_objects 1 min_distance_to_players 8 max_distance_to_players 14 }
 )";
     const std::string extra="create_object RMS_87 { set_place_for_every_player number_of_objects 1 min_distance_to_players 8 max_distance_to_players 14 }";
-    struct Case { uint32_t seed,rows,count,rng,objects,terrain,heights,slopes; bool onCenter=false; };
+    struct Case { uint32_t seed,rows,count,rng,objects,terrain,heights,slopes; bool onCenter=false; int unit=87; bool loose=false; };
     const Case cases[]={
         {1u,1u,5989u,1745024857u,1456092772u,3952391958u,1017236165u,1017236165u},
         {12345u,1u,5973u,3433587427u,3999233898u,2021000264u,1017236165u,1017236165u},
         {16160u,1u,6065u,3908054248u,1674239946u,2635766779u,1017236165u,1017236165u},
         {1u,2u,5991u,2727130514u,258802950u,3531810289u,1017236165u,1017236165u},
         {1u,1u,5989u,524140293u,2363215044u,742396127u,1017236165u,1017236165u,true},
+        {1u, 1u, 5989u, 1040066035u, 683316884u, 1401291587u, 1017236165u, 1017236165u, false, 70, false},
+        {12345u, 1u, 5973u, 3797195514u, 1950773600u, 219316191u, 1017236165u, 1017236165u, false, 70, false},
+        {16160u, 1u, 6065u, 1428071604u, 2223973520u, 2447633602u, 1017236165u, 1017236165u, false, 70, false},
+        {1u, 2u, 5991u, 2617341845u, 2276589332u, 639547895u, 1017236165u, 1017236165u, false, 70, false},
+        {1u, 1u, 5995u, 2723706306u, 189115598u, 4015094335u, 1017236165u, 1017236165u, false, 70, true},
+        {12345u, 1u, 5979u, 2206864911u, 657115638u, 184374139u, 1017236165u, 1017236165u, false, 70, true},
+        {16160u, 1u, 6071u, 1753002939u, 2754205972u, 602091358u, 1017236165u, 1017236165u, false, 70, true},
     };
-    struct Building { uint32_t seed,rows,id,owner; float x,y; bool onCenter=false; };
+    struct Building { uint32_t seed,rows,id,owner; float x,y; bool onCenter=false; int unit=87; bool loose=false; };
     const Building buildings[]={
         {1,1,6020,1, 90.5f, 25.5f},
         {1,1,6021,2, 24.5f, 102.5f},
@@ -33,9 +40,58 @@ static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
         {1,2,6023,2, 28.5f, 101.5f},
         {1,1,6020,1, 96.5f, 34.5f,true},
         {1,1,6021,2, 37.5f, 92.5f,true},
+        {1, 1, 6020, 1, 106.0f, 34.0f, false, 70, false},
+        {1, 1, 6021, 2, 47.0f, 98.0f, false, 70, false},
+        {12345, 1, 6000, 1, 9.0f, 76.0f, false, 70, false},
+        {12345, 1, 6001, 2, 83.0f, 24.0f, false, 70, false},
+        {16160, 1, 6092, 1, 7.0f, 46.0f, false, 70, false},
+        {16160, 1, 6093, 2, 31.0f, 95.0f, false, 70, false},
+        {1, 2, 6020, 1, 106.0f, 34.0f, false, 70, false},
+        {1, 2, 6021, 2, 47.0f, 98.0f, false, 70, false},
+        {1, 2, 6022, 1, 84.0f, 42.0f, false, 70, false},
+        {1, 2, 6023, 2, 32.0f, 102.0f, false, 70, false},
+        {1, 1, 6020, 1, 107.0f, 35.0f, false, 70, true},
+        {1, 1, 6021, 1, 105.0f, 34.0f, false, 70, true},
+        {1, 1, 6022, 1, 103.0f, 35.0f, false, 70, true},
+        {1, 1, 6023, 1, 104.0f, 32.0f, false, 70, true},
+        {1, 1, 6024, 2, 22.0f, 95.0f, false, 70, true},
+        {1, 1, 6025, 2, 24.0f, 95.0f, false, 70, true},
+        {1, 1, 6026, 2, 25.0f, 97.0f, false, 70, true},
+        {1, 1, 6027, 2, 26.0f, 95.0f, false, 70, true},
+        {12345, 1, 6000, 1, 10.0f, 74.0f, false, 70, true},
+        {12345, 1, 6001, 1, 6.0f, 76.0f, false, 70, true},
+        {12345, 1, 6002, 1, 7.0f, 73.0f, false, 70, true},
+        {12345, 1, 6003, 1, 12.0f, 73.0f, false, 70, true},
+        {12345, 1, 6004, 2, 80.0f, 4.0f, false, 70, true},
+        {12345, 1, 6005, 2, 78.0f, 1.0f, false, 70, true},
+        {12345, 1, 6006, 2, 80.0f, 2.0f, false, 70, true},
+        {12345, 1, 6007, 2, 82.0f, 1.0f, false, 70, true},
+        {16160, 1, 6092, 1, 8.0f, 46.0f, false, 70, true},
+        {16160, 1, 6093, 1, 7.0f, 43.0f, false, 70, true},
+        {16160, 1, 6094, 1, 9.0f, 43.0f, false, 70, true},
+        {16160, 1, 6095, 1, 6.0f, 45.0f, false, 70, true},
+        {16160, 1, 6096, 2, 32.0f, 94.0f, false, 70, true},
+        {16160, 1, 6097, 2, 29.0f, 93.0f, false, 70, true},
+        {16160, 1, 6098, 2, 30.0f, 95.0f, false, 70, true},
+        {16160, 1, 6099, 2, 31.0f, 92.0f, false, 70, true},
     };
     for(const auto &c:cases) {
         std::string source=baseline+(c.rows==2?extra:"");
+        const bool prefab=c.unit==70;
+        const int quantity=c.rows*(c.loose?4:1);
+        if(prefab) {
+            for(size_t pos=0;(pos=source.find("RMS_87",pos))!=std::string::npos;pos+=6)source.replace(pos,6,"RMS_70");
+            source.replace(source.find("#const RMS_70 87"),16,"#const RMS_70 70");
+            const std::string range="min_distance_to_players 8 max_distance_to_players 14";
+            for(size_t pos=0;(pos=source.find(range,pos))!=std::string::npos;) {
+                source.replace(pos,range.size(),"min_distance_to_players 10 max_distance_to_players 12");
+                ++pos;
+            }
+            if(c.loose) {
+                const auto pos=source.rfind("number_of_objects 1");
+                source.replace(pos,19,"number_of_objects 4 set_loose_grouping");
+            }
+        }
         if(c.onCenter) {
             const std::string range="min_distance_to_players 8 max_distance_to_players 14";
             source.replace(source.find(range),range.size(),"min_distance_to_players 0 max_distance_to_players 0");
@@ -43,20 +99,25 @@ static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
         swgb::RmsScript script;std::string error;
         check(script.load(0,[&](int32_t id,std::vector<uint8_t> &bytes){if(id)return false;bytes.assign(source.begin(),source.end());return true;},{},&error),error.c_str());
         swgb::RmsMap map;uint32_t rng=c.seed;
-        if(c.seed==1 && c.rows==1 && !c.onCenter) {
+        if(c.seed==1 && c.rows==1 && !c.onCenter && !c.loose) {
             auto scaled=source;scaled.insert(scaled.rfind('}')," set_scaling_to_player_number ");
             swgb::RmsScript scaledScript;
             check(scaledScript.load(0,[&](int32_t id,std::vector<uint8_t> &bytes){if(id)return false;bytes.assign(scaled.begin(),scaled.end());return true;},{},&error),error.c_str());
             check(!swgb::generateRmsMap(scaledScript,{"FIXED_POSITIONS"},120,120,assets.dat(),rng,map,&error,2,{1,1}) && rng==c.seed && map.terrain.empty(),
-                  "Unverified scaled owned87 quantity rejects atomically");
-            auto bad=assets.dat();bad.civs[1].units[87].foundationTerrainId=7;
+                  "Unverified scaled owned-building quantity rejects atomically");
+            auto bad=assets.dat();bad.civs[1].units[c.unit].foundationTerrainId=7;
             check(!swgb::generateRmsMap(script,{"FIXED_POSITIONS"},120,120,bad,rng,map,&error,2,{1,1}) && rng==c.seed && map.terrain.empty(),
-                  "Unsupported owned87 foundation rejects atomically");
+                  "Unsupported owned-building foundation rejects atomically");
+            if(prefab) {
+                bad=assets.dat();bad.civs[1].units[70].resourceStorages[0].amount=10;
+                check(!swgb::generateRmsMap(script,{"FIXED_POSITIONS"},120,120,bad,rng,map,&error,2,{1,1}) && rng==c.seed && map.terrain.empty(),
+                      "Unverified Prefab population storage rejects atomically");
+            }
             check(!swgb::generateRmsMap(script,{},120,120,assets.dat(),rng,map,&error,2,{1,1}) && rng==c.seed && map.terrain.empty(),
-                  "Unverified randomized owned87 starts reject atomically");
+                  "Unverified randomized owned-building starts reject atomically");
         }
         check(swgb::generateRmsMap(script,{"FIXED_POSITIONS"},120,120,assets.dat(),rng,map,&error,2,{1,1}),error.c_str());
-        check(rng==c.rng && map.resourcesAfterOwned.size()==c.rows*2,"Original owned87 row count and completion RNG");
+        check(rng==c.rng && map.resourcesAfterOwned.size()==size_t(quantity*2),"Original owned-building row count and completion RNG");
         uint32_t hash=2166136261u,count=0,next=0;
         auto record=[&](uint32_t id,uint32_t owner,int unit,int facet,float x,float y) {
             for(uint32_t v:{id,owner,uint32_t(unit),uint32_t(facet),uint32_t(x*2),uint32_t(y*2)})hash=(hash^v)*16777619u;
@@ -66,35 +127,37 @@ static void ownedRmsBuildingChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
         for(const auto &o:map.scenery){if(o.alive)record(next,0,o.unitId,o.facet,o.x,o.y);++next;}
         for(const auto &o:map.ownedObjects)record(next++,o.owner,o.unitId,o.facet,o.x,o.y);
         for(const auto &o:map.resourcesAfterOwned)record(next++,o.owner,o.unitId,o.facet,o.x,o.y);
-        check(count==c.count && hash==c.objects,"Original complete87 startup object order and positions");
+        check(count==c.count && hash==c.objects,"Original complete building startup object order and positions");
         auto gridHash=[](const auto &grid){uint32_t h=2166136261u;if(grid.empty()){for(int i=0;i<14400;++i)h*=16777619u;}else for(auto value:grid)h=(h^value)*16777619u;return h;};
-        check(gridHash(map.terrain)==c.terrain && gridHash(map.elevation)==c.heights && gridHash(map.slopes)==c.slopes,"Original87 foundation terrain and flat grids");
+        check(gridHash(map.terrain)==c.terrain && gridHash(map.elevation)==c.heights && gridHash(map.slopes)==c.slopes,"Original building foundation terrain and flat grids");
         swgb::Game game(assets);rng=c.seed;
         check(game.initRms(script,{"FIXED_POSITIONS"},120,rng,&error,2,{1,1}),error.c_str());
-        check(rng==c.rng && game.activeObjectCount()==c.count,"Owned87 native import count/RNG");
+        check(rng==c.rng && game.activeObjectCount()==c.count,"Owned-building native import count/RNG");
         for(int owner:{1,2}) {
-            check(game.resource(owner,98)==575+160*c.rows && game.resource(owner,164)==200 && game.resource(owner,165)==375+160*c.rows &&
-                  game.resource(owner,4)==1 && game.resource(owner,11)==4 && game.resource(owner,21)==3 && game.resource(owner,99)==0,
-                  "Original87 cost and research counters without duplicate completion grants");
-            check(game.technologyOrderForTesting(owner)==std::vector<int>({0,486,22,451,31,85,209}) && game.unitAvailableForTesting(owner,307),
-                  "Original CC then87 research chronology and effect70 enable307");
+            check(game.resource(owner,98)==575+(prefab?25:160)*quantity && game.resource(owner,164)==200 && game.resource(owner,165)==375+(prefab?25:160)*quantity &&
+                  game.resource(owner,4)==1+(prefab?5*quantity:0) && game.resource(owner,11)==4 && game.resource(owner,21)==(prefab?2:3) && game.resource(owner,99)==0,
+                  "Original building cost and research counters without duplicate completion grants");
+            check(game.technologyOrderForTesting(owner)==(prefab?std::vector<int>({0,486,22,451,16}):std::vector<int>({0,486,22,451,31,85,209})) && (prefab || game.unitAvailableForTesting(owner,307)),
+                  "Original CC then building research chronology and completion unlock");
         }
-        for(const auto &b:buildings)if(b.seed==c.seed && b.rows==c.rows && b.onCenter==c.onCenter) {
+        for(const auto &b:buildings)if(b.seed==c.seed && b.rows==c.rows && b.onCenter==c.onCenter && b.unit==c.unit && b.loose==c.loose) {
             const auto id=b.id+1;const auto position=game.objectPosition(id);
-            check(game.objectUnitId(id)==87 && game.objectPlayer(id)==int(b.owner) && game.objectHitPoints(id)==1500 &&
+            check(game.objectUnitId(id)==c.unit && game.objectPlayer(id)==int(b.owner) && game.objectHitPoints(id)==(prefab?800:1500) &&
                   position[0]==b.y && position[1]==120-b.x && game.pendingFoundationForTesting(id)==(b.owner==1?255:27),
-                  "Original87 ownership, health, position and deferred foundation");
+                  "Original building ownership, health, position and deferred foundation");
             const auto animation=game.objectAnimationForTesting(id);
-            check(animation[0]==0 && animation[1]==0,"Original87 resets animation on completion");
+            check(animation[0]==0 && animation[1]==0,"Original building resets animation on completion");
         }
-        if(c.seed==1 && c.rows==1 && !c.onCenter) {
-            const auto &b=buildings[1];const auto id=b.id+1;
-            check(game.spawnObjectForTesting(1,83,1,b.y,120-b.x)!=0,"Reveal original enemy87 foundation");
+        if(c.seed==1 && c.rows==1 && !c.onCenter && !c.loose) {
+            const auto &b=*std::find_if(std::begin(buildings),std::end(buildings),[&](const auto &v){
+                return v.seed==c.seed && v.rows==1 && v.owner==2 && v.unit==c.unit && !v.onCenter && !v.loose;
+            });const auto id=b.id+1;
+            check(game.spawnObjectForTesting(1,83,1,b.y,120-b.x)!=0,"Reveal original enemy building foundation");
             game.lookAt(b.y,120-b.x);game.render(renderer,960,544);
-            check(game.pendingFoundationForTesting(id)==255,"Visible enemy87 consumes deferred foundation");
-            for(int y=int(b.y)-1;y<=int(b.y)+1;++y)for(int x=int(b.x)-1;x<=int(b.x)+1;++x)
-                check(game.terrainAtForTesting(y,119-x)==27,"Enemy87 paints exactly its original3x3 footprint");
+            check(game.pendingFoundationForTesting(id)==255,"Visible enemy building consumes deferred foundation");
+            for(int y=int(b.y)-1;y<int(b.y)+(prefab?1:2);++y)for(int x=int(b.x)-1;x<int(b.x)+(prefab?1:2);++x)
+                check(game.terrainAtForTesting(y,119-x)==27,"Enemy building paints exactly its original footprint");
         }
     }
-    std::puts("PASS: owned87 placement, research chronology, costs and deferred foundations");
+    std::puts("PASS: owned-building placement, research chronology, costs and deferred foundations");
 }

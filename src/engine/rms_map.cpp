@@ -1027,9 +1027,11 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                     return fail("scouts require connected passable grass and foundations");
         }
     }
-    const bool troopCenters=std::any_of(resourceRows.begin(),resourceRows.end(),[](const auto &row){return row.unitId==87;});
-    if(troopCenters) {
-        // shortcut: flat Empire87 completion; extend slopes, mixed rows and boundary fallback with original traces.
+    const auto ownedBuilding=std::find_if(resourceRows.begin(),resourceRows.end(),[](const auto &row){return row.unitId==87 || row.unitId==70;});
+    if(ownedBuilding!=resourceRows.end()) {
+        const int buildingId=ownedBuilding->unitId;const bool prefab=buildingId==70;
+        const float radius=prefab?1.f:1.5f;
+        // shortcut: flat Empire87/70 completion; extend slopes, mixed rows and boundary fallback with original traces.
         if(width!=120 || height!=120 || base!=6 || playerCount!=2 || playerCivilizations!=std::vector<uint16_t>{1,1} ||
            !defines.count("FIXED_POSITIONS") || !ownedObjects || !startingWorkers || !startingScouts || startingStalagmites ||
            workerGroups!=1 || scoutGroups!=1 || workerMinDistance!=6 || workerMaxDistance!=6 ||
@@ -1039,31 +1041,35 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
            terrainRows[0].clumps!=60 || terrainRows[0].spacing!=2 || terrainRows[0].clumping!=20 || !terrainRows[0].avoidPlayerStarts ||
            cliffSettings.minCount!=3 || cliffSettings.maxCount!=9 || cliffSettings.minLength!=5 || cliffSettings.maxLength!=9 ||
            cliffSettings.curl!=36 || cliffSettings.waterDistance!=2 || cliffSettings.cliffDistance!=2 ||
-           !std::all_of(resourceRows.begin(),resourceRows.end(),[](const auto &row) {
-               return row.unitId==87 && row.owner==-1 && row.landId==1 && !row.matchPlayerCiv && !row.mode && !row.scaling && row.groups==1 &&
-                      row.perGroup==1 && !row.variance && row.radius==3 && row.terrain==-1 && ((row.minDistance==8 && row.maxDistance==14) || (!row.minDistance && !row.maxDistance)) &&
-                      !row.spacing && !row.temporarySpacing && !row.zoneDistance;
-           })) return fail("unsupported owned87 startup composition");
+           !std::all_of(resourceRows.begin(),resourceRows.end(),[&](const auto &row) {
+               const bool quantity=prefab?((row.mode==0 && row.perGroup==1) || (row.mode==1 && row.perGroup==4)):(!row.mode && row.perGroup==1);
+               const bool range=prefab?(row.minDistance==10 && row.maxDistance==12):((row.minDistance==8 && row.maxDistance==14) || (!row.minDistance && !row.maxDistance));
+               return row.unitId==buildingId && row.owner==-1 && row.landId==1 && !row.matchPlayerCiv && !row.scaling && row.groups==1 &&
+                      quantity && range && !row.variance && row.radius==3 && row.terrain==-1 && !row.spacing && !row.temporarySpacing && !row.zoneDistance;
+           })) return fail("unsupported owned-building startup composition");
         for(const auto &land:lands)
             if(land.terrain!=6 || land.radius!=13 || land.targetTiles!=7200 || land.leftBorder || land.topBorder ||
-               land.rightBorder!=-1 || land.bottomBorder!=-1 || land.clumpingFactor!=8 || land.borderFuzziness!=20 || land.separation) return fail("unsupported owned87 player lands");
-        if(data.civs.size()<=1 || data.civs[1].units.size()<=87 || data.terrainRestrictions.size()<=4)
-            return fail("missing owned87 prototype");
-        const auto &u=data.civs[1].units[87];const auto *g=data.graphic(u.standingGraphic[0]);
-        if(!u.exists || u.id!=87 || u.type!=dat::UT_Building || u.cls!=18 || u.hitPoints!=1500 ||
-           u.collisionSize[0]!=1.5f || u.collisionSize[1]!=1.5f || u.collisionSize[2]!=4 ||
-           u.clearanceSize[0]!=1.5f || u.clearanceSize[1]!=1.5f || u.terrainRestriction!=4 || u.hillMode!=3 ||
+               land.rightBorder!=-1 || land.bottomBorder!=-1 || land.clumpingFactor!=8 || land.borderFuzziness!=20 || land.separation) return fail("unsupported owned-building player lands");
+        if(data.civs.size()<=1 || data.civs[1].units.size()<=size_t(buildingId) || data.terrainRestrictions.size()<=4)
+            return fail("missing owned-building prototype");
+        const auto &u=data.civs[1].units[buildingId];const auto *g=data.graphic(u.standingGraphic[0]);
+        if(!u.exists || u.id!=buildingId || u.type!=dat::UT_Building || u.cls!=18 || u.hitPoints!=(prefab?800:1500) ||
+           u.collisionSize[0]!=radius || u.collisionSize[1]!=radius || u.collisionSize[2]!=(prefab?2:4) ||
+           u.clearanceSize[0]!=radius || u.clearanceSize[1]!=radius || u.terrainRestriction!=4 || u.hillMode!=(prefab?0:3) ||
            u.speed || u.flyMode || u.canBeBuiltOn || u.trait || u.convertTerrain || u.obstructionType!=2 || u.obstructionClass!=3 ||
-           u.standingGraphic[0]!=4075 || u.standingGraphic[1]!=-1 || u.constructionGraphic!=355 || u.foundationTerrainId!=27 ||
-           u.costs[0].type!=1 || u.costs[0].amount!=160 || (u.costs[0].flag&255)!=1 ||
-           u.costs[1].type!=-1 || u.costs[2].type!=-1 || u.techId!=31 || u.trainSound!=-1 || u.constructionSound!=598 || u.adjacentMode || u.graphicsAngle ||
+           u.standingGraphic[0]!=(prefab?883:4075) || u.standingGraphic[1]!=-1 || u.constructionGraphic!=(prefab?348:355) || u.foundationTerrainId!=27 ||
+           u.costs[0].type!=1 || u.costs[0].amount!=(prefab?25:160) || (u.costs[0].flag&255)!=1 ||
+           u.costs[1].type!=-1 || u.costs[2].type!=-1 || u.techId!=(prefab?16:31) || u.trainSound!=-1 || u.constructionSound!=(prefab?591:598) || u.adjacentMode || u.graphicsAngle ||
            u.disappearsWhenBuilt || u.stackUnitId!=-1 || u.oldOverlayId!=-1 || u.transformUnit!=-1 || u.headUnit!=-1 ||
            u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 || u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 ||
-           !g || g->sequenceType!=1 || g->frameCount!=2 || g->angleCount!=1 || g->frameDuration!=.4f || g->replayDelay ||
-           g->soundId!=-1 || !g->angleSounds.empty()) return fail("unsupported owned87 lifecycle metadata");
-        for(const auto &annex:u.annexes)if(annex.unitId!=-1)return fail("owned87 annexes are unsupported");
-        for(const auto &storage:u.resourceStorages)if(storage.type!=-1 || storage.amount || storage.flag)
-            return fail("unsupported owned87 completion storage");
+           !g || g->sequenceType!=(prefab?6:1) || g->frameCount!=(prefab?3:2) || g->angleCount!=1 || g->frameDuration!=(prefab?0.f:.4f) || g->replayDelay ||
+           g->soundId!=-1 || !g->angleSounds.empty()) return fail("unsupported owned-building lifecycle metadata");
+        for(const auto &annex:u.annexes)if(annex.unitId!=-1)return fail("owned-building annexes are unsupported");
+        for(size_t n=0;n<u.resourceStorages.size();++n) {
+            const auto &storage=u.resourceStorages[n];const bool population=prefab && n==0;
+            if(storage.type!=(population?4:-1) || storage.amount!=(population?5:0) || storage.flag!=(population?4:0))
+                return fail("unsupported owned-building completion storage");
+        }
     }
     const bool airTransport=std::any_of(resourceRows.begin(),resourceRows.end(),[](const auto &row){return row.unitId==1521;});
     if(airTransport) {
@@ -1450,9 +1456,33 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 if(targets.empty())continue;
                 const bool ownedRow=std::any_of(targets.begin(),targets.end(),[](const auto &target){return target.owner>0;});
                 if(ownedRow) {
-                    if(row.unitId==87) {
+                    if(row.unitId==87 || row.unitId==70) {
+                        const bool prefab=row.unitId==70;
+                        const float radius=prefab?1.f:1.5f,offset=prefab?0.f:.5f;
+                        const int low=-1,high=prefab?1:2;
+                        const auto &pass=data.terrainRestrictions[4].passableBuildableDmgMultiplier;
+                        for(auto terrain:generated.terrain)if(terrain>=pass.size() || !std::isfinite(pass[terrain]))
+                            return fail("invalid owned-building terrain restriction");
+                        auto outside=[&](int x,int y){return x+low<0 || y+low<0 || x+high>int(width) || y+high>int(height);};
+                        auto blocked=[&](uint32_t tile) {
+                            const int x=tile%width,y=tile/width;
+                            if(outside(x,y))return true;
+                            for(int yy=y+low;yy<y+high;++yy)for(int xx=x+low;xx<x+high;++xx)
+                                if(pass[generated.terrain[size_t(yy)*width+xx]]<=.05f)return true;
+                            const float px=x+offset,py=y+offset;
+                            auto overlap=[&](int id,uint16_t owner,float ox,float oy) {
+                                const auto &u=data.civs[owner?playerCivilizations[owner-1]:0].units[id];
+                                return std::abs(px-ox)<radius+u.collisionSize[data.footprintAxesSwapped?1:0] &&
+                                       std::abs(py-oy)<radius+u.collisionSize[data.footprintAxesSwapped?0:1];
+                            };
+                            for(const auto &o:generated.cliffs)if(overlap(o.unit,0,o.x,o.y))return true;
+                            for(const auto &o:generated.scenery)if(o.alive && overlap(o.unitId,0,o.x,o.y))return true;
+                            for(const auto &o:generated.ownedObjects)if(overlap(o.unitId,o.owner,o.x,o.y))return true;
+                            for(const auto &o:generated.resourcesAfterOwned)if(overlap(o.unitId,o.owner,o.x,o.y))return true;
+                            return false;
+                        };
                         for(const auto &target:targets) {
-                            if(target.owner<1 || target.owner>2 || target.landIndex<0)return fail("owned87 requires selected player lands");
+                            if(target.owner<1 || target.owner>2 || target.landIndex<0)return fail("owned buildings require selected player lands");
                             const auto &center=generated.lands[target.landIndex].center;
                             std::vector<uint32_t> candidates;
                             if(!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,row.maxDistance,rng,candidates,err))return false;
@@ -1460,38 +1490,38 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                             if(!startZone(center,4,zoneIndex))return false;
                             const auto &zones=startZones.entry(zoneIndex)->zones.tiles;
                             const auto zone=zones[size_t(center.y)*width+center.x];
-                            const auto &pass=data.terrainRestrictions[4].passableBuildableDmgMultiplier;
+                            auto create=[&](uint32_t tile) {
+                                const int x=tile%width,y=tile/width;
+                                if(outside(x,y))return fail("owned-building forced boundary placement remains unverified");
+                                for(int draw=0;draw<(prefab?6:3);++draw)genieRandomDraw(rng);
+                                rng=genieRandomDraw(rng); // Actual554951 reseeds after87's fourth or70's seventh draw.
+                                const uint16_t owner=uint16_t(target.owner);
+                                generated.resourcesAfterOwned.push_back({x+offset,y+offset,0,0,int16_t(row.unitId),0,0,owner,0,uint8_t(owner==1?255:27)});
+                                if(owner==1)for(int yy=y+low;yy<y+high;++yy)for(int xx=x+low;xx<x+high;++xx)
+                                    generated.terrain[size_t(yy)*width+xx]=27;
+                                return true;
+                            };
                             for(auto tile:candidates) {
                                 const int x=tile%width,y=tile/width;
                                 if(zones[tile]!=zone || std::any_of(generated.lands.begin(),generated.lands.end(),[&](const auto &land) {
                                     return std::abs(x-land.center.x)<row.minDistance && std::abs(y-land.center.y)<row.minDistance;
                                 }))continue;
-                                const float px=x+.5f,py=y+.5f;
-                                const bool outside=x<1 || y<1 || x+1>=int(width) || y+1>=int(height);
-                                bool blocked=outside;
-                                if(!blocked) for(int yy=y-1;yy<=y+1;++yy)for(int xx=x-1;xx<=x+1;++xx) {
-                                    const auto terrain=generated.terrain[size_t(yy)*width+xx];
-                                    if(terrain>=pass.size() || !std::isfinite(pass[terrain]))return fail("invalid owned87 terrain restriction");
-                                    blocked|=pass[terrain]<=.05f;
+                                if(!row.mode) {
+                                    if(blocked(tile) && tile!=candidates.back())continue;
+                                    // Last-candidate fallback retains overlapping world objects;4de1b0 only unlinks queue nodes.
+                                    if(!create(tile))return false;
+                                } else {
+                                    if(blocked(tile))continue;
+                                    std::vector<uint32_t> members;
+                                    if(!generateRmsObjectCandidatesInArea(width,height,x,y,row.radius,rng,members,err))return false;
+                                    genieRandomDraw(rng); // Original loose groups consume a quantity draw even with zero variance.
+                                    int remaining=row.perGroup;
+                                    for(auto member:members) {
+                                        if(blocked(member))continue;
+                                        if(!create(member))return false;
+                                        if(!--remaining)break;
+                                    }
                                 }
-                                auto overlap=[&](int id,uint16_t owner,float ox,float oy) {
-                                    const auto &u=data.civs[owner?playerCivilizations[owner-1]:0].units[id];
-                                    return std::abs(px-ox)<1.5f+u.collisionSize[data.footprintAxesSwapped?1:0] &&
-                                           std::abs(py-oy)<1.5f+u.collisionSize[data.footprintAxesSwapped?0:1];
-                                };
-                                for(const auto &o:generated.cliffs)blocked|=overlap(o.unit,0,o.x,o.y);
-                                for(const auto &o:generated.scenery)if(o.alive)blocked|=overlap(o.unitId,0,o.x,o.y);
-                                for(const auto &o:generated.ownedObjects)blocked|=overlap(o.unitId,o.owner,o.x,o.y);
-                                for(const auto &o:generated.resourcesAfterOwned)blocked|=overlap(o.unitId,o.owner,o.x,o.y);
-                                if(blocked && tile!=candidates.back())continue;
-                                if(outside)return fail("owned87 forced boundary placement remains unverified");
-                                // Last-candidate fallback retains overlapping world objects;4de1b0 only unlinks queue nodes.
-                                for(int draw=0;draw<3;++draw)genieRandomDraw(rng);
-                                rng=genieRandomDraw(rng); // Actual554951 completion reseeds after the fourth draw.
-                                const uint16_t owner=uint16_t(target.owner);
-                                generated.resourcesAfterOwned.push_back({px,py,0,0,87,0,0,owner,0,uint8_t(owner==1?255:27)});
-                                if(owner==1)for(int yy=y-1;yy<=y+1;++yy)for(int xx=x-1;xx<=x+1;++xx)
-                                    generated.terrain[size_t(yy)*width+xx]=27;
                                 break;
                             }
                         }

@@ -8,8 +8,8 @@ Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
 Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206, allied roads54218, central water54212 and Motherlode54225.
 The shared packaged suite contains68 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
-Gaia resource accounting and deferred foundation rendering. Five additional authored
-fixtures cover owned Troop Center placement and completion research order.
+Gaia resource accounting and deferred foundation rendering. Twelve additional authored
+fixtures cover owned Troop Center and Prefab placement, completion research order and population grants.
 
 The standard production audit accepts54/138 map/seed attempts (eighteen of46 resources,
 three seeds each);84 are explicitly rejected. The allied54218 configuration is
@@ -3356,3 +3356,51 @@ and zone filtering, preserving overlapping objects. The compared8..14 ring and
 0..0 control are admitted; out-of-map forced footprints still reject atomically.
 Evidence: `rms-owned87-forced-findings-2026-11-16.json` and the
 `rms-text-full-owned87-on-cc` full/research-v2/native comparisons.
+
+
+### Owned Prefab placement and completion (2026-11-16)
+
+The bounded flat120, two-Empire cliff/forest startup now supports Prefab70:
+one per owner, a repeated second row, and the raw54208 loose group of four.
+Seven complete comparisons against the original executable match ordered object
+records, terrain/elevation/slopes, final RNG, Gaia and owned animation, and
+pending foundations. These are authored fixtures, not full54208 support.
+
+| Row form | Seed | Objects | Final RNG |
+| --- | --- | --- | --- |
+| Single | 1 | 5989 | 1040066035 |
+| Single | 12345 | 5973 | 3797195514 |
+| Single | 16160 | 6065 | 1428071604 |
+| Repeated single | 1 | 5991 | 2617341845 |
+| Loose four | 1 | 5995 | 2723706306 |
+| Loose four | 12345 | 5979 | 2206864911 |
+| Loose four | 16160 | 6071 | 1753002939 |
+
+Prefab centers snap to integer coordinates before collision checks. Each
+constructor consumes seven random draws and reseeds on completion. Loose groups
+use a separate radius-three candidate queue and consume the quantity-variation
+draw even with zero variance. Members pass their own collision checks without
+repeating the outer player-distance filter. The existing candidate queue helper
+and owned-building placement path handle this; no separate map generator was added.
+
+Each completed Prefab contributes five population capacity and25 carbon to
+construction accounting. Tech16 unlocks only on the first completion, with no
+research effect or repeated technology counter increment. Native import checks
+these counters and chronology, HP800, reset animation, and local/deferred enemy
+2x2 foundations. The same test runs retain the five Troop Center cases, including
+forced overlap. Unsupported scaling, foundation metadata, population storage and
+randomized start configurations reject before generation.
+
+Evidence: `rms-owned70-mode0-findings-2026-11-16.json`,
+`rms-owned70-loose-findings-2026-11-16.json`, original loader captures and
+`rms-text-full-owned70-{single,double,loose}` full/research-v2/native comparisons.
+All research stays local. Slopes, other civilizations, mixed building rows,
+partial loose-group exhaustion and boundary fallback are not established by
+these fixtures. Farm50, defense building79 and barrier117 still block full54208.
+
+
+An additional loose-group seed8000 comparison matches all6088 objects, all grids,
+poses and RNG1640586513. The shared68 packaged cases and twelve authored building
+fixtures pass under ASan/UBSan; strict integrated RMS and standalone CLI checks
+also pass. This extra seed is retained as a local full comparison, not counted
+as an additional shared regression fixture.
