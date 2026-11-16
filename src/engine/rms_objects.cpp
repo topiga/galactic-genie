@@ -29,27 +29,31 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         {66,5134,30,29,0,8,10,3,800,1,1.f},
         {102,5232,30,30,0,8,10,2,350,1,1.f},
         {1160,5147,30,31,50,11,12,1,100,2,2.f},
-        {1170,5266,10,42,50,1,3,-1,0,0,1.f}};
+        {1170,5266,10,42,50,1,3,-1,0,0,1.f},
+        {1165,5276,10,42,5000,11,1,-1,0,0,3.f},
+        {1166,5277,10,42,5000,11,1,-1,0,0,3.f}};
     const ResourceSpec *match=nullptr;
     for (const auto &candidate:specs) if (candidate.id==unitId) match=&candidate;
     if (!match) return fail("unsupported resource unit");
     const auto &spec=*match;
+    const bool mountain=unitId==1165 || unitId==1166;
+    const float radius=mountain?3.f:.5f;
     if (data.civs.empty() || data.civs[0].units.size()<=static_cast<size_t>(unitId))
         return fail("missing Gaia resource prototype");
     const auto &u=data.civs[0].units[unitId];
     const auto *g=data.graphic(spec.graphic);
     if (!u.exists || u.id!=unitId || u.type!=spec.type || u.cls!=spec.cls ||
         u.standingGraphic[0]!=spec.graphic || u.standingGraphic[1]!=-1 || u.hitPoints!=spec.hp ||
-        u.collisionSize[0]!=.5f || u.collisionSize[1]!=.5f || u.collisionSize[2]!=spec.height ||
-        u.clearanceSize[0]!=.5f || u.clearanceSize[1]!=.5f ||
+        u.collisionSize[0]!=radius || u.collisionSize[1]!=radius || u.collisionSize[2]!=spec.height ||
+        u.clearanceSize[0]!=radius || u.clearanceSize[1]!=radius ||
         u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 ||
         u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
         u.terrainRestriction!=spec.restriction || u.hillMode || u.flyMode || u.canBeBuiltOn ||
         u.recyclable || u.lineOfSight!=0 || u.trainSound!=-1 ||
-        u.obstructionType!=2 || u.obstructionClass!=(unitId==1170?3:1) || u.civilization ||
-        u.enableAutoGather!=(unitId==1170?0:1) || !g || g->sequenceType!=6 || g->angleCount!=spec.angles)
+        u.obstructionType!=(mountain?10:2) || u.obstructionClass!=(unitId==1170?3:1) || u.civilization ||
+        u.enableAutoGather!=(spec.resource<0?0:1) || !g || g->sequenceType!=(mountain?0:6) || g->angleCount!=spec.angles)
         return fail("unsupported resource prototype or graphic");
-    if (spec.type==30 && (u.createDoppelgangerOnDeath!=spec.doppel || u.speed!=0 ||
+    if ((spec.type==30 || mountain) && (u.createDoppelgangerOnDeath!=spec.doppel || u.speed!=0 ||
         u.trackingUnit!=-1 || u.trackingUnitMode!=0 || u.trackingUnitDensity!=0 ||
         g->frameCount!=1 || g->soundId!=-1 || !g->angleSounds.empty()))
         return fail("unsupported resource movement or sprite metadata");
@@ -218,6 +222,7 @@ bool generateRmsResourcePlacements(uint32_t width, uint32_t height,
     std::vector<RmsTimberPlacement> &out, std::string *err,
     const std::vector<uint32_t> &occupiedTiles) {
     out.clear();
+    if(unitId==1165 || unitId==1166) {if(err)*err="RMS mountain requires a verified final object row";return false;}
     if (err) err->clear();
     auto fail = [&](const char *reason) {
         if (err) *err = std::string("RMS resource: ") + reason;
@@ -276,6 +281,12 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
        (group.mode!=1 && group.mode!=2 && !((objectRow || isPredator(unitId) || unitId==822 || unitId==1249 || unitId==1364 || isTree(unitId) || unitId==816 || unitId==69 || unitId==1585) && group.mode==0)) || group.groups>count || group.perGroup>count ||
        group.variance>1024 || group.radius>1024)
         return fail("unsupported dimensions or grouping parameters");
+    const bool mountain=unitId==1165 || unitId==1166;
+    if(mountain && (!objectRow || width!=120 || height!=120 || objectRow->landId!=-2 ||
+        objectRow->minDistance!=40 || objectRow->maxDistance!=-1 || objectRow->terrain!=-1 ||
+        objectRow->spacing || objectRow->temporarySpacing || objectRow->zoneDistance ||
+        group.mode || group.groups!=1 || group.perGroup!=1 || group.variance || group.radius!=3))
+        return fail("unsupported mountain row");
     const bool hunt=unitId==1363 || unitId==1365;
     const bool predator=isPredator(unitId);
     if(!objectRow && (unitId==349 || unitId==350 || unitId==411 || unitId==413) && group.mode!=0)return fail("tree species requires verified mode0 rows");
@@ -441,6 +452,13 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
         return true;
     };
     auto pass=[&](int tile) {
+        if(mountain) {
+            const int x=tile%width,y=tile/width;
+            if(x<3 || y<3 || x+3>int(width) || y+3>int(height))return false;
+            for(int yy=y-3;yy<y+3;++yy)for(int xx=x-3;xx<x+3;++xx)
+                if(occupied[yy*width+xx] || restriction[terrain[yy*width+xx]]<=.05f)return false;
+            return true;
+        }
         if(!objectRow && unitId==1585 && terrain[tile]!=22)return false;
         if(unitId==69) {
             const int x=tile%width,y=tile/width;
@@ -459,7 +477,10 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
     };
     auto create=[&](int tile) {
         RmsTimberPlacement placement{float(tile%width)+.5f,float(tile/width)+.5f,0,0,unitId};
-        if(bird) {
+        if(mountain) {
+            // Original global placement retains integer centers and static graphics consume no draws.
+            placement.x=float(tile%width);placement.y=float(tile/width);
+        } else if(bird) {
             const uint32_t heading=genieRandomDraw(rng)*8u/32767u;
             placement.headingRadians=float(double(heading)*3.14159265358979323846/4.);
             placement.facet=uint8_t((heading+7)%8);

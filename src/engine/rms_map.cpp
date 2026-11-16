@@ -987,6 +987,10 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             for(const auto &sourceRow:resourceRows) {
                 RmsObjectRow row;
                 if(!finalizeRmsObjectRow(sourceRow,width,height,playerCount,row,err)) return false;
+                // shortcut: mountains are verified only as the final Hoth row; extend after later-row collision comparisons.
+                if((row.unitId==1165 || row.unitId==1166) &&
+                   (base!=32 || !cliffStage || &sourceRow!=&resourceRows.back()))
+                    return fail("mountains require the final verified Hoth row");
                 std::vector<RmsObjectTarget> targets;
                 if(!selectRmsObjectTargets(row,generated.lands,playerCount,targets,err))return false;
                 if(targets.empty())continue;

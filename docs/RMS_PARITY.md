@@ -2564,9 +2564,21 @@ footprint before civilization overrides. The native RMS startup now follows that
 rule. This does not yet replace the later gameplay construction heuristic.
 
 Original full runs and independent resource replays also exist for seeds12345
-and16160, including optional mountains1166/1165. Those mountain rows remain
-unsupported in native generation pending placement and footprint comparison.
+and16160, including optional mountains1166/1165. Both mountain rows now match in native generation:seed12345 has2,374 objects
+and RNG2432524620;seed16160 has2,402 objects and RNG1898746486. All ordered
+objects, grids and startup poses match, including native import. Original gate
+traces confirm integer centers,6×6 terrain footprints and zero constructor RNG
+draws. Support remains limited to one mountain as the final Hoth object row;
+multiple mountains and subsequent rows are explicitly rejected until their
+collision propagation is compared. The packaged suite now has10 complete cases.
 Private evidence: `rms-packaged-hoth-full-findings-2026-11-16.json`,
 `rms-hoth-assets-provenance-2026-11-16.json`, and the matching Hoth comparison
 and snow-flag disassembly files. This is configured-world original executable
 evidence, not a new live Windows UI/settings comparison.
+
+The Hoth production audit accepts12/138 standard combinations, up from9:
+Forest, Reytha, Arid and Hoth each at seeds1,12345,16160. The remaining126
+cases reject unsupported rules. Full startup/import regressions, the algorithm
+suites, production CLI include/define/rejection checks and desktop smoke pass.
+The smoke uses dummy video/audio; it verifies the audio pipeline, not listening
+or original sound-mixing parity. Audit and PNGs remain local.
