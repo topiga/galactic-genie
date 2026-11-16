@@ -67,6 +67,8 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         {6202,664476888u,374431829u,742396127u},
         {6202,664476888u,374431829u,742396127u},
         {6330,2120920959u,1363971012u,3073990882u},
+        {6067,112705475u,2840059083u,3870201515u},
+        {6077,2361844694u,730438242u,299840089u},
     };
     auto replace=[](std::string &text,const std::string &from,const std::string &to) {
         const auto at=text.find(from);check(at!=std::string::npos,"authored variation finds directive");
@@ -97,18 +99,20 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         case 11: changed.insert(changed.begin()+4,"create_object 66 { number_of_objects 7 place_on_specific_land_id 7 }");break;
         }
         std::string text=source.substr(0,first);
-        if(variant>=12 && variant<=16) {
-            replace(text,"<CLIFF_GENERATION>","");
+        if((variant>=12 && variant<=16) || variant>=50) {
+            const size_t selected=variant>=50?(variant==50?12:15):variant;
+            if(variant<50)replace(text,"<CLIFF_GENERATION>","");
             std::string neutral;
             std::vector<std::pair<int,int>> positions;
-            if(variant==12 || variant==14)positions.push_back({50,50});
-            if(variant==13 || variant==14)positions.push_back({25,25});
-            if(variant==15)positions.push_back({75,28});
-            if(variant==16)positions.push_back({0,0});
+            if(selected==12 || selected==14)positions.push_back({50,50});
+            if(selected==13 || selected==14)positions.push_back({25,25});
+            if(selected==15)positions.push_back({75,28});
+            if(selected==16)positions.push_back({0,0});
             for(const auto &position:positions)
                 neutral+="create_land { terrain_type 6 base_size 0 number_of_tiles 0 land_position "+
                     std::to_string(position.first)+" "+std::to_string(position.second)+" land_id 7 }\n";
-            replace(text,"<TERRAIN_GENERATION>",neutral+"<TERRAIN_GENERATION>");
+            const std::string stage=variant>=50?"<CLIFF_GENERATION>":"<TERRAIN_GENERATION>";
+            replace(text,stage,neutral+stage);
             changed.assign(rows.begin(),rows.begin()+3);
             changed.push_back("create_object 66 { number_of_objects 5 set_tight_grouping number_of_groups 3 place_on_specific_land_id 7 min_distance_to_players 6 max_distance_to_players 12 min_distance_group_placement 3 }");
             changed.push_back("create_object 413 { number_of_objects 10 }");
@@ -153,7 +157,7 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
             const std::string air="create_object 1521 { set_place_for_every_player match_player_civ number_of_objects "+std::to_string(quantity)+" min_distance_to_players 3 max_distance_to_players 6 }";
             if(variant==35 || variant==37 || variant==38)changed.insert(changed.begin()+3,air);else changed.push_back(air);
         }
-        if(variant>=44) {
+        if(variant>=44 && variant<=49) {
             const char *zones[]={"zone 0","set_zone_by_team","set_zone_randomly"};
             if(variant<47)replace(text,"<CLIFF_GENERATION>","");
             replace(text,"number_of_tiles 7200",std::string("number_of_tiles 7200 ")+zones[(variant-44)%3]);
@@ -177,7 +181,7 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
             const int ids[]={4,11,21,37,40,84,98,164,165};
             const float values[4][9]={{-2,7,2,6,1,3,725,350,375},{-5,10,2,9,1,3,875,500,375},
                 {0,5,2,3,2,3,625,250,375},{-1,6,2,3,3,3,675,300,375}};
-            const float quantityValues[27][2][9]={
+            const float quantityValues[29][2][9]={
                 {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
                 {{-1.0f,6.0f,2.0f,5.0f,1.0f,3.0f,675.0f,300.0f,375.0f},{-1.0f,6.0f,2.0f,5.0f,1.0f,3.0f,675.0f,300.0f,375.0f}},
                 {{-3.0f,8.0f,2.0f,7.0f,1.0f,3.0f,775.0f,400.0f,375.0f},{-3.0f,8.0f,2.0f,7.0f,1.0f,3.0f,775.0f,400.0f,375.0f}},
@@ -199,6 +203,8 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
                 {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
                 {{-1.0f,6.0f,2.0f,3.0f,3.0f,3.0f,895.0f,520.0f,375.0f},{-1.0f,6.0f,2.0f,3.0f,3.0f,3.0f,895.0f,520.0f,375.0f}},
                 {{-62.0f,67.0f,2.0f,3.0f,64.0f,3.0f,10655.0f,10280.0f,375.0f},{-50.0f,55.0f,2.0f,3.0f,52.0f,3.0f,8735.0f,8360.0f,375.0f}},
+                {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
+                {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
                 {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
                 {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
                 {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
@@ -535,6 +541,26 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         {49,6154u,2,7,255,1.0f,40.0f},
         {49,6155u,1,0,255,0.20000000298023224f,60.0f},
         {49,6156u,2,0,255,0.20000000298023224f,60.0f},
+        {50,6071u,1,0,255,0.20000000298023224f,2500.0f},
+        {50,6072u,2,0,27,0.20000000298023224f,2500.0f},
+        {50,6073u,1,7,255,1.0f,40.0f},
+        {50,6074u,1,2,255,1.0f,40.0f},
+        {50,6075u,1,7,255,1.5872981548309326f,40.0f},
+        {50,6076u,2,1,255,1.0f,40.0f},
+        {50,6077u,2,1,255,1.0f,40.0f},
+        {50,6078u,2,7,255,1.2029175758361816f,40.0f},
+        {50,6079u,1,0,255,0.20000000298023224f,60.0f},
+        {50,6080u,2,0,255,0.20000000298023224f,60.0f},
+        {51,6063u,1,0,255,0.20000000298023224f,2500.0f},
+        {51,6064u,2,0,27,0.20000000298023224f,2500.0f},
+        {51,6065u,1,0,255,1.0f,40.0f},
+        {51,6066u,1,0,255,1.0f,40.0f},
+        {51,6067u,1,3,255,1.0f,40.0f},
+        {51,6068u,2,3,255,1.0f,40.0f},
+        {51,6069u,2,0,255,1.0f,40.0f},
+        {51,6070u,2,5,255,1.0f,40.0f},
+        {51,6071u,1,0,255,0.20000000298023224f,60.0f},
+        {51,6072u,2,0,255,0.20000000298023224f,60.0f},
         };
         for(const auto &pose:ownedPoses)if(pose.variant==variant) {
             const int unit=game.objectUnitId(pose.id);

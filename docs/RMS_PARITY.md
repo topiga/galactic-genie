@@ -2532,3 +2532,18 @@ The final Arid production audit accepts9/138 standard combinations and rejects
 129 unsupported cases. Forest/Reytha/Arid native import,19 algorithm suites,
 archive rendering and desktop smoke checks pass. The smoke check also verifies
 effects and streamed music; it does not establish original sound mixing parity.
+
+### Mixed-land cliffs and selected resources
+
+Two additional complete original-runner cases combine fixed Tiny120 two-Empire
+startup, cliffs and one zero-growth neutral land. A center neutral land produces
+6,067 objects and RNG112705475; a worker-edge neutral land produces6,077 objects
+and RNG2361844694. Ordered objects, all three terrain/elevation/slope grids,
+owned and animated Gaia poses match. Independent resource replays also agree.
+The general regression suite now covers52 complete-map cases.
+
+The gate permits exactly one extra neutral seed land with cliffs; growing neutral
+lands, elevation/connections and additional cliff neutral lands remain excluded.
+Evidence is retained locally in `rms-selected-cliff-findings-2026-11-16.json`
+and `rms-selected-cliff-source-provenance-2026-11-16.json`. This is bounded
+original-executable evidence, not universal RMS or live Windows parity.

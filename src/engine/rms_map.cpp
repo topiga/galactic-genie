@@ -421,7 +421,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 ((elevationRows[0].targetTiles==400 && elevationRows[0].clumps==8) ||
                  (elevationRows[0].targetTiles==8000 && elevationRows[0].clumps==30));
             if(width!=120 || height!=120 || base!=6 ||
-                (playerLands ? (playerCount!=2 || lands.size()!=2 || (playerZoneOverride && !ownedCliff) ||
+                (playerLands ? (playerCount!=2 || (lands.size()!=2 && !ownedCliff) || (playerZoneOverride && !ownedCliff) ||
                     (elevationStage && !ownedCliffElevation && (hasObjects || !terrainRows.empty()))) : lands.size()!=1) ||
                 (hasObjects && !ownedCliff) || connectionStage || terrainRows.size()>1 ||
                 (elevationStage && (elevationRows.empty() || elevationRows.size()>7 ||
@@ -434,9 +434,9 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
             for(size_t index=0;index<lands.size();++index) {
                 const auto &land=lands[index];
                 if(land.terrain!=6 || (!playerLands && (placements[index].x<0 || placements[index].y<0)) ||
-                    (ownedCliff ? (land.radius!=13 || land.targetTiles!=7200) :
+                    (ownedCliff ? (landMetadata[index].owner ? (land.radius!=13 || land.targetTiles!=7200) : (land.radius || land.targetTiles)) :
                         playerLands ? (land.radius>10 || land.targetTiles>8000) : (land.radius || land.targetTiles)) ||
-                    (!playerZoneOverride && land.zone!=(playerLands?int(index+1):0)) ||
+                    (!playerZoneOverride && land.zone!=(playerLands?landMetadata[index].owner:0)) ||
                     land.clumpingFactor!=8 || land.borderFuzziness!=20 || land.separation ||
                     land.leftBorder || land.topBorder || land.rightBorder!=-1 || land.bottomBorder!=-1)
                     return fail("cliffs require verified land size and growth defaults");
@@ -483,7 +483,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     if(ownedObjects && lands.size()!=playerCount) {
         // shortcut: fixed neutral seed lands only; broaden after original mixed-land startup comparisons.
         if(width!=120 || height!=120 || base!=6 || playerLandBegin!=0 || playerCount!=2 ||
-           lands.size()>playerCount+2 || cliffStage || elevationStage || connectionStage ||
+           lands.size()>playerCount+(cliffStage?1:2) || elevationStage || connectionStage ||
            playerZoneOverride || !defines.count("FIXED_POSITIONS") ||
            playerCivilizations!=std::vector<uint16_t>{1,1} || !startingWorkers || !startingScouts)
             return fail("mixed-land owned-object startup remains unverified");
