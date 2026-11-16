@@ -10,6 +10,8 @@
 #include "starting_age_checks.h"
 #include "upgrade_rng_checks.h"
 #include "local_simulation_checks.h"
+#include "local_command_queue_checks.h"
+#include "player_update_order_checks.h"
 #include "world_rng_checks.h"
 #include "local_simulation_clock_checks.h"
 
@@ -17,6 +19,8 @@ static void civilizationBonusChecks(swgb::Assets &assets) {
     hitPointEffectChecks(assets);
     combinedUpgradeChecks(assets);
     upgradeRngChecks(assets);
+    playerUpdateOrderChecks(assets);
+    localCommandQueueChecks();
     localSimulationClockChecks();
     localSimulationChecks(assets);
     worldRngChecks(assets);

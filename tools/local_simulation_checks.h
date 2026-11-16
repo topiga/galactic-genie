@@ -62,11 +62,16 @@ static void localSimulationChecks(swgb::Assets &assets) {
     check(game.objectPosition(2)==position && game.productionRemainingForTesting(1)==remaining &&
           game.aiGoalForTesting(2,980)==1,"Order input does not run a world step between eligible timestamps");
     const auto moving=game.movingObjects();
-    check(std::any_of(moving.begin(),moving.end(),[](const swgb::MovingObjectInfo &o){return o.spawnId==2;}),
-          "Between-tick right click creates a movement order exactly once");
+    check(std::none_of(moving.begin(),moving.end(),[](const swgb::MovingObjectInfo &o){return o.spawnId==2;}),
+          "Between-tick right click waits for admitted command dispatch");
+    check(game.selectObjectForTesting(1),"Change selection while the worker command is pending");
+    game.lookAtObject(1);
     game.updateLocal(1066,.031f,{});
     check(game.objectPosition(2)!=position && game.productionRemainingForTesting(1)<remaining,
           "Next admitted tick advances both ordered movement and production");
+    const auto destination=game.moveAnchorForTesting(2);
+    check(std::abs(destination[0]-goalX)<.01f && std::abs(destination[1]-goalY)<.01f,
+          "Queued destination is captured in world coordinates before camera changes");
     swgb::Game reference(assets);
     check(reference.initScenario(scenario,&error),error.c_str());
     check(reference.queueUnitForTesting(1,83),"Queue reference worker for original normal-speed scaling");
@@ -81,6 +86,48 @@ static void localSimulationChecks(swgb::Assets &assets) {
           game.aiGoalForTesting(2,980)==1,"Pause and first accepted resume rebase without catch-up or AI evaluation");
     game.updateLocal(9050,.05f,{});
     check(game.productionRemainingForTesting(1)<pausedRemaining,"Simulation resumes after a fresh admitted interval");
+
+    initialize();
+    game.lookAtObject(2);
+    game.updateLocal(1000,0,{});
+    check(game.selectObjectForTesting(2),"Select worker before pending-command pause");
+    input={};input.commandPressed=true;input.cursorVisible=true;
+    auto point=game.objectPosition(2);
+    const auto view=game.cameraForTesting();
+    input.pointerX=(point[0]+4-point[1])*swgb::Game::kTileHalfW-view[0]+input.screenW*.5f;
+    input.pointerY=(point[0]+4+point[1])*swgb::Game::kTileHalfH-view[1]+input.screenH*.5f;
+    game.updateLocal(1001,0,input);
+    game.updatePaused(1,{});
+    game.updateLocal(2000,0,{});
+    check(game.objectPosition(2)==point,"Queued command survives pause without executing during resume rebase");
+    game.updateLocal(2050,0,{});
+    check(game.objectPosition(2)!=point,"Retained command executes on next admitted resumed step");
+    initialize();
+    game.updateLocal(1000,0,{});
+    game.selectObjectForTesting(2);game.lookAtObject(2);
+    game.updateLocal(1001,0,input);
+    initialize();
+    point=game.objectPosition(2);
+    game.updateLocal(1000,0,{});game.updateLocal(1050,0,{});
+    check(game.objectPosition(2)==point,"New session discards pending commands from the old world");
+
+    initialize();
+    game.updateLocal(1000,0,{});
+    game.lookAtObject(2);game.selectObjectForTesting(2);
+    game.updateLocal(1001,0,input);
+    check(game.destroyLastSelectedForTesting(),"Delete captured actor before command dispatch");
+    game.updateLocal(1050,0,{});
+    const auto afterDeletion=game.movingObjects();
+    check(std::none_of(afterDeletion.begin(),afterDeletion.end(),[](const swgb::MovingObjectInfo &o){return o.spawnId==2;}),
+          "Deleted captured actor is not revived or replaced during dispatch");
+    initialize();
+    game.updateLocal(1000,0,{});
+    game.lookAtObject(2);game.selectObjectForTesting(1);
+    game.updateLocal(1001,0,input);
+    check(!game.gatherPointActiveForTesting(1),"Building rally click waits for command dispatch");
+    game.selectObjectForTesting(2);
+    game.updateLocal(1050,0,{});
+    check(game.gatherPointActiveForTesting(1),"Rally dispatch keeps captured building after selection changes");
 
     initialize();
     for(uint32_t call=1;call<=40;++call) {

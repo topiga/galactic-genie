@@ -394,6 +394,7 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     aiRandomNumbers_.fill(-1);
     gameTime_ = 0;
     localClock_.reset();
+    localCommands_.reset();
     players_ = {};
     worldPlayerCount_=2;
     resources_ = {};
@@ -947,6 +948,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     aiRandomNumbers_.fill(-1);
     gameTime_ = 0;
     localClock_.reset();
+    localCommands_.reset();
     players_ = scenario.players;
     worldPlayerCount_=scenario.playerSlotCount;
     if(!worldPlayerCount_) {
@@ -5180,10 +5182,17 @@ void Game::setGatherPoint(Object &building, float screenX, float screenY, int sc
     float worldX = 0, worldY = 0;
     screenToWorld(screenX, screenY, screenW, screenH, worldX, worldY);
     const Object *target = objectAtScreen(screenX, screenY, screenW, screenH);
+    const uint32_t buildingId=building.spawnId, targetId=target?target->spawnId:0;
+    const int player=building.player;
+    if (target) {worldX=target->x;worldY=target->y;}
+    localCommands_.enqueue([this,buildingId,targetId,player,worldX,worldY] {
+    Object *object=findObject(buildingId);
+    if (!object || !object->active || object->player!=player || !canSetGatherPoint(*object)) return;
+    Object &building=*object;
     building.rallyActive = true;
-    building.rallyTargetId = target ? target->spawnId : 0;
-    building.rallyX = target ? target->x : worldX;
-    building.rallyY = target ? target->y : worldY;
+    building.rallyTargetId = targetId;
+    building.rallyX = worldX;
+    building.rallyY = worldY;
     commandMarkerX_ = building.rallyX;
     commandMarkerY_ = building.rallyY;
     commandMarkerTime_ = 0.65f;
@@ -5191,6 +5200,7 @@ void Game::setGatherPoint(Object &building, float screenX, float screenY, int sc
     if (playInterfaceSound_ && building.player == localPlayer_) playInterfaceSound_(50329);
     statusMessage_ = "GATHER POINT SET";
     statusTime_ = 2.0f;
+    });
 }
 
 // Spawned unit follows the gather point (0x56e390): the building itself
@@ -5898,8 +5908,9 @@ bool Game::isShielded(const Object &object) const {
     return source && isPowered(*source);
 }
 
-void Game::updateShields(float dt) {
+void Game::updateShields(float dt,int player) {
     for (Object &object : objects_) {
+        if (object.player!=player)continue;
         if (!object.active || object.hidden ||
             object.underConstruction || !object.unit) {
             object.shieldPoints = 0;
@@ -6421,8 +6432,9 @@ bool Game::issueRepairCommand(
     return true;
 }
 
-void Game::updateRepairing(float dt) {
+void Game::updateRepairing(float dt,int player) {
     for (Object &worker : objects_) {
+        if (worker.player!=player)continue;
         if (!worker.active || worker.hidden ||
             !worker.repairTargetId)
             continue;
@@ -6570,9 +6582,10 @@ Game::Object *Game::nextResourceLike(const Object &worker) {
     return best;
 }
 
-void Game::updateGathering(float dt) {
+void Game::updateGathering(float dt,int player) {
     bool depletedResource = false;
     for (Object &worker : objects_) {
+        if (worker.player!=player)continue;
         if (!worker.active || worker.hidden ||
             !worker.unit ||
             (!worker.gatherTargetId &&
@@ -7118,8 +7131,12 @@ bool Game::findProductionExit(
 }
 
 bool Game::issueGarrisonCommand(Object &building) {
+    return issueGarrisonCommand(building,selectedObjectsInOrder(false));
+}
+
+bool Game::issueGarrisonCommand(Object &building, const std::vector<Object *> &selected) {
     size_t assigned = 0;
-    for (Object *unit : selectedObjectsInOrder(false)) {
+    for (Object *unit : selected) {
         if (!unit ||
             !issueGarrisonOrder(
                 *unit, building))
@@ -7128,7 +7145,7 @@ bool Game::issueGarrisonCommand(Object &building) {
     }
     if (assigned > 0) {
         playUnitAcknowledgement(
-            *selectedObjectsInOrder(false).front(), false);
+            *selected.front(), false);
         statusMessage_ = "GARRISONING " +
                          std::to_string(assigned) +
                          (assigned == 1 ? " UNIT" : " UNITS");
@@ -7191,9 +7208,10 @@ bool Game::issueGarrisonOrder(
     return true;
 }
 
-void Game::updateGarrisoning() {
+void Game::updateGarrisoning(int player) {
     bool changed = false;
     for (Object &unit : objects_) {
+        if(unit.player!=player)continue;
         if (!unit.active || unit.hidden ||
             unit.garrisonTargetId == 0)
             continue;
@@ -7239,6 +7257,13 @@ void Game::updateGarrisoning() {
         playWorldUnitSound(
             *building, assets_.dat().garrisonSound);
     }
+    if (changed) {
+        syncSelectionOrder();
+        rebuildMobileOccupancy();
+    }
+}
+
+void Game::syncGarrisonedTransports() {
     // Passengers ride along inside their transport.
     for (Object &unit : objects_) {
         if (!unit.active || unit.garrisonedInId < 0) continue;
@@ -7246,10 +7271,6 @@ void Game::updateGarrisoning() {
         if (!container || !container->active || !isTransport(*container)) continue;
         unit.x = unit.homeX = container->x;
         unit.y = unit.homeY = container->y;
-    }
-    if (changed) {
-        syncSelectionOrder();
-        rebuildMobileOccupancy();
     }
 }
 
@@ -8363,7 +8384,7 @@ bool Game::placeBuildingWorld(float worldX, float worldY) {
     return true;
 }
 
-void Game::updateConstruction(float dt) {
+void Game::updateConstruction(float dt,int player) {
     struct CompletedBuilding {
         uint32_t spawnId;
         const dat::Unit *unit;
@@ -8375,6 +8396,7 @@ void Game::updateConstruction(float dt) {
     const size_t count = objects_.size();
     for (size_t index = 0; index < count; index++) {
         Object &building = objects_[index];
+        if (building.player!=player)continue;
         if (!building.active ||
             !building.underConstruction)
             continue;
@@ -8528,9 +8550,31 @@ void Game::commandAtScreen(float screenX, float screenY, int screenW, int screen
         return;
     }
 
-    Object *resource =
-        gatherableAtScreen(
-            screenX, screenY, screenW, screenH);
+    ContextCommand command;
+    for (const auto *object:selected) command.actors.push_back(object->spawnId);
+    command.player=localPlayer_;
+    command.formation=selectedFormation_;
+    if (const auto *object=gatherableAtScreen(screenX,screenY,screenW,screenH)) command.resource=object->spawnId;
+    if (const auto *object=objectAtScreen(screenX,screenY,screenW,screenH)) command.friendly=object->spawnId;
+    if (const auto *object=enemyAtScreen(screenX,screenY,screenW,screenH)) command.enemy=object->spawnId;
+    const auto *memory=classicHud_?rememberedBuildingAtScreen(screenX,screenY,screenW,screenH):nullptr;
+    if (memory) {command.memory=memory->spawnId;command.x=memory->x;command.y=memory->y;}
+    else screenToWorld(screenX,screenY,screenW,screenH,command.x,command.y);
+    localCommands_.enqueue([this,command] {executeContextCommand(command);});
+}
+
+void Game::executeContextCommand(const ContextCommand &command) {
+    std::vector<Object *> selected;
+    for (uint32_t id:command.actors) {
+        auto *object=findObject(id);
+        if (object && object->active && object->player==command.player && isSelectable(*object)) selected.push_back(object);
+    }
+    if (selected.empty()) return;
+    auto live=[this](uint32_t id) -> Object * {
+        auto *object=id?findObject(id):nullptr;
+        return object && object->active?object:nullptr;
+    };
+    Object *resource = live(command.resource);
     if (resource) {
         Object *acknowledgement = nullptr;
         for (Object *object : selected)
@@ -8547,10 +8591,7 @@ void Game::commandAtScreen(float screenX, float screenY, int screenW, int screen
             return;
         }
     }
-    Object *friendly =
-        objectAtScreen(
-            screenX, screenY, screenW,
-            screenH);
+    Object *friendly = live(command.friendly);
     if (friendly) {
         Object *medic=nullptr;
         for (Object *object:selected)
@@ -8623,13 +8664,13 @@ void Game::commandAtScreen(float screenX, float screenY, int screenW, int screen
             if (canGarrison(*object, *friendly) &&
                 (isTransport(*friendly) || !isWorker(*object)))
                 eligible = true;
-        if (eligible && issueGarrisonCommand(*friendly)) {
+        if (eligible && issueGarrisonCommand(*friendly,selected)) {
             flashCommandTarget(*friendly);
             return;
         }
     }
 
-    Object *enemy = enemyAtScreen(screenX, screenY, screenW, screenH);
+    Object *enemy = live(command.enemy);
     if (enemy) {
         struct ReservedAttackSlot {
             float x, y, radius;
@@ -8781,10 +8822,9 @@ void Game::commandAtScreen(float screenX, float screenY, int screenW, int screen
         return;
     }
 
-    float targetX, targetY;
-    const Object *memory=classicHud_?rememberedBuildingAtScreen(screenX,screenY,screenW,screenH):nullptr;
-    if(memory) {targetX=memory->x;targetY=memory->y;}
-    else screenToWorld(screenX, screenY, screenW, screenH, targetX, targetY);
+    const float targetX=command.x, targetY=command.y;
+    const auto remembered=rememberedObjects_.find(command.memory);
+    const Object *memory=remembered==rememberedObjects_.end()?nullptr:&remembered->second;
     for (Object *object : selected) {
         clearUnitCommandOrder(*object);
         if (isWorker(*object))
@@ -8795,10 +8835,10 @@ void Game::commandAtScreen(float screenX, float screenY, int screenW, int screen
         object->attackAutomatic = false;
     }
     playUnitAcknowledgement(*selected.front(), false);
-    issueGroupMove(selected, targetX, targetY, selectedFormation_);
+    issueGroupMove(selected, targetX, targetY, command.formation);
     if(memory) for(Object *unit:selected) if(canAttack(*unit) && isEnemy(*unit,*memory)) {
         unit->rememberedAttackId=memory->spawnId;
-        unit->attackLastSeenX=memory->x;unit->attackLastSeenY=memory->y;
+        unit->attackLastSeenX=command.x;unit->attackLastSeenY=command.y;
     }
     commandMarkerX_ = targetX;
     commandMarkerY_ = targetY;
@@ -13914,31 +13954,29 @@ void Game::updateAiGatherers(
     }
 }
 
-void Game::updateAi(float dt) {
+void Game::updateAi(int player,float dt) {
     // Original normal-player callback wraps even humans and inactive records; Gaia does not.
-    for(uint32_t player=1;player<=worldPlayerCount_;++player) {
-        const uint32_t saved=genieRandomDraw(legacyRandomState_);
-        AiPlayerState &state=aiPlayers_[player];
-        if(state.loaded) {
-            const int age=aiTechLevel(int(player));
-            if(age!=state.age) {state.age=age;state.ageTime=0.f;}
-            else state.ageTime+=dt;
-            if(state.firstEvaluation) {
-                state.firstEvaluation=false;
-                updateAiPlayer(int(player),state);
-            }
-            if(++state.updateCount>=20) {
-                state.updateCount=0;
-                updateAiPlayer(int(player),state);
-            }
-            state.economyTime-=dt;
-            if(state.economyTime<=0.f) {
-                state.economyTime=2.f;
-                updateAiGatherers(int(player),state);
-            }
+    const uint32_t saved=genieRandomDraw(legacyRandomState_);
+    AiPlayerState &state=aiPlayers_[player];
+    if(state.loaded) {
+        const int age=aiTechLevel(int(player));
+        if(age!=state.age) {state.age=age;state.ageTime=0.f;}
+        else state.ageTime+=dt;
+        if(state.firstEvaluation) {
+            state.firstEvaluation=false;
+            updateAiPlayer(int(player),state);
         }
-        legacyRandomState_=saved;
+        if(++state.updateCount>=20) {
+            state.updateCount=0;
+            updateAiPlayer(int(player),state);
+        }
+        state.economyTime-=dt;
+        if(state.economyTime<=0.f) {
+            state.economyTime=2.f;
+            updateAiGatherers(int(player),state);
+        }
     }
+    legacyRandomState_=saved;
 }
 
 void Game::updateCamera(float dt,const InputState &in,bool blocked) {
@@ -14029,9 +14067,7 @@ void Game::handleControlGroup(const InputState &in) {
     }
 }
 
-void Game::updateProductionAndDecay(float dt) {
-    updateTriggers(dt);
-    updateAi(dt);
+void Game::updateProductionAndDecay(float dt,int player) {
     struct ProductionSpawn {
         const dat::Unit *unit;
         int player;
@@ -14051,6 +14087,7 @@ void Game::updateProductionAndDecay(float dt) {
     for (size_t index = 0; index < productionObjectCount;
          index++) {
         Object &building = objects_[index];
+        if(building.player!=player)continue;
         if (!building.active ||
             building.productionQueue.empty())
             continue;
@@ -14187,18 +14224,18 @@ void Game::updateProductionAndDecay(float dt) {
             if (building && unit) sendToGatherPoint(*building, *unit);
         }
     }
-    updateConstruction(dt);
-    updateShields(dt);
+    updateConstruction(dt,player);
+    updateShields(dt,player);
     rebuildMobileOccupancy();
-    updateLivestockOwnership();
-    updateGathering(dt);
-    updateRepairing(dt);
+    updateGathering(dt,player);
+    updateRepairing(dt,player);
     // Gate logic, following the original (battlegrounds_x1.exe 0x558390):
     // the gate watches a 0.4-tile-wide corridor between its two end posts.
     // A closed, unlocked gate swaps to its OPEN unit the moment a friendly
     // unit is in the corridor; an open gate swaps back to CLOSED 0.5s after
     // the corridor is empty of all units. There is no intermediate frame.
     for (Object &gate : objects_) {
+        if(gate.player!=player)continue;
         if (!gate.active || !gate.gate || !gate.gateClosedUnit ||
             !gate.gateOpenUnit || gate.underConstruction)
             continue;
@@ -14260,14 +14297,12 @@ void Game::updateProductionAndDecay(float dt) {
             }
         }
     }
-    commandMarkerTime_ = std::max(0.0f, commandMarkerTime_ - dt);
-    commandTargetTime_ = std::max(0.0f, commandTargetTime_ - dt);
-    animClock_ = std::fmod(animClock_ + dt, 3600.0f);
     for (Object &object : objects_)
-        if (object.active && object.unit && object.unit->cls == 7 &&
+        if (object.player==player && object.active && object.unit && object.unit->cls == 7 &&
             object.unit->type == dat::UT_Building)
             syncFarmTerrain(object);
     for (Object &worker : objects_) {
+        if(worker.player!=player)continue;
         if (!worker.active || !worker.unit || !isWorker(worker)) continue;
         if (worker.constructionTargetId) {
             worker.jobKind = 1;
@@ -14283,21 +14318,9 @@ void Game::updateProductionAndDecay(float dt) {
             }
         }
     }
-    for (const PendingCarcass &pending : pendingCarcasses_) {
-        Object *carcass = addObject(pending.deadUnit, pending.owner, pending.x, pending.y,
-                                    pending.facing, nextSpawnId_++);
-        if (!carcass) continue;
-        carcass->resourceType = 0;
-        carcass->resourceAmount = pending.amount;
-        carcass->carcassClass = pending.animalClass;
-        carcass->carcassDecay = pending.decay;
-        carcass->carcassHidden = pending.dying;
-        carcass->wander = false;
-        if (Object *animal = findObject(pending.animalId)) animal->carcassId = carcass->spawnId;
-    }
-    pendingCarcasses_.clear();
     // Carcasses rot away: their food decays until none is left.
     for (Object &carcass : objects_) {
+        if(carcass.player!=player)continue;
         if (!carcass.active || carcass.carcassClass < 0) continue;
         carcass.carcassHidden = std::max(0.0f, carcass.carcassHidden - dt);
         carcass.resourceAmount -= carcass.carcassDecay * dt;
@@ -14309,6 +14332,7 @@ void Game::updateProductionAndDecay(float dt) {
     // Animal Nursery (garrison type 16): each garrisoned animal adds the
     // nursery's work rate in food per second to its owner.
     for (const Object &nursery : objects_) {
+        if(nursery.player!=player)continue;
         const float rate =
             animalNurseryFoodRate(nursery);
         if (rate > 0.0f)
@@ -14317,6 +14341,7 @@ void Game::updateProductionAndDecay(float dt) {
     // Damage graphics (fire/smoke stages) carry their own sound, played each
     // animation cycle like any graphic sound while the building is heard.
     for (Object &object : objects_) {
+        if(object.player!=player)continue;
         if (!object.active || object.hidden || !object.unit ||
             object.unit->type != dat::UT_Building || object.underConstruction ||
             object.maxHitPoints <= 0.0f)
@@ -14340,10 +14365,551 @@ void Game::updateProductionAndDecay(float dt) {
         object.damageSoundTime = std::max(2.0f, cycle);
         playWorldUnitSound(object, graphicSound(stage->graphicId));
     }
-    for (Object &object : objects_)
-        if (object.selected && !isInspectable(object)) object.selected = false;
-    syncSelectionOrder();
+}
 
+void Game::updatePlayerObjects(float dt,int player) {
+    std::uniform_real_distribution<float> r01(0, 1);
+    auto spreadBlockedMoveGoal = [&](Object &object) {
+        const float originalX = object.moveAnchorX;
+        const float originalY = object.moveAnchorY;
+        constexpr float searchStep = 0.35f;
+        const uint8_t retry = object.moveSpreadRetries++;
+        for (int ring = 1; ring <= 8; ring++) {
+            const int samples = ring * 8;
+            const float startAngle =
+                (object.spawnId % 16) * (2.0f * kPi / 16.0f) +
+                retry * 2.39996323f;
+            for (int sample = 0; sample < samples; sample++) {
+                const float angle =
+                    startAngle + sample * (2.0f * kPi / samples);
+                const float candidateX =
+                    originalX + std::cos(angle) * ring * searchStep;
+                const float candidateY =
+                    originalY + std::sin(angle) * ring * searchStep;
+                if (!positionPassable(object, candidateX, candidateY, true) ||
+                    !segmentClear(object, originalX, originalY, candidateX,
+                                  candidateY))
+                    continue; // must be on the goal's side of any wall
+                bool formationSlotOpen = true;
+                if (object.moveGroupId != 0)
+                    for (const Object &other : objects_) {
+                        if (&other == &object || !other.active ||
+                            other.moveGroupId != object.moveGroupId ||
+                            isAirUnit(other) != isAirUnit(object))
+                            continue;
+                        const float dx = candidateX - other.targetX;
+                        const float dy = candidateY - other.targetY;
+                        const float separation =
+                            collisionRadius(object) +
+                            collisionRadius(other) + 0.08f;
+                        if (dx * dx + dy * dy <
+                            separation * separation) {
+                            formationSlotOpen = false;
+                            break;
+                        }
+                    }
+                if (!formationSlotOpen) continue;
+                object.targetX = object.homeX = candidateX;
+                object.targetY = object.homeY = candidateY;
+                object.moveStallTime = 0;
+                const float dx = candidateX - object.x;
+                const float dy = candidateY - object.y;
+                object.moveBestDistance = std::sqrt(dx * dx + dy * dy);
+                issueMove(object, candidateX, candidateY);
+                object.moveGoalActive = true;
+                return true;
+            }
+        }
+        object.moveStallTime = 0;
+        return false;
+    };
+    struct GroupCohesion {
+        float nearestRemaining =
+            std::numeric_limits<float>::max();
+        size_t movingMembers = 0;
+    };
+    std::unordered_map<uint32_t, GroupCohesion> groupCohesion;
+    for (const Object &object : objects_) {
+        if (!object.active || !object.moveGoalActive ||
+            object.moveGroupId == 0)
+            continue;
+        const float dx = object.targetX - object.x;
+        const float dy = object.targetY - object.y;
+        GroupCohesion &cohesion = groupCohesion[object.moveGroupId];
+        const float remaining =
+            std::sqrt(dx * dx + dy * dy);
+        cohesion.nearestRemaining =
+            std::min(cohesion.nearestRemaining, remaining);
+        cohesion.movingMembers++;
+    }
+    for (Object &o : objects_) {
+        if (o.player!=player || !o.active) continue;
+        const auto recover = [&](float period) {
+            if (period <= 0 || o.hitPoints < 1.f || o.hitPoints >= o.maxHitPoints) return;
+            o.recoveryTime += dt;
+            while (o.recoveryTime >= period && o.hitPoints < o.maxHitPoints) {
+                o.recoveryTime -= period;
+                o.hitPoints = std::min(o.maxHitPoints,o.hitPoints+1.f);
+            }
+        };
+        // Original 0x55a760 runs both branches in order, sharing the retained timer.
+        if (o.unit->heroMode) recover(2.f);
+        constexpr std::array<int,8> masterCopies = {115,125,136,134,89,140,643,645};
+        constexpr std::array<int,16> masterHeroes = {
+            1077,1085,1082,1084,1080,725,728,731,747,753,761,770,778,784,806,792};
+        const bool master =
+            std::find(masterCopies.begin(),masterCopies.end(),o.unit->copyId) != masterCopies.end() ||
+            std::find(masterHeroes.begin(),masterHeroes.end(),o.unit->id) != masterHeroes.end();
+        if (master) recover(playerAttribute(o.player,49));
+        else if (o.unit->trait & 0x20) recover(playerAttribute(o.player,96));
+        float animationDt=dt;
+        if (o.initialIdleDelay>0) {
+            const auto *idleGraphic=assets_.dat().graphic(o.unit->standingGraphic[0]);
+            const float lastFrameTime=idleGraphic?(idleGraphic->frameCount-1)*idleGraphic->frameDuration:0.f;
+            if (o.state==State::Idle && o.animTime==lastFrameTime) {
+                const float held=std::min(animationDt,o.initialIdleDelay);
+                o.initialIdleDelay-=held;animationDt-=held;
+            } else o.initialIdleDelay=0;
+        }
+        o.animTime += animationDt;
+        o.approachRetry = std::max(0.0f, o.approachRetry - dt);
+        o.flashTime = std::max(0.0f, o.flashTime - dt);
+        updateUnitCommandOrder(o, dt);
+        updateHealing(o, dt);
+        // Passengers and garrisoned units don't fight from inside (a
+        // building's garrison fire is the building's own volley).
+        if (o.garrisonedInId >= 0) {
+            const auto *host=findObject(uint32_t(o.garrisonedInId));
+            if (host && host->active && !host->underConstruction &&
+                host->unit->type == dat::UT_Building) {
+                const float rate=modifiedUnitAttribute(*host,108,host->unit->garrisonHealRate);
+                o.hitPoints=std::min(o.maxHitPoints,o.hitPoints+dt*std::max(0.f,rate));
+            }
+            o.attackTargetId = 0;
+            o.attackAutomatic = false;
+            o.attackGroundActive = false;
+            o.attackShotPending = false;
+        } else if (!o.healTargetId) {
+            updateAttack(o, dt);
+        }
+        if (!o.active) continue;
+        if (o.hidden || o.unit->type < dat::UT_DeadFish || o.unit->speed <= 0 ||
+            o.unit->type == dat::UT_Building)
+            continue;
+        o.stateTime -= dt;
+        if (o.state == State::Attack ||
+            o.state == State::Build ||
+            o.state == State::Gather ||
+            o.state == State::Repair ||
+            o.state == State::Heal)
+            continue;
+        if (o.state == State::Idle) {
+            if (o.moveGoalActive) {
+                if (o.marchGroupId) continue; // the march update steers it
+                o.moveRetryTime -= dt;
+                if (o.moveRetryTime <= 0) {
+                    o.moveRetryTime =
+                        0.35f + (o.spawnId % 5) * 0.04f;
+                    issueMove(o, o.targetX, o.targetY);
+                }
+                continue;
+            }
+        } else {
+            // Original arrival rule (0x4a45a0): a unit walking to an object
+            // stops the moment its edge distance is within its work range,
+            // wherever it is around the target. Builders, gatherers and
+            // repairers therefore never fight over one exact spot.
+            if (o.pathGoalId && o.state == State::Walk && !o.attackTargetId) {
+                const Object *goal = findObject(o.pathGoalId);
+                if (goal && goal->active &&
+                    withinInteractionRange(o, *goal, o.pathGoalClearance) &&
+                    !overlapsWorkingUnit(o, o.pathGoalId)) {
+                    o.state = State::Idle;
+                    o.stateTime = 1.5f + r01(rng_) * 5.0f;
+                    o.animTime = 0;
+                    o.path.clear();
+                    o.pathIndex = 0;
+                    o.moveGoalActive = false;
+                    o.moveSpeedLimit = 0;
+                    o.facing = std::atan2(goal->y - o.y, goal->x - o.x);
+                    continue;
+                }
+            }
+            if (o.moveGoalActive && !o.attackTargetId) {
+                const float goalDx = o.targetX - o.x;
+                const float goalDy = o.targetY - o.y;
+                float arrival =
+                    std::max(0.20f,
+                             collisionRadius(o) * 0.75f);
+                if (o.moveGroupId != 0 &&
+                    o.pathIndex + 1 >= o.path.size())
+                    arrival = 0.10f;
+                if (goalDx * goalDx + goalDy * goalDy <=
+                    arrival * arrival) {
+                    if (o.moveGroupId != 0 &&
+                        positionPassable(o, o.targetX, o.targetY, false) &&
+                        !unitBlockerAt(o, o.targetX, o.targetY)) {
+                        o.x = o.targetX;
+                        o.y = o.targetY;
+                    }
+                    o.moveGoalActive = false;
+                    o.moveSpeedLimit = 0;
+                    o.path.clear();
+                    o.pathIndex = 0;
+                    o.state = State::Idle;
+                    o.stateTime =
+                        1.5f + r01(rng_) * 5.0f;
+                    o.animTime = 0;
+                    continue;
+                }
+            }
+            if (o.pathIndex >= o.path.size()) {
+                if (o.marchGroupId &&
+                    o.moveGoalActive) {
+                    o.state = State::Walk;
+                    continue;
+                }
+                o.state = State::Idle;
+                o.stateTime = 1.5f + r01(rng_) * 5.0f;
+                o.animTime = 0;
+                const float goalDx = o.targetX - o.x;
+                const float goalDy = o.targetY - o.y;
+                const float arrival =
+                    std::max(0.20f, collisionRadius(o) * 0.75f);
+                if (o.moveGoalActive &&
+                    goalDx * goalDx + goalDy * goalDy <= arrival * arrival) {
+                    o.moveGoalActive = false;
+                    o.moveSpeedLimit = 0;
+                }
+                continue;
+            }
+            const auto &waypoint = o.path[o.pathIndex];
+            float dx = waypoint[0] - o.x, dy = waypoint[1] - o.y;
+            float dist = std::sqrt(dx * dx + dy * dy);
+            const float unitSpeed =
+                modifiedUnitAttribute(o, 5, o.unit->speed);
+            float moveSpeed =
+                o.moveSpeedLimit > 0
+                    ? std::min(unitSpeed, o.moveSpeedLimit)
+                    : unitSpeed;
+            if (o.moveGroupId != 0 && o.moveGoalActive) {
+                const auto group = groupCohesion.find(o.moveGroupId);
+                if (group != groupCohesion.end() &&
+                    group->second.movingMembers > 1) {
+                    const float goalDx = o.targetX - o.x;
+                    const float goalDy = o.targetY - o.y;
+                    const float remaining =
+                        std::sqrt(goalDx * goalDx + goalDy * goalDy);
+                    const float lag =
+                        remaining -
+                        group->second.nearestRemaining;
+                    if (lag > 1.0f) {
+                        const float catchUp =
+                            1.0f +
+                            std::min(0.30f,
+                                     (lag - 1.0f) * 0.12f);
+                        moveSpeed *= catchUp;
+                    }
+                }
+            }
+            if (o.marchGroupId && o.marchSpeed > 0) moveSpeed = o.marchSpeed;
+            const float step = moveSpeed * dt;
+            const float scale = dist <= step || dist <= 0.0001f ? 1.0f : step / dist;
+            float nextX = o.x + dx * scale, nextY = o.y + dy * scale;
+            bool moved = false;
+            const bool staticOk = positionPassable(o, nextX, nextY, false);
+            const Object *blocker =
+                staticOk ? unitBlockerAt(o, nextX, nextY) : nullptr;
+            if (staticOk && !blocker) {
+                moved = true;
+            } else if (!staticOk) {
+                // Slide along the obstruction edge (axis-separated move).
+                if (std::abs(dx) > 0.0001f &&
+                    positionPassable(o, nextX, o.y, false) &&
+                    !unitBlockerAt(o, nextX, o.y)) {
+                    nextY = o.y;
+                    moved = true;
+                } else if (std::abs(dy) > 0.0001f &&
+                           positionPassable(o, o.x, nextY, false) &&
+                           !unitBlockerAt(o, o.x, nextY)) {
+                    nextX = o.x;
+                    moved = true;
+                }
+            } else {
+                // Blocked by a unit. Idle friendly units are asked to step
+                // aside, as in the original; then try to flow around it.
+                Object *other = const_cast<Object *>(blocker);
+                o.blockerId = other->spawnId;
+                const bool friendlyWalker =
+                    other->player == o.player && other->state == State::Walk;
+                const bool mutual =
+                    friendlyWalker && other->blockerId == o.spawnId &&
+                    other->blockedTime > 0.0f;
+                if (friendlyWalker && !mutual && other->blockedTime < 0.3f) {
+                    // Queue behind a friendly unit that is still moving
+                    // (a chokepoint): wait instead of shoving sideways.
+                    o.blockedTime = std::min(o.blockedTime, 0.4f);
+                    o.moveStallTime = std::max(0.0f, o.moveStallTime - dt);
+                } else if (mutual && o.spawnId > other->spawnId && dist > 0.0001f) {
+                    // Two units pushing into each other: the later one gives
+                    // way by stepping back/aside at half speed.
+                    const float awayX = o.x - other->x, awayY = o.y - other->y;
+                    const float awayLength = std::max(0.001f, std::sqrt(awayX * awayX + awayY * awayY));
+                    const float baseAngle = std::atan2(awayY / awayLength, awayX / awayLength);
+                    static constexpr float yields[5] = {0.0f, 0.7853982f, -0.7853982f,
+                                                        1.5707963f, -1.5707963f};
+                    for (float turn : yields) {
+                        const float candidateX = o.x + std::cos(baseAngle + turn) * step * 0.5f;
+                        const float candidateY = o.y + std::sin(baseAngle + turn) * step * 0.5f;
+                        if (positionPassable(o, candidateX, candidateY, false) &&
+                            !unitBlockerAt(o, candidateX, candidateY)) {
+                            nextX = candidateX;
+                            nextY = candidateY;
+                            moved = true;
+                            break;
+                        }
+                    }
+                    o.blockedTime = std::min(o.blockedTime, 0.4f);
+                }
+                if (moved || (friendlyWalker && !mutual && other->blockedTime < 0.3f)) {
+                    // handled above
+                } else {
+                if (other->state == State::Idle && !other->moveGoalActive &&
+                    other->player == o.player && other->unit->speed > 0 &&
+                    !other->attackTargetId && !other->gatherTargetId &&
+                    !other->constructionTargetId && !other->repairTargetId &&
+                    other->approachRetry <= 0.0f && dist > 0.0001f) {
+                    const float side = ((o.spawnId ^ other->spawnId) & 1u) ? 1.0f : -1.0f;
+                    const float px = -dy / dist * side, py = dx / dist * side;
+                    const float push =
+                        collisionRadius(o) + collisionRadius(*other) + 0.3f;
+                    const float aside[2][2] = {
+                        {other->x + px * push, other->y + py * push},
+                        {other->x - px * push, other->y - py * push}};
+                    for (const auto &point : aside)
+                        if (staticPassableAt(*other, point[0], point[1])) {
+                            const bool wander = other->wander;
+                            issueMove(*other, point[0], point[1]);
+                            other->wander = wander;
+                            other->approachRetry = 1.0f;
+                            break;
+                        }
+                }
+                if (dist > 0.0001f) {
+                    const float directionX = dx / dist, directionY = dy / dist;
+                    const float handedness = (o.spawnId & 1u) ? 1.0f : -1.0f;
+                    static constexpr float turns[6] = {
+                        0.39269908f, -0.39269908f, 0.78539816f,
+                        -0.78539816f, 1.17809725f, -1.17809725f};
+                    for (float turn : turns) {
+                        const float angle = turn * handedness;
+                        const float sx = directionX * std::cos(angle) - directionY * std::sin(angle);
+                        const float sy = directionX * std::sin(angle) + directionY * std::cos(angle);
+                        const float candidateX = o.x + sx * step;
+                        const float candidateY = o.y + sy * step;
+                        if (positionPassable(o, candidateX, candidateY, false) &&
+                            !unitBlockerAt(o, candidateX, candidateY)) {
+                            nextX = candidateX;
+                            nextY = candidateY;
+                            moved = true;
+                            break;
+                        }
+                    }
+                }
+                }
+            }
+            if (moved) {
+                if (!blocker) o.blockerId = 0;
+                o.x = nextX;
+                o.y = nextY;
+                o.facing = std::atan2(dy, dx);
+                o.blockedTime = std::max(0.0f, o.blockedTime - dt);
+                const float newGoalDx = o.targetX - o.x;
+                const float newGoalDy = o.targetY - o.y;
+                const float newGoalDistance =
+                    std::sqrt(newGoalDx * newGoalDx + newGoalDy * newGoalDy);
+                if (newGoalDistance + 0.05f < o.moveBestDistance) {
+                    o.moveBestDistance = newGoalDistance;
+                    o.moveStallTime = 0;
+                    o.repathCount = 0;
+                } else {
+                    o.moveStallTime += dt;
+                    // Sliding along an obstacle without getting closer (the
+                    // unit was pushed off its route): plan again from here.
+                    if (o.moveStallTime >= 1.5f && o.detourTime <= 0.0f &&
+                        o.pathIndex < o.path.size() &&
+                        !segmentClear(o, o.x, o.y, o.path[o.pathIndex][0],
+                                      o.path[o.pathIndex][1])) {
+                        o.moveStallTime = 0.0f;
+                        const Object *goalObject = findObject(o.pathGoalId);
+                        const bool wander = o.wander;
+                        const float bestDistance = o.moveBestDistance;
+                        issueMove(o, o.targetX, o.targetY, goalObject,
+                                  o.pathGoalClearance);
+                        o.wander = wander;
+                        o.moveBestDistance = bestDistance;
+                        o.detourTime = 1.0f;
+                        continue;
+                    }
+                }
+                // Reached (or passed) the waypoint.
+                const float wx = waypoint[0] - o.x, wy = waypoint[1] - o.y;
+                if (dist <= step || dist <= 0.0001f ||
+                    wx * wx + wy * wy <= 0.0025f) {
+                    o.pathIndex++;
+                    if (o.pathIndex >= o.path.size()) {
+                        const bool marching =
+                            o.marchGroupId != 0 &&
+                            o.moveGoalActive;
+                        o.state =
+                            marching
+                                ? State::Walk
+                                : State::Idle;
+                        if (!marching) {
+                            o.stateTime =
+                                1.5f +
+                                r01(rng_) * 5.0f;
+                            o.animTime = 0;
+                        }
+                        const float goalDx = o.targetX - o.x;
+                        const float goalDy = o.targetY - o.y;
+                        const float arrival =
+                            std::max(0.20f, collisionRadius(o) * 0.75f);
+                        if (o.moveGoalActive &&
+                            goalDx * goalDx + goalDy * goalDy <=
+                                arrival * arrival) {
+                            o.moveGoalActive = false;
+                            o.moveSpeedLimit = 0;
+                        }
+                    }
+                }
+            } else {
+                o.blockedTime += dt;
+                o.detourTime -= dt;
+                if (o.moveGoalActive && !o.attackTargetId)
+                    o.moveStallTime += dt;
+                const float targetDx = o.targetX - o.x, targetDy = o.targetY - o.y;
+                const float targetDistance =
+                    std::sqrt(targetDx * targetDx + targetDy * targetDy);
+                const float arrival =
+                    std::max(0.20f, collisionRadius(o) * 0.75f);
+                // A crowd at the destination: close enough counts as arrived
+                // (formation members settle next to each other).
+                const bool crowdedArrival =
+                    blocker && !o.pathGoalId && targetDistance <=
+                                   arrival + collisionRadius(o) * 2.0f + 0.4f;
+                if ((targetDistance <= arrival || crowdedArrival) &&
+                    o.blockedTime >= 0.3f) {
+                    o.state = State::Idle;
+                    o.stateTime = 1.5f + r01(rng_) * 5.0f;
+                    o.animTime = 0;
+                    o.path.clear();
+                    o.pathIndex = 0;
+                    o.moveGoalActive = false;
+                    o.moveSpeedLimit = 0;
+                    continue;
+                }
+                // Jammed by other units just short of the goal: take a free
+                // spot nearby (or stop there) instead of pushing forever.
+                const bool blockerSettled =
+                    blocker && blocker->state != State::Walk && !blocker->moveGoalActive;
+                if (blocker && o.moveGoalActive && !o.attackTargetId &&
+                    o.moveStallTime >= (blockerSettled ? 1.5f : 3.0f) &&
+                    targetDistance < 3.0f) {
+                    o.moveStallTime = 0.0f;
+                    if (targetDistance < 2.5f && o.moveSpreadRetries < 3 &&
+                        spreadBlockedMoveGoal(o))
+                        continue;
+                    o.state = State::Idle;
+                    o.stateTime = 1.5f + r01(rng_) * 5.0f;
+                    o.animTime = 0;
+                    o.path.clear();
+                    o.pathIndex = 0;
+                    o.moveGoalActive = false;
+                    o.moveSpeedLimit = 0;
+                    continue;
+                }
+                if (blocker && o.pathGoalId && o.blockedTime >= 0.4f &&
+                    o.detourTime <= 0.0f) {
+                    // Another unit is on our spot at the target (builders,
+                    // gatherers, attackers): take a free one on the perimeter.
+                    const Object *goal = findObject(o.pathGoalId);
+                    if (goal && goal->active) {
+                        const float gx = std::max(0.0f, std::abs(o.x - goal->x) -
+                                                            goal->unit->collisionSize[0]);
+                        const float gy = std::max(0.0f, std::abs(o.y - goal->y) -
+                                                            goal->unit->collisionSize[1]);
+                        float fx = 0, fy = 0;
+                        // Only when our own spot is taken; otherwise the
+                        // local detour below routes around the blocker.
+                        const float sx = o.targetX - blocker->x, sy = o.targetY - blocker->y;
+                        const float sep = collisionRadius(o) + collisionRadius(*blocker) + 0.05f;
+                        const bool spotTaken =
+                            blocker->state != State::Walk && sx * sx + sy * sy < sep * sep;
+                        if (spotTaken && gx * gx + gy * gy < 4.0f &&
+                            freeInteractionPoint(o, *goal, o.pathGoalClearance * 0.6f, fx, fy) &&
+                            (std::abs(fx - o.targetX) > 0.1f || std::abs(fy - o.targetY) > 0.1f)) {
+                            const bool wander = o.wander;
+                            issueMove(o, fx, fy, goal, o.pathGoalClearance);
+                            o.wander = wander;
+                            o.detourTime = 0.75f;
+                            continue;
+                        }
+                    }
+                }
+                if (blocker && o.blockedTime >= 0.5f && o.detourTime <= 0.0f) {
+                    // Rejoin the route beyond the blockage via a local detour.
+                    size_t rejoin = o.pathIndex;
+                    while (rejoin + 1 < o.path.size()) {
+                        const float rx = o.path[rejoin][0] - o.x;
+                        const float ry = o.path[rejoin][1] - o.y;
+                        if (rx * rx + ry * ry > 9.0f) break;
+                        rejoin++;
+                    }
+                    o.detourTime = 0.75f;
+                    if (detourAround(o, o.path[rejoin][0], o.path[rejoin][1]))
+                        continue;
+                }
+                if (!staticOk && o.blockedTime >= 0.25f && o.detourTime <= 0.0f) {
+                    // The static world changed under the path: re-plan.
+                    o.detourTime = 0.75f;
+                    const Object *goalObject = findObject(o.pathGoalId);
+                    const bool wander = o.wander;
+                    issueMove(o, o.targetX, o.targetY, goalObject,
+                              o.pathGoalClearance);
+                    o.wander = wander;
+                    o.repathCount++;
+                    continue;
+                }
+                if (o.blockedTime >= 2.0f) {
+                    o.blockedTime = 0.0f;
+                    if (o.attackTargetId) {
+                        retryAttackApproach(o);
+                        continue;
+                    }
+                    if (++o.repathCount > 4) {
+                        // Give up, like the original does after repeated
+                        // failures: stop and idle where we are.
+                        o.state = State::Idle;
+                        o.path.clear();
+                        o.pathIndex = 0;
+                        o.moveGoalActive = false;
+                        o.moveSpeedLimit = 0;
+                        o.repathCount = 0;
+                        continue;
+                    }
+                    if (o.moveGoalActive && targetDistance < 2.5f &&
+                        spreadBlockedMoveGoal(o))
+                        continue;
+                    const Object *goalObject = findObject(o.pathGoalId);
+                    const bool wander = o.wander;
+                    issueMove(o, o.targetX, o.targetY, goalObject,
+                              o.pathGoalClearance);
+                    o.wander = wander;
+                }
+            }
+        }
+    }
 }
 
 void Game::update(float dt,const InputState &in) {
@@ -14592,7 +15158,6 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
     updateCamera(uiDt,in,consumeWorldInput || actionMenuOpen_);
     if(advanceWorld)updateAmbience(dt,in.screenW,in.screenH);
 
-    if(advanceWorld)updateProductionAndDecay(dt);
     selectionClickAge_ += uiDt;
 
     cursorVisible_ = in.cursorVisible;
@@ -15157,556 +15722,47 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
     }
 
     if(!advanceWorld)return;
+    // shortcut: Other HUD/AI emitters remain direct until their opcode payloads are ported.
+    localCommands_.drain();
 
-    std::uniform_real_distribution<float> r01(0, 1);
-    auto spreadBlockedMoveGoal = [&](Object &object) {
-        const float originalX = object.moveAnchorX;
-        const float originalY = object.moveAnchorY;
-        constexpr float searchStep = 0.35f;
-        const uint8_t retry = object.moveSpreadRetries++;
-        for (int ring = 1; ring <= 8; ring++) {
-            const int samples = ring * 8;
-            const float startAngle =
-                (object.spawnId % 16) * (2.0f * kPi / 16.0f) +
-                retry * 2.39996323f;
-            for (int sample = 0; sample < samples; sample++) {
-                const float angle =
-                    startAngle + sample * (2.0f * kPi / samples);
-                const float candidateX =
-                    originalX + std::cos(angle) * ring * searchStep;
-                const float candidateY =
-                    originalY + std::sin(angle) * ring * searchStep;
-                if (!positionPassable(object, candidateX, candidateY, true) ||
-                    !segmentClear(object, originalX, originalY, candidateX,
-                                  candidateY))
-                    continue; // must be on the goal's side of any wall
-                bool formationSlotOpen = true;
-                if (object.moveGroupId != 0)
-                    for (const Object &other : objects_) {
-                        if (&other == &object || !other.active ||
-                            other.moveGroupId != object.moveGroupId ||
-                            isAirUnit(other) != isAirUnit(object))
-                            continue;
-                        const float dx = candidateX - other.targetX;
-                        const float dy = candidateY - other.targetY;
-                        const float separation =
-                            collisionRadius(object) +
-                            collisionRadius(other) + 0.08f;
-                        if (dx * dx + dy * dy <
-                            separation * separation) {
-                            formationSlotOpen = false;
-                            break;
-                        }
-                    }
-                if (!formationSlotOpen) continue;
-                object.targetX = object.homeX = candidateX;
-                object.targetY = object.homeY = candidateY;
-                object.moveStallTime = 0;
-                const float dx = candidateX - object.x;
-                const float dy = candidateY - object.y;
-                object.moveBestDistance = std::sqrt(dx * dx + dy * dy);
-                issueMove(object, candidateX, candidateY);
-                object.moveGoalActive = true;
-                return true;
-            }
-        }
-        object.moveStallTime = 0;
-        return false;
-    };
-    struct GroupCohesion {
-        float nearestRemaining =
-            std::numeric_limits<float>::max();
-        size_t movingMembers = 0;
-    };
-    std::unordered_map<uint32_t, GroupCohesion> groupCohesion;
-    for (const Object &object : objects_) {
-        if (!object.active || !object.moveGoalActive ||
-            object.moveGroupId == 0)
-            continue;
-        const float dx = object.targetX - object.x;
-        const float dy = object.targetY - object.y;
-        GroupCohesion &cohesion = groupCohesion[object.moveGroupId];
-        const float remaining =
-            std::sqrt(dx * dx + dy * dy);
-        cohesion.nearestRemaining =
-            std::min(cohesion.nearestRemaining, remaining);
-        cohesion.movingMembers++;
+    updateTriggers(dt);
+    commandMarkerTime_ = std::max(0.0f, commandMarkerTime_ - dt);
+    commandTargetTime_ = std::max(0.0f, commandTargetTime_ - dt);
+    animClock_ = std::fmod(animClock_ + dt, 3600.0f);
+    for (const PendingCarcass &pending : pendingCarcasses_) {
+        Object *carcass = addObject(pending.deadUnit, pending.owner, pending.x, pending.y,
+                                    pending.facing, nextSpawnId_++);
+        if (!carcass) continue;
+        carcass->resourceType = 0;
+        carcass->resourceAmount = pending.amount;
+        carcass->carcassClass = pending.animalClass;
+        carcass->carcassDecay = pending.decay;
+        carcass->carcassHidden = pending.dying;
+        carcass->wander = false;
+        if (Object *animal = findObject(pending.animalId)) animal->carcassId = carcass->spawnId;
     }
+    pendingCarcasses_.clear();
+    rebuildMobileOccupancy();
+    // shortcut: Native capture/group planning remain global until original list transitions are mapped.
+    updateLivestockOwnership();
     updateMarchGroups(dt);
-    for (Object &o : objects_) {
-        if (!o.active) continue;
-        const auto recover = [&](float period) {
-            if (period <= 0 || o.hitPoints < 1.f || o.hitPoints >= o.maxHitPoints) return;
-            o.recoveryTime += dt;
-            while (o.recoveryTime >= period && o.hitPoints < o.maxHitPoints) {
-                o.recoveryTime -= period;
-                o.hitPoints = std::min(o.maxHitPoints,o.hitPoints+1.f);
-            }
-        };
-        // Original 0x55a760 runs both branches in order, sharing the retained timer.
-        if (o.unit->heroMode) recover(2.f);
-        constexpr std::array<int,8> masterCopies = {115,125,136,134,89,140,643,645};
-        constexpr std::array<int,16> masterHeroes = {
-            1077,1085,1082,1084,1080,725,728,731,747,753,761,770,778,784,806,792};
-        const bool master =
-            std::find(masterCopies.begin(),masterCopies.end(),o.unit->copyId) != masterCopies.end() ||
-            std::find(masterHeroes.begin(),masterHeroes.end(),o.unit->id) != masterHeroes.end();
-        if (master) recover(playerAttribute(o.player,49));
-        else if (o.unit->trait & 0x20) recover(playerAttribute(o.player,96));
-        float animationDt=dt;
-        if (o.initialIdleDelay>0) {
-            const auto *idleGraphic=assets_.dat().graphic(o.unit->standingGraphic[0]);
-            const float lastFrameTime=idleGraphic?(idleGraphic->frameCount-1)*idleGraphic->frameDuration:0.f;
-            if (o.state==State::Idle && o.animTime==lastFrameTime) {
-                const float held=std::min(animationDt,o.initialIdleDelay);
-                o.initialIdleDelay-=held;animationDt-=held;
-            } else o.initialIdleDelay=0;
-        }
-        o.animTime += animationDt;
-        o.approachRetry = std::max(0.0f, o.approachRetry - dt);
-        o.flashTime = std::max(0.0f, o.flashTime - dt);
-        updateUnitCommandOrder(o, dt);
-        updateHealing(o, dt);
-        // Passengers and garrisoned units don't fight from inside (a
-        // building's garrison fire is the building's own volley).
-        if (o.garrisonedInId >= 0) {
-            const auto *host=findObject(uint32_t(o.garrisonedInId));
-            if (host && host->active && !host->underConstruction &&
-                host->unit->type == dat::UT_Building) {
-                const float rate=modifiedUnitAttribute(*host,108,host->unit->garrisonHealRate);
-                o.hitPoints=std::min(o.maxHitPoints,o.hitPoints+dt*std::max(0.f,rate));
-            }
-            o.attackTargetId = 0;
-            o.attackAutomatic = false;
-            o.attackGroundActive = false;
-            o.attackShotPending = false;
-        } else if (!o.healTargetId) {
-            updateAttack(o, dt);
-        }
-        if (!o.active) continue;
-        if (o.hidden || o.unit->type < dat::UT_DeadFish || o.unit->speed <= 0 ||
-            o.unit->type == dat::UT_Building)
-            continue;
-        o.stateTime -= dt;
-        if (o.state == State::Attack ||
-            o.state == State::Build ||
-            o.state == State::Gather ||
-            o.state == State::Repair ||
-            o.state == State::Heal)
-            continue;
-        if (o.state == State::Idle) {
-            if (o.moveGoalActive) {
-                if (o.marchGroupId) continue; // the march update steers it
-                o.moveRetryTime -= dt;
-                if (o.moveRetryTime <= 0) {
-                    o.moveRetryTime =
-                        0.35f + (o.spawnId % 5) * 0.04f;
-                    issueMove(o, o.targetX, o.targetY);
-                }
-                continue;
-            }
-        } else {
-            // Original arrival rule (0x4a45a0): a unit walking to an object
-            // stops the moment its edge distance is within its work range,
-            // wherever it is around the target. Builders, gatherers and
-            // repairers therefore never fight over one exact spot.
-            if (o.pathGoalId && o.state == State::Walk && !o.attackTargetId) {
-                const Object *goal = findObject(o.pathGoalId);
-                if (goal && goal->active &&
-                    withinInteractionRange(o, *goal, o.pathGoalClearance) &&
-                    !overlapsWorkingUnit(o, o.pathGoalId)) {
-                    o.state = State::Idle;
-                    o.stateTime = 1.5f + r01(rng_) * 5.0f;
-                    o.animTime = 0;
-                    o.path.clear();
-                    o.pathIndex = 0;
-                    o.moveGoalActive = false;
-                    o.moveSpeedLimit = 0;
-                    o.facing = std::atan2(goal->y - o.y, goal->x - o.x);
-                    continue;
-                }
-            }
-            if (o.moveGoalActive && !o.attackTargetId) {
-                const float goalDx = o.targetX - o.x;
-                const float goalDy = o.targetY - o.y;
-                float arrival =
-                    std::max(0.20f,
-                             collisionRadius(o) * 0.75f);
-                if (o.moveGroupId != 0 &&
-                    o.pathIndex + 1 >= o.path.size())
-                    arrival = 0.10f;
-                if (goalDx * goalDx + goalDy * goalDy <=
-                    arrival * arrival) {
-                    if (o.moveGroupId != 0 &&
-                        positionPassable(o, o.targetX, o.targetY, false) &&
-                        !unitBlockerAt(o, o.targetX, o.targetY)) {
-                        o.x = o.targetX;
-                        o.y = o.targetY;
-                    }
-                    o.moveGoalActive = false;
-                    o.moveSpeedLimit = 0;
-                    o.path.clear();
-                    o.pathIndex = 0;
-                    o.state = State::Idle;
-                    o.stateTime =
-                        1.5f + r01(rng_) * 5.0f;
-                    o.animTime = 0;
-                    continue;
-                }
-            }
-            if (o.pathIndex >= o.path.size()) {
-                if (o.marchGroupId &&
-                    o.moveGoalActive) {
-                    o.state = State::Walk;
-                    continue;
-                }
-                o.state = State::Idle;
-                o.stateTime = 1.5f + r01(rng_) * 5.0f;
-                o.animTime = 0;
-                const float goalDx = o.targetX - o.x;
-                const float goalDy = o.targetY - o.y;
-                const float arrival =
-                    std::max(0.20f, collisionRadius(o) * 0.75f);
-                if (o.moveGoalActive &&
-                    goalDx * goalDx + goalDy * goalDy <= arrival * arrival) {
-                    o.moveGoalActive = false;
-                    o.moveSpeedLimit = 0;
-                }
-                continue;
-            }
-            const auto &waypoint = o.path[o.pathIndex];
-            float dx = waypoint[0] - o.x, dy = waypoint[1] - o.y;
-            float dist = std::sqrt(dx * dx + dy * dy);
-            const float unitSpeed =
-                modifiedUnitAttribute(o, 5, o.unit->speed);
-            float moveSpeed =
-                o.moveSpeedLimit > 0
-                    ? std::min(unitSpeed, o.moveSpeedLimit)
-                    : unitSpeed;
-            if (o.moveGroupId != 0 && o.moveGoalActive) {
-                const auto group = groupCohesion.find(o.moveGroupId);
-                if (group != groupCohesion.end() &&
-                    group->second.movingMembers > 1) {
-                    const float goalDx = o.targetX - o.x;
-                    const float goalDy = o.targetY - o.y;
-                    const float remaining =
-                        std::sqrt(goalDx * goalDx + goalDy * goalDy);
-                    const float lag =
-                        remaining -
-                        group->second.nearestRemaining;
-                    if (lag > 1.0f) {
-                        const float catchUp =
-                            1.0f +
-                            std::min(0.30f,
-                                     (lag - 1.0f) * 0.12f);
-                        moveSpeed *= catchUp;
-                    }
-                }
-            }
-            if (o.marchGroupId && o.marchSpeed > 0) moveSpeed = o.marchSpeed;
-            const float step = moveSpeed * dt;
-            const float scale = dist <= step || dist <= 0.0001f ? 1.0f : step / dist;
-            float nextX = o.x + dx * scale, nextY = o.y + dy * scale;
-            bool moved = false;
-            const bool staticOk = positionPassable(o, nextX, nextY, false);
-            const Object *blocker =
-                staticOk ? unitBlockerAt(o, nextX, nextY) : nullptr;
-            if (staticOk && !blocker) {
-                moved = true;
-            } else if (!staticOk) {
-                // Slide along the obstruction edge (axis-separated move).
-                if (std::abs(dx) > 0.0001f &&
-                    positionPassable(o, nextX, o.y, false) &&
-                    !unitBlockerAt(o, nextX, o.y)) {
-                    nextY = o.y;
-                    moved = true;
-                } else if (std::abs(dy) > 0.0001f &&
-                           positionPassable(o, o.x, nextY, false) &&
-                           !unitBlockerAt(o, o.x, nextY)) {
-                    nextX = o.x;
-                    moved = true;
-                }
-            } else {
-                // Blocked by a unit. Idle friendly units are asked to step
-                // aside, as in the original; then try to flow around it.
-                Object *other = const_cast<Object *>(blocker);
-                o.blockerId = other->spawnId;
-                const bool friendlyWalker =
-                    other->player == o.player && other->state == State::Walk;
-                const bool mutual =
-                    friendlyWalker && other->blockerId == o.spawnId &&
-                    other->blockedTime > 0.0f;
-                if (friendlyWalker && !mutual && other->blockedTime < 0.3f) {
-                    // Queue behind a friendly unit that is still moving
-                    // (a chokepoint): wait instead of shoving sideways.
-                    o.blockedTime = std::min(o.blockedTime, 0.4f);
-                    o.moveStallTime = std::max(0.0f, o.moveStallTime - dt);
-                } else if (mutual && o.spawnId > other->spawnId && dist > 0.0001f) {
-                    // Two units pushing into each other: the later one gives
-                    // way by stepping back/aside at half speed.
-                    const float awayX = o.x - other->x, awayY = o.y - other->y;
-                    const float awayLength = std::max(0.001f, std::sqrt(awayX * awayX + awayY * awayY));
-                    const float baseAngle = std::atan2(awayY / awayLength, awayX / awayLength);
-                    static constexpr float yields[5] = {0.0f, 0.7853982f, -0.7853982f,
-                                                        1.5707963f, -1.5707963f};
-                    for (float turn : yields) {
-                        const float candidateX = o.x + std::cos(baseAngle + turn) * step * 0.5f;
-                        const float candidateY = o.y + std::sin(baseAngle + turn) * step * 0.5f;
-                        if (positionPassable(o, candidateX, candidateY, false) &&
-                            !unitBlockerAt(o, candidateX, candidateY)) {
-                            nextX = candidateX;
-                            nextY = candidateY;
-                            moved = true;
-                            break;
-                        }
-                    }
-                    o.blockedTime = std::min(o.blockedTime, 0.4f);
-                }
-                if (moved || (friendlyWalker && !mutual && other->blockedTime < 0.3f)) {
-                    // handled above
-                } else {
-                if (other->state == State::Idle && !other->moveGoalActive &&
-                    other->player == o.player && other->unit->speed > 0 &&
-                    !other->attackTargetId && !other->gatherTargetId &&
-                    !other->constructionTargetId && !other->repairTargetId &&
-                    other->approachRetry <= 0.0f && dist > 0.0001f) {
-                    const float side = ((o.spawnId ^ other->spawnId) & 1u) ? 1.0f : -1.0f;
-                    const float px = -dy / dist * side, py = dx / dist * side;
-                    const float push =
-                        collisionRadius(o) + collisionRadius(*other) + 0.3f;
-                    const float aside[2][2] = {
-                        {other->x + px * push, other->y + py * push},
-                        {other->x - px * push, other->y - py * push}};
-                    for (const auto &point : aside)
-                        if (staticPassableAt(*other, point[0], point[1])) {
-                            const bool wander = other->wander;
-                            issueMove(*other, point[0], point[1]);
-                            other->wander = wander;
-                            other->approachRetry = 1.0f;
-                            break;
-                        }
-                }
-                if (dist > 0.0001f) {
-                    const float directionX = dx / dist, directionY = dy / dist;
-                    const float handedness = (o.spawnId & 1u) ? 1.0f : -1.0f;
-                    static constexpr float turns[6] = {
-                        0.39269908f, -0.39269908f, 0.78539816f,
-                        -0.78539816f, 1.17809725f, -1.17809725f};
-                    for (float turn : turns) {
-                        const float angle = turn * handedness;
-                        const float sx = directionX * std::cos(angle) - directionY * std::sin(angle);
-                        const float sy = directionX * std::sin(angle) + directionY * std::cos(angle);
-                        const float candidateX = o.x + sx * step;
-                        const float candidateY = o.y + sy * step;
-                        if (positionPassable(o, candidateX, candidateY, false) &&
-                            !unitBlockerAt(o, candidateX, candidateY)) {
-                            nextX = candidateX;
-                            nextY = candidateY;
-                            moved = true;
-                            break;
-                        }
-                    }
-                }
-                }
-            }
-            if (moved) {
-                if (!blocker) o.blockerId = 0;
-                o.x = nextX;
-                o.y = nextY;
-                o.facing = std::atan2(dy, dx);
-                o.blockedTime = std::max(0.0f, o.blockedTime - dt);
-                const float newGoalDx = o.targetX - o.x;
-                const float newGoalDy = o.targetY - o.y;
-                const float newGoalDistance =
-                    std::sqrt(newGoalDx * newGoalDx + newGoalDy * newGoalDy);
-                if (newGoalDistance + 0.05f < o.moveBestDistance) {
-                    o.moveBestDistance = newGoalDistance;
-                    o.moveStallTime = 0;
-                    o.repathCount = 0;
-                } else {
-                    o.moveStallTime += dt;
-                    // Sliding along an obstacle without getting closer (the
-                    // unit was pushed off its route): plan again from here.
-                    if (o.moveStallTime >= 1.5f && o.detourTime <= 0.0f &&
-                        o.pathIndex < o.path.size() &&
-                        !segmentClear(o, o.x, o.y, o.path[o.pathIndex][0],
-                                      o.path[o.pathIndex][1])) {
-                        o.moveStallTime = 0.0f;
-                        const Object *goalObject = findObject(o.pathGoalId);
-                        const bool wander = o.wander;
-                        const float bestDistance = o.moveBestDistance;
-                        issueMove(o, o.targetX, o.targetY, goalObject,
-                                  o.pathGoalClearance);
-                        o.wander = wander;
-                        o.moveBestDistance = bestDistance;
-                        o.detourTime = 1.0f;
-                        continue;
-                    }
-                }
-                // Reached (or passed) the waypoint.
-                const float wx = waypoint[0] - o.x, wy = waypoint[1] - o.y;
-                if (dist <= step || dist <= 0.0001f ||
-                    wx * wx + wy * wy <= 0.0025f) {
-                    o.pathIndex++;
-                    if (o.pathIndex >= o.path.size()) {
-                        const bool marching =
-                            o.marchGroupId != 0 &&
-                            o.moveGoalActive;
-                        o.state =
-                            marching
-                                ? State::Walk
-                                : State::Idle;
-                        if (!marching) {
-                            o.stateTime =
-                                1.5f +
-                                r01(rng_) * 5.0f;
-                            o.animTime = 0;
-                        }
-                        const float goalDx = o.targetX - o.x;
-                        const float goalDy = o.targetY - o.y;
-                        const float arrival =
-                            std::max(0.20f, collisionRadius(o) * 0.75f);
-                        if (o.moveGoalActive &&
-                            goalDx * goalDx + goalDy * goalDy <=
-                                arrival * arrival) {
-                            o.moveGoalActive = false;
-                            o.moveSpeedLimit = 0;
-                        }
-                    }
-                }
-            } else {
-                o.blockedTime += dt;
-                o.detourTime -= dt;
-                if (o.moveGoalActive && !o.attackTargetId)
-                    o.moveStallTime += dt;
-                const float targetDx = o.targetX - o.x, targetDy = o.targetY - o.y;
-                const float targetDistance =
-                    std::sqrt(targetDx * targetDx + targetDy * targetDy);
-                const float arrival =
-                    std::max(0.20f, collisionRadius(o) * 0.75f);
-                // A crowd at the destination: close enough counts as arrived
-                // (formation members settle next to each other).
-                const bool crowdedArrival =
-                    blocker && !o.pathGoalId && targetDistance <=
-                                   arrival + collisionRadius(o) * 2.0f + 0.4f;
-                if ((targetDistance <= arrival || crowdedArrival) &&
-                    o.blockedTime >= 0.3f) {
-                    o.state = State::Idle;
-                    o.stateTime = 1.5f + r01(rng_) * 5.0f;
-                    o.animTime = 0;
-                    o.path.clear();
-                    o.pathIndex = 0;
-                    o.moveGoalActive = false;
-                    o.moveSpeedLimit = 0;
-                    continue;
-                }
-                // Jammed by other units just short of the goal: take a free
-                // spot nearby (or stop there) instead of pushing forever.
-                const bool blockerSettled =
-                    blocker && blocker->state != State::Walk && !blocker->moveGoalActive;
-                if (blocker && o.moveGoalActive && !o.attackTargetId &&
-                    o.moveStallTime >= (blockerSettled ? 1.5f : 3.0f) &&
-                    targetDistance < 3.0f) {
-                    o.moveStallTime = 0.0f;
-                    if (targetDistance < 2.5f && o.moveSpreadRetries < 3 &&
-                        spreadBlockedMoveGoal(o))
-                        continue;
-                    o.state = State::Idle;
-                    o.stateTime = 1.5f + r01(rng_) * 5.0f;
-                    o.animTime = 0;
-                    o.path.clear();
-                    o.pathIndex = 0;
-                    o.moveGoalActive = false;
-                    o.moveSpeedLimit = 0;
-                    continue;
-                }
-                if (blocker && o.pathGoalId && o.blockedTime >= 0.4f &&
-                    o.detourTime <= 0.0f) {
-                    // Another unit is on our spot at the target (builders,
-                    // gatherers, attackers): take a free one on the perimeter.
-                    const Object *goal = findObject(o.pathGoalId);
-                    if (goal && goal->active) {
-                        const float gx = std::max(0.0f, std::abs(o.x - goal->x) -
-                                                            goal->unit->collisionSize[0]);
-                        const float gy = std::max(0.0f, std::abs(o.y - goal->y) -
-                                                            goal->unit->collisionSize[1]);
-                        float fx = 0, fy = 0;
-                        // Only when our own spot is taken; otherwise the
-                        // local detour below routes around the blocker.
-                        const float sx = o.targetX - blocker->x, sy = o.targetY - blocker->y;
-                        const float sep = collisionRadius(o) + collisionRadius(*blocker) + 0.05f;
-                        const bool spotTaken =
-                            blocker->state != State::Walk && sx * sx + sy * sy < sep * sep;
-                        if (spotTaken && gx * gx + gy * gy < 4.0f &&
-                            freeInteractionPoint(o, *goal, o.pathGoalClearance * 0.6f, fx, fy) &&
-                            (std::abs(fx - o.targetX) > 0.1f || std::abs(fy - o.targetY) > 0.1f)) {
-                            const bool wander = o.wander;
-                            issueMove(o, fx, fy, goal, o.pathGoalClearance);
-                            o.wander = wander;
-                            o.detourTime = 0.75f;
-                            continue;
-                        }
-                    }
-                }
-                if (blocker && o.blockedTime >= 0.5f && o.detourTime <= 0.0f) {
-                    // Rejoin the route beyond the blockage via a local detour.
-                    size_t rejoin = o.pathIndex;
-                    while (rejoin + 1 < o.path.size()) {
-                        const float rx = o.path[rejoin][0] - o.x;
-                        const float ry = o.path[rejoin][1] - o.y;
-                        if (rx * rx + ry * ry > 9.0f) break;
-                        rejoin++;
-                    }
-                    o.detourTime = 0.75f;
-                    if (detourAround(o, o.path[rejoin][0], o.path[rejoin][1]))
-                        continue;
-                }
-                if (!staticOk && o.blockedTime >= 0.25f && o.detourTime <= 0.0f) {
-                    // The static world changed under the path: re-plan.
-                    o.detourTime = 0.75f;
-                    const Object *goalObject = findObject(o.pathGoalId);
-                    const bool wander = o.wander;
-                    issueMove(o, o.targetX, o.targetY, goalObject,
-                              o.pathGoalClearance);
-                    o.wander = wander;
-                    o.repathCount++;
-                    continue;
-                }
-                if (o.blockedTime >= 2.0f) {
-                    o.blockedTime = 0.0f;
-                    if (o.attackTargetId) {
-                        retryAttackApproach(o);
-                        continue;
-                    }
-                    if (++o.repathCount > 4) {
-                        // Give up, like the original does after repeated
-                        // failures: stop and idle where we are.
-                        o.state = State::Idle;
-                        o.path.clear();
-                        o.pathIndex = 0;
-                        o.moveGoalActive = false;
-                        o.moveSpeedLimit = 0;
-                        o.repathCount = 0;
-                        continue;
-                    }
-                    if (o.moveGoalActive && targetDistance < 2.5f &&
-                        spreadBlockedMoveGoal(o))
-                        continue;
-                    const Object *goalObject = findObject(o.pathGoalId);
-                    const bool wander = o.wander;
-                    issueMove(o, o.targetX, o.targetY, goalObject,
-                              o.pathGoalClearance);
-                    o.wander = wander;
-                }
-            }
-        }
+    for(uint32_t player=0;player<=worldPlayerCount_;++player) {
+        rebuildMobileOccupancy();
+        updateProductionAndDecay(dt,int(player));
+        updatePlayerObjects(dt,int(player));
+        updateGarrisoning(int(player));
+        if(player)updateAi(int(player),dt);
     }
-    updateGarrisoning();
+    syncGarrisonedTransports();
+    for (Object &object : objects_)
+        if (object.selected && !isInspectable(object)) object.selected = false;
+    syncSelectionOrder();
+
     updateProjectiles(dt);
     updateRemains(dt);
     refreshVisibility();
     // Original world tail restores its auxiliary-pass draw, then consumes a final draw.
-    // shortcut: Native object/auxiliary callbacks are not yet ordered per original player lists.
+    // shortcut: Owner barriers are original; intra-owner phases and auxiliary lists still need callback-order parity.
     legacyRandomState_=genieRandomDraw(legacyRandomState_);
     genieRandomDraw(legacyRandomState_);
 }

@@ -8,7 +8,7 @@ namespace swgb {
 
 // Original normal-local branch: 61e902..61e990 and 61ee3e..61ee50.
 // Supply absolute monotonic host milliseconds, not a clamped frame delta.
-// Queue-forced and synchronized/network admission are outside this helper.
+// Replay-forced and synchronized/network admission are outside this helper.
 class LocalSimulationClock {
 public:
     struct Step {

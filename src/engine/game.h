@@ -3,6 +3,7 @@
 #pragma once
 
 #include "local_simulation_clock.h"
+#include "local_command_queue.h"
 #include "assets.h"
 #include "ai_script.h"
 #include "pathfinding.h"
@@ -1206,7 +1207,7 @@ private:
     const Object *shieldGeneratorFor(
         const Object &object) const;
     bool isShielded(const Object &object) const;
-    void updateShields(float dt);
+    void updateShields(float dt,int player);
     const dat::Unit *builderUnit(
         const Object &worker) const;
     int builderWorkingGraphic(
@@ -1232,7 +1233,7 @@ private:
     bool assignAutomaticWorkerTask(
         Object &worker,
         const Object &completedBuilding);
-    void updateGathering(float dt);
+    void updateGathering(float dt,int player);
     bool isFriendlyPlayer(int sourcePlayer,
                           int targetPlayer) const;
     bool isRepairableBy(
@@ -1241,7 +1242,7 @@ private:
         bool requireDamage = true) const;
     bool issueRepairCommand(
         Object &worker, Object &target);
-    void updateRepairing(float dt);
+    void updateRepairing(float dt,int player);
     bool canGarrison(const Object &unit,
                      const Object &building) const;
     bool findProductionExit(
@@ -1254,9 +1255,11 @@ private:
     float animalNurseryFoodRate(
         const Object &nursery) const;
     bool issueGarrisonCommand(Object &building);
+    bool issueGarrisonCommand(Object &building, const std::vector<Object *> &selected);
     bool issueGarrisonOrder(
         Object &unit, Object &container);
-    void updateGarrisoning();
+    void updateGarrisoning(int player);
+    void syncGarrisonedTransports();
     bool ejectGarrisonedUnit(
         Object &building, Object &unit,
         size_t placementOffset = 0);
@@ -1272,7 +1275,15 @@ private:
     bool assignBuilder(Object &worker, Object &building);
     bool placeBuilding(float screenX, float screenY,
                        int screenW, int screenH);
-    void updateConstruction(float dt);
+    void updateConstruction(float dt,int player);
+    struct ContextCommand {
+        std::vector<uint32_t> actors;
+        uint32_t resource=0, friendly=0, enemy=0, memory=0;
+        float x=0, y=0;
+        int player=0;
+        FormationType formation=FormationType::Line;
+    };
+    void executeContextCommand(const ContextCommand &command);
     void commandAtScreen(float screenX, float screenY, int screenW, int screenH);
     void cycleSelectedAttackMode();
     void setSelectedAttackMode(AttackMode mode);
@@ -1327,8 +1338,9 @@ private:
     std::array<int,2> worldSoundMix(float x,float y) const;
     void updateAmbience(float dt, int screenW, int screenH);
     void updateFrame(float dt,float uiDt,const InputState &in,bool advanceWorld,double worldTime);
-    void updateProductionAndDecay(float dt);
-    void updateAi(float dt);
+    void updateProductionAndDecay(float dt,int player);
+    void updateAi(int player,float dt);
+    void updatePlayerObjects(float dt,int player);
     void updateAiPlayer(
         int player, AiPlayerState &state);
     void updateAiGatherers(
@@ -1456,6 +1468,7 @@ private:
     int difficulty_ = 2;
     double gameTime_ = 0;
     LocalSimulationClock localClock_;
+    LocalCommandQueue localCommands_;
     int victoryState_ = -1;
     bool keyboardMouseControls_ = false;
     bool classicHud_=false, classicHudRoot_=true, classicHudMenuRequested_=false;
