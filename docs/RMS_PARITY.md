@@ -208,6 +208,34 @@ uses its separate `elevHeight` scale. These changes apply to retained RMS startu
 height; flight transitions and all other scenario-created aircraft remain
 separate work. No fresh live Windows or pixel-for-pixel UI comparison is claimed.
 
+## Transport civilization mapping: 2026-11-16
+
+Four mixed-pair complete original replays now cover all eight civilizations:
+early1/2, early3/4, late5/6 and late7/8. Native generation matches every ordered
+object, grid, owned/Gaia pose and final RNG. The native mapper uses the actual
+1036/1040/1046/1042/1038/1044/1521/1522 transport prototypes and their graphics.
+The Rebel transport has eight frames at0.5seconds instead of five at0.85seconds.
+
+Early3/4 produces6,205 objects and RNG1007836572, unlike early1/1 and1/2
+(6,206/RNG4112436110): an earlier nonanimated scout omits a constructor draw.
+Both late mixed pairs match the late1/1 count/RNG. Import additionally checks
+all original owned poses, height and counters, including resource21=3 for Rebels
+and1 for Trade Federation (2 for the other compared civilizations).
+
+The original harness executes civilization restrictions and automatic research,
+not full ordinary civilization/team bonus application. Its resource4 therefore
+represents RMS building grants minus used population. The native test compares
+that same component separately from final capacity; Trade Federation retains
+its existing native200 scenario-capped capacity, and Confederacy workers retain
+the existing native55HP rather than the harness's unbonused40HP. These captures do not prove
+full civilization-bonus parity. The boundary is documented in
+`rms-research-initialization-findings-2026-11-13.txt` and the transport ledger.
+
+`rms_general_object_checks.h` now contains41 full-map cases. These four pairs
+cover each civilization, not all64 pairings or every seed. The one-row/count1,
+flat120/base6 and distances3..6 limits remain. Full-map evidence and resource
+replay hashes are indexed in `rms-airtransport-findings-2026-11-16.json`.
+
 ## General object-row controller: 2026-11-15
 
 Gaia resources after owned startup now execute in source order from parsed rows,

@@ -54,13 +54,19 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         {6202,664476888u,864327435u,742396127u},
         {6206,4112436110u,4029094520u,742396127u},
         {6204,3529783542u,2909101468u,742396127u},
+        {6206,4112436110u,1534552978u,742396127u},
+        {6205,1007836572u,1455093729u,742396127u},
+        {6204,3529783542u,1855488030u,742396127u},
+        {6204,3529783542u,1152800464u,742396127u},
     };
     auto replace=[](std::string &text,const std::string &from,const std::string &to) {
         const auto at=text.find(from);check(at!=std::string::npos,"authored variation finds directive");
         text.replace(at,from.size(),to);
     };
-    for(size_t variant=0;variant<37;++variant) {
+    for(size_t variant=0;variant<41;++variant) {
         auto changed=rows;
+        std::vector<uint16_t> civilizations={1,1};
+        if(variant>=37)civilizations={uint16_t(1+2*(variant-37)),uint16_t(2+2*(variant-37))};
         switch(variant) {
         case 0: std::reverse(changed.begin()+4,changed.end());break;
         case 1:
@@ -135,7 +141,7 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         }
         if(variant>=35) {
             const std::string air="create_object 1521 { set_place_for_every_player match_player_civ number_of_objects 1 min_distance_to_players 3 max_distance_to_players 6 }";
-            if(variant==35)changed.insert(changed.begin()+3,air);else changed.push_back(air);
+            if(variant==35 || variant==37 || variant==38)changed.insert(changed.begin()+3,air);else changed.push_back(air);
         }
         for(const auto &row:changed)text+=row+'\n';
         swgb::RmsScript script;std::string error;swgb::RmsMap map;uint32_t rng=1;
@@ -143,20 +149,20 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
             bytes.assign(text.begin(),text.end());return true;
         },swgb::RmsScript::Limits{},&error),error.c_str());
         check(swgb::generateRmsMap(script,{"FIXED_POSITIONS","TINY_MAP","RANDOM_MAP","2_PLAYERS","DEFAULT_RESOURCES"},
-            120,120,data,rng,map,&error,2,{1,1}),error.c_str());
+            120,120,data,rng,map,&error,2,civilizations),error.c_str());
         check(map.objects.empty(),"general rows have no pre-owned records");
         swgb::Game game(assets);
         if(variant>=12) {
             uint32_t importedState=1;
             check(game.initRms(script,{"FIXED_POSITIONS","TINY_MAP","RANDOM_MAP","2_PLAYERS","DEFAULT_RESOURCES"},
-                120,importedState,&error,2,{1,1}),error.c_str());
+                120,importedState,&error,2,civilizations),error.c_str());
             check(importedState==rng && game.activeObjectCount()==cases[variant].count,"selected-land native import count/RNG");
         }
         if(variant>=17) {
             const int ids[]={4,11,21,37,40,84,98,164,165};
             const float values[4][9]={{-2,7,2,6,1,3,725,350,375},{-5,10,2,9,1,3,875,500,375},
                 {0,5,2,3,2,3,625,250,375},{-1,6,2,3,3,3,675,300,375}};
-            const float quantityValues[14][2][9]={
+            const float quantityValues[18][2][9]={
                 {{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,3.0f,1.0f,3.0f,575.0f,200.0f,375.0f}},
                 {{-1.0f,6.0f,2.0f,5.0f,1.0f,3.0f,675.0f,300.0f,375.0f},{-1.0f,6.0f,2.0f,5.0f,1.0f,3.0f,675.0f,300.0f,375.0f}},
                 {{-3.0f,8.0f,2.0f,7.0f,1.0f,3.0f,775.0f,400.0f,375.0f},{-3.0f,8.0f,2.0f,7.0f,1.0f,3.0f,775.0f,400.0f,375.0f}},
@@ -171,15 +177,19 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
                 {{1.0f,4.0f,2.0f,2.0f,2.0f,3.0f,575.0f,200.0f,375.0f},{1.0f,4.0f,2.0f,2.0f,2.0f,3.0f,575.0f,200.0f,375.0f}},
                 {{0,5,2,3,2,3,735,360,375},{0,5,2,3,2,3,735,360,375}},
                 {{0,5,2,3,2,3,735,360,375},{0,5,2,3,2,3,735,360,375}},
+                {{0.0f,5.0f,2.0f,3.0f,2.0f,3.0f,735.0f,360.0f,375.0f},{0.0f,5.0f,3.0f,3.0f,2.0f,3.0f,735.0f,360.0f,375.0f}},
+                {{0.0f,5.0f,2.0f,3.0f,2.0f,3.0f,735.0f,360.0f,375.0f},{0.0f,5.0f,2.0f,3.0f,2.0f,3.0f,735.0f,360.0f,375.0f}},
+                {{0.0f,5.0f,1.0f,3.0f,2.0f,3.0f,735.0f,360.0f,375.0f},{0.0f,5.0f,2.0f,3.0f,2.0f,3.0f,735.0f,360.0f,375.0f}},
+                {{0.0f,5.0f,2.0f,3.0f,2.0f,3.0f,735.0f,360.0f,375.0f},{0.0f,5.0f,2.0f,3.0f,2.0f,3.0f,735.0f,360.0f,375.0f}},
             };
             const int extra=variant>=20?2+(variant==22):int(variant==19);
             const float *expectedCounters=values[extra];
             for(int owner=1;owner<=2;++owner) {
                 if(variant>=23)expectedCounters=quantityValues[variant-23][owner-1];
-                check(game.populationUsedForTesting(owner)==expectedCounters[1] && game.populationCapacityForTesting(owner)==5,
+                check(game.populationUsedForTesting(owner)==expectedCounters[1] && game.populationCapacityForTesting(owner)==(civilizations[owner-1]==5?200:5),
                     "additional owned units preserve original population usage/capacity");
                 for(size_t i=0;i<9;++i) {
-                    const float actual=ids[i]==4?game.populationCapacityForTesting(owner)-game.populationUsedForTesting(owner):
+                    const float actual=ids[i]==4?game.buildingPopulationCapacityForTesting(owner)-game.populationUsedForTesting(owner):
                         ids[i]==84?game.playerAttributeForTesting(owner,84):game.resource(owner,ids[i]);
                     check(actual==expectedCounters[i],("additional owned resource "+std::to_string(ids[i])+" owner "+std::to_string(owner)+
                         " got "+std::to_string(actual)+" expected "+std::to_string(expectedCounters[i])).c_str());
@@ -355,16 +365,69 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         {36,6020u,2,0,255,0.20000000298023224f,60.0f},
         {36,6236u,1,4,255,0.8500000238418579f,150.0f},
         {36,6237u,2,3,255,0.8500000238418579f,150.0f},
+        {37,6011u,1,0,255,0.20000000298023224f,2500.0f},
+        {37,6012u,2,0,27,0.20000000298023224f,2500.0f},
+        {37,6013u,1,6,255,1.0f,40.0f},
+        {37,6014u,1,5,255,1.0f,40.0f},
+        {37,6015u,1,7,255,1.0f,40.0f},
+        {37,6016u,2,7,255,1.5916622877120972f,40.0f},
+        {37,6017u,2,5,255,1.0f,40.0f},
+        {37,6018u,2,7,255,2.6373791694641113f,40.0f},
+        {37,6019u,1,0,255,0.20000000298023224f,60.0f},
+        {37,6020u,2,2,255,0.20000000298023224f,60.0f},
+        {37,6021u,1,0,255,0.8500000238418579f,150.0f},
+        {37,6022u,2,5,255,0.5f,150.0f},
+        {38,6011u,1,0,255,0.20000000298023224f,2500.0f},
+        {38,6012u,2,0,27,0.20000000298023224f,2500.0f},
+        {38,6013u,1,6,255,1.0f,40.0f},
+        {38,6014u,1,5,255,1.0f,40.0f},
+        {38,6015u,1,7,255,1.0f,40.0f},
+        {38,6016u,2,7,255,1.5916622877120972f,40.0f},
+        {38,6017u,2,5,255,1.0f,40.0f},
+        {38,6018u,2,7,255,2.6373791694641113f,40.0f},
+        {38,6019u,1,0,255,2.7770378589630127f,60.0f},
+        {38,6020u,2,0,255,0.0f,60.0f},
+        {38,6021u,1,0,255,0.8500000238418579f,150.0f},
+        {38,6022u,2,1,255,0.8500000238418579f,150.0f},
+        {39,6011u,1,0,255,0.20000000298023224f,2500.0f},
+        {39,6012u,2,0,27,0.20000000298023224f,2500.0f},
+        {39,6013u,1,6,255,1.0f,40.0f},
+        {39,6014u,1,5,255,1.0f,40.0f},
+        {39,6015u,1,7,255,1.0f,40.0f},
+        {39,6016u,2,7,255,1.5916622877120972f,40.0f},
+        {39,6017u,2,5,255,1.0f,40.0f},
+        {39,6018u,2,7,255,2.6373791694641113f,40.0f},
+        {39,6019u,1,0,255,2.7770378589630127f,60.0f},
+        {39,6020u,2,0,255,0.2920987606048584f,60.0f},
+        {39,6236u,1,4,255,0.8500000238418579f,150.0f},
+        {39,6237u,2,3,255,0.8500000238418579f,150.0f},
+        {40,6011u,1,0,255,0.20000000298023224f,2500.0f},
+        {40,6012u,2,0,27,0.20000000298023224f,2500.0f},
+        {40,6013u,1,6,255,1.0f,40.0f},
+        {40,6014u,1,5,255,1.0f,40.0f},
+        {40,6015u,1,7,255,1.0f,40.0f},
+        {40,6016u,2,7,255,1.5916622877120972f,40.0f},
+        {40,6017u,2,5,255,1.0f,40.0f},
+        {40,6018u,2,7,255,2.6373791694641113f,40.0f},
+        {40,6019u,1,0,255,0.20000000298023224f,60.0f},
+        {40,6020u,2,0,255,0.2920987606048584f,60.0f},
+        {40,6236u,1,4,255,0.8500000238418579f,150.0f},
+        {40,6237u,2,3,255,0.8500000238418579f,150.0f},
         };
         for(const auto &pose:ownedPoses)if(pose.variant==variant) {
             const int unit=game.objectUnitId(pose.id);
-            const auto *graphic=data.graphic(data.civs[1].units[unit].standingGraphic[0]);
+            const auto *graphic=data.graphic(data.civs[civilizations[pose.owner-1]].units[unit].standingGraphic[0]);
             const auto animation=game.objectAnimationForTesting(pose.id);const bool animated=graphic->sequenceType&1;
-            check(game.objectPlayer(pose.id)==pose.owner && game.objectHitPoints(pose.id)==pose.hp &&
+            // The original RMS harness excludes ordinary civilization bonuses; native import applies them.
+            const float expectedHp=civilizations[pose.owner-1]==8 && (unit==83 || unit==293)?55:pose.hp;
+            check(game.objectPlayer(pose.id)==pose.owner && game.objectHitPoints(pose.id)==expectedHp &&
                 game.pendingFoundationForTesting(pose.id)==pose.pending &&
                 animation[0]==(animated?pose.frame*graphic->frameDuration:0) &&
                 std::abs(animation[1]-(animated?pose.hold-graphic->frameDuration:0))<.00001f,
-                "interleaved owned startup preserves original ownership, health and animation");
+                ("owned pose variant "+std::to_string(variant)+" id "+std::to_string(pose.id)+
+                 " hp "+std::to_string(game.objectHitPoints(pose.id))+" expected "+std::to_string(expectedHp)+
+                 " animation "+std::to_string(animation[0])+"/"+std::to_string(animation[1])+" expected frame/hold "+
+                 std::to_string(pose.frame)+"/"+std::to_string(pose.hold)).c_str());
         }
         uint32_t ordinal=0,count=0,hash=2166136261u;
         auto record=[&](int unit,int owner,int facet,float x,float y) {
@@ -381,9 +444,10 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
         for(const auto &o:map.ownedObjects){record(o.unitId,o.owner,o.facet,o.x,o.y);++ordinal;}
         for(const auto &o:map.resourcesAfterOwned){
             record(o.unitId,o.owner,o.facet,o.x,o.y);
-            if(variant>=35)check(o.heightAboveGround==(o.unitId==1036?1.f:0.f) &&
+            const bool air=o.owner && data.civs[civilizations[o.owner-1]].units[o.unitId].cls==59;
+            if(variant>=35)check(o.heightAboveGround==(air?1.f:0.f) &&
                 game.objectHeightForTesting(ordinal+1)==o.heightAboveGround,"original transport height survives native import");
-            if(variant>=35 && o.unitId==1036) {
+            if(variant>=35 && air) {
                 const auto ground=game.objectPosition(6011),air=game.objectPosition(ordinal+1);
                 float gx,gy,ax,ay;
                 check(game.objectScreenPosition(6011,960,544,gx,gy) && game.objectScreenPosition(ordinal+1,960,544,ax,ay),
@@ -411,11 +475,11 @@ static void rmsGeneralObjectChecks(swgb::Assets &assets) {
                 const std::string unsupported=text+row;swgb::RmsScript invalid;uint32_t unchanged=1;
                 check(invalid.load(60000,[&](int32_t,std::vector<uint8_t> &bytes){bytes.assign(unsupported.begin(),unsupported.end());return true;},
                     swgb::RmsScript::Limits{},&error),error.c_str());
-                check(!game.initRms(invalid,{"FIXED_POSITIONS","TINY_MAP","RANDOM_MAP","2_PLAYERS","DEFAULT_RESOURCES"},120,unchanged,&error,2,{1,1}) &&
+                check(!game.initRms(invalid,{"FIXED_POSITIONS","TINY_MAP","RANDOM_MAP","2_PLAYERS","DEFAULT_RESOURCES"},120,unchanged,&error,2,civilizations) &&
                     unchanged==1 && game.activeObjectCount()==retained && game.populationUsedForTesting(1)==6,
                     "unsupported owned-row variance preserve the running world and caller RNG");
             }
         }
     }
-    std::puts("PASS: thirty-seven general object-row variations match complete original runner");
+    std::puts("PASS: forty-one general object-row variations match complete original runner");
 }

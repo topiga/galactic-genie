@@ -270,6 +270,9 @@ public:
     float populationCapacityForTesting(int player) const {
         return populationCapacity(player);
     }
+    float buildingPopulationCapacityForTesting(int player) const {
+        return buildingPopulationCapacity(player);
+    }
     bool unitAvailableForTesting(int player,int unitId) const {
         return unitAvailable(player,unitId);
     }

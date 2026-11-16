@@ -82,6 +82,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     bool holocrons = false;
     std::vector<RmsObjectRow> resourceRows;
     constexpr int scoutIds[]={550,552,556,554,258,558,927,932};
+    constexpr int transportIds[]={1036,1040,1046,1042,1038,1044,1521,1522};
     int workerMinDistance=1,workerMaxDistance=3,workerGroups=1,scoutGroups=1;
     bool startingStalagmites = false;
     bool playerLands = false;
@@ -615,24 +616,31 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     }
     const bool airTransport=std::any_of(resourceRows.begin(),resourceRows.end(),[](const auto &row){return row.unitId==1521;});
     if(airTransport) {
-        // shortcut: one Empire transport row on the compared flat120 profile; extend with original constructor/gate cases.
-        if(!ownedMixedForest || base!=6 || playerCivilizations!=std::vector<uint16_t>{1,1} ||
+        // shortcut: one transport row on the compared flat120 profile; extend quantities and geometry with original cases.
+        if(!ownedMixedForest || base!=6 ||
            std::count_if(resourceRows.begin(),resourceRows.end(),[](const auto &row){return row.unitId==1521;})!=1 ||
-           data.civs[1].units.size()<=1036 || data.terrainRestrictions.size()<=23)
+           data.terrainRestrictions.size()<=23)
             return fail("unsupported air transport startup profile");
-        const auto &u=data.civs[1].units[1036];const auto *g=data.graphic(u.standingGraphic[0]);
-        if(!u.exists || u.id!=1036 || u.type!=dat::UT_Creatable || u.cls!=59 || u.hitPoints!=150 ||
-           u.collisionSize[0]!=.5f || u.collisionSize[1]!=.5f || u.collisionSize[2]!=3 ||
-           u.clearanceSize[0]!=.5f || u.clearanceSize[1]!=.5f || u.terrainRestriction!=23 ||
-           u.flyMode!=1 || u.hillMode || u.trait!=1 || u.headUnit!=-1 || u.trackingUnit!=-1 ||
-           u.trackingUnitMode || u.trackingUnitDensity || u.convertTerrain || u.trainSound!=144 ||
-           u.standingGraphic[0]!=5458 || !g || g->sequenceType!=7 || g->frameCount!=5 ||
-           g->angleCount!=8 || g->frameDuration!=.85f || g->replayDelay || g->soundId!=-1 || !g->angleSounds.empty() ||
-           u.costs[0].type!=0 || u.costs[0].amount!=35 || (u.costs[0].flag&255)!=1 ||
-           u.costs[1].type!=1 || u.costs[1].amount!=125 || (u.costs[1].flag&255)!=1 ||
-           u.resourceStorages[0].type!=4 || u.resourceStorages[0].amount!=-1 || u.resourceStorages[0].flag!=2 ||
-           u.resourceStorages[1].type!=11 || u.resourceStorages[1].amount!=1 || u.resourceStorages[1].flag!=2)
-            return fail("unsupported air transport prototype or graphics");
+        constexpr int standing[]={5458,5471,5488,5482,5465,5495,8984,8987};
+        constexpr int sounds[]={144,969,538,965,971,963,418,692};
+        for(const auto civ:playerCivilizations) {
+            const int id=transportIds[civ-1];
+            if(data.civs[civ].units.size()<=size_t(id))return fail("missing air transport prototype");
+            const auto &u=data.civs[civ].units[id];const auto *g=data.graphic(u.standingGraphic[0]);
+            if(!u.exists || u.id!=id || u.type!=dat::UT_Creatable || u.cls!=59 || u.hitPoints!=150 ||
+               u.collisionSize[0]!=.5f || u.collisionSize[1]!=.5f || u.collisionSize[2]!=((civ==2 || civ==5 || civ==6 || civ==8)?4:3) ||
+               u.clearanceSize[0]!=.5f || u.clearanceSize[1]!=.5f || u.terrainRestriction!=23 ||
+               u.flyMode!=1 || u.hillMode || u.trait!=1 || u.headUnit!=-1 || u.trackingUnit!=-1 ||
+               u.trackingUnitMode || u.trackingUnitDensity || u.convertTerrain || u.trainSound!=sounds[civ-1] ||
+               u.lineOfSight!=5 || u.speed!=.75f || u.canBeBuiltOn!=1 || u.obstructionType!=5 || u.obstructionClass!=2 ||
+               u.standingGraphic[0]!=standing[civ-1] || !g || g->sequenceType!=7 || g->frameCount!=(civ==2?8:5) ||
+               g->angleCount!=8 || g->frameDuration!=(civ==2?.5f:.85f) || g->replayDelay || g->soundId!=-1 || !g->angleSounds.empty() ||
+               u.costs[0].type!=0 || u.costs[0].amount!=35 || (u.costs[0].flag&255)!=1 ||
+               u.costs[1].type!=1 || u.costs[1].amount!=125 || (u.costs[1].flag&255)!=1 ||
+               u.resourceStorages[0].type!=4 || u.resourceStorages[0].amount!=-1 || u.resourceStorages[0].flag!=2 ||
+               u.resourceStorages[1].type!=11 || u.resourceStorages[1].amount!=1 || u.resourceStorages[1].flag!=2)
+                return fail("unsupported air transport prototype or graphics");
+        }
     }
     auto safeTerrain = [&](uint8_t terrain, bool allowScenery=false) {
         if (terrain>52 || terrain>=data.terrainBlock.terrains.size()) return false;
@@ -886,7 +894,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 occupied,nullptr,[&](const auto &object){generated.ownedObjects.push_back(object);}))return false;
         auto placeMobile=[&](uint16_t owner,const RmsPlayerStart &center,int requested,bool air,const std::vector<uint32_t> &blockedTiles,
                             const std::vector<uint8_t> *eligibility,auto emit) {
-            const auto civ=playerCivilizations[owner-1];const int id=air?1036:scoutIds[civ-1];
+            const auto civ=playerCivilizations[owner-1];const int id=air?transportIds[civ-1]:scoutIds[civ-1];
             const auto &u=data.civs[civ].units[id];const auto &g=*data.graphic(u.standingGraphic[0]);
             std::vector<uint32_t> candidates;
             if (!generateRmsObjectCandidatesInArea(width,height,center.x,center.y,air?6:9,rng,candidates,err)) return false;
