@@ -1124,7 +1124,7 @@ private:
     bool unitAvailable(int player, int unitId) const;
     const dat::Unit *effectiveUnitForPlayer(
         int player, const dat::Unit *unit) const;
-    void applyUnitUpgrades(int player);
+    void applyUnitUpgrades(int player,const std::vector<int> &previousEffects);
     bool technologyRequirementsMet(int player,
                                   const dat::Tech &technology) const;
     void initializeCivilizationBonuses();

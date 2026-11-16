@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+#include "hit_point_effect_checks.h"
 
 static void civilizationBonusChecks(swgb::Assets &assets) {
+    hitPointEffectChecks(assets);
     const int units[]={1212,1212,933,579,1208,933,104,933};
     const int attributes[]={101,100,1,13,12,1,100,2};
     const float expected[]={90,50,101,110,103,105,90,105};

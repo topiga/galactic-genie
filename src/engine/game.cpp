@@ -2867,7 +2867,9 @@ float Game::modifiedUnitAttribute(const Object &object,
             if (command.c != attribute ||
                 !technologyCommandApplies(command, object))
                 continue;
-            if (command.type == 0)
+            if (attribute==0)
+                value=applyShortEffect(truncateShort(value),command);
+            else if (command.type == 0)
                 value = command.d;
             else if (command.type == 4)
                 value += command.d;
@@ -3920,6 +3922,7 @@ void Game::refreshAutomaticTechnologies(int player) {
         return;
     const int civilization = civilizationForPlayer(player);
     auto &effects=playerEffects_[(size_t)player];
+    const auto previousEffects=effects;
     effects.clear();
     const auto &order=researchedTechOrder_[size_t(player)];
     const auto &civilizationEffects=civilizationEffects_[size_t(player)];
@@ -3974,7 +3977,7 @@ void Game::refreshAutomaticTechnologies(int player) {
     // Original recursive refresh records statistics after dependent technologies finish.
     for(auto it=completed.rbegin();it!=completed.rend();++it)
         recordResearchStatistics(player,assets_.dat().techs[size_t(*it)]);
-    applyUnitUpgrades(player);
+    applyUnitUpgrades(player,previousEffects);
 }
 
 void Game::initializeCivilizationBonuses() {
@@ -4134,7 +4137,10 @@ const dat::Unit *Game::effectiveUnitForPlayer(
     return findUnit(civilization, unitId);
 }
 
-void Game::applyUnitUpgrades(int player) {
+void Game::applyUnitUpgrades(int player,const std::vector<int> &previousEffects) {
+    const auto &effects=playerEffects_[size_t(player)];
+    const bool appended=previousEffects.size()<=effects.size() &&
+        std::equal(previousEffects.begin(),previousEffects.end(),effects.begin());
     bool pathingChanged = false;
     for (Object &object : objects_) {
         if (!object.active || object.player != player ||
@@ -4143,18 +4149,28 @@ void Game::applyUnitUpgrades(int player) {
         const dat::Unit *upgraded =
             effectiveUnitForPlayer(player, object.unit);
         if (!upgraded || upgraded == object.unit) {
-            // Hit point technologies (attribute 0) raise the maximum of
-            // existing units and buildings at once and add the same amount
-            // to their current hit points.
-            const float newMax = (float)std::max(
-                1, (int)std::lround(modifiedUnitAttribute(object, 0, object.unit->hitPoints)));
-            if (newMax != object.maxHitPoints && object.maxHitPoints > 0.0f) {
-                if (object.underConstruction)
-                    object.hitPoints *= newMax / object.maxHitPoints;
-                else
-                    object.hitPoints += newMax - object.maxHitPoints;
-                object.maxHitPoints = newMax;
-                object.hitPoints = std::max(1.0f, std::min(newMax, object.hitPoints));
+            if(appended) {
+                for(size_t index=previousEffects.size();index<effects.size();++index)
+                    for(const auto &command:assets_.dat().effects[size_t(effects[index])].commands) {
+                        if(command.c!=0 || (command.type!=0 && command.type!=4 && command.type!=5) ||
+                           !technologyCommandApplies(command,object))continue;
+                        // Original live-object callback precedes the separate signed-short master update.
+                        double hp=0;
+                        if(command.type==5)hp=double(object.hitPoints)*double(command.d)+.5;
+                        else if(object.maxHitPoints!=0) {
+                            const double target=command.type==0 ? double(command.d) : double(object.maxHitPoints)+double(command.d);
+                            hp=target*double(object.hitPoints)/double(object.maxHitPoints);
+                        }
+                        object.hitPoints=truncateShort(hp);
+                        object.maxHitPoints=applyShortEffect(truncateShort(object.maxHitPoints),command);
+                    }
+            } else {
+                // Diagnostic bonus reinitialization can replace history; gameplay only appends effects.
+                const float maximum=modifiedUnitAttribute(object,0,object.unit->hitPoints);
+                if(maximum!=object.maxHitPoints) {
+                    object.hitPoints=object.maxHitPoints!=0 ? truncateShort(double(maximum)*object.hitPoints/object.maxHitPoints) : 0;
+                    object.maxHitPoints=maximum;
+                }
             }
             continue;
         }
@@ -8932,25 +8948,7 @@ void Game::activateCheat(size_t index, int screenW, int screenH) {
         defeatCheatPlayer(cheat.value);
         break;
     case CheatAction::Technology: {
-        std::vector<std::pair<Object *, float>> oldMaximums;
-        for (Object &object : objects_)
-            if (object.active &&
-                object.player == localPlayer_)
-                oldMaximums.push_back(
-                    {&object, object.maxHitPoints});
         activated = researchTechnology(localPlayer_, cheat.value);
-        if (activated)
-            for (const auto &entry : oldMaximums) {
-                Object &object = *entry.first;
-                const float maximum = std::max(
-                    1.0f, modifiedUnitAttribute(
-                              object, 0,
-                              object.unit->hitPoints));
-                object.hitPoints = std::max(
-                    1.0f, object.hitPoints +
-                              maximum - entry.second);
-                object.maxHitPoints = maximum;
-            }
         break;
     }
     }

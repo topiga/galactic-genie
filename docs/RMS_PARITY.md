@@ -4507,3 +4507,84 @@ fixtures (four existing plus fourteen civilization cases). Nine comparator tests
 pass, including invalid civilizations, native argument propagation and rejection
 of a saved capture from a different civilization pair. No production algorithm
 change or map-specific admission was needed for these new cases.
+
+### Larger complete RMS starts and effect dispatch (2026-11-16)
+
+The authored bordered startup now matches complete original RMS execution at
+144×144 and 200×200 for seed 1, two Empire players: ten ordered starting objects,
+all terrain/elevation/slope bytes, animation poses and final RNG. These worlds
+still register TINY_MAP; raw dimensions are deliberately independent of named
+UI size presets. The common owned-land admission no longer imposes 120×120;
+other terrain, prototype, square-world and owner-count restrictions remain.
+This proves RMS creation, not the subsequent ordinary civilization/team pass.
+
+The original reference needed larger, nonoverlapping tile/controller/visibility
+and queue arenas. The relocated reference reproduces the prior 120 baseline
+exactly on objects, grids, RNG, poses, resources, tokens and preset registrations.
+The snapshot keeps its old two-player CLI and adds an explicit form:
+`DAT SEED TERRAIN CIVS_CSV DRS RESOURCE WIDTH HEIGHT tiny|tiny-random`.
+Comparison manifests accept `width`/`height` (default 120), validate the reference
+world context and full grid lengths, and pass raw dimensions to reference probes.
+Accepting a context in this diagnostic is not a claim that every map supports it.
+
+A separate full original civilization-6 master-table capture loaded all 1,446
+nonnull prototypes, with the true table count 1,596. Actual post-RMS tree 9 then
+own-team effect 15 dispatch changes unit 933 and 183 class-targeted units,
+respectively. This executes original effect callbacks; it does not yet prove the
+whole-world team-selection routine or all civilizations.
+
+Three explicitly synthetic original dispatcher controls establish a shared
+selector correction: an in-range unit index takes priority over class; a negative
+or out-of-range unit index falls back to a nonnegative class; both negative
+selectors affect nothing. The native predicate previously intersected selectors
+and treated both negatives as a wildcard. The shared predicate now follows the
+original; costs, training time, stats, attack and armour use it. Normal captured
+civilization commands use exclusive selectors, so this correction is not presented
+as a demonstrated mismatch in their ordinary startup effects.
+
+Local evidence: `rms-commonborder-larger-startup-findings-2026-11-16.json`,
+`rms-text-full-commonborder-dimension144-60000-settings-tiny-derived-1-1-1-oracle-2026-11-16.json`,
+its dimension200 counterpart, and `rms-civ6-selector-controls-6-1-seed1-oracle-2026-11-16.json`.
+
+The larger-start matrix now contains ten complete matches: fixed seeds
+1/12345/20261116 and random seeds 12345/20261116 at both dimensions. Retained
+regressions also import these maps into Game and verify every terrain tile plus
+object identity, owner and coordinates. Larger worlds with three/eight owners
+still require complete reference owner contexts; this work does not waive those
+requirements.
+
+Original full-table team15 execution also exposed missing native attribute23
+application. Search radius is independent of LOS: the original team effect has
+separate commands for each. Automatic healing, next-building/resource searches
+and aggressive acquisition now evaluate search-radius effects through the shared
+attribute machinery, using the builder/gatherer master where appropriate. Tests
+cover the 183 captured team targets and independent LOS/radius commands.
+
+Original live HP controls cover completed fortress933, worker293 and a genuinely
+created unfinished fortress. Live HP is updated before the signed-short master:
+set uses `s16(trunc(d*H/M))`, add uses `s16(trunc((M+d)*H/M))`, multiplication uses
+`s16(trunc(H*d+0.5))`. Set/add with zero old maximum produce zero live HP; there is
+no minimum-one clamp. The master separately uses truncated set/add and rounded
+multiply, with 16-bit wrapping. The native refresh now applies newly appended
+HP commands in order rather than adding an aggregate maximum delta. Attribute0
+queries use the same per-command signed-short master arithmetic. The technology
+cheat no longer applies a second HP adjustment after ordinary research.
+
+Twenty-one retained original controls cover fractional values, reductions, zero,
+negative results and command ordering. Repeated research and unrelated refreshes
+must not replay old HP commands. This does not establish combined unit-type
+replacement/HP-effect ordering; that remains outside these unchanged-master controls.
+
+Additional evidence: `rms-civ6-postbonus-decoded-findings-2026-11-16.json`,
+`rms-hp-command-semantics-findings-2026-11-16.json`, and the linked type70/type80
+and unfinished-building captures. Whole-world allied-team selection still needs
+an independently initialized reference world; the current normal runtime proof
+executes tree9 followed by own-team15 directly after RMS.
+
+Validation after these shared fixes: all ten larger full-RMS differential cases
+match; the retained packaged/general/owned startup suite and larger Game imports
+pass under ASan/UBSan. Focused cost/time, civilization, HP, combat, healing and
+automatic-technology tests pass under the same sanitizers. Ten comparator tests
+pass, as do eleven malformed snapshot-argument controls. The rebuilt desktop
+passes dummy-driver menu/start/pause navigation and 60 render frames with effect
+playback, streamed music and EOF looping. This is not a new live Windows UI test.
