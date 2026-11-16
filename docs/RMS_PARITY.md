@@ -1,12 +1,23 @@
 # Clone Campaigns random-map parity
 
-## Current comparison coverage: 2026-11-15
+## Current comparison coverage: 2026-11-16
 
-Packaged **Forest54204, Reytha54220 and Arid54201** now have complete original-runner
-comparisons in the fixed, Tiny, two-Empire profile: three seeds each for Forest
-and Reytha, four for Arid. The standard production audit passes9/138 attempts
-(three of46 map resources). This is bounded startup coverage; it is not general
-engine or gameplay parity.
+Ten packaged profiles have complete original-runner comparisons at fixed Tiny120,
+two Empire players and default resources: Forest54204, Reytha54220, Arid54201,
+Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
+Tatooine New55019 and Endor54207. The shared packaged suite contains29 complete
+cases in addition to the separate Forest fixtures. It checks ordered objects,
+terrain/elevation/slopes, startup animation and native import; added tests cover
+Gaia resource accounting and deferred foundation rendering.
+
+The standard production audit accepts30/138 map/seed attempts (ten of46 resources,
+three seeds each);108 are explicitly rejected. This measures supported
+configurations, not an engine completion percentage. New comparisons run the
+original executable locally with modeled host boundaries. Live Windows evidence
+below remains a separate, earlier baseline. Later gameplay and other map settings
+are not established as1:1.
+
+## Retained Forest and live Windows baseline
 
 Forest resource 54204 now runs directly from `gamedata_x1.drs`, including all 23
 object rows. For seed 16160, 120×120, Tiny, FIXED_POSITIONS, DEFAULT_RESOURCES and two
@@ -2820,3 +2831,41 @@ Forest/holocron regressions, Gaia and owned-foundation render checks, strict
 integrated RMS tests and production CLI tests. The audit now accepts27/138
 sampled cases across nine map families, with111 unsupported cases rejected.
 The rebuilt desktop passes preferences, menus and headless effects/music smoke.
+
+### Endor mixed water/forest startup (2026-11-16)
+
+Raw54207's fixed Endor profile now matches the complete original runner at
+Tiny120/two-Empire/default resources. It reuses the growing-neutral-land/cliff
+pipeline with water1, neutral grass0, player terrain12, forest21, deep water23
+and player zones1/2. All three terrain/elevation/slope grids match without new
+geometry algorithms.
+
+| Seed | Objects | Final RNG | Gaia unit/total cost |
+|---|---:|---:|---:|
+| 1 | 2414 | 3714391971 | 2450 |
+| 12345 | 2393 | 2516654529 | 2900 |
+| 16160 | 2360 | 3431027007 | 3850 |
+
+The comparison also covers every ordered object and startup pose. Each map
+creates36 deep-water fish456 at integer centers, using three constructor draws
+and an original2×2 terrain footprint. Their zero-height collision ignores
+objects. Two each of marine predators998/1033 consume eight draws and can share
+positions with one another. Their exact placement terrain23 agrees with the
+original master gate; restriction27 independently permits only23 in the supplied
+DAT. Native placement checks both constraints rather than relying on that
+coincidence if restrictions change.
+
+The shared packaged suite now includes29 complete cases, native fish health and
+animation, Gaia cost/storage checks and rejection of uncompared random starts.
+Evidence: `rms-packaged-endor54207-full-findings-2026-11-16.json`,
+`rms-endor-assets-provenance-2026-11-16.json` and
+`rms-endor-marine-terrain-gate-findings-2026-11-16.json`. Original full runs and
+independent resource replays agree for all three seeds. These bounded captures
+do not establish other civilization/settings combinations or subsequent gameplay.
+
+Validation passes all29 shared packaged cases,52 general object rows, Forest,
+Gaia/owned-foundation rendering, strict integrated RMS and production CLI tests.
+The production audit accepts30/138 cases across ten profiles;108 remain rejected.
+Desktop preferences/menu/effects/music smoke passes using dummy video/audio.
+The final explicit marine master-terrain check also passes all three full Endor
+comparisons with full-precision coordinates.
