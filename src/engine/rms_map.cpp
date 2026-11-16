@@ -552,6 +552,39 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         }
         return true;
     }();
+    const bool motherlode=[&]() {
+        if(width!=120 || height!=120 || (base!=46 && base!=0 && base!=41) || !playerLands || playerLandBegin!=2 || lands.size()!=4 ||
+           playerCount!=2 || !playerZoneOverride || !ownedObjects || !startingWorkers || !startingScouts ||
+           workerGroups!=1 || scoutGroups!=1 || workerMinDistance!=6 || workerMaxDistance!=6 || startingStalagmites ||
+           playerCivilizations!=std::vector<uint16_t>{1,1} || !defines.count("FIXED_POSITIONS") ||
+           cliffStage || !elevationStage || connectionStage || terrainRows.size()!=6 || elevationRows.size()!=7)return false;
+        const uint32_t ground=static_cast<uint32_t>(base),forest=base==46?50:base==0?18:10;
+        for(size_t n=0;n<lands.size();++n) {
+            const auto &land=lands[n];const auto &position=placements[n];const auto &metadata=landMetadata[n];const bool neutral=n<2;
+            const int border=n==0?24:n==1?48:0;
+            if(land.terrain!=(n==0?forest:n==1?1:ground) || land.radius!=(neutral?3u:7u) ||
+               land.targetTiles!=(n==0?8640u:n==1?720u:2160u) || land.zone!=(n==0?26:n==1?25:11) ||
+               land.clumpingFactor!=8 || land.borderFuzziness!=(n==0?90u:n==1?20u:10u) || land.separation!=(neutral?0u:5u) ||
+               land.leftBorder!=border || land.topBorder!=border || land.rightBorder!=(neutral?120-border:-1) ||
+               land.bottomBorder!=(neutral?120-border:-1) || position.x!=-1 || position.y!=-1 || position.minPlacementDistance!=-1 ||
+               metadata.id!=(neutral?0:1) || metadata.owner!=(neutral?0:int(n-1)))return false;
+        }
+        const uint32_t terrain[]={22,23,forest,base==46?45u:base==0?12u:9u,base==46?14u:6u,base==41?44u:45u};
+        const uint32_t bases[]={1,22,ground,ground,ground,ground};
+        const uint32_t tiles[]={288,144,2160,1296,288,288},clumps[]={3,6,14,8,24,30},spacing[]={1,5,5,1,1,1};
+        for(size_t n=0;n<terrainRows.size();++n) {
+            const auto &row=terrainRows[n];
+            if(row.terrain!=terrain[n] || row.baseTerrain!=bases[n] || row.targetTiles!=tiles[n] || row.clumps!=clumps[n] ||
+               row.spacing!=spacing[n] || row.clumping!=20 || row.avoidPlayerStarts!=(n==2) ||
+               row.flatTerrainOnly || row.minHeight || row.maxHeight!=255)return false;
+        }
+        for(size_t n=0;n<elevationRows.size();++n) {
+            const auto &row=elevationRows[n];
+            if(row.elevation!=n+1 || row.baseHeight!=n || row.baseTerrain!=ground || row.targetTiles!=2000 ||
+               row.clumps!=20 || row.spacing!=(n==0?2u:1u))return false;
+        }
+        return true;
+    }();
     const bool centralLakeCliffs=[&]() {
         if(width!=120 || height!=120 || (base!=0 && base!=26) || !playerLands || playerLandBegin!=1 || lands.size()!=3 ||
            playerCount!=2 || !playerZoneOverride || !ownedObjects || !startingWorkers || !startingScouts ||
@@ -832,7 +865,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         }
     }
     if(allies && ownedObjects && !alliedRoads) return fail("allied owned-object startup remains unverified");
-    if(playerZoneOverride && ownedObjects && !mixedLandCliffs && !lakeCliffs && !centralLakeCliffs && !migrationCliffs && !basinCliffs && !alliedRoads && !connectedCliffs) {
+    if(playerZoneOverride && ownedObjects && !motherlode && !mixedLandCliffs && !lakeCliffs && !centralLakeCliffs && !migrationCliffs && !basinCliffs && !alliedRoads && !connectedCliffs) {
         // shortcut: explicit zones on the compared flat120 Forest profile; extend geometry with original startup replays.
         if(width!=120 || height!=120 || base!=6 || playerCount!=2 || lands.size()!=2 ||
            elevationStage || connectionStage || !defines.count("FIXED_POSITIONS") ||
@@ -847,7 +880,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
            row.minHeight || row.maxHeight!=255)
             return fail("unsupported explicit-zone terrain profile");
     }
-    if(ownedObjects && lands.size()!=playerCount && !mixedLandCliffs && !lakeCliffs && !centralLakeCliffs && !migrationCliffs && !basinCliffs && !connectedIslands) {
+    if(ownedObjects && lands.size()!=playerCount && !motherlode && !mixedLandCliffs && !lakeCliffs && !centralLakeCliffs && !migrationCliffs && !basinCliffs && !connectedIslands) {
         // shortcut: fixed neutral seed lands only; broaden after original mixed-land startup comparisons.
         if(width!=120 || height!=120 || base!=6 || playerLandBegin!=0 || playerCount!=2 ||
            lands.size()>playerCount+(cliffStage?1:2) || elevationStage || connectionStage ||
@@ -862,7 +895,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         }
     }
     const bool ownedForest=ownedObjects && playerLands && base==41 && lands[0].terrain==9;
-    const bool ownedMixedForest=mixedLandCliffs || lakeCliffs || centralLakeCliffs || migrationCliffs || basinCliffs || alliedRoads || connectedCliffs || connectedIslands || (ownedObjects && playerLands && (base==6 || base==12 || base==14 || base==26 || base==32 || base==41) && lands[0].terrain==base &&
+    const bool ownedMixedForest=motherlode || mixedLandCliffs || lakeCliffs || centralLakeCliffs || migrationCliffs || basinCliffs || alliedRoads || connectedCliffs || connectedIslands || (ownedObjects && playerLands && (base==6 || base==12 || base==14 || base==26 || base==32 || base==41) && lands[0].terrain==base &&
         width==120 && height==120 && playerCount==2 && playerCivilizations.size()==2 &&
         std::all_of(playerCivilizations.begin(),playerCivilizations.end(),[](uint16_t civ){return civ>=1 && civ<=8;}) &&
         startingWorkers && startingScouts && workerMinDistance==6 && workerMaxDistance==6 &&

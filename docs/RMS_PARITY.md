@@ -2,16 +2,16 @@
 
 ## Current comparison coverage: 2026-11-16
 
-Eighteen packaged profiles have complete original-runner comparisons at fixed Tiny120,
+Nineteen packaged profiles have complete original-runner comparisons at fixed Tiny120,
 two Empire players and default resources (54218 uses mutual allies): Forest54204, Reytha54220, Arid54201,
 Hoth55004, Zaloriis55011, Kessel55008, Tatooine55009, mixed-land54209,
-Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206 allied roads54218 and central water54212.
-The shared packaged suite contains65 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
+Tatooine New55019, Endor54207, four-biome connections54210, inland54203, flat Tiny Mos Espa55014, Migration54216, five-land islands54217, central basin54206 allied roads54218 central water54212 and Motherlode54225.
+The shared packaged suite contains68 complete cases in addition to the separate Forest fixtures. It checks ordered objects,
 terrain/elevation/slopes, startup animation and native import; added tests cover
 Gaia resource accounting and deferred foundation rendering.
 
-The standard production audit accepts51/138 map/seed attempts (seventeen of46 resources,
-three seeds each);87 are explicitly rejected. The allied54218 configuration is
+The standard production audit accepts54/138 map/seed attempts (eighteen of46 resources,
+three seeds each);84 are explicitly rejected. The allied54218 configuration is
 verified separately and is not counted as accepted by this enemy-player audit. This measures supported
 configurations, not an engine completion percentage. New comparisons run the
 original executable locally with modeled host boundaries. Live Windows evidence
@@ -3240,3 +3240,47 @@ strict RMS integration and production CLI tests. The audit accepts51/138 enemy
 map/seed attempts;87 remain explicitly rejected. The separate allied profile
 adds three full comparisons without changing those audit figures. Desktop
 preferences/menu/render/effects/music-streaming smoke passes with dummy output.
+
+### Motherlode forest land with an inner lake (2026-11-16)
+
+Raw54225 uses four lands: a large neutral forest, an inner neutral lake, then
+two enemy player lands sharing zone11. Forest/water zones are26/25. Global
+bases46/0/41 are nonforest; a forest land row does not itself select the early
+forest creation path. The original phase trace distinguishes that behavior from
+a forest global base.
+
+For the compared branches, the original world registry counter is zero on entry
+to the object controller. Five rectangle operations run during generation, with
+no495020 scenery calls. The automatic phase runs one rectangle operation and
+14400 actual495020 calls before manual RMS rows. These observations and the full
+ordered object comparisons support the existing deferred scenery scan. The
+registry counter is not used as a live-object count, and tracing5cfad0 alone
+would miss the separate automatic factory path.
+
+Terrain50 creates automatic carbon objects217; carbon1161 is a separate explicit
+RMS row. The native profile keeps both identities, the original object order and
+their different constructor draws. Holocron exclusion uses all four land centers.
+No generation algorithm or callback stub was added for this profile.
+
+Evidence: `rms-packaged-motherlode54225-full-findings-2026-11-16.json` and
+`rms-text-full-motherlode54225` full/resource/native comparisons. Settings remain
+fixed Tiny120, two Empire players and default resources; later simulation and
+other settings are not established by these startup captures.
+
+
+| Seed | Biome | Objects | Final RNG |
+|---:|---|---:|---:|
+| 1 | Kessel46 | 5271 | 980332046 |
+| 16160 | Naboo0 | 5485 | 1304177538 |
+| 8000 | Reytha41 | 5341 | 3198581591 |
+
+All three native captures match complete ordered objects at full coordinate
+precision, all three map grids, captured startup poses and final RNG. The phase
+observations described above hold for all three original biome runs.
+
+Independent resource replays verify Gaia total/unit costs1400,2100,1350 for
+seeds1,16160,8000, zero building costs and five Gaia units. All68 shared packaged
+cases pass with ASan/UBSan, together with the retained Forest/general-row,
+holocron, foundation and transport regressions. Strict RMS and production CLI
+checks pass. The audit accepts54/138 enemy configurations;84 remain rejected.
+The desktop menu/render/effects/music-streaming smoke passes with dummy output.
