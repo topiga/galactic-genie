@@ -87,7 +87,8 @@ def run_case(case, args):
         if not args.existing:
             before = oracle_path.stat().st_mtime_ns if oracle_path.exists() else None
             env = dict(os.environ, SWGB_CLIFF_SEED=str(case['seed']), SWGB_OWNER_CIVS=','.join(map(str, case['civilizations'])),
-                       SWGB_RAW_DIMENSION=str(case['width']), SWGB_RAW_WIDTH=str(case['width']), SWGB_RAW_HEIGHT=str(case['height']))
+                       SWGB_RAW_DIMENSION=str(case['width']), SWGB_RAW_WIDTH=str(case['width']), SWGB_RAW_HEIGHT=str(case['height']),
+                       SWGB_PLAYER_COUNT=str(len(case['civilizations'])))
             env.pop('SWGB_PARSE_ONLY', None)
             with (work / 'original.log').open('w') as log:
                 run = subprocess.run([str(args.python), str(probe)], env=env, stdout=log,

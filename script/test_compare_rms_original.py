@@ -56,7 +56,7 @@ class RunnerTests(unittest.TestCase):
             probe = work/'probe.py';probe.write_text('raise SystemExit(1)')
             native = work/'native'
             native.write_text('#!' + sys.executable + '\nfrom pathlib import Path\nimport sys\n'
-                              'assert sys.argv[4] == "1,2"\n'
+                              'assert sys.argv[4] in ("1,2", "1,2,3")\n'
                               'p=Path(sys.argv[3])\n'
                               'for suffix in ("", ".heights", ".slopes"): Path(str(p)+suffix).write_bytes(bytes(int(sys.argv[7])*int(sys.argv[8])))\n'
                               'print("rng 42")\n')
@@ -72,18 +72,22 @@ class RunnerTests(unittest.TestCase):
             command = [sys.executable, str(Path(__file__).with_name('compare_rms_original.py')),
                        '--manifest', str(manifest), '--native', str(native), '--data', str(work),
                        '--python', sys.executable, '--existing']
-            for problem in ('good', 'source', 'mode', 'civilizations', 'dimensions', 'larger'):
-                stale = problem not in ('good', 'larger')
+            original_capture=json.loads(oracle.read_text())
+            for problem in ('good', 'source', 'mode', 'civilizations', 'dimensions', 'larger', 'moreplayers', 'wrongcount'):
+                stale = problem not in ('good', 'larger', 'moreplayers')
                 source.write_text('changed' if problem == 'source' else 'original fixture')
                 cases = json.loads(manifest.read_text())
                 cases[0]['positions'] = 'random' if problem == 'mode' else 'fixed'
                 cases[0]['civilizations'] = [2,1] if problem == 'civilizations' else [1,2]
                 cases[0]['width'] = cases[0]['height'] = 144 if problem in ('dimensions', 'larger') else 120
+                capture=copy.deepcopy(original_capture)
+                if problem in ('moreplayers', 'wrongcount'):
+                    cases[0]['civilizations']=capture['civs']=[1,2,3]
+                    capture['playerCount']=3 if problem=='moreplayers' else 2
                 if problem == 'larger':
-                    capture=json.loads(oracle.read_text())
                     capture.update(width=144,height=144,playerCount=2)
                     for key in ('terrain','heights','slopes'):capture[key]=[0]*(144*144)
-                    oracle.write_text(json.dumps(capture))
+                oracle.write_text(json.dumps(capture))
                 manifest.write_text(json.dumps(cases))
                 output = work/problem
                 run = subprocess.run(command + ['--output', str(output)], capture_output=True, text=True)

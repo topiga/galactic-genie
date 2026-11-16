@@ -1374,7 +1374,7 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
     }
     const bool ownedForest=ownedObjects && playerLands && base==41 && lands[0].terrain==9;
     const bool ownedMixedForest=nabooSwamp || swamp || spaceStartup || geonosisCliffs || eredennCliffs || tundraCliffs || arenaForest || resourceIslands || coastalCliffs || fortressCliffs || motherlode || mixedLandCliffs || lakeCliffs || centralLakeCliffs || iceLakeCliffs || migrationCliffs || basinCliffs || alliedRoads || connectedCliffs || connectedIslands || (ownedObjects && playerLands && (base==6 || base==12 || base==14 || base==26 || base==32 || base==41) && lands[0].terrain==base &&
-        playerCount==2 && playerCivilizations.size()==2 &&
+        playerCivilizations.size()==playerCount &&
         std::all_of(playerCivilizations.begin(),playerCivilizations.end(),[](uint16_t civ){return civ>=1 && civ<=8;}) &&
         startingWorkers && startingScouts && workerMinDistance==6 && workerMaxDistance==6 &&
         !startingStalagmites);
@@ -1477,8 +1477,8 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
         }
     }
     if (startingScouts) {
-        if (playerCount>2 || workerMinDistance!=6 || workerMaxDistance!=6)
-            return fail("starting scouts require one or two owners and packaged worker distances6..6");
+        if (workerMinDistance!=6 || workerMaxDistance!=6)
+            return fail("starting scouts require packaged worker distances6..6");
         constexpr int standing[]={6500,6510,6520,6515,6505,6525,9505,9510};
         constexpr int sounds[]={14,525,440,499,740,743,1133,1137};
         for (const auto civ:playerCivilizations) {
