@@ -4076,3 +4076,44 @@ regressions pass under ASan/UBSan. Strict integrated RMS, production file/archiv
 checks and desktop menu/render/audio-stream smoke pass. The production audit
 accepts81 of138 configurations across27 resources; this measures acceptance,
 not whole-engine parity.
+
+### Space Mass54214 elevated asteroid startup (2026-11-16)
+
+Actual-derived Tiny/default two-Empire seeds1/12345/16160 match the full original
+runner:1291/1281/1266 objects, RNG3549801262/3681008734/3199497979. Ordered
+object records, exact positions, terrain/elevation/slope grids and startup poses
+match. The fixtures add82 animation/health/height records, along with transport
+population, military counters and cost accounting (735 total per player).
+
+This bounded profile reuses existing geometry for space16 surrounding three
+rock42 lands, six terrain rows,27 derived-default elevation rows and kind63
+connections replacing space16 with rock42. Complete connection settings and
+all land/terrain/elevation parameters are checked before admission. The selected
+maps contain heights0 through7; no cliff stage is requested.
+
+Actual captures supply Mynock1203, food crate615, carbon1117 and asteroid
+craters1332/1333/1334. Crates retain type20 construction and facet reset; carbon
+uses type30 appearance. These crater IDs differ from desert craters1329–1331:
+their radii decrease2/1.5/1, their restriction is28, and large crater1332 is not
+buildable-over. All three have zero collision height and do not block later
+objects. Mynocks use their actual hunting metadata and one-tile clearance.
+
+Air transports retain relative flight height1. Original54fc2c/54fd73 computes
+interpolated ground height plus1; placement5c92e0 uses XY overlap, with collision
+height only deciding whether an obstacle participates. Nonzero terrain elevation
+alone therefore does not change its overlap rule. All six captured transports
+spawn on ground height0; nonzero-ground flight arithmetic is statically proven,
+not observed in these three startup placements. Native imported object height
+is now checked as ground interpolation plus flight offset.
+
+Evidence: `rms-spacemass54214-full-startup-findings-2026-11-16.json`,
+`rms-spacemass54214-geometry-findings-2026-11-16.json`,
+`rms-spacemass54214-assets-provenance-2026-11-16.json`, and
+`rms-spacemass54214-air-height-gate-review-2026-11-16.json`.
+Other sizes, civilizations, arbitrary seeds and later gameplay remain unverified.
+
+Validation:109 retained packaged startup cases and the general/authored suites
+pass under ASan/UBSan, including native import ownership and absolute object
+heights. Strict RMS, production file/archive checks and desktop menu/render/
+audio-stream smoke pass. Production accepts84 of138 tested configurations
+across28 resources; this is bounded acceptance coverage, not total parity.
