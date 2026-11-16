@@ -2776,3 +2776,47 @@ that expected loose-group members on the wrong terrain. It is corrected to the
 original4dee03 behavior already exercised by the complete54209 captures; the
 single eligible tile now yields one object. All20 suites pass after rerunning
 the corrected suite and the remaining candidate/AI suites.
+
+### New Tatooine settlements and deferred Gaia foundations (2026-11-16)
+
+Raw55019 (Tatooine New) now matches the full original runner with fixed Tiny120,
+two Empire players and default resources, including the shipped misspelled label.
+
+| Seed | Objects | Final RNG | Gaia unit/building costs |
+|---|---:|---:|---:|
+| 1 | 2197 | 65450833 | 3400 / 875 |
+| 12345 | 2220 | 126653571 | 3250 / 1000 |
+| 16160 | 2227 | 4224403267 | 3550 / 900 |
+
+All ordered objects, terrain/elevation/slopes, startup poses, native import and
+resource counters agree. Six additional Gaia building prototypes275/518/519/524/
+536/537 use seven draws followed by reseeding. Sarlacc1465 uses six draws with
+no heading or military-timer draw; Womprat1475 uses eight. New resource blockers
+include rock1171 in animal placement. Original5c9572 skips type70 objects only
+for the direct animal-gate argument; building overrides retain those blockers.
+This distinction is independent of the existing unit's movement speed.
+
+Jawa camp519 and Tusken tent537 retain pending foundation27 at startup. Separate
+original496e80 executions prove4×4 and2×2 footprints respectively, raw Gaia
+terrain27 and no RNG change. Their fog mode1 permits dispatch in explored128
+and visible15; unseen0 retains the pending flag. Native rendering now uses the
+prototype footprint and this visibility rule, while the existing enemy Command
+Center regressions still retain foundations in remembered fog. New checks cover
+both sizes, all three visibility states, untouched neighboring tiles and one-time
+consumption. The native importer preserves the original pending flags and
+building height on slopes.
+
+The shared packaged suite contains26 complete cases. Full comparisons and
+resource replays are in `rms-packaged-tatooine-new-full-findings-2026-11-16.json`;
+asset closure and original loader provenance are in
+`rms-tatooine-new-assets-provenance-2026-11-16.json`. The original harness needed
+Gaia diplomacy storage for a newly reached building gate; its values were set
+by executing the original player-constructor initialization loop (self0, others3),
+not by bypassing that gate. These remain local original-executable comparisons
+at bounded settings, not fresh Windows runs or universal gameplay parity.
+
+Validation passes26 complete shared packaged cases,52 general object rows,
+Forest/holocron regressions, Gaia and owned-foundation render checks, strict
+integrated RMS tests and production CLI tests. The audit now accepts27/138
+sampled cases across nine map families, with111 unsupported cases rejected.
+The rebuilt desktop passes preferences, menus and headless effects/music smoke.

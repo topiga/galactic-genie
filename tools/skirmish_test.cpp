@@ -43,6 +43,7 @@ static void check(bool value, const char *message) {
 #include "rms_forest_hunt_checks.h"
 #include "rms_packaged_forest_checks.h"
 #include "rms_packaged_startup_checks.h"
+#include "rms_gaia_foundation_checks.h"
 #include "rms_general_object_checks.h"
 #include "rms_transport_render_checks.h"
 #include "rms_cliff_map_checks.h"
@@ -314,6 +315,7 @@ int main(int argc, char **argv) {
         checkRmsCliffImport(assets);
         rmsPackagedForestChecks(assets,argv[1]);
         rmsPackagedStartupChecks(assets,argv[1]);
+        rmsGaiaFoundationChecks(assets,renderer,argv[1]);
         rmsGeneralObjectChecks(assets);
         rmsTransportRenderChecks(argv[1]);
         rmsHuntProfileChecks(assets,argv[1]);

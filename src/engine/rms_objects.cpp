@@ -11,10 +11,10 @@
 namespace swgb {
 namespace {
 bool isTree(int unit) { return unit==348 || unit==349 || unit==350 || unit==411 || unit==413; }
-bool isPredator(int unit) { return unit==126 || unit==812 || unit==1197 || unit==1250 || unit==1129 || unit==1252 || unit==1251; }
+bool isPredator(int unit) { return unit==126 || unit==812 || unit==1197 || unit==1250 || unit==1129 || unit==1252 || unit==1251 || unit==1465; }
 bool isMountain(int unit) { return unit==1019 || unit==1020 || unit==1165 || unit==1166; }
 bool isCrater(int unit) { return unit>=1329 && unit<=1331; }
-bool isGaiaBuilding(int unit) { return unit==1307 || (unit>=1184 && unit<=1188); }
+bool isGaiaBuilding(int unit) { return unit==1307 || (unit>=1184 && unit<=1188) || unit==275 || unit==518 || unit==519 || unit==524 || unit==536 || unit==537; }
 struct ResourceSpec { int id, graphic, type, cls, hp, restriction, angles, resource, amount, doppel; float height; };
 const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
                                     const std::vector<uint8_t> &terrain,std::string *err) {
@@ -47,13 +47,19 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         {1185,2860,80,18,800,4,1,-1,0,0,2.f},
         {1186,2847,80,18,2100,4,1,-1,0,0,2.f},
         {1187,2866,80,18,2000,4,1,-1,0,0,2.f},
-        {1188,2873,80,18,2000,4,1,-1,0,0,2.f}};
+        {1188,2873,80,18,2000,4,1,-1,0,0,2.f},
+        {275,8865,80,18,2100,4,1,-1,0,0,2.f},
+        {518,8865,80,18,2100,4,1,-1,0,0,2.f},
+        {519,8866,80,18,800,4,1,-1,0,0,2.f},
+        {524,8868,80,18,800,4,1,-1,0,0,2.f},
+        {536,8889,80,18,800,4,1,-1,0,0,2.f},
+        {537,8890,80,18,800,4,1,-1,0,0,2.f}};
     const ResourceSpec *match=nullptr;
     for (const auto &candidate:specs) if (candidate.id==unitId) match=&candidate;
     if (!match) return fail("unsupported resource unit");
     const auto &spec=*match;
     const bool mountain=isMountain(unitId),crater=isCrater(unitId),mine=unitId==1307,building=isGaiaBuilding(unitId);
-    const float radius=mountain?3.f:(unitId==1184 || unitId==1185)?1.5f:unitId==1186?2.f:(mine || unitId==1187)?1.f:crater?float(unitId-1327)*.5f:.5f;
+    const float radius=(mountain || unitId==275 || unitId==518)?3.f:(unitId==1184 || unitId==1185)?1.5f:(unitId==1186 || unitId==519 || unitId==524)?2.f:(mine || unitId==1187 || unitId==536 || unitId==537)?1.f:crater?float(unitId-1327)*.5f:.5f;
     const float clearance=unitId==1188?0.f:radius;
     if (data.civs.empty() || data.civs[0].units.size()<=static_cast<size_t>(unitId))
         return fail("missing Gaia resource prototype");
@@ -66,7 +72,7 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 ||
         u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
         u.terrainRestriction!=spec.restriction || u.hillMode || u.flyMode || u.canBeBuiltOn!=int(crater) ||
-        u.recyclable || u.lineOfSight!=((unitId==1184 || unitId==1185)?2.f:building?1.f:0.f) || u.trainSound!=-1 ||
+        u.recyclable || u.lineOfSight!=((unitId==1184 || unitId==1185 || unitId==519 || unitId==524 || unitId==537)?2.f:building?1.f:0.f) || u.trainSound!=-1 ||
         u.obstructionType!=(mountain?10:(unitId==1123 || crater)?0:2) || u.obstructionClass!=((unitId==1123 || crater)?0:(unitId==1170 || unitId==1171 || building)?3:1) || u.civilization ||
         u.enableAutoGather!=(spec.resource<0?0:1) || !g || g->sequenceType!=(mine?5:(mountain || crater)?0:6) || g->angleCount!=spec.angles)
         return fail("unsupported resource prototype or graphic");
@@ -75,9 +81,9 @@ const ResourceSpec *validateResource(const dat::DatFile &data,int16_t unitId,
         g->frameCount!=(mine?8:1) || g->soundId!=-1 || !g->angleSounds.empty()))
         return fail("unsupported resource movement or sprite metadata");
     if(building) {
-        const int construction=unitId==1186?367:unitId==1188?342:348;
-        const int sound=mine?919:(unitId==1184 || unitId==1185)?591:2;
-        if(u.foundationTerrainId!=-1 || u.oldOverlayId!=-1 || u.techId!=-1 || u.transformUnit!=-1 ||
+        const int construction=(unitId==275 || unitId==518)?373:unitId==1186?367:unitId==1188?342:348;
+        const int sound=mine?919:(unitId==519 || unitId==537)?930:(unitId==1184 || unitId==1185 || unitId==524)?591:2;
+        if(((unitId==519 || unitId==537) && u.fogVisibility!=1) || u.foundationTerrainId!=((unitId==519 || unitId==537)?27:-1) || u.oldOverlayId!=-1 || u.techId!=-1 || u.transformUnit!=-1 ||
            u.headUnit!=-1 || u.stackUnitId!=-1 || u.adjacentMode || u.graphicsAngle || u.disappearsWhenBuilt ||
            u.trait || u.convertTerrain || u.constructionGraphic!=construction || u.constructionSound!=sound ||
            u.trainTime!=20 || g->frameDuration!=(mine?.3f:0.f) || g->replayDelay!=0)
@@ -104,6 +110,8 @@ const ResourceSpec *validateHerd(const dat::DatFile &data,int16_t unitId,const s
     static constexpr ResourceSpec bantha{833,1,70,1,7,19,8,0,200,0,2.f};
     static constexpr ResourceSpec kaadu{1363,46,70,4,5,1,8,0,100,0,2.f};
     static constexpr ResourceSpec eopie{1365,22,70,4,5,1,8,0,140,0,2.f};
+    static constexpr ResourceSpec womprat{1475,8731,70,4,15,26,8,0,170,0,2.f};
+    static constexpr ResourceSpec sarlacc{1465,8718,70,5,500,26,1,-1,0,0,2.f};
     static constexpr ResourceSpec rancor{126,70,70,5,150,26,8,-1,0,0,2.f};
     const bool bigHunt=unitId==822 || unitId==1249 || unitId==1364;
     const bool predator=isPredator(unitId);
@@ -116,8 +124,8 @@ const ResourceSpec *validateHerd(const dat::DatFile &data,int16_t unitId,const s
     static constexpr ResourceSpec hunt822{822,31,70,60,50,1,8,0,300,0,2.f};
     static constexpr ResourceSpec hunt1249{1249,17,70,60,75,26,8,0,340,0,2.f};
     static constexpr ResourceSpec ronto{1364,75,70,60,100,19,8,0,400,0,2.f};
-    const auto &spec=unitId==1251?predator1251:unitId==1252?predator1252:unitId==1250?predator1250:unitId==1129?predator1129:unitId==1364?ronto:unitId==833?bantha:unitId==822?hunt822:unitId==1249?hunt1249:unitId==812?predator812:unitId==1197?predator1197:predator?rancor:unitId==1363?kaadu:unitId==1365?eopie:nerf;
-    const bool hunt=unitId==1363 || unitId==1365;
+    const auto &spec=unitId==1465?sarlacc:unitId==1475?womprat:unitId==1251?predator1251:unitId==1252?predator1252:unitId==1250?predator1250:unitId==1129?predator1129:unitId==1364?ronto:unitId==833?bantha:unitId==822?hunt822:unitId==1249?hunt1249:unitId==812?predator812:unitId==1197?predator1197:predator?rancor:unitId==1363?kaadu:unitId==1365?eopie:nerf;
+    const bool hunt=unitId==1363 || unitId==1365 || unitId==1475;
     auto fail=[&]()->const ResourceSpec* {if(err)*err="RMS herd: unsupported original animal metadata";return nullptr;};
     if(data.civs.empty() || data.civs[0].units.size()<=size_t(unitId) || data.terrainRestrictions.size()<=size_t(spec.restriction)) return fail();
     const auto &u=data.civs[0].units[unitId];const auto *g=data.graphic(spec.graphic);
@@ -125,10 +133,10 @@ const ResourceSpec *validateHerd(const dat::DatFile &data,int16_t unitId,const s
     const float clearance=unitId==1364?.3f:bigHunt?1.f:predator?.5f:radius;
     if(!u.exists || u.id!=unitId || u.type!=70 || u.cls!=spec.cls || u.hitPoints!=spec.hp || u.standingGraphic[0]!=spec.graphic || u.standingGraphic[1]!=-1 ||
        u.collisionSize[0]!=radius || u.collisionSize[1]!=radius || u.collisionSize[2]!=2.f || u.clearanceSize[0]!=clearance || u.clearanceSize[1]!=clearance ||
-       u.lineOfSight!=((unitId==1250 || unitId==1251 || unitId==1252)?5.f:unitId==1129?8.f:bigHunt?4.f:unitId==812?6.f:unitId==1197?10.f:predator?7.f:2.f) || u.speed!=(unitId==1251?.8f:unitId==1250?.7f:unitId==1129?.95f:unitId==1364?.85f:bigHunt?.9f:unitId==812?.9f:unitId==1197?.85f:hunt?.74f:.7f) || u.terrainRestriction!=spec.restriction || u.obstructionType!=5 || u.obstructionClass!=2 ||
+       u.lineOfSight!=((unitId==1250 || unitId==1251 || unitId==1252)?5.f:unitId==1129?8.f:bigHunt?4.f:unitId==812?6.f:unitId==1197?10.f:predator?7.f:2.f) || u.speed!=(unitId==1465?0.f:unitId==1475?1.2f:unitId==1251?.8f:unitId==1250?.7f:unitId==1129?.95f:unitId==1364?.85f:bigHunt?.9f:unitId==812?.9f:unitId==1197?.85f:hunt?.74f:.7f) || u.terrainRestriction!=spec.restriction || u.obstructionType!=5 || u.obstructionClass!=2 ||
        u.hillMode || u.flyMode || u.canBeBuiltOn || u.recyclable || u.civilization || u.enableAutoGather || u.createDoppelgangerOnDeath ||
        u.placementSideTerrain[0]!=-1 || u.placementSideTerrain[1]!=-1 || u.placementTerrain[0]!=-1 || u.placementTerrain[1]!=-1 ||
-       u.trainSound!=(unitId==1251?622:unitId==1252?619:unitId==1250?636:unitId==1129?836:unitId==1364?624:unitId==833?615:unitId==822?612:unitId==1249?562:unitId==812?642:unitId==1197?639:predator?37:unitId==1363?421:unitId==1365?609:630) || !g || g->sequenceType!=7 || g->frameCount!=(unitId==833?11:unitId==1364?8:bigHunt?10:unitId==1363?11:unitId==1365?12:8) || g->angleCount!=8 || g->frameDuration!=((unitId==812 || unitId==1197 || unitId==1251)?.1f:(hunt || predator || bigHunt)?.12f:.275f) ||
+       u.trainSound!=(unitId==1465?1044:unitId==1475?1056:unitId==1251?622:unitId==1252?619:unitId==1250?636:unitId==1129?836:unitId==1364?624:unitId==833?615:unitId==822?612:unitId==1249?562:unitId==812?642:unitId==1197?639:predator?37:unitId==1363?421:unitId==1365?609:630) || !g || g->sequenceType!=7 || g->frameCount!=(unitId==833?11:unitId==1364?8:bigHunt?10:unitId==1363?11:unitId==1365?12:8) || g->angleCount!=spec.angles || g->frameDuration!=((unitId==812 || unitId==1197 || unitId==1251)?.1f:(hunt || predator || bigHunt)?.12f:.275f) ||
        g->replayDelay!=((unitId==812 || unitId==1197 || unitId==1251)?1.f:(hunt || predator || bigHunt)?.5f:0.f) || g->soundId!=-1 || !g->angleSounds.empty()) return fail();
     int stores=0;for(const auto &storage:u.resourceStorages) {
         if(storage.flag || (storage.type>=0 && (predator || storage.type!=0 || storage.amount!=spec.amount))) return fail();
@@ -333,10 +341,11 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
        group.variance>1024 || group.radius>1024)
         return fail("unsupported dimensions or grouping parameters");
     const bool mountain=isMountain(unitId),crater=isCrater(unitId),mine=unitId==1307,building=isGaiaBuilding(unitId);
+    const bool settlement=building && unitId<1000;
     if(building && (!objectRow || width!=120 || height!=120 || objectRow->landId!=-2 ||
-        objectRow->minDistance!=35 || objectRow->maxDistance!=-1 || objectRow->terrain!=-1 ||
-        objectRow->spacing!=15 || objectRow->temporarySpacing || objectRow->zoneDistance ||
-        group.mode!=((unitId==1184 || unitId==1185)?1:0) || group.groups!=(mine?20u:unitId==1186?1u:unitId==1188?5u:10u) || group.perGroup!=1 || group.variance || group.radius!=3))
+        objectRow->minDistance!=(settlement?((unitId==275 || unitId==537)?12:unitId==536?8:10):35) || objectRow->maxDistance!=-1 || objectRow->terrain!=-1 ||
+        objectRow->spacing!=(settlement?0:15) || objectRow->temporarySpacing || objectRow->zoneDistance ||
+        group.mode!=((unitId==1184 || unitId==1185)?1:0) || group.groups!=(settlement?(unitId==275?2u:(unitId==536 || unitId==537)?4u:unitId==524?5u:1u):mine?20u:unitId==1186?1u:unitId==1188?5u:10u) || group.perGroup!=1 || group.variance || group.radius!=3))
         return fail("unsupported Gaia building row");
     if(mountain && (!objectRow || width!=120 || height!=120 || objectRow->landId!=-2 ||
         objectRow->minDistance!=40 || objectRow->maxDistance!=-1 || objectRow->terrain!=-1 ||
@@ -349,7 +358,7 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
        objectRow->spacing || objectRow->temporarySpacing || objectRow->zoneDistance ||
        group.mode!=1 || group.groups!=2 || group.perGroup!=1 || group.variance || group.radius!=3))
         return fail("unsupported Sandcrawler row");
-    const bool hunt=unitId==1363 || unitId==1365;
+    const bool hunt=unitId==1363 || unitId==1365 || unitId==1475;
     const bool predator=isPredator(unitId);
     if(!objectRow && (unitId==349 || unitId==350 || unitId==411 || unitId==413) && group.mode!=0)return fail("tree species requires verified mode0 rows");
     const bool tree=isTree(unitId) && group.mode==0,bird=unitId==816,aquatic=unitId==69 || unitId==1585;
@@ -572,10 +581,10 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
                 placement.animationFrame=uint8_t(std::min(int(g.frameCount)-1,frame));
                 if(frame>=g.frameCount)placement.initialIdleDelay=std::max(0.f,float(elapsed-double(g.frameCount-1)*g.frameDuration)-g.frameDuration);
             }
-            const uint32_t heading=aquatic?0:genieRandomDraw(rng)*8u/32767u;
+            const uint32_t heading=(aquatic || unitId==1465)?0:genieRandomDraw(rng)*8u/32767u;
             placement.headingRadians=float(double(heading)*3.14159265358979323846/4.);
             placement.facet=uint8_t((heading+7)%8);
-            if(!aquatic)for(int timer=0;timer<((hunt || predator)?4:3);++timer)genieRandomDraw(rng);
+            if(!aquatic)for(int timer=0;timer<((hunt || predator) && unitId!=1465?4:3);++timer)genieRandomDraw(rng);
         } else if(spec->type==30) {
             const auto appearance=drawRmsCarbonAppearance(rng,static_cast<uint8_t>(spec->angles));
             placement.facet=appearance.facet;placement.headingRadians=appearance.headingRadians;

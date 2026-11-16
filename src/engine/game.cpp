@@ -1256,6 +1256,8 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         recordStartupResources(assets_.dat().civs[placement.owner?playerCivilizations[placement.owner-1]:0].units[placement.unitId],placement.owner);
         if(auto *object=findObject(resourceIdBase+uint32_t(index))) {
             if(placement.owner)object->pendingFoundation=255;
+            else if(object->unit->type==dat::UT_Building && object->unit->foundationTerrainId>=0)
+                object->pendingFoundation=uint8_t(object->unit->foundationTerrainId);
             const auto *graphic=assets_.dat().graphic(object->unit->standingGraphic[0]);
             object->animTime=placement.animationFrame*(graphic?graphic->frameDuration:0.f);
             object->initialIdleDelay=placement.initialIdleDelay;
@@ -16222,10 +16224,11 @@ void Game::render(Renderer &r, int screenW, int screenH) {
         }
     }
 
-    // Original 496e80 dispatches after terrain drawing; fog memories never consume +264.
+    // Original496e80 dispatches after terrain drawing; fog mode1 also permits explored terrain.
     std::vector<Object *> pendingFoundations;
     for (auto &object:objects_) {
-        if (object.pendingFoundation==255 || !objectVisible(object)) continue;
+        if (object.pendingFoundation==255 || !object.active || object.hidden || !object.draw) continue;
+        if (!objectVisible(object) && !(object.unit->fogVisibility==1 && tileVisibility(int(object.x),int(std::ceil(object.y))-1)>0)) continue;
         const float cameraX=(camX_/kTileHalfW+camY_/kTileHalfH)*.5f;
         const float cameraY=(camY_/kTileHalfH-camX_/kTileHalfW)*.5f;
         if (!terrainDrawScanContains(int(mapSize_-cameraY),int(cameraX),
@@ -16238,10 +16241,11 @@ void Game::render(Renderer &r, int screenW, int screenH) {
     });
     for (Object *pending:pendingFoundations) {
         Object &object=*pending;
-        const int cx=int(object.x),cy=int(object.y);
         const int civ=civilizationForPlayer(object.player);
         const uint8_t foundation=object.pendingFoundation==27?(civ==2?4:civ==6?6:27):object.pendingFoundation;
-        for (int y=cy-2;y<cy+2;++y) for (int x=cx-2;x<cx+2;++x)
+        const int x0=int(std::floor(object.x-object.unit->collisionSize[0])),x1=int(std::ceil(object.x+object.unit->collisionSize[0]));
+        const int y0=int(std::floor(object.y-object.unit->collisionSize[1])),y1=int(std::ceil(object.y+object.unit->collisionSize[1]));
+        for (int y=y0;y<y1;++y) for (int x=x0;x<x1;++x)
             if (x>=0 && y>=0 && x<mapSize_ && y<mapSize_) {
                 auto &tile=terrain_[size_t(y)*mapSize_+x];
                 if (tile!=object.pendingFoundation && tile!=1 && tile!=22 && tile!=23) tile=foundation;
