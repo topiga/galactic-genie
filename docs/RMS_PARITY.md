@@ -4710,3 +4710,73 @@ in20.07 simulation seconds, destruction takes another36.23, and eight attackers
 remain engaged with0.45 minimum separation and3.05 maximum spread. Evidence:
 `combat-checked-pairwise.log`. Initial long-distance approach is no longer an
 incidental part of this click fixture; this is not a1:1 combat-pathing claim.
+
+### Session player setup, restart state and mixed allied bonuses (2026-11-16)
+
+The actual selector now has 48 controls: player counts 3–8, alternating
+civilizations 6/1, four normal diplomacy configurations and four raw option-gate
+configurations at every count. Each recipient uses its own complete captured
+1,446-master table. Normal cases cover enemies, mutual allies, directional
+alliances with duplicate civilizations, and reversed direction. All retain
+unchanged RNG. Twenty-four normal dispatches are retained as native golden
+tests, including team15 LOS/search 5→7 and team10 speed 1.5→1.650000095.
+This extends player-count and alliance coverage, not full-master coverage for
+the other six civilizations. Evidence: local
+`rms-multiowner-selector-findings-2026-11-16.json` and its six original oracles.
+
+The original selector traverses configured player records without consulting
+starting-object counts. Static evidence supports the inference that empty
+players still contribute bonuses; runtime controls here contain starting
+objects. Native RMS import incorrectly created players only while importing
+owned objects. Explicit player setup now precedes object creation, preserving
+civilization, human slot and complete configured diplomacy even when placement
+produces no objects. Invalid explicit civilization lists fail before replacing
+the current game. Calls without civilization context retain terrain-only
+diagnostic behavior. Empty-start native regressions cover 3–8 players.
+
+Repeated-session checks exposed two independent shared reset defects. Trigger
+runtime vectors retained elapsed time and fired flags when a new scenario had
+the same trigger count. Shield-generator indices retained the previous session's
+object ordering when the object count stayed equal. Initializers now reset both
+states. Separate pre-change and post-change binaries prove all three regressions:
+the previous build fails empty-player bonuses, timer restart and swapped shield
+indices; the fixed build passes. Evidence: `session-before-after.log` in the
+build directory. The expanded bonus/HP/healing/research suite, packaged RMS
+startup/import suite and broad combat check pass ASan/UBSan. The rebuilt desktop
+passes menu navigation and 60 render/audio smoke frames.
+
+Full session initialization remains incomplete. The desktop still calls the
+custom two-player `initSkirmish` path; `initRms` is a diagnostic world import.
+Starting resources, runtime RNG handoff, AI activation, multi-player victory,
+camera and setup options need an integrated session path. Original UI/static
+evidence maps game+1439 to All Techs and world.config+5be8 to the scenario Full
+Tech Tree setting. Early restrictions and automatic technology eligibility also
+consult these settings, so suppressing late bonuses alone would be incorrect.
+The runtime full-tech cheat is separate. Raw game+1437 suppresses teams; the
+complete game+1664 mode enumeration is still unresolved. See local
+`session-option-gates-findings-2026-11-16.json` and
+`native-rms-session-initialization-audit-2026-11-16.json`. These investigations do
+not establish whole-session parity or a new live Windows UI comparison.
+
+The subsequent resource phase has 15 actual executable controls: five ending at
+602484 and ten ending at 60260f, with two recipients and unchanged RNG. Normal
+mode overwrites resources 0–3 with current modified resources 91–94 plus:
+
+| Raw resource tier | Added constants, in resource-index order |
+|---|---|
+| 0 or 1 | 200, 200, 250, 100 |
+| 2 | 500, 500, 450, 300 |
+| 3 | 1000, 1000, 850, 700 |
+| Above 3, unsigned | No tier grant |
+
+Sentinel stocks distinguish overwrite from addition; resource92 offset −25
+produces carbon175 in the first tier. Afterward raw map37 clamps carbon to at
+least475 and adds100 ore. Raw mode2 then overwrites with offsets plus
+[20000,20000,5000,10000], while mode1 uses [500,500,150,0]; these later overrides
+erase earlier map adjustments. The first map control exposed an inherited getter
+stub, retained as failed evidence; the corrected private runner uses the actual
+getter. See `rms-post-selector-resource-findings-2026-11-16.json`. Special tier0
+mode3/4 branches remain static-only. This phase is not yet integrated into the
+native diagnostic importer and must not be applied to ordinary scenario loads.
+The next bounded original segment is starting-age research at60260f..6026be;
+its mapped calls are static evidence only so far.
