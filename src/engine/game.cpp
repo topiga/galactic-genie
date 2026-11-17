@@ -3081,7 +3081,7 @@ bool Game::retainCurrentTargetOnHit(const Object &object) const {
     if (!current || !current->active || current->hidden || !combatTargetVisible(object,*current)) return false;
     if(object.player>0 && players_[size_t(object.player-1)].human && genieGenericTroopController(object.unit->cls)) {
         const int cls=current->unit->cls;
-        if(cls!=18 && cls!=6 && cls!=10 && cls!=9)return true;
+        return cls!=18 && cls!=6 && cls!=10 && cls!=9;
     }
     const float dx = current->x - object.x, dy = current->y - object.y;
     const float reach = attackRange(object, *current) + 0.5f;
@@ -4838,6 +4838,7 @@ std::string Game::unitCommandHelp(
 
 void Game::clearUnitCommandOrder(
     Object &unit, bool preserveGather) {
+    unit.pointMovement.cancel();
     setTaskReference(unit.gatherChildReference,0);
     if (!preserveGather) {
         setGatherTarget(unit,0);
@@ -9674,6 +9675,7 @@ void Game::issueAttack(Object &source, Object &target, float approachAngle,
         !canAttackTarget(source, target))
         return;
     source.rememberedAttackId=0;
+    source.pointMovement.cancel();
     setTaskReference(source.attackChildReference,0);
     if (!automatic)
         clearUnitCommandOrder(source);
@@ -9911,15 +9913,27 @@ bool Game::combatTargetVisible(const Object &source,const Object &target) const 
 void Game::acquireAutomaticTarget(Object &source) {
     if (!canAttack(source) || source.attackTargetId || source.unloadActive ||
         source.attackMode == AttackMode::Passive || source.state != State::Idle ||
-        source.moveGoalActive ||
+        source.moveGoalActive || source.pointMovement.present ||
         mobileObjectGridWidth_ <= 0 ||
         combatObjectCells_.size() !=
             (size_t)mobileObjectGridWidth_ * mobileObjectGridWidth_)
         return;
 
+    Object *best=chooseCombatTarget(source);
+    if (!best) return;
+    const float jitter =
+        ((float)((source.spawnId * 2654435761u) >> 29) - 3.5f) * 0.10f;
+    const float approachAngle =
+        std::atan2(source.y - best->y, source.x - best->x) + jitter;
+    issueAttack(source, *best, approachAngle, true);
+    automaticTargetsAcquired_++;
+    if (source.unit->type == dat::UT_Building) armedBuildingsEngaged_++;
+}
+
+Game::Object *Game::chooseCombatTarget(Object &source,const Object *hitAttacker) {
     constexpr float cellSize = 4.0f;
     const float radius = automaticAcquisitionRadius(source);
-    if (radius <= 0) return;
+    if (radius <= 0) return nullptr;
     const int centerX = (int)std::floor(source.x / cellSize);
     const int centerY = (int)std::floor(source.y / cellSize);
     const int cellRadius = std::max(1, (int)std::ceil(radius / cellSize));
@@ -9930,6 +9944,17 @@ void Game::acquireAutomaticTarget(Object &source) {
     // The original generic controller uses mobile-first scoring for these classes.
     const int actorClass = source.unit->cls;
     const bool scored = genieGenericTroopController(actorClass);
+    Object *current=hitAttacker?findObject(source.attackTargetId):nullptr;
+    if(current && !isEnemy(source,*current))current=nullptr;
+    const auto effectiveSpeed=[&](const Object &object) {
+        float speed=modifiedUnitAttribute(object,5,object.unit->speed);
+        const auto *graphic=assets_.dat().graphic(objectGraphic(object,*object.unit));
+        return graphic && graphic->speedMultiplier>0?speed*graphic->speedMultiplier:speed;
+    };
+    const auto threatens=[&](const Object &object) {
+        return attackDamage(object,source)>0 || canAttackTarget(object,source);
+    };
+    size_t threatCount=0;
     std::vector<GenieTargetCandidate> candidates;
     if (scored) {
         source.targetExclusions.erase(std::remove_if(source.targetExclusions.begin(), source.targetExclusions.end(),
@@ -9938,6 +9963,11 @@ void Game::acquireAutomaticTarget(Object &source) {
     Object *best = nullptr;
     float bestDistanceSquared = radius * radius;
     std::vector<uint32_t> queryIds;
+    if(current && (effectiveSpeed(source)>0 ||
+        genieTargetDistance(source.x,source.y,source.unit->collisionSize[0],source.unit->collisionSize[1],
+            current->x,current->y,current->unit->collisionSize[0],current->unit->collisionSize[1])<=
+            modifiedUnitAttribute(source,12,source.unit->maxRange)))queryIds.push_back(current->spawnId);
+    if(hitAttacker && (!current || hitAttacker->spawnId!=current->spawnId))queryIds.push_back(hitAttacker->spawnId);
     if(scored && source.player>0) {
         static constexpr int classes[] = {5,6,7,8,9,10,11,12,13,14,15,16,17,18,32,33,34,35,36,37,38,39,40,
             43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,63,64,62,61};
@@ -9945,11 +9975,14 @@ void Game::acquireAutomaticTarget(Object &source) {
         const auto &player=players_[size_t(source.player-1)];
         for(int owner=0;owner<=16;++owner)partitions[size_t(owner)]=genieDiplomacyPartition(source.player,owner,
             size_t(owner)<player.diplomacy.size()?player.diplomacy[size_t(owner)]:3);
-        const auto groups=visibleTargets_.query(size_t(source.player-1),int(mapSize_-source.y),int(source.x),
+        const auto &origin=current?*current:source;
+        const auto groups=visibleTargets_.query(size_t(source.player-1),int(mapSize_-origin.y),int(origin.x),
             genieTargetQueryRadius(unitSearchRadius(source.player,*source.unit),
                 modifiedUnitAttribute(source,1,source.unit->lineOfSight)),classes,partitions);
         for(int category=4;category>=(player.human?2:0);--category)
-            for(const auto &record:groups[size_t(category)])queryIds.push_back(record.id);
+            for(const auto &record:groups[size_t(category)])
+                if((!current || record.id!=current->spawnId) && (!hitAttacker || record.id!=hitAttacker->spawnId))
+                    queryIds.push_back(record.id);
     } else {
         for(int cellY=minY;cellY<=maxY;++cellY)for(int cellX=minX;cellX<=maxX;++cellX)
             for(uint32_t index:combatObjectCells_[size_t(cellY)*mobileObjectGridWidth_+cellX])
@@ -9962,31 +9995,33 @@ void Game::acquireAutomaticTarget(Object &source) {
         // Gaia fauna may be manually hunted, but only hostile Gaia
         // animals initiate combat. Player-owned passive animals are
         // never military auto-acquisition targets.
-        if (candidate.player <= 0 ||
+        const bool currentRow=current && id==current->spawnId;
+        const bool explicitRow=hitAttacker && id==hitAttacker->spawnId;
+        if (!currentRow && (candidate.player <= 0 ||
             (source.player > 0 &&
              isPassiveAnimal(candidate)) ||
             !isEnemy(source, candidate) ||
-            !combatTargetVisible(source,candidate) ||
-            !canAttackTarget(source, candidate))
+            (!explicitRow && !combatTargetVisible(source,candidate)) ||
+            !canAttackTarget(source, candidate)))
             continue;
         const float dx = candidate.x - source.x;
         const float dy = candidate.y - source.y;
         const float distanceSquared = dx * dx + dy * dy;
         if (!scored && distanceSquared > bestDistanceSquared) continue;
         if (scored) {
-            if (source.player<=0 || visibleTargets_.slot(size_t(source.player-1),candidate.spawnId)==size_t(-1))continue;
-            if (std::any_of(source.targetExclusions.begin(), source.targetExclusions.end(),
+            if (!currentRow && !explicitRow && (source.player<=0 ||
+                visibleTargets_.slot(size_t(source.player-1),candidate.spawnId)==size_t(-1)))continue;
+            if (!currentRow && !explicitRow && std::any_of(source.targetExclusions.begin(), source.targetExclusions.end(),
                 [&](const auto &entry) { return entry.first == candidate.spawnId; })) continue;
-            float speed = modifiedUnitAttribute(candidate,5,candidate.unit->speed);
-            const auto *graphic = assets_.dat().graphic(objectGraphic(candidate,*candidate.unit));
-            if (graphic && graphic->speedMultiplier > 0) speed *= graphic->speedMultiplier;
+            const float speed=effectiveSpeed(candidate);
+            if(threatens(candidate))++threatCount;
             candidates.push_back({int(candidate.spawnId),speed > 0,
                 genieTargetMetric(candidate.hitPoints,float(attackDamage(source,candidate)),
                     modifiedUnitAttribute(source,10,source.unit->reloadTime),true),
                 genieTargetDistance(source.x,source.y,source.unit->collisionSize[0],source.unit->collisionSize[1],
                     candidate.x,candidate.y,candidate.unit->collisionSize[0],candidate.unit->collisionSize[1]),
                 modifiedUnitAttribute(candidate,12,candidate.unit->maxRange),
-                candidate.unit->cls,0});
+                candidate.unit->cls,currentRow?15.f:0.f});
             if(candidates.size()==128)break;
         } else {
             best = &candidate;
@@ -9994,12 +10029,17 @@ void Game::acquireAutomaticTarget(Object &source) {
         }
     }
     if (scored) {
-        const bool mobile = std::any_of(candidates.begin(),candidates.end(),[](const auto &c){return c.positiveSpeed;});
+        if(candidates.empty())return nullptr;
+        if(current && candidates.size()==1 && candidates.front().id==int(current->spawnId))return current;
+        const size_t mobileCount=std::count_if(candidates.begin(),candidates.end(),[](const auto &c){return c.positiveSpeed;});
+        const bool mobile=mobileCount>0;
         const bool preferMobile=actorClass!=43;
         const auto ranked = genieRankTargets(candidates,preferMobile,source.player>0 && !players_[size_t(source.player-1)].human);
         // Original bank is shared across actors/players and survives query resets.
         static GenieTargetSlots slots;
         slots.update(ranked);
+        if(current && genieRetainHitTarget(mobileCount,effectiveSpeed(*current)>0,threatens(*current),threatCount))
+            return current;
         for (int phase=0;phase<2 && !best;++phase)
         for (size_t attempt=0;attempt<std::min<size_t>(3,candidates.size());++attempt) {
             const auto record=slots.candidate(candidates,attempt);
@@ -10022,14 +10062,7 @@ void Game::acquireAutomaticTarget(Object &source) {
             if (phase == 1) source.targetExclusions.emplace_back(candidate->spawnId,gameTime_+(record.positiveSpeed ? 5.0 : 10.0));
         }
     }
-    if (!best) return;
-    const float jitter =
-        ((float)((source.spawnId * 2654435761u) >> 29) - 3.5f) * 0.10f;
-    const float approachAngle =
-        std::atan2(source.y - best->y, source.x - best->x) + jitter;
-    issueAttack(source, *best, approachAngle, true);
-    automaticTargetsAcquired_++;
-    if (source.unit->type == dat::UT_Building) armedBuildingsEngaged_++;
+    return best;
 }
 
 // Player attribute (civ resource) with the researched technologies' resource
@@ -10245,13 +10278,16 @@ void Game::damageObject(Object &object, int damage, uint32_t attackerId) {
         return;
     }
 
+    const bool originalHit=object.player>0 && players_[size_t(object.player-1)].human &&
+        genieGenericTroopController(object.unit->cls) &&
+        (object.attackTargetId || object.state==State::Idle);
     if (attacker && attacker->active &&
         isEnemy(object, *attacker) &&
         combatTargetVisible(object,*attacker) &&
         canAttackTarget(object, *attacker) &&
         object.attackMode != AttackMode::Passive &&
         (!object.attackTargetId || object.attackAutomatic) &&
-        !retainCurrentTargetOnHit(object)) {
+        (originalHit || !retainCurrentTargetOnHit(object))) {
         const float dx = attacker->x - object.x;
         const float dy = attacker->y - object.y;
         const float distanceSquared = dx * dx + dy * dy;
@@ -10265,7 +10301,12 @@ void Game::damageObject(Object &object, int damage, uint32_t attackerId) {
                       automaticAcquisitionRadius(object) *
                           automaticAcquisitionRadius(object)
                 : homeDx * homeDx + homeDy * homeDy <= leash * leash;
-        if (canReach && object.attackTargetId != attackerId) {
+        bool selected=canReach && object.attackTargetId!=attackerId;
+        if(selected && originalHit) {
+            selected=chooseCombatTarget(object,attacker)==attacker;
+            if(selected && retainCurrentTargetOnHit(object))selected=false;
+        }
+        if (selected) {
             issueAttack(object, *attacker,
                         std::atan2(object.y - attacker->y,
                                    object.x - attacker->x),
@@ -11780,6 +11821,7 @@ bool Game::approach(Object &object, const Object &target, float clearance) {
 
 bool Game::issueMove(Object &object, float targetX, float targetY,
                      const Object *goalObject, float clearance) {
+    if(object.pointMovement.present)object.pointMovement.status=GenieMovementStatus::Active;
     object.targetX = targetX;
     object.targetY = targetY;
     object.pathIndex = 0;
@@ -11792,7 +11834,10 @@ bool Game::issueMove(Object &object, float targetX, float targetY,
         (goalObject && withinInteractionRange(object, *goalObject, clearance))) {
         object.path.clear();
         object.state = State::Idle;
-        if (!goalObject) object.moveGoalActive = false;
+        if (!goalObject) {
+            object.moveGoalActive = false;
+            object.pointMovement.complete();
+        }
         return true;
     }
     // A unit standing inside a footprint (spawned or pushed there) first
@@ -11847,6 +11892,7 @@ bool Game::issueMove(Object &object, float targetX, float targetY,
                          clearance)) {
         object.path.clear();
         object.state = State::Idle;
+        object.pointMovement.fail();
         return false;
     }
     object.state = State::Walk;
@@ -12054,6 +12100,7 @@ void Game::issueGroupMove(std::vector<Object *> targets, float targetX, float ta
         object->rememberedAttackId=0;
         if (object->hidden || object->unit->speed <= 0)
             continue;
+        object->pointMovement.begin(targetX,targetY);
         if (movesIndependently(*object)) {
             independentTargets.push_back(object);
             continue;
@@ -12097,6 +12144,8 @@ void Game::issueGroupMove(std::vector<Object *> targets, float targetX, float ta
         if (std::abs(dx) <= object->unit->collisionSize[0] &&
             std::abs(dy) <= object->unit->collisionSize[1]) {
             stopUnit(*object);
+            object->pointMovement.begin(targetX,targetY);
+            object->pointMovement.complete();
             continue;
         }
         object->moveBestDistance = std::sqrt(dx * dx + dy * dy);
@@ -12494,6 +12543,7 @@ void Game::issueGroupMove(std::vector<Object *> targets, float targetX, float ta
                 }
             }
             if (!found) {
+                object->pointMovement.fail();
                 object->moveGoalActive = false;
                 object->moveGroupId = 0;
                 object->state = State::Idle;
@@ -12501,6 +12551,7 @@ void Game::issueGroupMove(std::vector<Object *> targets, float targetX, float ta
                 continue;
             }
         }
+        object->pointMovement.begin(slotX,slotY);
         reserved.push_back({slotX, slotY, radius});
         object->homeX = object->moveAnchorX = slotX;
         object->homeY = object->moveAnchorY = slotY;
@@ -14899,6 +14950,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
             return true;
         }
         if (!o.active) return false;
+        o.pointMovement.retire();
         if (o.resourceDeathState == 2) {
             // Base constructor's zero-HP child enters3 on its first same-owner pass.
             o.resourceDeathState = 3;
@@ -15037,6 +15089,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                     o.animTime = 0;
                     o.path.clear();
                     o.pathIndex = 0;
+                    o.pointMovement.complete();
                     o.moveGoalActive = false;
                     o.moveSpeedLimit = 0;
                     o.facing = std::atan2(goal->y - o.y, goal->x - o.x);
@@ -15060,6 +15113,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                         o.x = o.targetX;
                         o.y = o.targetY;
                     }
+                    o.pointMovement.complete();
                     o.moveGoalActive = false;
                     o.moveSpeedLimit = 0;
                     o.path.clear();
@@ -15086,6 +15140,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                     std::max(0.20f, collisionRadius(o) * 0.75f);
                 if (o.moveGoalActive &&
                     goalDx * goalDx + goalDy * goalDy <= arrival * arrival) {
+                    o.pointMovement.complete();
                     o.moveGoalActive = false;
                     o.moveSpeedLimit = 0;
                 }
@@ -15286,6 +15341,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                         if (o.moveGoalActive &&
                             goalDx * goalDx + goalDy * goalDy <=
                                 arrival * arrival) {
+                            o.pointMovement.complete();
                             o.moveGoalActive = false;
                             o.moveSpeedLimit = 0;
                         }
@@ -15313,6 +15369,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                     o.animTime = 0;
                     o.path.clear();
                     o.pathIndex = 0;
+                    o.pointMovement.complete();
                     o.moveGoalActive = false;
                     o.moveSpeedLimit = 0;
                     return false;
@@ -15333,6 +15390,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                     o.animTime = 0;
                     o.path.clear();
                     o.pathIndex = 0;
+                    o.pointMovement.complete();
                     o.moveGoalActive = false;
                     o.moveSpeedLimit = 0;
                     return false;
@@ -15401,6 +15459,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                         o.state = State::Idle;
                         o.path.clear();
                         o.pathIndex = 0;
+                        o.pointMovement.fail();
                         o.moveGoalActive = false;
                         o.moveSpeedLimit = 0;
                         o.repathCount = 0;

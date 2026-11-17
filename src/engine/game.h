@@ -9,6 +9,7 @@
 #include "pathfinding.h"
 #include "../core/scenario.h"
 #include "../core/genie_work_attack.h"
+#include "../core/genie_movement_action.h"
 #include "../core/genie_visible_targets.h"
 #include "../core/genie_update_list.h"
 
@@ -350,6 +351,16 @@ public:
     bool damageObjectForTesting(
         uint32_t spawnId, int damage,
         uint32_t attackerId = 0);
+    bool issuePointMoveForTesting(uint32_t id,float x,float y) {
+        auto *o=findObject(id);if(!o || !o->active || x<0 || y<0 || x>=mapSize_ || y>=mapSize_)return false;
+        clearUnitCommandOrder(*o);issueGroupMove({o},x,y,selectedFormation_);return true;
+    }
+    int pointMovementStatusForTesting(uint32_t id) const {
+        const auto *o=findObject(id);return o && o->pointMovement.present?int(o->pointMovement.status):-1;
+    }
+    std::array<float,2> pointMovementDestinationForTesting(uint32_t id) const {
+        const auto *o=findObject(id);return o?std::array<float,2>{o->pointMovement.destinationX,o->pointMovement.destinationY}:std::array<float,2>{-1,-1};
+    }
     bool moveObjectForTesting(uint32_t spawnId, float x, float y);
     int objectPlayer(uint32_t spawnId) const;
     bool setGateLockedForTesting(
@@ -890,6 +901,7 @@ private:
         float farmMoveTime = 0.0f;
         uint8_t farmMoveStep = 0;
         bool farmMoveActive = false;
+        GenieMovementAction pointMovement;
         uint32_t pathGoalId = 0;      // object approached (region goal), 0 = point
         float pathGoalClearance = 0;
         uint8_t repathCount = 0;
@@ -1362,6 +1374,7 @@ private:
                      bool automatic = false,
                      float approachDistance = 0);
     void acquireAutomaticTarget(Object &source);
+    Object *chooseCombatTarget(Object &source,const Object *hitAttacker=nullptr);
     bool combatTargetVisible(const Object &source,const Object &target) const;
     void finishAttack(Object &source, bool returnToPost);
     void retryAttackApproach(Object &source);

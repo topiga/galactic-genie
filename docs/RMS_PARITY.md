@@ -6100,3 +6100,38 @@ retention controls alone do not justify removing the native in-range veto;
 earlier original current-target retention must also run. No speculative polling
 or retaliation change was added. Corrected static contract and limitations:
 `visible-hit-reselection-next-contract-2026-11-17.json`.
+
+### Hit-context selection and ordinary movement heads (2026-11-17)
+
+Twenty original41a150 controls resolve hit-context flags(0,0). Native human
+generic-troop hit response now reuses a selector independent of order issuance:
+current target first, explicit attacker second, then current-centered visible
+query excluding both IDs. Current candidates receive the original15-point bonus;
+ordinary query visibility/exclusion filters do not discard the explicit rows.
+An only-current candidate returns before scoring. Other queries score/sort before
+retention, preserving shared slot writes. Retention uses the original below-five
+mobile count, current speed and reverse-threat predicates without a path check.
+A different winner prevents retaliation; it does not redirect the hit to that
+third candidate. The human ordinary-current class veto remains after selection.
+
+Positive replacement remains bounded by native order/stance/visibility/leash
+policies and native damage, capability and path callbacks. Explicit attack orders
+keep the existing native exemption; queued hit/threat messages, actor update
+result caching, group orders and nonhuman hit context are not claimed as ported.
+Evidence: `visible-hit-selector-contract-2026-11-17.json` and20 retained controls.
+
+Accepted ordinary point commands now attach a separate movement record. Arrival
+marks it completed; the next admitted owner update retires it. Zero-distance
+commands preserve a completed head until that update, and pause does not retire
+it. Failed movement stays attached until cancellation/replacement. Automatic
+acquisition cannot treat an attached completed/failed point action as no action.
+Stop, replacement task commands and accepted attacks cancel it explicitly. Route
+probes/retries do not create heads; formation routes install them at command
+acceptance. Native path/arrival criteria remain adapters. Gathering's nested
+movement, patrol/unload/last-seen movement and livestock/transport dispatch are
+separate scopes; this does not substitute a point head for their parent actions.
+
+Focused ASan/UBSan passes original score/query/list checks, native static-current
+hit switching, third-winner no-switch, four-versus-five mobile retention, explicit
+order boundaries, and point movement attachment/pause/arrival/retirement/Stop.
+Bonus/research/healing/AI checks pass. Logs: `hit-movement-{local,bonus}.log`.

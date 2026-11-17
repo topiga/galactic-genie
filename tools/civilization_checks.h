@@ -10,6 +10,7 @@
 #include "support_task_reference_checks.h"
 #include "attack_reference_checks.h"
 #include "target_selection_checks.h"
+#include "movement_action_checks.h"
 #include "visible_target_index_checks.h"
 #include "frozen_target_visibility_checks.h"
 #include "visibility_stencil_checks.h"
@@ -44,6 +45,9 @@ static void civilizationBonusChecks(swgb::Assets &assets) {
     visibleTargetIndexGameplayChecks(assets);
     targetSelectionChecks();
     targetSelectionGameplayChecks(assets);
+    hitReselectionGameplayChecks(assets);
+    runMovementActionChecks();
+    movementActionGameplayChecks(assets);
     frozenTargetVisibilityChecks(assets);
     visibilityStencilChecks();
     fellingAnimationChecks(assets);

@@ -105,6 +105,10 @@ inline GenieTargetRanking genieRankTargets(const std::vector<GenieTargetCandidat
     if (!preferMobile) emit([](const auto& c) { return c.positiveSpeed; }, mobileCount);
     return result;
 }
+// Hit selector flags(0,0), after scoring/sorting; original41a150 controls.
+inline bool genieRetainHitTarget(size_t mobileCount,bool currentMobile,bool currentThreat,size_t threatCount) {
+    return mobileCount<5 && (currentMobile || mobileCount==0) && (currentThreat || threatCount==0);
+}
 // Original output slots outlive each query; cleared candidate records resolve to ID0.
 class GenieTargetSlots {
     std::array<size_t,128> indices_{};

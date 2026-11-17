@@ -72,6 +72,12 @@ static void targetSelectionChecks() {
     const auto capped = genieRankTargets(input,true,false);
     check(capped.indices.size()==128 && capped.scores.size()==128 && capped.indices.back()==127,
           "Original candidate cap is128 with stable equal-score order");
+    check(swgb::genieRetainHitTarget(4,true,true,4) && !swgb::genieRetainHitTarget(5,true,true,5),
+          "Original hit retention stops at five mobile records");
+    check(swgb::genieRetainHitTarget(0,false,false,0) && !swgb::genieRetainHitTarget(1,false,true,1),
+          "Static current retains only when no mobile records compete");
+    check(!swgb::genieRetainHitTarget(2,true,false,1) && swgb::genieRetainHitTarget(2,true,false,0),
+          "Harmless current yields when another record threatens the actor");
     swgb::GenieTargetSlots slots;
     input={{10,false,0,0,1,49,0},{11,true,0,0,1,49,0}};
     slots.update(genieRankTargets(input,false,false));
@@ -186,4 +192,57 @@ static void targetSelectionGameplayChecks(swgb::Assets &assets) {
     check(staticFirst.attackTargetForTesting(artillery)==fartherWall,
           "Class43 consumes static-first ranking even with a nearer mobile target");
     std::puts("PASS: acquisition, fallback, dead-target reselection and pursuit retention on hit");
+}
+
+static void hitReselectionGameplayChecks(swgb::Assets &assets) {
+    swgb::Scenario scenario;scenario.map.width=scenario.map.height=64;scenario.map.tiles.resize(64*64);
+    scenario.nextUnitId=1;scenario.playerSlotCount=2;scenario.civilizations.fill(1);
+    for(int i=0;i<2;++i){scenario.players[i].active=true;scenario.players[i].human=i==0;scenario.players[i].civilization=1;}
+    auto &wall=const_cast<swgb::dat::DatFile &>(assets.dat()).civs.at(1).units.at(72);
+    struct Restore {swgb::dat::Unit &unit,original;~Restore(){unit=std::move(original);}} restore{wall,wall};
+    wall.cls=6;
+    for(bool thirdWins:{false,true}) {
+        swgb::Game game(assets);std::string error;check(game.initScenario(scenario,&error),error.c_str());
+        game.setDiplomacyForTesting(1,2,3);game.setDiplomacyForTesting(2,1,3);
+        const auto actor=game.spawnObjectForTesting(1,307,1,27.f,40.5f);
+        const auto current=game.spawnObjectForTesting(1,72,2,28.f,41.f);
+        const auto attacker=game.spawnObjectForTesting(1,307,2,30.f,40.5f);
+        game.setAttackModeForTesting(attacker,3);
+        uint32_t third=0;
+        if(thirdWins){third=game.spawnObjectForTesting(1,307,2,28.5f,39.f);game.setAttackModeForTesting(third,3);}
+        check(game.issueAttackForTesting(actor,current,true),"Current special-class attack before hit selection");
+        check(game.targetVisibleForTesting(1,attacker),"Hit attacker is visible in controlled fixture");
+        game.visibleTargetsForTesting(1,52);
+        game.damageObjectForTesting(actor,1,attacker);
+        check(game.attackTargetForTesting(actor)==(thirdWins?current:attacker),
+              "Hit response switches only when the attacker wins; it never redirects to a third winner");
+        check(!third || game.objectTaskReferencesForTesting(third)==0,"Unchosen hit-query winner owns no attack reference");
+        game.stopUnitForTesting(actor);
+        check(game.issueAttackForTesting(actor,current,false),"Explicit-order hit boundary fixture");
+        check(game.targetVisibleForTesting(1,attacker),"Hit attacker is visible in controlled fixture");
+        game.visibleTargetsForTesting(1,52);
+        game.damageObjectForTesting(actor,1,attacker);
+        check(game.attackTargetForTesting(actor)==current,"Unmapped explicit-order replacement retains native policy");
+    }
+    const auto &troop=assets.dat().civs.at(1).units.at(307);
+    wall.speed=1;wall.attacks=troop.attacks;
+    for(int mobileCount:{4,5}) {
+        swgb::Game game(assets);std::string error;check(game.initScenario(scenario,&error),error.c_str());
+        game.setDiplomacyForTesting(1,2,3);game.setDiplomacyForTesting(2,1,3);
+        const auto spotter=game.spawnObjectForTesting(1,83,1,31.f,43.f);game.setAttackModeForTesting(spotter,3);
+        const auto actor=game.spawnObjectForTesting(1,307,1,27.f,40.5f);
+        const auto current=game.spawnObjectForTesting(1,72,2,31.f,40.5f);
+        const auto attacker=game.spawnObjectForTesting(1,307,2,28.5f,39.f);
+        game.setAttackModeForTesting(attacker,3);
+        for(int i=0;i<mobileCount-2;++i) {
+            const auto other=game.spawnObjectForTesting(1,307,2,31.f+i*.4f,41.5f);
+            game.setAttackModeForTesting(other,3);
+        }
+        game.visibleTargetsForTesting(1,52);
+        check(game.issueAttackForTesting(actor,current,true),"Mobile-capability current retention boundary fixture");
+        game.damageObjectForTesting(actor,1,attacker);
+        check(game.attackTargetForTesting(actor)==(mobileCount==4?current:attacker),
+              "Native hit selector retains four mobile records but ranks at five");
+    }
+    std::puts("PASS: hit candidate competition, static-current switch and preserved explicit-order boundary");
 }
