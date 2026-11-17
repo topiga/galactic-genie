@@ -5723,3 +5723,18 @@ has not been replaced by a universal bucket rule. Evidence:
 Focused ASan/UBSan checks pass, including attack arrival/release and annex
 parent/frozen/one-hop cases (`annex-arrival-final-local.log`). Original executable
 controls and static analysis were used; no new live Windows match is claimed.
+
+Broader validation passes bonus/research/healing/AI and combat/gathering/garrison
+checks. The rebuilt desktop passes menu/preferences and60 dummy-driver
+render/audio frames. Compatibility reports the same five baseline failures:
+instruction speaker color, resource selection, upgrade menu/HP, upgraded drop
+site and Command Center tech-level sounds. Logs:
+`annex-arrival-{bonus,combat,desktop,fixes}.log`.
+
+Further selector tracing rules out another false generalization:5b4e80 belongs
+to classes50/51 and scores HP/distance with first-equal retention; it is not the
+generic troop acquisition rule. Constructor5b6af0/vtable666594 is the next generic
+controller entry point. Evidence:
+`visible-specialized-selector-findings-2026-11-17.json`. Native bucket ordering
+and complete child-controller timing remain open; these tests do not establish
+full simulation or live-match parity.
