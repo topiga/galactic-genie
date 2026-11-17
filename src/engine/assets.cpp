@@ -150,6 +150,43 @@ void Assets::ensureTerrainCacheSpace(size_t additionalBytes) {
     }
 }
 
+bool Assets::readAiSource(const std::string &name, std::string &source, std::string *err) {
+    source.clear();
+    // Original 0x5ff440..0x5ff88c registers these names as resources 60001..60056.
+    static constexpr const char *names[] = {
+        "age-advancement.per", "aggressive.per", "airbase.per", "animal.per",
+        "attack.per", "building-count.per", "carbon.per", "cheats.per",
+        "civ-loads.per", "combat-arm.per", "constants.per", "deathmatch.per",
+        "defensive.per", "difficulty-loads.per", "dip-boomer.per", "dip-bully.per",
+        "dip-feeder.per", "diplomacy.per", "fishboat.per", "food.per",
+        "fortress.per", "ground.per", "groups.per", "heavy-weapons.per",
+        "homebase.per", "init-goals.per", "jedi-temple.per", "map-loads.per",
+        "map-specs.per", "mech-factory.per", "military-population.per", "monument.per",
+        "no-diplomacy.per", "nova.per", "ore.per", "population.per",
+        "randomgame.per", "research-center.per", "research.per", "rush.per",
+        "shipyard.per", "sn-gather.per", "sn-homebase.per", "sn-soldiers.per",
+        "spaceport.per", "supplement.per", "tower.per", "troop-center.per",
+        "war-center.per", "warboat-island.per", "warboat.per", "wonder-kill.per",
+        "wonder-rush.per", "resign.per", "escrow.per", "military-population-hard.per",
+    };
+    std::string key=name;
+    std::transform(key.begin(),key.end(),key.begin(),[](unsigned char c){return char(std::tolower(c));});
+    for (size_t i=0;i<sizeof(names)/sizeof(*names);++i) {
+        if (key!=names[i]) continue;
+        const auto *entry=gameData_.find(int32_t(60001+i));
+        std::vector<uint8_t> bytes;
+        if (!entry || entry->type!=DrsType::Bina || entry->size>16*1024*1024 ||
+            !gameData_.read(int32_t(60001+i),bytes)) {
+            if (err) *err="could not read packaged AI script '"+name+"'";
+            return false;
+        }
+        source.assign(bytes.begin(),bytes.end());
+        return true;
+    }
+    if (err) *err="unknown packaged AI script '"+name+"'";
+    return false;
+}
+
 bool Assets::init(const std::string &dataDir, std::string *err) {
     struct Want {
         ResourceSet *set;
@@ -162,6 +199,7 @@ bool Assets::init(const std::string &dataDir, std::string *err) {
         {&terrain_, "terrain_x1.drs", false},  {&terrain_, "terrain.drs", true},
         {&interfac_, "interfac_x1.drs", false}, {&interfac_, "interfac.drs", true},
         {&sounds_, "sounds_x1.drs", false}, {&sounds_, "sounds.drs", false},
+        {&gameData_, "gamedata_x1.drs", false}, {&gameData_, "gamedata.drs", false},
     };
     for (const Want &w : wants) {
         std::string p = findFileNoCase(dataDir, w.name);

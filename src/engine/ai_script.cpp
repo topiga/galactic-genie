@@ -371,7 +371,8 @@ std::string normalizeAiSymbol(
 bool AiProgram::load(
     const std::string &entryPath,
     const std::unordered_set<std::string> &defines,
-    std::string *err) {
+    std::string *err, SourceLoader loader) {
+    sourceLoader_ = std::move(loader);
     rules.clear();
     constants.clear();
     files.clear();
@@ -400,14 +401,17 @@ bool AiProgram::load(
         {"ore", 2},
         {"nova", 3},
     };
-    return loadFile(entryPath, err);
+    const bool result = loadFile(entryPath, err);
+    sourceLoader_ = {};
+    return result;
 }
 
 bool AiProgram::loadSource(
     const std::string &name,
     const std::string &source,
     const std::unordered_set<std::string> &defines,
-    std::string *err) {
+    std::string *err, SourceLoader loader) {
+    sourceLoader_ = std::move(loader);
     rules.clear();
     constants.clear();
     files.clear();
@@ -436,11 +440,15 @@ bool AiProgram::loadSource(
         {"ore", 2},
         {"nova", 3},
     };
-    loaded_.insert(name);
+    std::string key=normalizeAiSymbol(name);
+    std::replace(key.begin(),key.end(),'\\','/');
+    loaded_.insert(key);
     files.push_back(name);
-    return processSource(
+    const bool result = processSource(
         name, directoryOf(name),
         source, err);
+    sourceLoader_ = {};
+    return result;
 }
 
 bool AiProgram::loadFile(
@@ -453,8 +461,12 @@ bool AiProgram::loadFile(
     if (!loaded_.insert(key).second)
         return true;
     std::string source;
-    if (!readTextFile(path, source, err))
+    if (!(sourceLoader_ ? sourceLoader_(path, source, err) : readTextFile(path, source, err)))
         return false;
+    if (source.size() > 16 * 1024 * 1024) {
+        if (err) *err = "AI script exceeds size limit: " + path;
+        return false;
+    }
     files.push_back(path);
     return processSource(
         path, directoryOf(path),

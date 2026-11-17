@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -33,15 +34,19 @@ struct AiRule {
 
 class AiProgram {
 public:
+    // A supplied loader owns all include resolution; no filesystem fallback.
+    using SourceLoader = std::function<bool(const std::string &, std::string &, std::string *)>;
     bool load(
         const std::string &entryPath,
         const std::unordered_set<std::string> &defines,
-        std::string *err = nullptr);
+        std::string *err = nullptr,
+        SourceLoader loader = {});
     bool loadSource(
         const std::string &name,
         const std::string &source,
         const std::unordered_set<std::string> &defines,
-        std::string *err = nullptr);
+        std::string *err = nullptr,
+        SourceLoader loader = {});
 
     int constant(
         const std::string &name,
@@ -54,6 +59,7 @@ public:
     std::vector<std::string> files;
 
 private:
+    SourceLoader sourceLoader_;
     std::unordered_set<std::string> defines_;
     std::unordered_set<std::string> loaded_;
 
