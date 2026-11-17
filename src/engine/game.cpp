@@ -398,6 +398,7 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     aiRandomNumbers_.fill(-1);
     gameTime_ = 0;
     localClock_.reset();
+    actorOwnerSchedule_ = {};
     localCommands_.reset();
     players_ = {};
     worldPlayerCount_=2;
@@ -1025,6 +1026,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     aiRandomNumbers_.fill(-1);
     gameTime_ = 0;
     localClock_.reset();
+    actorOwnerSchedule_ = {};
     localCommands_.reset();
     players_ = scenario.players;
     worldPlayerCount_=scenario.playerSlotCount;
@@ -1811,6 +1813,8 @@ Game::Object *Game::addObject(const dat::Unit *unit, int player, float x, float 
     object.facing = facing;
     object.spawnId = spawnId;
     object.autoAcquireTime = 0.1f + (spawnId % 8) * 0.05f;
+    if (unit->type >= dat::UT_Combatant && genieGenericTroopController(unit->cls))
+        object.idleAcquisition.initialize(legacyRandomState_);
     if (unit->type == dat::UT_Building || unit->speed <= 0)
         object.attackMode = AttackMode::StandGround;
     object.initialFrame = initialFrame;
@@ -10958,14 +10962,21 @@ void Game::updateAttack(Object &source, float dt) {
         }
     }
     source.attackRepathTime -= dt;
-    source.autoAcquireTime -= dt;
+    // shortcut: Owner admission covers idle scans; queued actor messages and tactical tasks remain native.
+    const bool originalIdleClock = source.idleAcquisition.threshold != 0;
+    bool idleScan = false;
+    if (originalIdleClock && actorOwnerSchedule_.selected == uint32_t(source.player)) {
+        const bool idle = !source.attackTargetId && !source.attackGroundActive &&
+            source.state == State::Idle && !source.moveGoalActive && !source.pointMovement.present;
+        idleScan = source.idleAcquisition.advance(actorOwnerSchedule_.delta(uint32_t(source.player)),idle);
+    } else if (!originalIdleClock) source.autoAcquireTime -= dt;
     if (source.attackGroundActive) {
         updateAttackGround(source, dt);
         return;
     }
     if (!source.attackTargetId) {
-        if (source.autoAcquireTime <= 0) {
-            source.autoAcquireTime =
+        if (originalIdleClock ? idleScan : source.autoAcquireTime <= 0) {
+            if (!originalIdleClock) source.autoAcquireTime =
                 0.45f + (source.spawnId % 5) * 0.04f;
             acquireAutomaticTarget(source);
         }
@@ -15596,6 +15607,8 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
         if(advanceWorld)updateSkirmish(dt);
         if (victoryState_ >= 0) return;
     }
+    const uint32_t stepMilliseconds = uint32_t(std::llround(worldTime*1000.0)) -
+                                      uint32_t(std::llround(gameTime_*1000.0));
     gameTime_ = worldTime;
     handleControlGroup(in);
     // Placement armed by the build menu last frame may now take clicks.
@@ -16437,6 +16450,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
     updateLivestockOwnership();
     updateMarchGroups(dt);
     for(uint32_t player=0;player<=worldPlayerCount_;++player) {
+        actorOwnerSchedule_.beginOwner(player,stepMilliseconds);
         rebuildMobileOccupancy();
         updateProductionAndDecay(dt,int(player));
         updatePlayerObjects(dt,int(player));
@@ -16457,6 +16471,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
     for(uint32_t player=0;player<=worldPlayerCount_;++player)
         updatePlayerObjects(dt,int(player),true);
     legacyRandomState_=auxiliaryRandom;
+    actorOwnerSchedule_.finish(worldPlayerCount_+1);
     genieRandomDraw(legacyRandomState_);
 }
 

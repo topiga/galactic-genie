@@ -24,6 +24,8 @@ static void check(bool value, const char *message) {
 #include "civilization_checks.h"
 #include "scenario_import_checks.h"
 #include "scenario_ai_checks.h"
+#include "actor_ai_timing_checks.h"
+#include "explore_action_checks.h"
 #include "ai_source_checks.h"
 #include "conquest_checks.h"
 #include "fog_edge_checks.h"
@@ -297,6 +299,8 @@ int main(int argc, char **argv) {
         scenarioImportChecks(assets);
         aiSourceChecks(assets);
         scenarioAiChecks(assets);
+        actorAiTimingChecks(assets);
+        exploreActionChecks();
         fogEdgeChecks(argv[1]);
         rmsSpawnChecks(assets);
         rmsElevationImportChecks(assets);

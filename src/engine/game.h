@@ -10,6 +10,7 @@
 #include "../core/scenario.h"
 #include "../core/genie_work_attack.h"
 #include "../core/genie_movement_action.h"
+#include "../core/genie_ai_timing.h"
 #include "../core/genie_visible_targets.h"
 #include "../core/genie_update_list.h"
 
@@ -129,6 +130,13 @@ public:
     bool skirmishActive() const { return skirmish_; }
     int matchResult() const { return victoryState_; }
     float matchTime() const { return matchTime_; }
+    void seedLegacyRandomForTesting(uint32_t state) { legacyRandomState_ = state; }
+    uint32_t selectedActorOwnerForTesting() const { return actorOwnerSchedule_.selected; }
+    std::array<uint32_t,2> idleClockForTesting(uint32_t id) const {
+        const auto *object=findObject(id);
+        return object ? std::array<uint32_t,2>{object->idleAcquisition.elapsed,object->idleAcquisition.threshold}
+                      : std::array<uint32_t,2>{};
+    }
     uint32_t commandCenterId(int player) const {
         return player >= 1 && player <= 2 ? skirmishCenters_[(size_t)player] : 0;
     }
@@ -815,6 +823,7 @@ private:
         float attackStallTime = 0;
         float attackBestDistance = 0;
         float autoAcquireTime = 0;
+        GenieTroopIdleClock idleAcquisition;
         uint32_t attackTargetId = 0;
         uint32_t rememberedAttackId=0;
         float attackLastSeenX=0,attackLastSeenY=0;
@@ -1556,6 +1565,7 @@ private:
     int difficulty_ = 2;
     double gameTime_ = 0;
     LocalSimulationClock localClock_;
+    GenieOwnerSchedule actorOwnerSchedule_;
     LocalCommandQueue localCommands_;
     int victoryState_ = -1;
     bool keyboardMouseControls_ = false;

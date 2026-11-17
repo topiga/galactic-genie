@@ -96,6 +96,7 @@ static void aiControllerChecks(swgb::Assets &assets) {
     check(game.productionQueueSizeForTesting(game.commandCenterId(2))>0,
           "New skirmish restores its normal fallback controller");
     check(game.init(1,64,&error,1,1),error.c_str());
+    game.seedLegacyRandomForTesting(1); // Isolate PER draws from world constructor draws.
     run(1,"(defrule (random-number == -1) => (set-goal 920 1))"
           "(defrule (true) => (generate-random-number 6) (disable-self))"
           "(defrule (random-number == 6) => (set-goal 921 1))");
@@ -112,11 +113,12 @@ static void aiControllerChecks(swgb::Assets &assets) {
           "(defrule (random-number == 1) => (set-goal 922 1))");
     check(game.aiGoalForTesting(1,922)==1,"Zero limit rejects without consuming draw; fourth-step player-one draw5202 yields one");
     check(game.init(1,64,&error,1,1),error.c_str());
+    game.seedLegacyRandomForTesting(1); // Isolate PER draws from world constructor draws.
     run(1,"(defrule (random-number == -1) => (set-goal 920 1))"
           "(defrule (true) => (generate-random-number 40000) (disable-self))"
           "(defrule (random-number == 18468) => (set-goal 923 1))");
     check(game.aiGoalForTesting(1,920)==1 && game.aiGoalForTesting(1,923)==1,
-          "New match resets random state/result; large limits retain original 15-bit draw range");
+          "New match resets per-player result; seeded large limits retain original 15-bit draw range");
     std::string fullPass;
     for(int i=0;i<200;++i)
         fullPass+="(defrule (true) => (set-goal 930 "+std::to_string(i)+") (disable-self))";

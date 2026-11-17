@@ -69,6 +69,8 @@ static void upgradeRngChecks(swgb::Assets &assets) {
         else if(c.source==558 && c.target==293)graphic.sequenceType&=uint8_t(~4u);
         commands={{3,int16_t(c.source),int16_t(c.target),-1,0}};
         game.invalidateUnitPrototypesForTesting();
+        // The original controls seed at upgrade entry, after all object constructors.
+        game.seedLegacyRandomForTesting(c.seed);
         check(game.researchTechnologyForTesting(1,501),"Apply actual upgrade RNG control");
         observe(c.after);
     }
@@ -94,6 +96,7 @@ static void upgradeRngChecks(swgb::Assets &assets) {
         middle.sequenceType=last.sequenceType=5;
         commands={{3,558,293,-1,0}};
         game.invalidateUnitPrototypesForTesting();
+        game.seedLegacyRandomForTesting(1);
         check(game.researchTechnologyForTesting(1,501),"Apply mutually exclusive graphic refresh control");
         observe(3357800067u); // Two draws; a mistaken standing→dying cascade would consume four.
     }
