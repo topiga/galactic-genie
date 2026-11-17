@@ -6314,9 +6314,9 @@ validate child outcomes and in-place forced/nonforced retargeting. Child statuse
 its primary reference and rebuilds the child. Only parentstate1 completes.
 
 The separate exploration helper and sanitizer checks preserve these transitions.
-It is not yet wired into native gameplay. State13 failure notification, waypoint
-selection, group admission, command705 scheduling and the first task610 producer
-remain unresolved; relabeling native point movement would hide those differences.
+The initial helper-only boundary is superseded by the gameplay integration below.
+State13 failure notification, original group admission, command705 scheduling and
+the first task610 producer remain unresolved.
 Evidence: `ai-movement-task-contract-2026-11-17.json` and its executed controls.
 
 Final validation: focused lifecycle/owner/exploration checks, bonus/research/AI,
@@ -6330,3 +6330,71 @@ threshold was relaxed to make that check pass. The compatibility suite retains
 its five existing failures (`actor-ai-timing-fixes.log`). Windows music and sound
 were rechecked Off. QuickDesk subsequently disconnected; no further remote
 keyboard/mouse actions or claims of a fresh complete game were made.
+
+
+### Exploration gameplay and resolved startup seeds (2026-11-17)
+
+Native fallback scouting now owns an action4 parent and a separate movement
+child. Arrival requests a destination without retiring the parent. Forced
+retargeting rebuilds its child; nonforced object-level reuse preserves the parent.
+Stop, ordinary point movement and accepted attacks replace both slots. Pause
+preserves both. A failed native path stays attached: its status is not guessed to
+be an original child-controller result. Focused gameplay checks cover these
+transitions, actual arrival, unreachable all-water terrain and fallback scouting.
+The original tactical admission, notification cadence and destination planner
+are still missing; this integration does not make scenario AI exploration 1:1.
+
+Original notification514/task605 dispatch resolves to local picker41c1d0, not
+only the Command Center rings in5ad950. Six original-instruction local controls
+confirm Y-major scanning, a single rand()%3 draw even with no candidate, jittered
+score replacement, and one final path callback. Twelve ring and eight remembered
+object controls also pass. Visibility/zone/path callbacks were modeled. Follow-up executed controls resolve
+the apparent history quirk as normal float XY equality: temporary stack pushes
+caused the initial static reading to compare the wrong offsets. Seventeen further
+controls cover history filtering, raw-bit inputs, signed zero, NaNs and the
+eight-entry history writer. Evidence:
+`exploration-local-picker-contract-2026-11-17.json` and
+`exploration-waypoint-contract-2026-11-17.json`. Native goal selection remains an
+explicit adapter until these environmental contracts are established.
+
+Scenario initialization accepts an already resolved CRT seed before construction;
+existing callers retain deterministic seed1. Resolved zero is accepted without
+host-time selection. Four seed regressions (0,1,24305,FFFFFFFF) check two generic
+constructors and repeat initialization. The original explicit-seed editor/test-style path61e570 treats input zero
+as a request to resolve the host seed:43ae00 may seed from WINMM timeGetTime and
+choose a15-bit draw, or use a retained controller seed. Six original-prefix
+controls establish this boundary; world reset is modeled and map/player startup
+is outside those controls. Evidence: `scenario-startup-rng-findings-2026-11-17.json`
+and `scenario-startup-seed-controls-2026-11-17.json`.
+
+Full startup RNG matching remains open. Original player construction reseeds,
+and sprite/facet/heading construction can consume graphic-dependent draws before
+the known generic-AI four-draw slice. No compensating fixed skip was added.
+A fresh read-only Windows restart capture contains260 snapshots, including
+simulation time0: CRT2110559061, worldRandom32204, retained controller seed24305,
+and troop thresholds1705/1306/1157/1406/1324. The retained seed field can be stale
+on explicit-seed startup, so this is not proof of the entry seed. First sampled
+enemy task610 is at150ms and exploration605 at300ms; human attacks first appear
+at1353/1504/1954ms. Sampling is non-atomic and does not give exact dispatch times.
+`live-startup-rng-restart-analysis-2026-11-17.json` retains the capture hash,
+observations and limits. Original game sound/music remained Off.
+
+
+A further caller trace distinguishes normal startup from that editor/test path.
+Normal5ed2ae dispatches world+ec to600310, then6004f1 calls61df00. Its application
+mode byte+9ae selects43ae00 or application seed+44; FFFFFFFF in the latter branch
+requests a rand() draw. It saves the resolved seed in application+4c at61e054.
+Checkpoint draws at61e057,61e0a2,61e0e5 and61e10e advance the stream and overwrite
+world+90 before later construction. These stages are not yet ported. The upstream
+Restart menu handler remains unproven; no normal-startup claim is inferred from
+the explicit editor/test prefix controls. Evidence:
+`scenario-restart-seed-dispatch-findings-2026-11-17.json` and companion disassembly.
+A later live read was in the editor (application+44=FFFFFFFF,+4c=11839); those
+values cannot retrospectively identify the earlier battle's entry seed.
+
+Validation after integration: focused lifecycle/startup checks, bonus/research/AI,
+combat, and desktop menu/render/audio smoke pass. The compatibility suite retains
+exactly its five prior failures: instruction speaker color, resource selection,
+upgrade menu, upgraded drop site and Tech Level Command Center sound. Logs:
+`exploration-startup-{local,bonus,combat,desktop,fixes}.log` in the external build
+directory. No full-game or startup RNG parity claim is made.
