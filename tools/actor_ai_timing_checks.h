@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "../src/core/genie_ai_timing.h"
+#include "../src/core/genie_graphic_random.h"
 static void actorAiTimingChecks(swgb::Assets &assets) {
+    for(uint8_t flags=0;flags<8;++flags)for(int angles:{1,8})for(uint32_t seed:{1u,12345u}) {
+        uint32_t actual=seed,expected=seed;
+        const int draws=(flags&4?2+int(bool(flags&1)):0)+int(bool(flags&2)&&angles>1);
+        for(int i=0;i<draws;++i)swgb::genieRandomDraw(expected);
+        swgb::genieScenarioGraphicConstructorRandom(actual,flags,angles);
+        check(actual==expected,"Original leaf graphic constructor flags preserve pre-AI RNG stages");
+    }
     uint32_t rng=1;swgb::GenieTroopIdleClock timer;timer.initialize(rng);
     check(timer.initialOffset==41&&timer.secondaryThreshold==1084&&timer.threshold==1375&&rng==3884216597u,
           "Generic AI constructor preserves four original CRT draws including overwritten base threshold");
@@ -36,12 +44,12 @@ static void actorAiTimingChecks(swgb::Assets &assets) {
     auto second=troop;second.spawnId=2;second.player=2;second.x=20;second.y=20;
     scenario.units.push_back(second);scenario.nextUnitId=3;
     struct SeedCase {uint32_t seed,first,second;};
-    for(const auto &c: {SeedCase{0,1312,1160},SeedCase{1,1375,1233},
-                       SeedCase{24305,1138,1322},SeedCase{0xffffffffu,1766,1320}}) {
+    for(const auto &c: {SeedCase{0,1160,1296},SeedCase{1,1233,1616},
+                       SeedCase{24305,1322,1864},SeedCase{0xffffffffu,1320,1726}}) {
         check(game.initScenario(scenario,&error,2,c.seed),error.c_str());
         check(game.idleClockForTesting(1)==std::array<uint32_t,2>{0,c.first}&&
               game.idleClockForTesting(2)==std::array<uint32_t,2>{0,c.second},
-              "Resolved startup seed reaches both generic constructors before their four-draw slices");
+              "Resolved startup seed reaches graphic construction before each generic AI four-draw slice");
         check(game.initScenario(scenario,&error,2,c.seed)&&game.idleClockForTesting(1)[1]==c.first,
               "Explicit startup seed reproduces native constructor phases on reload");
     }

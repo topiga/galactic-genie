@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "../core/genie_graphic_random.h"
 #include "../core/genie_random.h"
 #include "../core/genie_gather.h"
 #include "../core/genie_target_selection.h"
@@ -1200,6 +1201,14 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
             const float facing = part->adjacentMode && graphic && graphic->angleCount == 5
                                      ? source.rotation
                                      : source.rotation - kPi * 0.5f;
+            const auto *effective=effectiveUnitForPlayer(source.player,part);
+            const auto *standing=assets_.dat().graphic(effective->standingGraphic[0]);
+            // RMS import already accounts for constructor draws; scenario visual fields overwrite them.
+            if(!rmsCompletionOrder && effective->type>=dat::UT_Combatant &&
+               effective->type<=dat::UT_Creatable && genieGenericTroopController(effective->cls) &&
+               standing && standing->deltas.empty() && standing->soundId<0 && standing->angleSounds.empty())
+                genieScenarioGraphicConstructorRandom(legacyRandomState_,standing->sequenceType,standing->angleCount);
+            // shortcut: Delta/audio sprite construction and other controller families need their own original traces.
             Object *object = addObject(part, source.player, partX, partY, facing, spawnId,
                                        initialFrame, hidden, source.garrisonedInId, spawnId != 0);
             if (object) {
