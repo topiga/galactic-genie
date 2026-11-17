@@ -113,5 +113,30 @@ static void targetSelectionGameplayChecks(swgb::Assets &assets) {
     for(int tick=0;tick<20 && !fallback.attackTargetForTesting(chooser);++tick)fallback.update(.1f,{});
     check(fallback.attackTargetForTesting(chooser)==reachable,
           "Failed mobile approach permits a reachable static target in the fallback phase");
-    std::puts("PASS: integrated mobile preference, stable ties and static fallback acquisition");
+    swgb::Game replacement(assets);
+    check(replacement.initScenario(scenario,&error),error.c_str());
+    replacement.setDiplomacyForTesting(1,2,3);replacement.setDiplomacyForTesting(2,1,3);
+    const auto shooter=replacement.spawnObjectForTesting(1,307,1,27.f,40.5f);
+    const auto oldTarget=replacement.spawnObjectForTesting(1,307,2,28.f,40.5f);
+    const auto newTarget=replacement.spawnObjectForTesting(1,307,2,27.f,41.5f);
+    replacement.setAttackModeForTesting(oldTarget,3);replacement.setAttackModeForTesting(newTarget,3);
+    check(replacement.issueAttackForTesting(shooter,oldTarget),"Explicit attack establishes a registered target");
+    replacement.damageObjectForTesting(oldTarget,100000);
+    replacement.update(.1f,{});
+    check(replacement.attackTargetForTesting(shooter)==newTarget &&
+          replacement.objectTaskReferencesForTesting(oldTarget)==0,
+          "Registered non-building target death reselects immediately, including explicit attack orders");
+    const auto thirdTarget=replacement.spawnObjectForTesting(1,307,2,27.f,39.5f);
+    replacement.setAttackModeForTesting(thirdTarget,3);
+    replacement.moveObjectForTesting(newTarget,55.f,55.f);
+    replacement.damageObjectForTesting(newTarget,100000);replacement.update(.1f,{});
+    check(replacement.attackTargetForTesting(shooter)==thirdTarget &&
+          replacement.objectTaskReferencesForTesting(newTarget)==0,
+          "Registered non-building death precedes lost-sight pursuit, as in the original event order");
+    replacement.stopUnitForTesting(shooter);
+    const auto deadBuilding=replacement.spawnObjectForTesting(1,72,2,27.f,41.5f);
+    check(replacement.issueAttackForTesting(shooter,deadBuilding),"Building death discriminator");
+    replacement.damageObjectForTesting(deadBuilding,100000);replacement.update(.1f,{});
+    check(replacement.attackTargetForTesting(shooter)==0,"Building death does not use the non-building immediate event");
+    std::puts("PASS: integrated acquisition, fallback and registered dead-target reselection");
 }

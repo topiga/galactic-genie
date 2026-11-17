@@ -9272,6 +9272,8 @@ void Game::refreshVisibility() {
                 if(sourceSeesTile(source,mapSize_-1-y,x,radius)) visibleTiles_[size_t(y)*mapSize_+x]|=bit;
     }
     for(size_t i=0;i<count;++i) {exploredTiles_[i]|=visibleTiles_[i];observedTiles_[i]|=visibleTiles_[i];}
+    std::array<uint16_t,16> viewerMasks{};
+    for(int viewer=1;viewer<=16;++viewer)viewerMasks[size_t(viewer-1)]=sharedSightMask(viewer);
     // shortcut: Membership uses the native visibility refresh, not original per-object callback timing.
     for(const auto &object:objects_) {
         if(!object.spawnId || !object.unit)continue;
@@ -9279,7 +9281,7 @@ void Game::refreshVisibility() {
         if(object.active && !object.hidden && object.garrisonedInId<0) {
             for(const auto &cell:targetSightCells(object))sight|=visibleTiles_[size_t(cell[1])*mapSize_+cell[0]];
             for(int viewer=1;viewer<=16;++viewer)
-                if((sight&sharedSightMask(viewer)) || (forceSightCheat_ && viewer==localPlayer_))viewers|=uint16_t(1u<<(viewer-1));
+                if((sight&viewerMasks[size_t(viewer-1)]) || (forceSightCheat_ && viewer==localPlayer_))viewers|=uint16_t(1u<<(viewer-1));
         }
         visibleTargets_.update(object.spawnId,object.unit->cls,viewers);
     }
@@ -10839,6 +10841,17 @@ void Game::updateAttack(Object &source, float dt) {
     }
 
     Object *target = findObject(source.attackTargetId);
+    if (target && (!target->active || target->resourceDeathState>2) &&
+        target->unit->type!=dat::UT_Building && !(target->unit->cls==31 && source.unit->cls==36)) {
+        const bool returnToPost=source.attackAutomatic && source.attackMode==AttackMode::Defensive;
+        finishAttack(source,false);
+        source.moveGoalActive=false;
+        source.volleyRemaining=0;
+        // Original dead registered target event reselects; missing IDs follow the stop path below.
+        acquireAutomaticTarget(source);
+        if(!source.attackTargetId && returnToPost)finishAttack(source,true);
+        return;
+    }
     if(target && !combatTargetVisible(source,*target)) {
         const float x=source.attackLastSeenX,y=source.attackLastSeenY;
         const bool returnToPost=source.attackAutomatic && source.attackMode==AttackMode::Defensive;

@@ -5908,3 +5908,36 @@ partitions, byte-coordinate/radius filtering and per-partition caps remain nativ
 adapters. The cache tracks IDs/order, not original byte-packed records. These
 changes establish the membership algorithm and its effect on native ranking,
 not complete world-update or query equivalence.
+
+### Registered-dead target reselection and dispatch boundaries (2026-11-17)
+
+Original419396 handles an existing registered dead non-building target before
+lost-sight handling, with a class31-target/class36-actor exception. Native attack
+updates now release that target and attempt replacement immediately, preserving
+the separate missing-ID and building-death stop paths. This applies to accepted
+explicit attack orders too: the original branch does not test automatic-order
+provenance. Tests cover reference release, same-update replacement, death outside
+sight and the building discriminator. Existing native stance/eligibility and
+simulation scheduling remain adapters; exact original actor-AI admission timing
+is not claimed. Focused ASan/UBSan checks pass
+(`visibility-reselection-final-local.log`).
+
+Six additional original41a150 controls establish retention modes: retain a
+reachable current target, switch when unreachable, force rescoring, keep first
+equal scores and optionally omit retention reachability checks. Original419250
+periodic acquisition requires an idle task; active attacks do not rescore every
+frame. The event subset above is integrated, while other message-triggered
+reselection and original per-player AI gates remain open. Evidence:
+`visible-reselection-cadence-findings-2026-11-17.json` and its retained controls.
+
+Remaining return branches now have31 bounded controls:10 owned-livestock state6,
+7 state10 progress polls and14 transport-wait cases. Owned live class1 resources
+can be driven toward an owned destination before slaughter. The guard reads
+actual child-action primary/destination fields, and state10 polls progress every
+second rather than waiting a fixed duration. Transport F4 waits for an externally
+attached action3 child; it does not choose transport itself. Native live-resource
+and AI-zone fallbacks remain unchanged until action-head identity, targeted move
+installation, nearby-herd propagation and external transport planning are mapped.
+Evidence: `return-live-owned-and-transport-findings-2026-11-17.json` and its
+listed oracles. Authored callbacks/recording setters delimit those controls;
+no full herding or transport trip is claimed.
