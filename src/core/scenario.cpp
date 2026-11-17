@@ -94,6 +94,7 @@ void skipAiFiles(ByteReader &reader, float version) {
 void skipPlayerData(ByteReader &reader, Scenario &scenario) {
     const float version = reader.f32();
     scenario.playerDataVersion = version;
+    const bool cloneCampaignsLayout = std::fabs(version - 1.30f) < 0.0001f;
     if (!std::isfinite(version) || version < 1.0f || version > 2.0f)
         throw FormatError("unsupported scenario player-data version");
 
@@ -146,7 +147,9 @@ void skipPlayerData(ByteReader &reader, Scenario &scenario) {
         reader.skip(kPlayers * (256 + 8 * 4));
     } else {
         size_t resourceFields = versionAbove(version, 1.16f) ? 6 : 4;
-        if (versionAbove(version, 1.23f)) resourceFields++;
+        // Clone Campaigns editor 1.30 keeps six resource fields. Preserve
+        // the existing seventh-field handling for other 1.24+ layouts.
+        if (versionAbove(version, 1.23f) && !cloneCampaignsLayout) resourceFields++;
         for (ScenarioPlayer &player : scenario.players) {
             for (size_t field = 0; field < resourceFields; field++) {
                 const uint32_t value = reader.u32();
@@ -162,7 +165,8 @@ void skipPlayerData(ByteReader &reader, Scenario &scenario) {
     reader.skip(kPlayers * 180 * 4);
     if (versionAbove(version, 1.01f)) expectSeparator(reader, "allied victories");
     reader.skip((version < 1.02f ? kPlayers * kPlayers : kPlayers) * 4);
-    if (versionAbove(version, 1.22f)) reader.u32();
+    // The editor 1.30 layout has no extra value after allied victory flags.
+    if (versionAbove(version, 1.22f) && !cloneCampaignsLayout) reader.u32();
 
     if (versionAbove(version, 1.03f)) {
         if (versionAbove(version, 1.17f)) reader.skip(kPlayers * 4);
@@ -186,7 +190,9 @@ void skipPlayerData(ByteReader &reader, Scenario &scenario) {
         scenario.mapCameraY = scenario.cameraY;
     }
     if (versionAbove(version, 1.2f)) reader.i32();
-    if (versionAbove(version, 1.23f)) reader.skip(kPlayers);
+    // Clone Campaigns 1.30 places map dimensions immediately after the
+    // camera fields, without the earlier 1.24+ per-player bytes.
+    if (versionAbove(version, 1.23f) && !cloneCampaignsLayout) reader.skip(kPlayers);
 }
 
 ScenarioEffect readEffect(ByteReader &reader) {
