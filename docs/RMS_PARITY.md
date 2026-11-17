@@ -5615,3 +5615,37 @@ headless render/audio frames (`frozen-garrison-{combat,desktop}.log`). Its
 compatibility suite reports exactly the same five baseline failures, with no new
 failures (`frozen-garrison-fixes.log`). These runs do not establish live Windows
 match parity or prove the remaining attack/child-reference/visibility callbacks.
+
+### Attack ownership and frozen target visibility (2026-11-17)
+
+Object-target attack9 constructor401150 acquires primary via40ad40 at4011ce;
+coordinate attack4012e0 does not. Native accepted/manual/automatic attack now
+owns its target through the shared setter. All existing resets, common command
+cancellation, replacement, garrison and death release it. Remembered positions,
+volley caches and route copies are not inferred to own attack references.
+
+Visible object pursuit has an explicit child slot. Original state4 constructs
+4082c0 and acquires a separate target; coordinate states5/11 do not. Native
+successful visible pursuit owns that child, releasing before in-range attack or
+cancellation. Ground-point, remembered-position and backing-off movement remain
+reference-neutral. Original406b60 destroys completed children before reporting
+completion; state transitions clear previous children. Native range tolerances,
+repath/initialization ticks and exact controller status timing remain adapters,
+not a claim that the entire original attack state machine is ported. Evidence:
+`attack-primary-findings-2026-11-17.json` and
+`attack-movement-child-findings-2026-11-17.json`.
+
+Seven original614840 controls establish per-viewer/class target-index insertion,
+removal and swap-slot repair. This is not a remembered-graphics callback. The
+native direct search avoids duplicating that index; shared combat target sight
+now samples the original four frozen-building cells when radiusX>=1, retaining
+center-only sampling below1. Evidence: `visibility-index-findings-2026-11-17.json`
+and `visibility-index-controls-v1-oracle-2026-11-17.json`. Normal building stencils,
+annex geometry and renderer visibility are separate from this bounded correction.
+
+Focused sanitizer checks pass for attack primary ownership, rejected/repeated
+orders, automatic acquisition, destruction, pursuit child acquisition/arrival/
+cancellation, and attack-to-garrison replacement. Frozen visibility tests check
+all four contributing cells, the small-radius discriminator and an adjacent
+noncontributing cell. The fixtures use empty scenarios to isolate reference
+counts from other autonomous attackers. Log: `attack-visibility-local.log`.

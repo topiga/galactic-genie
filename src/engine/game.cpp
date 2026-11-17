@@ -1684,6 +1684,11 @@ void Game::setTaskReference(uint32_t &slot, uint32_t target) {
     }
 }
 
+void Game::setAttackTarget(Object &source, uint32_t target) {
+    if (source.attackTargetId != target) setTaskReference(source.attackChildReference,0);
+    setTaskReference(source.attackTargetId,target);
+}
+
 void Game::setGatherTarget(Object &worker, uint32_t target) {
     if (worker.gatherPrimaryReference != target) setTaskReference(worker.gatherChildReference,0);
     setTaskReference(worker.gatherPrimaryReference,target);
@@ -4839,6 +4844,7 @@ void Game::clearUnitCommandOrder(
         unit.initialFrame = 0;
         unit.animTime = 0.f;
     }
+    setAttackTarget(unit, 0);
     setTaskReference(unit.healTargetId, 0);
     setTaskReference(unit.garrisonTargetId, 0);
     clearConstructionAssignment(unit);
@@ -4860,7 +4866,7 @@ void Game::stopUnit(Object &unit) {
     setDropOffTarget(unit, 0);
     setTaskReference(unit.repairTargetId, 0);
     setTaskReference(unit.garrisonTargetId, 0);
-    unit.attackTargetId = 0;
+    setAttackTarget(unit, 0);
     unit.attackAutomatic = false;
     unit.attackGroundActive = false;
     unit.attackShotPending = false;
@@ -6379,7 +6385,7 @@ bool Game::issueGatherCommand(
     clearConstructionAssignment(worker);
     setGatherTarget(worker, 0);
     setDropOffTarget(worker, 0);
-    worker.attackTargetId = 0;
+    setAttackTarget(worker, 0);
     worker.attackAutomatic = false;
     worker.attackGroundActive = false;
     worker.attackShotPending = false;
@@ -6471,7 +6477,7 @@ bool Game::issueDropOffCommand(
     if (!accepts) return false;
     clearUnitCommandOrder(worker,true);
     clearConstructionAssignment(worker);
-    worker.attackTargetId = 0;
+    setAttackTarget(worker, 0);
     worker.attackAutomatic = false;
     worker.attackGroundActive = false;
     worker.attackShotPending = false;
@@ -6559,7 +6565,7 @@ bool Game::issueRepairCommand(
     clearConstructionAssignment(worker);
     setGatherTarget(worker, 0);
     setDropOffTarget(worker, 0);
-    worker.attackTargetId = 0;
+    setAttackTarget(worker, 0);
     worker.attackAutomatic = false;
     worker.attackGroundActive = false;
     worker.attackShotPending = false;
@@ -7380,7 +7386,7 @@ bool Game::issueGarrisonOrder(
     setGatherTarget(unit, 0);
     setDropOffTarget(unit, 0);
     setTaskReference(unit.repairTargetId, 0);
-    unit.attackTargetId = 0;
+    setAttackTarget(unit, 0);
     unit.attackAutomatic = false;
     unit.attackGroundActive = false;
     unit.attackShotPending = false;
@@ -7439,7 +7445,7 @@ void Game::updateGarrisoning(int player) {
         unit.moveGroupId = 0;
         unit.path.clear();
         unit.pathIndex = 0;
-        unit.attackTargetId = 0;
+        setAttackTarget(unit, 0);
         unit.state = State::Idle;
         unit.x = unit.homeX = building->x;
         unit.y = unit.homeY = building->y;
@@ -8088,7 +8094,7 @@ bool Game::assignBuilder(Object &worker,
     worker.resourcePreparationState = 0;
     setDropOffTarget(worker, 0);
     worker.manualDropOff = false;
-    worker.attackTargetId = 0;
+    setAttackTarget(worker, 0);
     worker.attackAutomatic = false;
     worker.attackGroundActive = false;
     worker.attackShotPending = false;
@@ -9067,7 +9073,7 @@ void Game::executeContextCommand(const ContextCommand &command) {
             clearConstructionAssignment(*object);
         setGatherTarget(*object,0);
         setDropOffTarget(*object,0);
-        object->attackTargetId = 0;
+        setAttackTarget(*object, 0);
         object->attackAutomatic = false;
     }
     playUnitAcknowledgement(*selected.front(), false);
@@ -9162,6 +9168,16 @@ bool Game::playerSees(int viewer,float x,float y) const {
         const int radius=std::clamp(int(modifiedUnitAttribute(source,1,source.unit->lineOfSight)),0,20);
         if(sourceSeesTile(source,int(mapSize_-y),int(x),radius)) return true;
     }
+    return false;
+}
+
+bool Game::playerSeesTarget(int viewer, const Object &target) const {
+    if (!target.buildingFrozen || target.unit->collisionSize[0] < 1.f)
+        return playerSees(viewer,target.x,target.y);
+    const int x=int(mapSize_-target.y), y=int(target.x);
+    // Original frozen manager4464c0 samples these four original-coordinate cells.
+    for(int dy=-1;dy<=0;++dy) for(int dx=-1;dx<=0;++dx)
+        if (playerSees(viewer,float(y+dy)+.5f,float(mapSize_-(x+dx))-.5f)) return true;
     return false;
 }
 
@@ -9557,7 +9573,7 @@ bool Game::issueAttackGround(
     setDropOffTarget(source, 0);
     setTaskReference(source.garrisonTargetId, 0);
     setTaskReference(source.repairTargetId, 0);
-    source.attackTargetId = 0;
+    setAttackTarget(source, 0);
     source.attackAutomatic = false;
     source.attackShotPending = false;
     source.attackGroundActive = true;
@@ -9665,7 +9681,7 @@ void Game::issueAttack(Object &source, Object &target, float approachAngle,
             break;
         }
     }
-    source.attackTargetId = target.spawnId;
+    setAttackTarget(source, target.spawnId);
     source.attackLastSeenX=target.x;source.attackLastSeenY=target.y;
     source.attackGroundActive = false;
     source.attackShotPending = false;
@@ -9725,7 +9741,7 @@ float Game::automaticPursuitLeash(const Object &source) const {
 }
 
 void Game::finishAttack(Object &source, bool returnToPost) {
-    source.attackTargetId = 0;
+    setAttackTarget(source, 0);
     source.attackAutomatic = false;
     source.attackShotPending = false;
     source.path.clear();
@@ -9814,7 +9830,7 @@ void Game::retryAttackApproach(Object &source) {
 }
 
 bool Game::combatTargetVisible(const Object &source,const Object &target) const {
-    if(source.player>0) return playerSees(source.player,target.x,target.y);
+    if(source.player>0) return playerSeesTarget(source.player,target);
     const float radius=modifiedUnitAttribute(source,1,source.unit->lineOfSight);
     return std::hypot(source.x-target.x,source.y-target.y)<=radius;
 }
@@ -9963,7 +9979,7 @@ void Game::killObject(Object &object, bool countKill, bool retainRemains) {
     object.selected = false;
     object.state = State::Idle;
     object.path.clear();
-    object.attackTargetId = 0;
+    setAttackTarget(object, 0);
 
     // Annexes (gate end posts) share their parent's state in the original
     // (building set_state 0x554710 forwards to every annex), so they die
@@ -10760,6 +10776,7 @@ void Game::updateAttack(Object &source, float dt) {
                 source.unit->maxRange));
     if (edgeGap <= maximumRange + 0.1f &&
         edgeGap + 0.05f >= minimumRange(source)) {
+        setTaskReference(source.attackChildReference,0);
         source.path.clear();
         source.pathIndex = 0;
         source.blockedTime = 0;
@@ -10891,12 +10908,10 @@ void Game::updateAttack(Object &source, float dt) {
     // the whole target footprint as one interchangeable goal region. That
     // preserves group slot distribution around buildings and prevents every
     // melee unit from converging on the same nearest corner.
-    source.attackRepathTime =
-        issueMove(
-            source, destinationX, destinationY,
-            nullptr, backingOff ? 0.2f : 0.0f)
-            ? (backingOff ? 0.3f : 0.5f)
-            : 1.5f;
+    const bool moving = issueMove(source,destinationX,destinationY,nullptr,backingOff ? 0.2f : 0.0f);
+    // shortcut: Visible pursuit owns a child; native range/repath timing is not the original state machine yet.
+    setTaskReference(source.attackChildReference,moving && !backingOff ? target->spawnId : 0);
+    source.attackRepathTime = moving ? (backingOff ? 0.3f : 0.5f) : 1.5f;
 }
 
 bool Game::terrainPassable(const Object &object, float x, float y) const {
@@ -11901,7 +11916,7 @@ void Game::issueGroupMove(std::vector<Object *> targets, float targetX, float ta
         formationTargets = std::move(cohesive);
     }
     for (Object *object : independentTargets) {
-        object->attackTargetId = 0;
+        setAttackTarget(*object, 0);
         object->attackAutomatic = false;
         object->attackGroundActive = false;
         object->attackShotPending = false;
@@ -12260,7 +12275,7 @@ void Game::issueGroupMove(std::vector<Object *> targets, float targetX, float ta
         findPath(*pathAnchor, targetX, targetY, macroPath);
     for (Object *object : remaining) {
         if (object->hidden || object->unit->speed <= 0) continue;
-        object->attackTargetId = 0;
+        setAttackTarget(*object, 0);
         object->attackAutomatic = false;
         object->attackGroundActive = false;
         object->attackShotPending = false;
@@ -13077,7 +13092,7 @@ bool Game::issuePatrolForTesting(
     unit->patrolStartY = unit->y;
     unit->patrolEndX = x;
     unit->patrolEndY = y;
-    unit->attackTargetId = 0;
+    setAttackTarget(*unit, 0);
     unit->attackGroundActive = false;
     unit->moveGoalActive =
         issueMove(*unit, x, y);
@@ -14815,7 +14830,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                 const float rate=modifiedUnitAttribute(*host,108,host->unit->garrisonHealRate);
                 o.hitPoints=std::min(o.maxHitPoints,o.hitPoints+dt*std::max(0.f,rate));
             }
-            o.attackTargetId = 0;
+            setAttackTarget(o, 0);
             o.attackAutomatic = false;
             o.attackGroundActive = false;
             o.attackShotPending = false;
@@ -15753,7 +15768,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
                 unit->patrolEndX = targetX;
                 unit->patrolEndY = targetY;
                 unit->attackGroundActive = false;
-                unit->attackTargetId = 0;
+                setAttackTarget(*unit, 0);
                 unit->moveGoalActive =
                     issueMove(
                         *unit, targetX,
@@ -15787,7 +15802,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
                     clearUnitCommandOrder(*unit);
                     unit->attackGroundActive =
                         false;
-                    unit->attackTargetId = 0;
+                    setAttackTarget(*unit, 0);
                     unit->moveGoalActive = false;
                     if (command ==
                         UnitCommand::Guard)
