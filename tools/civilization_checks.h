@@ -9,6 +9,7 @@
 #include "object_sleep_reference_checks.h"
 #include "support_task_reference_checks.h"
 #include "attack_reference_checks.h"
+#include "target_selection_checks.h"
 #include "frozen_target_visibility_checks.h"
 #include "visibility_stencil_checks.h"
 #include "felling_animation_checks.h"
@@ -38,6 +39,8 @@ static void civilizationBonusChecks(swgb::Assets &assets) {
     objectSleepReferenceChecks(assets);
     supportTaskReferenceChecks(assets);
     attackReferenceChecks(assets);
+    targetSelectionChecks();
+    targetSelectionGameplayChecks(assets);
     frozenTargetVisibilityChecks(assets);
     visibilityStencilChecks();
     fellingAnimationChecks(assets);

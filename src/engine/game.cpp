@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "../core/genie_random.h"
 #include "../core/genie_gather.h"
+#include "../core/genie_target_selection.h"
 #include "game.h"
 #include "../core/genie_visibility_stencil.h"
 #include "terrain_draw_scan.h"
@@ -6814,6 +6815,18 @@ void Game::updateGathering(Object &worker, float dt) {
         worker.manualDropOff = false;
         worker.state = State::Idle;
         worker.animTime = 0;
+        const dat::Task *returnTask = gatherTask(worker, *gatherer);
+        // shortcut: AI transport-zone dispatch remains native until its F4 action is ported.
+        const bool transportZoneGate = worker.player > 0 && !players_[size_t(worker.player-1)].human &&
+            std::any_of(objects_.begin(), objects_.end(), [&](const Object &o) {
+                return o.active && o.player == worker.player && (o.unit->cls == 59 || o.unit->cls == 17);
+            });
+        if (resource && isGatherable(*resource) && resource->resourceDeathState == 3 &&
+            resource->garrisonedInId < 0 && returnTask && returnTask->actionType == 110 && !transportZoneGate) {
+            setTaskReference(worker.gatherChildReference, resource->spawnId);
+            worker.resourcePreparationState = 4;
+        }
+
         if (!resource ||
             !isGatherable(*resource)) {
             Object *next = nextResourceLike(worker);
@@ -6993,6 +7006,15 @@ void Game::updateGathering(Object &worker, float dt) {
     worker.facing = std::atan2(
         resource->y - worker.y,
         resource->x - worker.x);
+    if (task && task->actionType == 110) {
+        if (worker.resourcePreparationState == 4 ||
+            (completedResourceApproach && resource->resourceDeathState == 3)) {
+            setTaskReference(worker.gatherChildReference,0);
+            worker.resourcePreparationState = 6;
+            return;
+        }
+        if (worker.resourcePreparationState == 6) { worker.resourcePreparationState = 7; return; }
+    }
     if (task && task->actionType == 110 && resource->unit->cls == 31 &&
         gatherer->projectileUnitId == -1 && gatherer->id != 1239) {
         Object job;
@@ -7048,12 +7070,6 @@ void Game::updateGathering(Object &worker, float dt) {
                 worker.animTime = 0.f; worker.initialFrame = 0;
                 return;
             }
-            if (worker.resourcePreparationState == 4 || completedResourceApproach) {
-                setTaskReference(worker.gatherChildReference,0);
-                worker.resourcePreparationState = 6;
-                return;
-            }
-            if (worker.resourcePreparationState == 6) { worker.resourcePreparationState = 7; return; }
         }
     }
     // shortcut: Other attack/sprite modes retain the legacy preparation until their controls are ported.
@@ -9877,6 +9893,16 @@ void Game::acquireAutomaticTarget(Object &source) {
     const int maxX = std::min(mobileObjectGridWidth_ - 1, centerX + cellRadius);
     const int minY = std::max(0, centerY - cellRadius);
     const int maxY = std::min(mobileObjectGridWidth_ - 1, centerY + cellRadius);
+    // The original generic controller uses mobile-first scoring for these classes.
+    // Class43 retains its adapter until persistent unwritten sort slots are modeled.
+    const int actorClass = source.unit->cls;
+    const bool scored = actorClass == 44 || actorClass == 47 || actorClass == 48 || actorClass == 49 ||
+        actorClass == 52 || actorClass == 53 || actorClass == 55 || actorClass == 56 || actorClass == 57;
+    std::vector<GenieTargetCandidate> candidates;
+    if (scored) {
+        source.targetExclusions.erase(std::remove_if(source.targetExclusions.begin(), source.targetExclusions.end(),
+            [&](const auto &entry) { return entry.second <= gameTime_; }), source.targetExclusions.end());
+    }
     Object *best = nullptr;
     float bestDistanceSquared = radius * radius;
     for (int cellY = minY; cellY <= maxY; cellY++)
@@ -9898,10 +9924,50 @@ void Game::acquireAutomaticTarget(Object &source) {
                 const float dx = candidate.x - source.x;
                 const float dy = candidate.y - source.y;
                 const float distanceSquared = dx * dx + dy * dy;
-                if (distanceSquared > bestDistanceSquared) continue;
-                best = &candidate;
-                bestDistanceSquared = distanceSquared;
+                if (distanceSquared > (scored ? radius * radius : bestDistanceSquared)) continue;
+                if (scored) {
+                    if (std::any_of(source.targetExclusions.begin(), source.targetExclusions.end(),
+                        [&](const auto &entry) { return entry.first == candidate.spawnId; })) continue;
+                    float speed = modifiedUnitAttribute(candidate,5,candidate.unit->speed);
+                    const auto *graphic = assets_.dat().graphic(objectGraphic(candidate,*candidate.unit));
+                    if (graphic && graphic->speedMultiplier > 0) speed *= graphic->speedMultiplier;
+                    candidates.push_back({int(candidate.spawnId),speed > 0,
+                        genieTargetMetric(candidate.hitPoints,float(attackDamage(source,candidate)),
+                            modifiedUnitAttribute(source,10,source.unit->reloadTime),true),
+                        std::sqrt(distanceSquared),modifiedUnitAttribute(candidate,12,candidate.unit->maxRange),
+                        candidate.unit->cls,0});
+                } else {
+                    best = &candidate;
+                    bestDistanceSquared = distanceSquared;
+                }
             }
+    if (scored) {
+        static constexpr int classes[] = {5,6,7,8,9,10,11,12,13,14,15,16,17,18,32,33,34,35,36,37,38,39,40,
+            43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,63,64,62,61};
+        const auto classOrder = [&](int cls) { return std::find(std::begin(classes),std::end(classes),cls); };
+        candidates.erase(std::remove_if(candidates.begin(),candidates.end(),
+            [&](const auto &c) { return classOrder(c.unitClass) == std::end(classes); }),candidates.end());
+        // shortcut: Within-class visibility order, damage and path queries remain native adapters.
+        std::stable_sort(candidates.begin(),candidates.end(),
+            [&](const auto &a,const auto &b) { return classOrder(a.unitClass) < classOrder(b.unitClass); });
+        if (candidates.size() > 128) candidates.resize(128);
+        const bool mobile = std::any_of(candidates.begin(),candidates.end(),[](const auto &c){return c.positiveSpeed;});
+        const auto ranked = genieRankTargets(candidates,true,source.player>0 && !players_[size_t(source.player-1)].human);
+        for (int phase=0;phase<2 && !best;++phase)
+        for (size_t attempt=0;attempt<std::min<size_t>(3,ranked.indices.size());++attempt) {
+            const auto &record=candidates[ranked.indices[attempt]];
+            if (phase == 0 && mobile && !record.positiveSpeed) continue;
+            Object *candidate=findObject(uint32_t(record.id));
+            if (!candidate) continue;
+            std::vector<std::array<float,2>> route;
+            const float range=std::max(0.f,modifiedUnitAttribute(source,12,source.unit->maxRange));
+            if (withinInteractionRange(source,*candidate,range) ||
+                findPath(source,candidate->x,candidate->y,route,candidate,range)) {
+                best=candidate;break;
+            }
+            if (phase == 1) source.targetExclusions.emplace_back(candidate->spawnId,gameTime_+(record.positiveSpeed ? 5.0 : 10.0));
+        }
+    }
     if (!best) return;
     const float jitter =
         ((float)((source.spawnId * 2654435761u) >> 29) - 3.5f) * 0.10f;

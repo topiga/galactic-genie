@@ -56,6 +56,27 @@ static void fellingAnimationChecks(swgb::Assets &assets) {
     game.update(.1f,{});
     check(game.objectCarriedAmount(newcomer)>carried,
           "No-child in-range entry does not inherit a movement-completion delay");
+    const auto dropSite=game.spawnObjectForTesting(1,109,1,45.f,45.f);
+    game.moveObjectForTesting(newcomer,45.f,45.f);
+    check(game.issueDropOffForTesting(newcomer,dropSite),"Drop carried carbon while retaining the resource primary");
+    game.update(.1f,{});
+    check(game.objectCarriedAmount(newcomer)==0.f && game.objectTaskReferencesForTesting(dropSite)==0 &&
+          game.objectTaskReferencesForTesting(tree)==2,
+          "Deposit clears secondary and immediately creates the return movement child");
+    game.moveObjectForTesting(newcomer,27.f,40.5f);
+    for(int phase=0;phase<2;++phase) {
+        game.update(.1f,{});
+        check(game.objectCarriedAmount(newcomer)==0.f && game.objectTaskReferencesForTesting(tree)==1,
+              "Return child retires through the shared facing and work-entry transitions");
+    }
+    game.update(.1f,{});
+    check(game.objectCarriedAmount(newcomer)>0.f,"Return dispatch resumes gathering after its entry transitions");
+    check(game.stopUnitForTesting(newcomer),"Clear resource primary while retaining carried carbon");
+    game.moveObjectForTesting(newcomer,45.f,45.f);
+    check(game.issueDropOffForTesting(newcomer,dropSite),"Manual drop-off without a primary target");
+    game.update(.1f,{});
+    check(game.objectCarriedAmount(newcomer)==0.f && game.objectTaskReferencesForTesting(tree)==0 &&
+          game.objectTaskReferencesForTesting(dropSite)==0,"No-primary drop-off does not invent a return child");
     auto &raw=const_cast<swgb::dat::DatFile &>(assets.dat()).civs.at(0).units.at(349);
     struct Restore { swgb::dat::Unit &unit, original; ~Restore(){unit=std::move(original);} } restore{raw,raw};
     for(auto &storage:raw.resourceStorages)

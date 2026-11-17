@@ -5813,3 +5813,44 @@ Compatibility retains exactly the same five recorded baseline failures; no new
 failures. Logs: `troop-child-{final-local,bonus,combat,desktop,fixes}.log`.
 No fresh live Windows session was used; the comparisons executed retained
 original PE routines with the explicit fixture boundaries above.
+
+### Initial troop acquisition and return dispatch (2026-11-17)
+
+Original41a150 controls now exercise producer, scoring, sorting and final choice
+with modeled query/getter/eligibility/path boundaries. Cases verify class/category
+ordering, rejected candidates, current-target retention,128 admitted candidates,
+and the top-three reachability limit with timed exclusions. Evidence:
+`visible-full-selector-controls-oracle-2026-11-17.json` and matching harness.
+
+Native initial acquisition for generic mobile-first controller classes44,47,48,
+49,52,53,55,56,57 now uses shared `genie_target_selection.h` rather than nearest
+candidate alone: HP/damage/reload metric, separately normalized mobile scores,
+original10/75 weights, stable preference tiers,128 cap and top-three attempts.
+The first phase prefers mobile candidates; fallback permits static targets.
+Failures exclude mobile/static targets for5/10 simulation seconds respectively.
+Explicit attack commands and already-owned target handling are unchanged.
+Class43 retains its previous adapter because the original non-mobile-first sort
+can expose unwritten persistent index slots. Other controller families retain
+separate behavior.
+
+This is not full selection parity. Candidate eligibility, query partition and
+within-class order, effective-speed suppression, damage estimates, distance and
+both path-attempt callbacks remain native adapters. The shared original class
+request order is applied before the cap. Existing-target reselection/history and
+persistent visible buckets still need integration. Tests compare stage outputs
+to original controls and verify actual native mobile-over-nearer-static choice
+and stable equal-score acquisition inside one native query cell.
+
+Thirteen original state4 dispatcher controls establish target state/class/owner
+and zone predicates. Native deposit now immediately acquires a return movement
+child for valid uncontained action110 resources in admitted death state3. Shared
+movement completion handles4→6→7 independently of the felling graphic. AI owners
+with active class17/59 objects keep the previous fallback until F4 zone dispatch
+is ported; humans bypass the original zone gate. Live-target attack dispatch and
+owned-class1 movement remain outside this change. Evidence:
+`return-child-dispatch-findings-2026-11-17.json` and
+`return-child-dispatch-controls-v1-oracle-2026-11-17.json`.
+
+Focused ASan/UBSan checks pass (`selection-return-local.log`), including immediate
+post-deposit reference transfer, return completion without premature gathering,
+manual drop-off without a primary, and the new scoring/acquisition checks.

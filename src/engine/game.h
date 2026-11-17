@@ -795,6 +795,7 @@ private:
         float moveBestDistance = 0;
         float moveSpeedLimit = 0;
         float attackCooldown = 0;
+        std::vector<std::pair<uint32_t,double>> targetExclusions;
         float attackRepathTime = 0;
         float attackApproachAngle = 0;
         float attackApproachDistance = 0;
