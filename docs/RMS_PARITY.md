@@ -6490,3 +6490,83 @@ new destination components also pass standalone ASan/UBSan checks. Reference
 music/sound settings were left muted throughout; QuickDesk later disconnected,
 so no further remote input or final paused-state claim was made. The SSH master
 was closed and the user's untracked screenshot was preserved byte-for-byte.
+
+
+### Tactical exploration staging and scenario startup checkpoints (2026-11-17)
+
+Native exploration orders now pass through the original-shaped tactical staging
+queue: at most 200 records, adjacent matching destinations grouped in actor order,
+one local-ring payload per group, and a flush after each owner. Application occurs
+at the next local-ring drain. Stale/dead/transferred actors are revalidated then.
+The forced exploration command activates during that application; no extra deferred
+phase was introduced. Other tactical opcodes, information-grid admission and the
+full original destination planner are still not integrated.
+
+Evidence: `exploration-command-queue-contract-2026-11-17.json`, the queue controls,
+and `exploration-command-immediate-activation-controls-2026-11-17.json`. Eighteen
+new original-instruction controls cover grouping, capacity and immediate activation.
+Native checks cover physical ring wrap, group ordering, signed-zero destinations,
+pause, death, ownership changes and session reset. Existing fog fixtures were
+corrected to use instantiated owners and the previously established registered
+non-building death-reference behavior (419396); no engine visibility rule changed.
+
+Scenario startup now consumes the map/player checkpoints, Gaia scheduling draw,
+per-player constructor save/reseed wrappers, post-load owner activation wrappers,
+and final world checkpoint at their recovered boundaries. It uses the existing
+per-graphic and per-troop constructor routines, without seed fitting or unit-specific
+skip counts. Original base-player, research-tail and owner-load controls establish
+zero RNG consumption for the tested Empire scene branches. Optional AI construction
+is wrapped, but its complete internal state is not reproduced by this result.
+
+The same authored five-mounted-trooper scene was loaded by the original Windows
+executable and the native parser. Seeds 13575 and 18062 independently match every
+unit's offset, secondary threshold and acquisition threshold (30 field comparisons)
+and both final startup CRT states: 2662558189 and 398728675. The latter comes from
+the first fully populated time-zero snapshot, sample59; subsequent samples are
+retained, not discarded. Evidence: `startup-rng-closure-ledger-2026-11-17.json`,
+`shared-scenario-startup-rng-sequence-2026-11-17.json`, and
+`tactical-startup-live-comparison-2026-11-17.json` in local research storage.
+
+Later time-zero CRT states differ while original world+90 remains6084. Twenty
+executed controls show accepted local world entry unconditionally reseeds from
+world+90 at61ee03, independently of ambient CRT. Even an unforced zero-delta
+original entry resets and stores the final draw; earlier rejected timing gates
+are separate. Native forced test updates intentionally execute simulation bodies
+at zero delta. They are not a model of that unforced original zero-delta branch.
+
+Native simulation now retains the final draw as a separate world checkpoint and
+restores it at accepted simulation-core entry. The regression deliberately alters
+ambient CRT between two steps and observes unchanged per-player draws. Scenario
+startup supplies its proven checkpoint; native sandbox/RMS first-step finalization
+remains unresolved, and their exposed construction-state outputs are preserved.
+Direct HUD/skirmish work before the simulation-core boundary remains an ordering
+limit. These results do not establish complete-game, all-civilization, all-graphic
+or RMS session-startup parity.
+
+
+The existing upgrade oracle ends inside a simulation step. Its regression now
+asserts the full post-upgrade CRT directly, then explicitly seeds the separate PER
+observation boundary. Previously it implicitly crossed a world-entry reset that
+was missing from the native engine. Original upgrade goldens are unchanged.
+The inner-world and owner-order fixtures likewise explicitly seed their documented
+entry boundary instead of relying on constructors leaving seed1 untouched.
+
+
+Four further original world-loop controls validate consecutive checkpoints for two
+players: seed1→1997→14968→8195→20970. The third-step player-two PER draw is11638;
+the fourth-step player-one draw is10525. The AI fact regression now uses those
+values across world reseeds (negative divisor and zero-limit checks retained),
+replacing expectations derived from incorrectly carrying full CRT between steps.
+Evidence: `world-checkpoint-multistep-oracle-2026-11-17.json`, executing the original
+world/owner loops with explicit empty object bodies and controlled PER draws.
+
+
+Final validation: focused local/lifecycle/startup/queue checks, bonus/research/AI,
+combat, fog/conquest and desktop smoke all pass. Core checks use ASan/UBSan.
+Compatibility still reports exactly the five previously tracked failures:
+instruction-speaker-color, resource-select, upgrades menu, upgraded-drop-site,
+and tech-level-command-center sound. No failure was disabled. Final logs use the
+`world-checkpoint-` prefix in the external build directory. Desktop smoke verifies
+60 update/render/present frames plus streamed audio/EOF handling, not an audible
+manual playthrough. Windows reference audio remained Off; the SSH master was
+closed. The untracked player-conquest-result.png hash remains unchanged.
