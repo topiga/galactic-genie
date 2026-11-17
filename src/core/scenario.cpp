@@ -80,14 +80,18 @@ void skipBitmap(ByteReader &reader) {
     reader.skip((size_t)paletteSize * 4 + rawSize);
 }
 
-void skipAiFiles(ByteReader &reader, float version) {
-    for (size_t i = 0; i < kPlayers; i++) {
+void readAiFiles(ByteReader &reader, Scenario &scenario, float version) {
+    for (ScenarioPlayer &player : scenario.players) {
         const uint32_t aiNameSize = reader.u32();
         const uint32_t citySize = reader.u32();
         const uint32_t personalitySize = versionAbove(version, 1.07f) ? reader.u32() : 0;
         const uint64_t total = (uint64_t)aiNameSize + citySize + personalitySize;
         if (total > reader.remaining()) throw FormatError("scenario AI file exceeds remaining data");
-        reader.skip((size_t)total);
+        reader.skip((size_t)aiNameSize + citySize);
+        const char *source = reinterpret_cast<const char *>(reader.ptr(personalitySize));
+        size_t length = personalitySize;
+        if (length && source[length - 1] == '\0') --length;
+        player.aiSource.assign(source, length);
     }
 }
 
@@ -138,9 +142,10 @@ void skipPlayerData(ByteReader &reader, Scenario &scenario) {
 
     for (size_t i = 0; i < kPlayers * 2; i++) sizedString16(reader);
     if (versionAbove(version, 1.07f))
-        for (size_t i = 0; i < kPlayers; i++) sizedString16(reader);
-    skipAiFiles(reader, version);
-    if (versionAbove(version, 1.1f) && std::fabs(version - 1.14f) > 0.0001f) reader.skip(kPlayers);
+        for (ScenarioPlayer &player : scenario.players) player.aiName = sizedString16(reader);
+    readAiFiles(reader, scenario, version);
+    if (versionAbove(version, 1.1f) && std::fabs(version - 1.14f) > 0.0001f)
+        for (ScenarioPlayer &player : scenario.players) player.aiType = reader.u8();
     if (versionAbove(version, 1.01f)) expectSeparator(reader, "player resources");
 
     if (version < 1.14f) {

@@ -35,6 +35,9 @@ struct ScenarioUnit {
 
 struct ScenarioPlayer {
     std::string name;
+    std::string aiName;
+    std::string aiSource;
+    uint8_t aiType = 2; // Editor: 0 custom, 1 standard, 2 none.
     uint32_t civilization = 0;
     uint32_t color = 0;
     bool active = false;
