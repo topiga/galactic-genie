@@ -134,6 +134,12 @@ public:
     int matchResult() const { return victoryState_; }
     float matchTime() const { return matchTime_; }
     void seedLegacyRandomForTesting(uint32_t state) { legacyRandomState_ = state; }
+    uint32_t legacyRandomForTesting() const {return legacyRandomState_;}
+    std::array<uint32_t,3> idleRandomFieldsForTesting(uint32_t id) const {
+        const auto *o=findObject(id);
+        return o?std::array<uint32_t,3>{o->idleAcquisition.initialOffset,o->idleAcquisition.secondaryThreshold,
+                                      o->idleAcquisition.threshold}:std::array<uint32_t,3>{};
+    }
     uint32_t selectedActorOwnerForTesting() const { return actorOwnerSchedule_.selected; }
     std::array<uint32_t,2> idleClockForTesting(uint32_t id) const {
         const auto *object=findObject(id);

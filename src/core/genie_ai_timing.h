@@ -5,6 +5,11 @@
 #include <cstdint>
 
 namespace swgb {
+// 5cdcf0 saves a draw around optional AI creation, reseeds, then draws owner+1d98.
+inline void geniePlayerConstructorRandom(uint32_t &state) {
+    state=genieRandomDraw(state);
+    genieRandomDraw(state);
+}
 struct GenieTroopIdleClock {
     uint32_t elapsed = 0, threshold = 0;
     uint32_t initialOffset = 0, secondaryThreshold = 0;

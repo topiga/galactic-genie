@@ -46,6 +46,7 @@ static void playerUpdateOrderChecks(swgb::Assets &assets) {
         check(game.initScenario(scenario,&error),error.c_str());
         commands={{3,109,109,-1,0}};
         game.invalidateUnitPrototypesForTesting();
+        game.seedLegacyRandomForTesting(1); // Scheduling oracle begins after construction.
         uint32_t expectedState=1;
         for(int player=1;player<=2;++player) {
             const bool queued=(mask&(1u<<unsigned(player-1)))!=0;

@@ -1024,6 +1024,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
 
     rng_.seed(1);
     legacyRandomState_=initialRandomState;
+    if(!rmsCompletionOrder)genieRandomDraw(legacyRandomState_); // 61e057 startup checkpoint
     aiRandomNumbers_.fill(-1);
     gameTime_ = 0;
     localClock_.reset();
@@ -1187,6 +1188,15 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     statusMessage_.clear();
     statusTime_ = 0;
     objects_.reserve(scenario.units.size() * 2);
+    if(!rmsCompletionOrder) {
+        genieRandomDraw(legacyRandomState_); // 61e0a2 after map allocation
+        geniePlayerConstructorRandom(legacyRandomState_); // Gaia is constructed first.
+        genieRandomDraw(legacyRandomState_); // 5d5be9 Gaia scheduling interval
+        genieRandomDraw(legacyRandomState_); // 61e0e5 after Gaia
+        for(size_t player=0;player<worldPlayerCount_;++player)
+            if(players_[player].active)geniePlayerConstructorRandom(legacyRandomState_);
+        genieRandomDraw(legacyRandomState_); // 61e10e after normal players
+    }
     // Player startup research precedes building-completion technologies.
     initializeCivilizationRestrictions();
     refreshAllAutomaticTechnologies();
@@ -1252,6 +1262,12 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     if(postRmsRandomState)legacyRandomState_=*postRmsRandomState;
     initializeCivilizationBonuses();
     refreshAllAutomaticTechnologies();
+    if(!rmsCompletionOrder) {
+        // 623b6e activates mapped non-Gaia owners; 5d2760 saves/reseeds even without AI.
+        for(size_t player=0;player<worldPlayerCount_;++player)
+            if(players_[player].active)legacyRandomState_=genieRandomDraw(legacyRandomState_);
+        genieRandomDraw(legacyRandomState_); // 61e41b final startup checkpoint
+    }
     const Object *hero = nullptr;
     size_t heroCount = 0;
     for (const Object &object : objects_) {

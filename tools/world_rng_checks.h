@@ -25,6 +25,7 @@ static void worldRngChecks(swgb::Assets &assets) {
         swgb::Game game(assets);
         std::string error;
         check(game.initScenario(scenario,&error),error.c_str());
+        game.seedLegacyRandomForTesting(1); // The oracle starts at world update, after startup.
         std::string body="(defrule (true) => ";
         for(int i=0;i<bodyDraws;++i)body+="(generate-random-number 32768) ";
         body+="(set-goal 994 1) (disable-self))";
