@@ -6670,3 +6670,44 @@ The smoke run covers menu flows and60 update/render/present frames with dummy
 sound/music verification; no new audible/live-Windows-playthrough claim is made.
 QuickDesk audio settings were not changed. The user's untracked screenshot is
 unchanged and no compiler or emulator is left running by this work.
+
+
+### Empty-owner startup: recovered controller (18 November 2026)
+
+The precision question above is now narrowed by the original CRT chain:
+636601 → 63b80c → 632b4d → 637118 selects 53-bit precision before WinMain.
+Four executed control-word cases confirm it. A read-only live Windows context
+capture found 0x027f in all twelve threads, but those waiting contexts do not
+identify startup or simulation execution. The simulation temporarily selects
+extended precision, so this is not a universal floating-point setting.
+
+`genieEmptyOwnerStart` now preserves original Y/X sampling, collision-radius
+half offsets, 4999 Command Center checks and the final unused sample, worker
+sex across retries, and factory/completion callback boundaries. Five captured
+vectors and exhaustion run in the permanent player-start test. Factories and
+placement predicates remain explicit callbacks; this helper is not yet called
+by `Game::initRmsSession`.
+
+Eighteen original fallback controls used actual placement, factories and building
+completion for civilizations6/1, three seeds and0/1/3workers. Each tested109
+constructor consumes four draws, completion draws and reseeds once, and each
+83/293 constructor consumes seven draws. The captured registry adds only the
+Command Center and workers: a table-capacity change was not extra annex creation.
+These controls retain an occupied RMS world and explicitly empty one owner's
+primary list; they are not pristine full-session captures.
+
+Shared placement primitives now check inclusive terrain bounds, the strict
+0.05 multiplier threshold and rectangle overlap, with eighteen original reduced
+controls. Half offsets use collisionSize; the placement gate uses clearanceSize.
+Twelve original occupied-worker queries reject in the empty-owner branch,
+where the ordinary RMS query flag skips those workers. Forty-four captured
+worker candidates agree with CC footprint rejection; water, slopes, diplomacy
+and dead-scenery policy are not established by that result. Native UI/pathfinding
+placement cannot be substituted unchanged. Worker retries in the recovered
+controller are unbounded; a production adapter needs safe cancellation and a
+verified viable placement policy before connecting it to the launcher.
+
+Local evidence: `rms-empty-owner-closure-findings-2026-11-18.json`,
+`rms-empty-factory-v5-result-2026-11-18.json`,
+`rms-empty-owner-geometry-oracle-2026-11-18.json`, and
+`rms-empty-owner-occupied-worker-gate-oracle-2026-11-18.json`.

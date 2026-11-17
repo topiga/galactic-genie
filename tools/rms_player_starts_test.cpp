@@ -7,9 +7,11 @@ static void check(bool ok, const std::string &message) {
 }
 #include "rms_player_start_regions_checks.h"
 #include "start_placement_checks.h"
+#include "empty_owner_start_checks.h"
 int main() {
     checkRmsPlayerStartRegions();
     checkStartPlacement();
+    emptyOwnerStartChecks();
     using namespace swgb;
     // Full original handler/initializer/0x4e0740 executed in Unicorn, exact CC EXE
     // c01d78a0...; rms-player-starts-probe-2026-11-13.json. Includes draw32767 offset.
