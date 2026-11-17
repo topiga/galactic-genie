@@ -137,6 +137,7 @@ public:
     void setAmbientRandomForTesting(uint32_t state) { legacyRandomState_=state; }
     uint32_t legacyRandomForTesting() const {return legacyRandomState_;}
     std::optional<uint32_t> worldCheckpointForTesting() const {return worldRandomCheckpoint_;}
+    void focusRmsStartForTesting() {focusRmsStart();}
     std::array<uint32_t,3> idleRandomFieldsForTesting(uint32_t id) const {
         const auto *o=findObject(id);
         return o?std::array<uint32_t,3>{o->idleAcquisition.initialOffset,o->idleAcquisition.secondaryThreshold,
@@ -1136,6 +1137,7 @@ private:
                    const Object *goalObject = nullptr, float clearance = 0.0f);
     bool issueExplore(Object &object,float x,float y,bool force);
     bool queueExplore(Object &object,float x,float y);
+    void focusRmsStart();
     bool queueTacticalAttack(Object &actor,const Object &target);
     void applyTacticalCommands(const std::vector<TacticalCommandQueue::Order> &orders);
     void issueGroupMove(std::vector<Object *> targets, float targetX, float targetY,

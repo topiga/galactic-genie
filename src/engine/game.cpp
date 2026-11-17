@@ -1423,6 +1423,22 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
     return true;
 }
 
+void Game::focusRmsStart() {
+    const auto &list=objectUpdateList(localPlayer_,0);
+    if(list.empty())return;
+    size_t selected=list[0];
+    double nearest=std::numeric_limits<double>::infinity();
+    for(size_t slot=0;slot<list.size();++slot) {
+        const auto &object=objects_[list[slot]];
+        if(object.unit->id!=109)continue;
+        // Original5d1110 queries109 nearest to original (0,0), then falls back to the first primary object.
+        const double x=double(mapSize_)-object.y,y=object.x;
+        const double distance=x*x+y*y;
+        if(distance<nearest){nearest=distance;selected=list[slot];}
+    }
+    lookAt(objects_[selected].x,objects_[selected].y);
+}
+
 bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std::string> &defines,
                           int mapSize, uint32_t &randomState,
                           const std::vector<uint16_t> &civilizations, const RmsSessionOptions &options,
@@ -1451,6 +1467,7 @@ bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std:
     for(uint32_t owner=1;owner<=worldPlayerCount_;++owner)
         hasStartingObjects&=!objectUpdateList(int(owner),0).empty();
     if(hasStartingObjects) {
+        focusRmsStart();
         worldRandomCheckpoint_=genieRandomDraw(legacyRandomState_); // Common61e41b precedes derived starting-age research.
         for(uint32_t owner=1;owner<=worldPlayerCount_;++owner)
             legacyRandomState_=genieRandomDraw(legacyRandomState_); // RMS61e495 owner activation save/reseed.

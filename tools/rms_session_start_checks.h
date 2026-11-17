@@ -5,8 +5,27 @@
 #include <filesystem>
 #include <fstream>
 
+static void rmsStartCameraChecks(swgb::Assets &assets) {
+    // Three original5d1110/4af610 controls, positions in original world axes.
+    const std::vector<std::vector<std::array<int,3>>> cases={
+        {{83,5,5},{109,80,80},{109,20,30}},{{109,20,30},{109,30,20}},{{83,70,60},{293,5,5}}};
+    const uint32_t selected[]={3,1,1};size_t index=0;
+    for(const auto &entries:cases) {
+        swgb::Scenario scenario;scenario.map.width=scenario.map.height=128;scenario.map.tiles.resize(128*128);
+        scenario.playerSlotCount=1;scenario.players[0].active=scenario.players[0].human=true;
+        scenario.players[0].civilization=1;scenario.civilizations.fill(1);scenario.nextUnitId=1;
+        for(const auto &entry:entries){swgb::ScenarioUnit unit;unit.unitId=entry[0];unit.x=entry[1];unit.y=entry[2];
+            unit.player=1;unit.state=2;unit.spawnId=scenario.nextUnitId++;scenario.units.push_back(unit);}
+        swgb::Game game(assets);std::string error;check(game.initScenario(scenario,&error),error.c_str());
+        const auto random=game.legacyRandomForTesting();game.focusRmsStartForTesting();const auto camera=game.cameraForTesting();
+        check(game.lookAtObject(selected[index++]) && game.cameraForTesting()==camera && game.legacyRandomForTesting()==random,
+              "Original starting camera prefers nearest109, preserves ties, otherwise uses first primary object without RNG");
+    }
+}
+
 static void rmsSessionStartChecks(swgb::Assets &assets) {
     rmsFinalizationChecks();
+    rmsStartCameraChecks(assets);
     const auto fixtures=std::filesystem::path(__FILE__).parent_path()/"fixtures";
     swgb::RmsScript script;std::string error;
     std::ifstream input(fixtures/"owned-scouts.rms");
