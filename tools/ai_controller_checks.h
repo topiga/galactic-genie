@@ -106,12 +106,12 @@ static void aiControllerChecks(swgb::Assets &assets) {
     check(game.aiGoalForTesting(1,921)==1,"Random result survives script reload and reading consumes no draw");
     run(2,"(defrule (random-number == -1) => (set-goal 920 1))"
           "(defrule (true) => (generate-random-number -6) (disable-self))"
-          "(defrule (random-number == 4) => (set-goal 921 1))");
+          "(defrule (random-number == 5) => (set-goal 921 1))");
     check(game.aiGoalForTesting(2,920)==1 && game.aiGoalForTesting(2,921)==1,
-          "Per-player results survive wrapper reseeds; original third-step player-two draw3399 keeps negative divisor semantics");
+          "Per-player results survive world reseeds; third-step player-two draw11638 keeps negative divisor semantics");
     run(1,"(defrule (true) => (generate-random-number 0) (generate-random-number 6) (disable-self))"
-          "(defrule (random-number == 1) => (set-goal 922 1))");
-    check(game.aiGoalForTesting(1,922)==1,"Zero limit rejects without consuming draw; fourth-step player-one draw5202 yields one");
+          "(defrule (random-number == 2) => (set-goal 922 1))");
+    check(game.aiGoalForTesting(1,922)==1,"Zero limit rejects without consuming draw; fourth-step player-one draw10525 yields two");
     check(game.init(1,64,&error,1,1),error.c_str());
     game.seedLegacyRandomForTesting(1); // Isolate PER draws from world constructor draws.
     run(1,"(defrule (random-number == -1) => (set-goal 920 1))"

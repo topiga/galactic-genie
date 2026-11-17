@@ -133,7 +133,8 @@ public:
     bool skirmishActive() const { return skirmish_; }
     int matchResult() const { return victoryState_; }
     float matchTime() const { return matchTime_; }
-    void seedLegacyRandomForTesting(uint32_t state) { legacyRandomState_ = state; }
+    void seedLegacyRandomForTesting(uint32_t state) { legacyRandomState_ = state; worldRandomCheckpoint_=state; }
+    void setAmbientRandomForTesting(uint32_t state) { legacyRandomState_=state; }
     uint32_t legacyRandomForTesting() const {return legacyRandomState_;}
     std::array<uint32_t,3> idleRandomFieldsForTesting(uint32_t id) const {
         const auto *o=findObject(id);
@@ -1547,6 +1548,7 @@ private:
     std::mt19937 rng_;
     // shortcut: Shared RMS/upgrade/AI stream; other world consumers still need original call ordering.
     uint32_t legacyRandomState_=1;
+    std::optional<uint32_t> worldRandomCheckpoint_;
     std::array<int32_t,17> aiRandomNumbers_{};
     int mapSize_ = 0;
     std::vector<uint8_t> terrain_;

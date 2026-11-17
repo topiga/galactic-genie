@@ -396,6 +396,7 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     }
     rng_.seed(seed);
     legacyRandomState_=seed;
+    worldRandomCheckpoint_.reset();
     aiRandomNumbers_.fill(-1);
     gameTime_ = 0;
     localClock_.reset();
@@ -1024,6 +1025,8 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
 
     rng_.seed(1);
     legacyRandomState_=initialRandomState;
+    // shortcut: RMS keeps its construction boundary until session finalization is recovered.
+    worldRandomCheckpoint_.reset();
     if(!rmsCompletionOrder)genieRandomDraw(legacyRandomState_); // 61e057 startup checkpoint
     aiRandomNumbers_.fill(-1);
     gameTime_ = 0;
@@ -1266,7 +1269,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
         // 623b6e activates mapped non-Gaia owners; 5d2760 saves/reseeds even without AI.
         for(size_t player=0;player<worldPlayerCount_;++player)
             if(players_[player].active)legacyRandomState_=genieRandomDraw(legacyRandomState_);
-        genieRandomDraw(legacyRandomState_); // 61e41b final startup checkpoint
+        worldRandomCheckpoint_=genieRandomDraw(legacyRandomState_); // 61e41b final startup checkpoint
     }
     const Object *hero = nullptr;
     size_t heroCount = 0;
@@ -16523,6 +16526,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
     }
 
     if(!advanceWorld)return;
+    if(worldRandomCheckpoint_)legacyRandomState_=*worldRandomCheckpoint_; // 61ee03 simulation reseed
     // shortcut: Other HUD/AI emitters remain direct until their opcode payloads are ported.
     localCommands_.drain();
 
@@ -16574,7 +16578,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
         updatePlayerObjects(dt,int(player),true);
     legacyRandomState_=auxiliaryRandom;
     actorOwnerSchedule_.finish(worldPlayerCount_+1);
-    genieRandomDraw(legacyRandomState_);
+    worldRandomCheckpoint_=genieRandomDraw(legacyRandomState_); // 61f9c1 stores world+90
 }
 
 // Picks the SLP frame for a graphic given a world-space facing and time.

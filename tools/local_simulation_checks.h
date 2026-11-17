@@ -44,8 +44,11 @@ static void localSimulationChecks(swgb::Assets &assets) {
     const auto position=game.objectPosition(2);
     const float remaining=game.productionRemainingForTesting(1);
     const auto camera=game.cameraForTesting();
+    const uint32_t randomBeforeRejectedFrame=game.legacyRandomForTesting();
     swgb::InputState input;input.scrollX=1;
     game.updateLocal(1033,.033f,input);
+    check(game.legacyRandomForTesting()==randomBeforeRejectedFrame,
+          "Non-admitted camera frame neither reseeds nor advances simulation RNG");
     check(game.cameraForTesting()!=camera && game.objectPosition(2)==position &&
           game.productionRemainingForTesting(1)==remaining && game.aiGoalForTesting(2,980)==1,
           "Camera updates between admitted ticks without movement, production or AI advancement");

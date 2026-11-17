@@ -38,7 +38,9 @@ static void upgradeRngChecks(swgb::Assets &assets) {
     } restore{commands,commands};
     swgb::Game game(assets);std::string error;
     const auto observe=[&](uint32_t expectedState) {
-        // Observe two consecutive draws through the real PER action/fact interface, no RNG getter.
+        // The oracle ends inside the world step; preserve that explicit boundary for PER observation.
+        check(game.legacyRandomForTesting()==expectedState,"Original upgrade leaves the exact full CRT state");
+        game.seedLegacyRandomForTesting(game.legacyRandomForTesting());
         uint32_t next=expectedState;
         swgb::genieRandomDraw(next); // Player one saves a draw before entering PER.
         const int first=int(swgb::genieRandomDraw(next))+1;
@@ -51,7 +53,7 @@ static void upgradeRngChecks(swgb::Assets &assets) {
         check(game.loadAiSourceForTesting(1,"original-upgrade-rng",source,{},&error),error.c_str());
         game.update(0,{});
         check(game.aiGoalForTesting(1,950)==1 && game.aiGoalForTesting(1,951)==1 && game.aiGoalForTesting(1,952)==1,
-              "Original upgrade RNG feeds two consecutive AI draws in the same ordered PER pass");
+              "Original upgrade result feeds two consecutive AI draws at the explicit observation boundary");
     };
     for(const auto &c:cases) {
         commands=restore.original;

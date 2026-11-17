@@ -34,9 +34,9 @@ static void worldRngChecks(swgb::Assets &assets) {
         check(game.aiGoalForTesting(1,994)==1,"Empty-world controlled PER body executes once");
 
         // Reloading the controller preserves the per-player random result and
-        // shared stream. Observe the recorded final state through two PER draws
-        // on the next step, after player one's unconditional saved draw.
-        uint32_t next=c.finalState;
+        // saved world seed. Observe two PER draws after player one's saved draw.
+        check(game.legacyRandomForTesting()==c.finalState,"Original first-step full CRT matches");
+        uint32_t next=(c.finalState>>16)&32767u;
         swgb::genieRandomDraw(next);
         const int first=int(swgb::genieRandomDraw(next))+1;
         const int second=int(swgb::genieRandomDraw(next))+1;
@@ -50,6 +50,7 @@ static void worldRngChecks(swgb::Assets &assets) {
             "(defrule (random-number == "+std::to_string(first)+") => (set-goal 996 1) (generate-random-number 32768) (disable-self))\n"
             "(defrule (random-number == "+std::to_string(second)+") => (set-goal 997 1) (disable-self))\n";
         check(game.loadAiSourceForTesting(1,"world-rng-observe",observe,{},&error),error.c_str());
+        game.setAmbientRandomForTesting(0xdeadbeefu);
         game.update(0,{});
         const std::string label="Original empty-world RNG: "+std::to_string(c.slots)+
             " instantiated slots, only human one active, "+std::to_string(bodyDraws)+" discarded AI draws";
