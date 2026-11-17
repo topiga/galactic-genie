@@ -6570,3 +6570,103 @@ and tech-level-command-center sound. No failure was disabled. Final logs use the
 60 update/render/present frames plus streamed audio/EOF handling, not an audible
 manual playthrough. Windows reference audio remained Off; the SSH master was
 closed. The untracked player-conquest-result.png hash remains unchanged.
+
+
+### Tactical payloads and RMS session-finalization controller (2026-11-18)
+
+The shared tactical queue now compares the full recovered header: issuing owner,
+opcode, target ID, target owner, XYZ, range and three flags. The original emitter
+identifies the byte previously described as a class as the TARGET OWNER. Commands
+700 and729 normalize range to zero before staging. A further correction to the
+previous interpretation: grouping compares adjacent records and the packet uses
+the LAST record's header. Signed-zero and NaN-chain controls establish this;
+actor IDs remain in submission order. Native tests retain the physical ring-wrap,
+capacity200, pause and session-reset coverage and add all header discriminators.
+
+Native military attack decisions now stage command700 instead of immediately
+installing an attack. At local application they revalidate actor ownership,
+clear the old task for forced activation, and attempt the captured target ID.
+A missing target leaves the old task cleared. Only the tactical planner emitter
+changed; action-child movement and automatic combat acquisition remain direct.
+The current native emitter uses flags1/0/1. Native attack construction, capability
+checks and pathing remain adapters, not original actor+1e8 parity.
+
+Evidence: `tactical-command-expansion-findings-2026-11-17.json` and its grouping,
+activation and issuer controls: 64 new original-instruction cases. Native checks
+cover delayed attack application, pause, missing targets, transferred actors and
+session replacement. These controls also recover710 point movement and706 stop,
+but source audit finds no native military planner emitter to connect yet.
+`selectAiMilitaryGroups` and `rankAiTargets` still have test-only callers.
+Readiness stop uses a separate local opcode1 path; group-state7 movement uses724,
+so indiscriminately routing action movement through710 would be incorrect.
+
+RMS finalization order is now established by the original call graph and chained
+execution: map completion, two checkpoints, three owner-update passes including
+Gaia, another checkpoint, common owner finalizers, final saved-world checkpoint,
+owner activation wrappers, then derived starting resources/age research. The
+starting-age loop601f90..6026be follows the return from base-world61df00 at6004f6.
+The conditional601636 draw belongs to special unit826/terrain40 setup, and was
+not added as an unconditional normal-mode draw.
+
+`genieRmsPrepasses` reproduces that controller's three ascending passes. The native
+session uses existing primary-object and owner-AI callbacks at zero elapsed time;
+AI programs are installed after initialization. For nonempty owner primary lists,
+the common tail saves its world checkpoint before activation and age research.
+`initRms` remains the generation-only boundary; `initRmsSession` now includes these
+later phases. Tests distinguish its post-research ambient CRT from its saved world
+seed, which the next simulation entry restores.
+
+Original controls: 54 prepass cases (including initial owner selector-1), nine
+nonempty-owner common-tail cases, nine chained cases, one retained age-input chain,
+and five actual age-research cases. The 27 prepass goldens and nine chain goldens
+are checked directly by the native controller regression. For the existing6/1
+fixture, generation ends at3895143042; controlled no-object-draw finalization
+reaches checkpointCRT705322253, savedworld10762 and post-activationCRT9653.
+Actual age3/4/5/6 controls entered at9653 finish at4799/18572/25671/25671. Those are
+composed phase results, not an uninterrupted populated-world original execution.
+Evidence ledger: `rms-session-finalization-findings-2026-11-18.json`.
+
+Limits: native object/manager callbacks throughout the startup passes are not yet
+verified against full populated original execution; original selector/global-pass
+state and nonlocal owner camera bookkeeping remain incomplete. Empty primary-owner lists
+enter original5d1110 randomized starting-building/worker creation; the native
+adapter leaves the final checkpoint unresolved for that branch. Camera selection
+prefers a queried Command Center, not simply the first109. No universal RMS
+startup, complete tactical controller or whole-game parity claim follows.
+
+
+The native nonempty RMS start now focuses the local camera using the recovered
+109 query: nearest to original(0,0), stable ties, otherwise the first primary
+object. Three original camera fixtures pass through the native axis conversion.
+This adds no RNG calls. The desktop launcher still invokes `initSkirmish`; RMS
+session startup is currently exercised through its engine API and tests rather
+than presented as a newly completed launcher game mode.
+
+Further research retained for the next integration: fourteen original group-gather
+controls recover724 movement versus local opcode1 Stop, strict adjusted-distance
+comparison, task admission, retry saturation and command priority. The missing
+ordered group records, phase7/8/9 lifecycle and resumable budget scheduler prevent
+an honest direct bridge from the standalone grouping/target helpers. See
+`tactical-military-bridge-findings-2026-11-18.json`.
+
+Empty-owner5d1110 placement now has76 reduced original controls and38 independent
+extended-precision comparisons, with collision/factory/completion callbacks
+explicitly modeled. CC exhaustion uses4999 placement checks and10000 draws;
+workers retry positions without rerolling sex and read resource84 after CC
+completion. Actual startup FPU mode remains unresolved: four cases change float
+positions between tested precision modes. Actual collision and factory effects
+also remain open, so this branch is still not installed in the native engine.
+See `rms-empty-owner-placement-findings-2026-11-18.json`; callback draw variants
+verify interleaving, not the actual constructors. No emulators remain running.
+
+
+Final verification for this change: focused local/queue/lifecycle checks, the
+RMS session/age runner, the complete bonus/research/AI suite including camera
+fixtures, combat, fog/conquest and desktop smoke pass. Native core checks use
+ASan/UBSan. Compatibility retains the same five failures without disabling or
+relaxing them; see `rms-finalization-fixes.log`. Final external-build logs use
+`rms-finalization-`, `rms-camera-` and `rms-session-finalization-native` prefixes.
+The smoke run covers menu flows and60 update/render/present frames with dummy
+sound/music verification; no new audible/live-Windows-playthrough claim is made.
+QuickDesk audio settings were not changed. The user's untracked screenshot is
+unchanged and no compiler or emulator is left running by this work.
