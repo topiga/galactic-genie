@@ -6054,3 +6054,39 @@ selection of a farther static wall over a nearer mobile unit. Existing mobile
 ranking, visibility-query, dead-target and retaliation tests also pass. Evidence:
 `visible-sort-slot-integration-contract-2026-11-17.json` and the previously
 retained sort/consumer oracles. Log: `target-slots-local.log`.
+
+### Live Windows movement-head observation (2026-11-17)
+
+QuickDesk input and SSH read-only process inspection were restored. The running
+Clone Campaigns executable hash matches the retained reference. In the current
+Confederacy match, a point command moves worker7557 from(19.5,30.5) to
+(19.385416,32.46875). A1000-sample observer, sleeping20ms between reads, captures
+its controller head installing movement vtable654d5c/type1/state4 with primary0
+and saved targetID-1. At samples226..227 the same head/action remains attached in
+completed state1 with the destination intact; sample228 has an empty head.
+The other two sampled workers retain empty heads throughout.
+
+This independently confirms the lifecycle seen in original-routine controls.
+Sampling is not synchronized to simulation updates and is not atomic, so it
+establishes an observable completed-but-attached state, not a fixed40ms retirement
+delay. No native movement-head lifecycle, livestock herding or transport trip
+is claimed as implemented by this observation. Evidence and source hashes:
+`live-movement-head-findings-2026-11-17.json`, backed by the read-only sampler and
+full `live-movement-heads-2026-11-17.json` capture. At the user's request, reference
+music and sound were set to Off for these comparisons; no audible check was run.
+
+A sequential differential then ran306 queries through actual41b300/41b450 and
+the native ranker plus shared slot bank, with zero mismatches in consumed IDs and
+mobile flags. Coverage includes both preference/owner modes,128→2 shrink,
+empty→mixed queries, duplicate IDs, class7/43/49, range thresholds and300 seeded
+random populations of0..128 candidates. Stale/padded slots remain in place.
+The oracle retains all128 original slots and PE/header/executable hashes:
+`visible-sort-slots-differential-oracle-2026-11-17.json`. This validates the bounded
+selection stage, not live message admission or an original new-game reset.
+
+Combined validation passes focused ASan/UBSan, bonus/research/healing/AI,
+combat/gathering/garrison and rebuilt desktop menu/preferences/60-frame dummy
+render/audio checks. Compatibility retains exactly the same five documented
+baseline failures. Logs: `target-slots-{local,bonus,combat,desktop,fixes}.log`.
+Windows was left at the game menu with reference music/sound Off; the Mac's
+system audio settings were not changed.
