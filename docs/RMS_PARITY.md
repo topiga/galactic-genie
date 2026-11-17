@@ -6135,3 +6135,64 @@ Focused ASan/UBSan passes original score/query/list checks, native static-curren
 hit switching, third-winner no-switch, four-versus-five mobile retention, explicit
 order boundaries, and point movement attachment/pause/arrival/retirement/Stop.
 Bonus/research/healing/AI checks pass. Logs: `hit-movement-{local,bonus}.log`.
+
+The broader compatibility run exposed an explicit-attacker admission regression:
+wild predators must bypass ordinary visible-query owner filters. Corrected the
+shared admission path; `animal-targeting` passes again, including retaliation.
+Focused and combat ASan/UBSan checks pass (`hit-explicit-{local,combat}.log`).
+`hit-explicit-fixes.log` returns to the five existing compatibility failures:
+instruction speaker color, resource selection, upgrade menu, upgraded drop site,
+and Command Center technology sound. These are not claimed fixed.
+
+An unattended native Conquest fixture completed after 1046.93 simulation seconds
+with an AI victory, 5881 attacks and 17 kills, without sanitizer errors. This uses
+an authored flat map and native AI, not a seed-matched original RMS/AI session;
+it establishes a completed match, not whole-game parity. Retained evidence:
+`native-one-conquest-run-2026-11-17.jsonl` and its manifest.
+
+A five-unit scenario saved by the original Windows editor exposed three layout
+differences in player-data version 1.30: six resource fields, no extra word after
+allied-victory flags, and no sixteen player bytes before map data. The parser now
+handles that layout while retaining the existing older SCX path. A focused
+ASan/UBSan regression checks all five units/positions/resources, malformed and
+truncated input rejection, the packaged version 1.22 SCX, and two original medic
+scenarios. Proprietary fixtures remain outside the repository.
+
+### Original editor scenario comparison (2026-11-17)
+
+Imported original object ID zero is now assigned a free native ID at the public
+scenario boundary, with garrison, supported trigger-object and selected-object
+references updated together. RMS allocation stays unchanged. Duplicate zero IDs
+and signed-reference overflow are rejected before initialization. The source
+scenario remains unchanged. Regression coverage includes garrison, removal and
+destroyed-object victory triggers, future allocation and malformed IDs.
+
+A shared original-editor fixture contains three Empire advanced mounted troopers
+against two computer-controlled troops, all initially at 145 HP and with zero
+resources. Windows read-only sampling retained 1500 snapshots through 242.347
+simulation seconds, with no read failures and one snapshot crossing a step. The
+original moves enemy ID3 away by the 675ms sample; it survives at full HP. Enemy
+ID4 is first observed dead at 6.357s. Human IDs0/1/2 retain 145/85/145 HP. These
+are sampled event bounds, not exact callback timestamps.
+
+Native loading now preserves all five units and their original positions under
+the coordinate transform. Original ID0 maps to native ID5, which affects the
+existing ID-based acquisition delay. The native battle instead kills both
+enemies (8.1s and 10.5s of requested updates); human HP is 145/65/25 in original
+ID order. Native scenario matchTime remains zero and matchResult remains -1;
+frame/30 is the runner input-time basis, not a verified original clock.
+
+This is a measured mismatch, not a complete matched game. Scenario initialization
+clears aiPlayers_, while the parser skips AI payloads; native imported scenarios
+therefore lack the original computer controller visible in this capture. Resolve
+scenario AI activation and then compare acquisition/attack timing with identical
+controller conditions. Do not tune damage or timing constants to fit this single
+fight. Retained local evidence: `live-small-combat-summary-2026-11-17.json`,
+`native-small-combat-manifest-2026-11-17.json` and their raw captures.
+
+Final corrected-import validation: focused lifecycle and import regressions,
+combat/gathering/garrison checks, and desktop menu plus 60-frame render/audio
+smoke pass. The rebuilt compatibility suite retains the same five known failures
+listed above (`scenario-import-fixes.log`); no new failures were observed.
+Windows reference music and sound were rechecked at Off; no system-wide audio
+settings were changed.
