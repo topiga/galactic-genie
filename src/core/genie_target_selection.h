@@ -7,6 +7,10 @@
 #include <vector>
 
 namespace swgb {
+inline bool genieGenericTroopController(int cls) {
+    return cls==43 || cls==44 || cls==47 || cls==48 || cls==49 || cls==52 ||
+           cls==53 || cls==55 || cls==56 || cls==57;
+}
 // Original551b80/551ba0 uses axis-aligned footprint gaps. Its X delta and
 // X gap are stored as floats; the Y calculation stays in the x87 register.
 // Double models the unstored intermediates here; extreme x87 precision remains

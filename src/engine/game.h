@@ -1054,7 +1054,7 @@ private:
     bool hasCarry(const Object &worker) const;
     bool depositAt(Object &worker, const Object &building);
 
-    bool engagedWithCurrentTarget(const Object &object) const;
+    bool retainCurrentTargetOnHit(const Object &object) const;
     bool footprintContainsScreen(const Object &object, float screenX, float screenY,
                                  int screenW, int screenH) const;
     void syncFarmTerrain(Object &farm, bool dying = false);

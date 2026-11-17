@@ -138,5 +138,27 @@ static void targetSelectionGameplayChecks(swgb::Assets &assets) {
     check(replacement.issueAttackForTesting(shooter,deadBuilding),"Building death discriminator");
     replacement.damageObjectForTesting(deadBuilding,100000);replacement.update(.1f,{});
     check(replacement.attackTargetForTesting(shooter)==0,"Building death does not use the non-building immediate event");
-    std::puts("PASS: integrated acquisition, fallback and registered dead-target reselection");
+    swgb::Game pursuit(assets);
+    check(pursuit.initScenario(scenario,&error),error.c_str());
+    pursuit.setDiplomacyForTesting(1,2,3);pursuit.setDiplomacyForTesting(2,1,3);
+    const auto pursuer=pursuit.spawnObjectForTesting(1,307,1,27.f,40.5f);
+    const auto distant=pursuit.spawnObjectForTesting(1,307,2,30.5f,40.5f);
+    const auto hitter=pursuit.spawnObjectForTesting(1,307,2,28.f,40.5f);
+    check(pursuit.issueAttackForTesting(pursuer,distant,true),"Automatic pursuit before a different attacker hits");
+    pursuit.damageObjectForTesting(pursuer,1,hitter);
+    check(pursuit.attackTargetForTesting(pursuer)==distant && pursuit.objectTaskReferencesForTesting(distant)==1 &&
+          pursuit.objectTaskReferencesForTesting(hitter)==0,"Human troop retains ordinary current target outside weapon range when hit");
+    auto &special=const_cast<swgb::dat::DatFile &>(assets.dat()).civs.at(1).units.at(72);
+    Restore restoreSpecial{special,special};special.cls=6;
+    swgb::Game exception(assets);
+    check(exception.initScenario(scenario,&error),error.c_str());
+    exception.setDiplomacyForTesting(1,2,3);exception.setDiplomacyForTesting(2,1,3);
+    const auto defender=exception.spawnObjectForTesting(1,307,1,27.f,40.5f);
+    const auto specialTarget=exception.spawnObjectForTesting(1,72,2,31.f,40.5f);
+    const auto newAttacker=exception.spawnObjectForTesting(1,307,2,28.f,40.5f);
+    check(exception.issueAttackForTesting(defender,specialTarget,true),"Special current-class retaliation discriminator");
+    exception.damageObjectForTesting(defender,1,newAttacker);
+    check(exception.attackTargetForTesting(defender)==newAttacker,
+          "Current class6 is not blocked by the ordinary-target retention veto");
+    std::puts("PASS: acquisition, fallback, dead-target reselection and pursuit retention on hit");
 }

@@ -3074,14 +3074,15 @@ float Game::attackRange(const Object &source, const Object &target) const {
     return std::max(contact, weaponRange);
 }
 
-// A unit already fighting a live target within reach keeps it when others
-// hit it; it only turns on a new attacker when idle or its target is gone or
-// out of reach. Otherwise every hit from a crowd would retarget it and it
-// would never get a shot off.
-bool Game::engagedWithCurrentTarget(const Object &object) const {
+// Original human troop hit policy can retain a pursuit even outside weapon range.
+bool Game::retainCurrentTargetOnHit(const Object &object) const {
     if (!object.attackTargetId) return false;
     const Object *current = findObject(object.attackTargetId);
     if (!current || !current->active || current->hidden || !combatTargetVisible(object,*current)) return false;
+    if(object.player>0 && players_[size_t(object.player-1)].human && genieGenericTroopController(object.unit->cls)) {
+        const int cls=current->unit->cls;
+        if(cls!=18 && cls!=6 && cls!=10 && cls!=9)return true;
+    }
     const float dx = current->x - object.x, dy = current->y - object.y;
     const float reach = attackRange(object, *current) + 0.5f;
     return dx * dx + dy * dy <= reach * reach;
@@ -9921,8 +9922,7 @@ void Game::acquireAutomaticTarget(Object &source) {
     // The original generic controller uses mobile-first scoring for these classes.
     // Class43 retains its adapter until persistent unwritten sort slots are modeled.
     const int actorClass = source.unit->cls;
-    const bool scored = actorClass == 44 || actorClass == 47 || actorClass == 48 || actorClass == 49 ||
-        actorClass == 52 || actorClass == 53 || actorClass == 55 || actorClass == 56 || actorClass == 57;
+    const bool scored = genieGenericTroopController(actorClass) && actorClass != 43;
     std::vector<GenieTargetCandidate> candidates;
     if (scored) {
         source.targetExclusions.erase(std::remove_if(source.targetExclusions.begin(), source.targetExclusions.end(),
@@ -10232,7 +10232,7 @@ void Game::damageObject(Object &object, int damage, uint32_t attackerId) {
         canAttackTarget(object, *attacker) &&
         object.attackMode != AttackMode::Passive &&
         (!object.attackTargetId || object.attackAutomatic) &&
-        !engagedWithCurrentTarget(object)) {
+        !retainCurrentTargetOnHit(object)) {
         const float dx = attacker->x - object.x;
         const float dy = attacker->y - object.y;
         const float distanceSquared = dx * dx + dy * dy;

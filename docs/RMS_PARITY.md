@@ -5941,3 +5941,19 @@ installation, nearby-herd propagation and external transport planning are mapped
 Evidence: `return-live-owned-and-transport-findings-2026-11-17.json` and its
 listed oracles. Authored callbacks/recording setters delimit those controls;
 no full herding or transport trip is claimed.
+
+Ten original post-selection retaliation controls add a necessary retention veto:
+a human-mode generic troop retains its existing ordinary-class target after a
+hit even outside weapon range. Current classes18,6,10,9 are exceptions. Source
+classes49/52 and current classes49/52 are controlled explicitly. Native human
+troop pursuit now applies that veto to a live visible current target; the prior
+range-only retention test remains the fallback for other families/owners and
+class exceptions. Tests verify preserved target ownership/reference counts and
+the class6 discriminator. Explicit-order, stance, visibility and other positive
+switch gates retain their native policies. This is not a full port of message
+1f4/20f allocation, group policy, selection and reachability.
+
+Evidence: `retaliation-selection-findings-2026-11-17.json` and its10 original
+branch controls. Focused ASan/UBSan checks pass (`visibility-retaliation-local.log`).
+Generic controller classification is shared with initial acquisition; class43
+still retains its previously documented sorting adapter.
