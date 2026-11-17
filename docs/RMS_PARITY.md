@@ -5738,3 +5738,18 @@ controller entry point. Evidence:
 `visible-specialized-selector-findings-2026-11-17.json`. Native bucket ordering
 and complete child-controller timing remain open; these tests do not establish
 full simulation or live-match parity.
+
+The generic path is now mapped statically:5b7440→420930→41a150 selects a
+candidate, then41c880 issues actor virtual1e8 and records attack task258.
+Constructor5b6af0 supplies44 requested classes. Selection recategorizes the query,
+includes the existing target and recent history, caps candidate records at128,
+calculates metrics in41b050, normalizes scores in41b300, sorts preference tiers
+in41b450 and applies reachability/exclusion handling. Strict score comparisons
+retain equal candidates within those tiers; they do not prove a universal final
+tie policy. The nearby nearest helper5b70d0 only sets an auxiliary target.
+
+Evidence: `visible-generic-troop-selector-findings-2026-11-17.json`, with original
+PE and assembly hashes. Exact score weights, history-category meanings and the
+full retaliation path still need decoding and runtime controls. Native nearest
+acquisition remains an approximation; replacing just its equal-distance rule
+would not reproduce this original shared candidate pipeline.
