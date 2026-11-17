@@ -5753,3 +5753,28 @@ PE and assembly hashes. Exact score weights, history-category meanings and the
 full retaliation path still need decoding and runtime controls. Native nearest
 acquisition remains an approximation; replacing just its equal-distance rule
 would not reproduce this original shared candidate pipeline.
+
+### Resource approach completion and troop score controls (2026-11-17)
+
+A worker approaching an already-felled tree previously released its movement
+child and gathered in the arrival update. Supported action110 now uses the same
+movement-completion branch as post-felling state4: enter6 and return, enter7 on
+the next update and return, then gather. The completed approach is captured
+before releasing its reference; initial in-range commands without a child keep
+their separate native entry behavior. This changes a shared transition, not a
+per-resource delay. Regression checks cover child reference release, unchanged
+resource/carry on both transition updates, pause, later gathering and no-child
+entry. Focused ASan/UBSan checks pass (`troop-child-final-local.log`). Evidence:
+`gather-arrival-child-timing-audit-2026-11-17.json` and its retained original v5
+trace. Physical path-arrival and initial action setup remain native adapters.
+
+Eleven executable original controls now isolate41b300 scoring and41b450 sorting:
+five scoring fixtures verify weights10/75, existing-target bonus15, history
+weight10, separate flag1 statistics and the near-zero-spread branch. Six sorting
+fixtures verify tier ordering, equal-score retention and the unusual last-loop
+bound: with two flag0 and two flag1 candidates and prefer=false, only the two
+flag0 output slots are written. The unwritten outputs must not be treated as
+newly selected candidates. Evidence and reproducible harness:
+`visible-score-stage-controls-oracle-2026-11-17.json` and
+`visible-score-stage-controls-2026-11-17.py`. Owner/range getters and candidate
+records are authored boundaries; these controls do not execute full acquisition.

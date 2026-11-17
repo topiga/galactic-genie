@@ -6854,6 +6854,8 @@ void Game::updateGathering(Object &worker, float dt) {
         approach(worker, *resource, workRange);
         return;
     }
+    const bool completedResourceApproach = worker.resourcePreparationState == 0 &&
+        worker.gatherChildReference == resource->spawnId;
     if (worker.resourcePreparationState != 12 && worker.resourcePreparationState != 4)
         setTaskReference(worker.gatherChildReference,0);
     const bool farming =
@@ -7046,7 +7048,7 @@ void Game::updateGathering(Object &worker, float dt) {
                 worker.animTime = 0.f; worker.initialFrame = 0;
                 return;
             }
-            if (worker.resourcePreparationState == 4) {
+            if (worker.resourcePreparationState == 4 || completedResourceApproach) {
                 setTaskReference(worker.gatherChildReference,0);
                 worker.resourcePreparationState = 6;
                 return;

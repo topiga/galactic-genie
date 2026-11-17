@@ -32,6 +32,30 @@ static void fellingAnimationChecks(swgb::Assets &assets) {
     game.update(.1f,{});
     check(game.objectCarriedAmount(worker)>0.f && game.objectResourceAmount(tree)<100.f,
           "Completed animation preparation returns to resource gathering");
+    check(game.stopUnitForTesting(worker),"Release felled tree before arrival test");
+    const auto newcomer=game.spawnObjectForTesting(1,83,1,22.f,40.5f);
+    check(game.issueGatherForTesting(newcomer,tree),"Approach an already-felled resource");
+    game.update(.1f,{});
+    check(game.objectTaskReferencesForTesting(tree)==2,"Resource approach owns a movement child");
+    game.moveObjectForTesting(newcomer,27.f,40.5f);
+    const float remaining=game.objectResourceAmount(tree);
+    for(int phase=0;phase<2;++phase) {
+        game.update(.1f,{});
+        check(game.objectTaskReferencesForTesting(tree)==1 &&
+              game.objectCarriedAmount(newcomer)==0.f && game.objectResourceAmount(tree)==remaining,
+              "Already-felled arrival retires movement then faces and enters work without gathering");
+        game.updatePaused(1.f,{});
+        check(game.objectCarriedAmount(newcomer)==0.f,"Pause cannot advance resource child completion");
+    }
+    game.update(.1f,{});
+    check(game.objectCarriedAmount(newcomer)>0.f && game.objectResourceAmount(tree)<remaining,
+          "Already-felled approach gathers only after facing and work entry");
+    check(game.stopUnitForTesting(newcomer) && game.issueGatherForTesting(newcomer,tree),
+          "Reassign beside the felled tree without a movement child");
+    const float carried=game.objectCarriedAmount(newcomer);
+    game.update(.1f,{});
+    check(game.objectCarriedAmount(newcomer)>carried,
+          "No-child in-range entry does not inherit a movement-completion delay");
     auto &raw=const_cast<swgb::dat::DatFile &>(assets.dat()).civs.at(0).units.at(349);
     struct Restore { swgb::dat::Unit &unit, original; ~Restore(){unit=std::move(original);} } restore{raw,raw};
     for(auto &storage:raw.resourceStorages)
