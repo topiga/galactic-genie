@@ -6196,3 +6196,65 @@ smoke pass. The rebuilt compatibility suite retains the same five known failures
 listed above (`scenario-import-fixes.log`); no new failures were observed.
 Windows reference music and sound were rechecked at Off; no system-wide audio
 settings were changed.
+
+### Scenario personalities and live acquisition timing (2026-11-17)
+
+The original scenario editor uses AI type0 custom,1 standard,2 none. Its third
+name array identifies the PER personality and its third payload embeds that
+source; these are now retained by the parser. Original serializer/editor evidence
+and malformed/custom-payload regression provenance are retained in
+`scenario-ai-contract-2026-11-17.json`. Unknown type bytes are retained, then
+rejected for active computer players at startup rather than silently activated.
+
+`initScenario` now stages computer programs before changing the world, skips
+human/inactive/None players, and activates them after initialization without
+running rules during loading. Difficulty is an explicit validated0..4 argument
+(defaultModerate); defines and runtime difficulty facts agree. Missing later
+scripts preserve the previous game and AI. Embedded source is supported with
+packaged includes. External custom include files are not resolved: unsupported
+names fail explicitly. Existing filesystem AI loading remains available through
+its previous API.
+
+Assets resolves the original56 named PER resources directly from expansion/base
+gamedata DRS archives. A synchronous AiProgram source resolver handles includes
+without a filesystem fallback. Case-insensitive include deduplication, cycles,
+resolver lifetime, missing resources and path rejection are checked. Proprietary
+script bodies remain in the user's installation, outside the repository.
+
+The shared five-unit fixture now activates648 original rules for computerplayer2
+at Easy difficulty; player1 has no AI program. The complete120-second native
+capture still produces the earlier combat outcome: enemy3/4 die, with human
+original0/1/2 HP145/65/25. Script activation alone does not supply the original
+exploration/tactical controller. The runtime also reports unsupported original
+facts/actions, including map-type, set-difficulty-parameter and resource-found;
+full AI behavior is not claimed.
+
+A fresh350-snapshot read-only Windows capture confirms identical initial unit
+positions and HP, with no read failures. Human originalIDs0/1/2 first show attack
+task600/action9 at1504/1661/1961ms and movement at1661/1811/2111ms. Native first
+sampled target and movement are0.4/0.2/0.3 seconds respectively. Enemy3 receives
+task610/action1 at150ms, then task605/action4, and moves by525ms; it survives and
+travels across the map. This is not labeled fleeing from position alone. Capture
+samples bound event times; they do not prove a150ms child-action delay.
+
+Original generic constructor5b6dab overrides the base AI3000ms interval with
+1500ms and41e410 draws a threshold1125..1874ms. The base constructor consumes
+three prior CRT draws, so substituting just one random delay would change the RNG
+stream. The live game thresholds for human0/1/2 were1407/1466/1788ms. Original
+idle selection uses strict elapsed>threshold, task/control gates and admitted
+owner delta; the ordinary no-target path resets elapsed without resampling its
+threshold. Native ID-staggered0.1..0.45s initial and0.45..0.61s repeat delays remain
+unmatched. Exact owner admission, event paths and RNG lifecycle must be integrated
+together before claiming timing parity; no speculative timer constant was added.
+Corrected static contract: `scenario-idle-acquisition-contract-2026-11-17.json`.
+
+Reproducible local comparison with input/executable hashes, ID0->5 mapping and
+clock limitations: `scenario-ai-timing-comparison-2026-11-17.json`. The original
+RNG was not seed-matched and neither scenario run establishes completed Conquest
+parity. Windows music/sound remainOff; the existing editor contents were saved as
+`codex_editor_preserved_20261117_ai` before reloading the shared fixture.
+
+Validation: parser and focused lifecycle/AI tests pass ASan/UBSan; broad combat
+checks and desktop menu/render/audio smoke pass. The compatibility suite remains
+at its five previously documented failures, with no new failure observed. Logs:
+`scenario-ai-{local,combat,desktop,fixes}.log` in the native build directory.
