@@ -23,6 +23,8 @@ static void check(bool value, const char *message) {
 #include "selection_checks.h"
 #include "civilization_checks.h"
 #include "scenario_import_checks.h"
+#include "scenario_ai_checks.h"
+#include "ai_source_checks.h"
 #include "conquest_checks.h"
 #include "fog_edge_checks.h"
 #include "rms_spawn_checks.h"
@@ -293,6 +295,8 @@ int main(int argc, char **argv) {
         if(allCivilizations || conquestMatch) {civilizationMatches(assets,conquestMatch);return 0;}
         if(playerConquest) {swgb::Game game(assets);playerMatch(game,assets,renderer,true);return 0;}
         scenarioImportChecks(assets);
+        aiSourceChecks(assets);
+        scenarioAiChecks(assets);
         fogEdgeChecks(argv[1]);
         rmsSpawnChecks(assets);
         rmsElevationImportChecks(assets);

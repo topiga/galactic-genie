@@ -922,12 +922,51 @@ void Game::updateSkirmish(float dt) {
     if (matchTime_ >= 45) updateSkirmishArmy(player);
 }
 
-bool Game::initScenario(const Scenario &scenario, std::string *err) {
+bool Game::initScenario(const Scenario &scenario, std::string *err, int difficulty) {
+    if (difficulty < 0 || difficulty > 4) {
+        if (err) *err = "scenario difficulty must be between hardest (0) and easiest (4)";
+        return false;
+    }
+    static constexpr const char *difficultyDefines[] = {
+        "DIFFICULTY-HARDEST", "DIFFICULTY-HARD", "DIFFICULTY-MODERATE",
+        "DIFFICULTY-EASY", "DIFFICULTY-EASIEST"};
+    std::array<AiPlayerState,17> computers;
+    const AiProgram::SourceLoader sourceLoader = [this](const std::string &name,
+            std::string &source, std::string *error) {
+        return assets_.readAiSource(name, source, error);
+    };
+    for (size_t i = 0; i < scenario.players.size(); ++i) {
+        const auto &player = scenario.players[i];
+        if (!player.active || player.human || player.aiType == 2) continue;
+        if (player.aiType > 2) {
+            if (err) *err = "unsupported scenario AI type " + std::to_string(player.aiType);
+            return false;
+        }
+        std::string name = player.aiName;
+        if (name.empty()) name = player.aiType == 1 ? "RandomGame" : "scenario-player" + std::to_string(i+1);
+        const std::string normalized = normalizeAiSymbol(name);
+        if (normalized.size() < 4 || normalized.substr(normalized.size()-4) != ".per") name += ".per";
+        auto &state = computers[i+1];
+        const std::unordered_set<std::string> defines{difficultyDefines[difficulty]};
+        const bool loaded = player.aiSource.empty()
+            ? state.program.load(name, defines, err, sourceLoader)
+            : state.program.loadSource(name, player.aiSource, defines, err, sourceLoader);
+        if (!loaded) return false;
+        state.loaded = state.scripted = true;
+    }
+    const auto initialize = [&](const Scenario &imported) {
+        if (!initScenario(imported,err,false)) return false;
+        difficulty_ = difficulty;
+        for (size_t player = 1; player < computers.size(); ++player)
+            computers[player].age = aiTechLevel(int(player));
+        aiPlayers_ = std::move(computers);
+        return true;
+    };
     // Original scenario IDs include zero; native commands reserve it for no object.
     // Normalize only imported scenarios, leaving the RMS constructor ID stream alone.
     const auto zeroCount = std::count_if(scenario.units.begin(),scenario.units.end(),
         [](const ScenarioUnit &unit) { return unit.spawnId == 0; });
-    if (!zeroCount) return initScenario(scenario,err,false);
+    if (!zeroCount) return initialize(scenario);
     uint64_t replacement = std::max<uint64_t>(1,scenario.nextUnitId);
     for (const auto &unit : scenario.units)
         replacement = std::max(replacement,uint64_t(unit.spawnId)+1);
@@ -955,7 +994,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err) {
                 if (!selected) selected = id;
         }
     }
-    return initScenario(imported,err,false);
+    return initialize(imported);
 }
 
 bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsCompletionOrder,
