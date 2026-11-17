@@ -5778,3 +5778,38 @@ newly selected candidates. Evidence and reproducible harness:
 `visible-score-stage-controls-oracle-2026-11-17.json` and
 `visible-score-stage-controls-2026-11-17.py`. Owner/range getters and candidate
 records are authored boundaries; these controls do not execute full acquisition.
+
+Original41b050→41b300 producer controls now verify the inputs to those stages:
+HP101/damage3/reload7 produces float32 bits1083828127 after a stored-float first
+quotient, current-target bonus15 is retained, and positive-speed extrema are
+separate. Supplied categories7/3 update histograms, but zero-initialized record
+categories stay0; history[0] therefore contributes uniformly in this controlled
+producer path. Do not invent per-target category weights. Evidence:
+`visible-score-producer-controls-oracle-2026-11-17.json` and matching Python
+harness. Damage/reload/speed callbacks are authored; insertion and scoring execute
+original instructions. Both score harnesses retain their own source hashes.
+
+Static getter tracing identifies flag1 as effective speed>0, not currently
+moving. Speed includes the current graphic multiplier and runtime suppression;
+damage estimation includes original eligibility and damage callbacks. The metric
+is HP/damage/reload, not conventional time-to-kill. Evidence:
+`visible-selector-metric-getters-findings-2026-11-17.json`. Native nearest-target
+selection has not been replaced by a partial scoring adapter: query ordering,
+filtering, current-target retention and reachability still need faithful inputs
+and full-pipeline controls before these isolated stage results establish parity.
+
+Seven original parent/controller drop-off controls confirm that status1 may
+retire movement and deposit in the same parent update, clear carry/secondary and
+request state4. No extra pre-deposit facing delay should be added. Distance and
+deposit callbacks are modeled. State4 itself dispatches using target state,
+class, owner and zone checks; it is not universally a movement return. Evidence:
+`dropoff-parent-timing-controls-v1-oracle-2026-11-17.json` and
+`dropoff-return-dispatch-findings-2026-11-17.json`. Native return-child creation
+and original/native distance equivalence remain unresolved.
+
+Final validation: focused ASan/UBSan, bonus/research/healing/AI, combat/gathering/
+garrison and rebuilt desktop menu/preferences/60-frame smoke checks pass.
+Compatibility retains exactly the same five recorded baseline failures; no new
+failures. Logs: `troop-child-{final-local,bonus,combat,desktop,fixes}.log`.
+No fresh live Windows session was used; the comparisons executed retained
+original PE routines with the explicit fixture boundaries above.
