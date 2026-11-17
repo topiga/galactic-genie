@@ -5682,3 +5682,10 @@ restart and approach retry: both explicitly release the discarded movement child
 before the replacement is created. This fixes stale child ownership after a
 route reset without changing same-slot primary reassignment semantics. Log:
 `attack-stencil-final-local.log`.
+
+Broader validation of the combined attack/stencil build passes bonus, research,
+healing, AI, combat, gathering and garrison checks. Desktop menu/preferences and
+60 dummy-driver render/audio frames pass. Compatibility retains exactly the
+same five baseline failures with no new failures. Logs:
+`attack-stencil-{bonus,combat,desktop,fixes}.log`. The app was rebuilt locally;
+no live Windows match was run in this pass.
