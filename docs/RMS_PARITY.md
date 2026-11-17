@@ -6258,3 +6258,75 @@ Validation: parser and focused lifecycle/AI tests pass ASan/UBSan; broad combat
 checks and desktop menu/render/audio smoke pass. The compatibility suite remains
 at its five previously documented failures, with no new failure observed. Logs:
 `scenario-ai-{local,combat,desktop,fixes}.log` in the native build directory.
+
+### Generic troop RNG and owner-admitted idle scans (2026-11-17)
+
+Native generic troop construction now consumes the four verified CRT draws in
+original order: base offset, overwritten base threshold, secondary threshold,
+then derived idle threshold1125+rand()%750. The caller owns the shared stream;
+this does not reconstruct all other object-constructor draws or original scenario
+startup seeds. RMS still restores its generator's post-startup random state;
+per-object phases require the actual original caller state for exact matching.
+
+The original owner scheduler was executed for144 world steps, with1/2/8 normal
+players, Gaia, boundary selections, zero/overflow accumulators and varied step
+lengths. Each instantiated non-null player accrues world step milliseconds before
+callbacks. The selected owner is cleared at the tail and selection rotates through
+all slots includingGaia. Constructor/reset initializes selection and accumulators
+to zero. Getter/null-slot controls and12 threshold-reset controls also pass.
+Original capacity isGaia+8; the native existing larger diagnostic player table is
+not additional original coverage. Evidence: `owner-schedule-contract-2026-11-17.json`.
+
+This scheduler now admits generic troop idle scans using accumulated integer
+milliseconds. The scan comparison is strictelapsed>threshold, with elapsed reset
+and the same threshold retained after an empty scan. Native movement/task guards
+remain adapters. Ordinary action/movement execution and strategic PER evaluation
+are not gated by this actor-only selector; the original action-controller update
+precedes the owner gate. Queued actor messages and the rest of actor AI dispatch
+remain separate work. Other unit-controller families retain their existing timers.
+
+Focused regression checks cover the four-draw stream continuation, equality,
+empty scans, active-task deferral, Gaia-inclusive rotation, unsigned wrap, native
+integration and pause. The original upgrade/PER isolated controls now explicitly
+seed at their probe entry after constructors, rather than assuming world setup
+consumes no RNG. Their expected original values are unchanged. The broader
+bonus/research/healing/AI suite passes ASan/UBSan with that corrected fixture.
+
+At nominal75ms admitted steps, the shared native fixture's human originalIDs0/1/2
+first acquire at1.500/1.500/2.175s, compared with Windows sampled attack-task times
+1.504/1.661/1.961s. Targets still differ, and native movement begins in the same
+sample as acquisition. The native final human HP is145/0/105; both enemies die,
+whereas the original exploration unit survives. Thus this is an algorithm
+correction, not whole-battle parity or a seed-matched timing claim. Nominal native
+steps are not a replay of the Windows host's actual irregular admissions.
+`owner-idle-timing-comparison-2026-11-17.json` retains sources/hashes and boundaries.
+A fresh read-only paused Windows snapshot also shows selectedowner2 with elapsed
+[75,0,150], consistent with the just-completed owner1 pass.
+
+### Original exploration parent/action contract (2026-11-17)
+
+Task610/order710 uses ordinary movement action1. Task605/order705 is exploration:
+the original tactical group path explicitly dispatches exploring units and asks
+5ad950 for destinations. Action4 owns a nested movement child, rather than being
+an ordinary top-level point move. Ten isolated original-instruction controls
+validate child outcomes and in-place forced/nonforced retargeting. Child statuses
+1/3/5 request another destination without completing the parent; status4 clears
+its primary reference and rebuilds the child. Only parentstate1 completes.
+
+The separate exploration helper and sanitizer checks preserve these transitions.
+It is not yet wired into native gameplay. State13 failure notification, waypoint
+selection, group admission, command705 scheduling and the first task610 producer
+remain unresolved; relabeling native point movement would hide those differences.
+Evidence: `ai-movement-task-contract-2026-11-17.json` and its executed controls.
+
+Final validation: focused lifecycle/owner/exploration checks, bonus/research/AI,
+combat and desktop menu/render/audio smoke pass. The spacing fixture previously
+issued attacks while the target fortress was invisible: all ten orders dropped
+on the first update, and rapid native reacquisition masked the fixture boundary.
+A passive spotter plus an explicit visibility check now isolates perimeter
+spacing; all ten remain engaged with the original separation requirements.
+Diagnostic capture: `building-slots-idle-timing-2026-11-17.log`. No gameplay
+threshold was relaxed to make that check pass. The compatibility suite retains
+its five existing failures (`actor-ai-timing-fixes.log`). Windows music and sound
+were rechecked Off. QuickDesk subsequently disconnected; no further remote
+keyboard/mouse actions or claims of a fresh complete game were made.
