@@ -5883,3 +5883,28 @@ Compatibility retains the same five baseline failures, with no new failures.
 Logs: `selection-return-final-{local,bonus,combat,desktop,fixes}.log`.
 The local app is rebuilt. No live Windows session was used in this pass;
 original executable routines were exercised within the documented boundaries.
+
+### Persistent visible-target ordering (2026-11-17)
+
+Native scored acquisition now consumes persistent per-viewer/class membership.
+The shared `GenieVisibleTargets` implements original614840 append, swap-last
+removal, moved-slot repair and append-on-reappearance. IDs replace relocatable
+record pointers; repeated masks do not reorder. Class changes remove the old
+membership before reinsertion. Both game initialization paths clear the index.
+This index is used by target ranking, not an unused parallel cache.
+
+Target sight samples are shared between direct visibility checks and cached
+mask sampling, preserving ordinary/frozen/annex geometry. A native refresh
+computes viewer membership, including shared sight. Tests cover original ordering
+controls, independent viewers, growth, class changes, reset, death removal and
+an actual equal-score selection changed by loss/reappearance. Focused ASan/UBSan
+checks pass (`visibility-reselection-local.log`), including previous stencil and
+annex tests. Evidence remains `visibility-index-controls-v1-oracle-2026-11-17.json`
+and `visible-query-order-controls-oracle-2026-11-17.json`.
+
+Limits: callback timing still follows native global visibility refresh; the
+original owner/object callback sequence is not reproduced. Query diplomacy
+partitions, byte-coordinate/radius filtering and per-partition caps remain native
+adapters. The cache tracks IDs/order, not original byte-packed records. These
+changes establish the membership algorithm and its effect on native ranking,
+not complete world-update or query equivalence.

@@ -9,6 +9,7 @@
 #include "pathfinding.h"
 #include "../core/scenario.h"
 #include "../core/genie_work_attack.h"
+#include "../core/genie_visible_targets.h"
 #include "../core/genie_update_list.h"
 
 #include <array>
@@ -547,6 +548,7 @@ public:
         return selectedCanAttackGround();
     }
     int tileVisibilityForTesting(int x,int y) {refreshVisibility();return tileVisibility(x,y);}
+    std::vector<uint32_t> visibleTargetsForTesting(int player,int cls) {refreshVisibility();return visibleTargets_.bucket(size_t(player-1),cls); }
     bool linkAnnexForTesting(uint32_t child, uint32_t parent) {
         Object *c=findObject(child), *p=findObject(parent);
         if (!c || !p || c==p || c->unit->type!=dat::UT_Building || p->unit->type!=dat::UT_Building) return false;
@@ -1397,7 +1399,9 @@ private:
     int tileVisibility(int x,int y) const;
     int rememberedTerrainAt(int x,int y) const;
     std::vector<uint8_t> rememberedTerrain_;
+    std::vector<std::array<int,2>> targetSightCells(const Object &target) const;
     void refreshVisibility();
+    GenieVisibleTargets visibleTargets_;
     std::vector<uint16_t> visibleTiles_,exploredTiles_,observedTiles_;
     std::unordered_map<uint32_t,Object> rememberedObjects_;
     int rememberedPlayer_=0;

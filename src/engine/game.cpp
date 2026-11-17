@@ -430,6 +430,7 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     automaticTargetsAcquired_ = retaliationOrders_ = armedBuildingsEngaged_ = 0;
     attackModeChanges_ = 0;
     objects_.clear();
+    visibleTargets_.clear();
     ownerUpdateLists_ = {}; ownerSleepLists_ = {}; ownerAuxiliaryLists_ = {};
     shieldGeneratorIndices_.clear();
     shieldGeneratorCacheSize_=size_t(-1);
@@ -1082,6 +1083,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     }
 
     objects_.clear();
+    visibleTargets_.clear();
     ownerUpdateLists_ = {}; ownerSleepLists_ = {}; ownerAuxiliaryLists_ = {};
     shieldGeneratorIndices_.clear();
     shieldGeneratorCacheSize_=size_t(-1);
@@ -9190,31 +9192,41 @@ bool Game::playerSees(int viewer,float x,float y) const {
     return false;
 }
 
-bool Game::playerSeesTarget(int viewer, const Object &target) const {
+std::vector<std::array<int,2>> Game::targetSightCells(const Object &target) const {
+    std::vector<std::array<int,2>> cells;
     const Object *geometry=&target;
     if (target.unit->type == dat::UT_Building && !target.buildingFrozen && target.annexParentId)
         if (const Object *parent=findObject(target.annexParentId)) geometry=parent;
-    if (playerSees(viewer,geometry->x,geometry->y)) return true;
+    if (!std::isfinite(geometry->x) || !std::isfinite(geometry->y) || geometry->x<0 ||
+        geometry->y<=0 || geometry->x>=mapSize_ || geometry->y>mapSize_) return cells;
+    cells.push_back({int(geometry->x),int(std::ceil(geometry->y))-1});
     // Fresh non-building constructors leave the stencil index zero.
-    if (target.unit->type != dat::UT_Building) return false;
+    if (target.unit->type != dat::UT_Building) return cells;
     const float ox=mapSize_-geometry->y,oy=geometry->x;
     const float rx=geometry->unit->collisionSize[0],ry=geometry->unit->collisionSize[1];
     if (!std::isfinite(ox) || !std::isfinite(oy) || ox<0 || oy<0 || ox>=mapSize_ || oy>=mapSize_ ||
-        !std::isfinite(rx) || !std::isfinite(ry) || rx<0 || ry<0 || rx>mapSize_ || ry>mapSize_) return false;
+        !std::isfinite(rx) || !std::isfinite(ry) || rx<0 || ry<0 || rx>mapSize_ || ry>mapSize_) return cells;
     const int x=int(ox),y=int(oy);
-    const auto sees=[&](int dx,int dy) {
-        return playerSees(viewer,float(y+dy)+.5f,float(mapSize_-(x+dx))-.5f);
+    const auto sample=[&](int dx,int dy) {
+        const int tx=y+dy,ty=mapSize_-1-(x+dx);
+        if(tx>=0 && ty>=0 && tx<mapSize_ && ty<mapSize_)cells.push_back({tx,ty});
     };
     if (target.buildingFrozen) {
-        if (rx<1.f) return false;
+        if (rx<1.f) return cells;
         for(int dy=-1;dy<=0;++dy) for(int dx=-1;dx<=0;++dx)
-            if (sees(dx,dy)) return true;
+            sample(dx,dy);
     } else {
         const auto offsets=genieVisibilityStencil(x,y,int(double(ox)-rx),int(double(oy)-ry),
             int(double(ox)+rx-double(.01f)),int(double(oy)+ry-double(.01f)),mapSize_,mapSize_);
-        for(const auto &offset:offsets) if(sees(offset[0],offset[1]))return true;
+        for(const auto &offset:offsets) sample(offset[0],offset[1]);
     }
     // shortcut: Loaded non-building objects with saved nonzero stencil indexes are not supported.
+    return cells;
+}
+
+bool Game::playerSeesTarget(int viewer, const Object &target) const {
+    for(const auto &cell:targetSightCells(target))
+        if(playerSees(viewer,float(cell[0])+.5f,float(cell[1])+.5f))return true;
     return false;
 }
 
@@ -9260,6 +9272,17 @@ void Game::refreshVisibility() {
                 if(sourceSeesTile(source,mapSize_-1-y,x,radius)) visibleTiles_[size_t(y)*mapSize_+x]|=bit;
     }
     for(size_t i=0;i<count;++i) {exploredTiles_[i]|=visibleTiles_[i];observedTiles_[i]|=visibleTiles_[i];}
+    // shortcut: Membership uses the native visibility refresh, not original per-object callback timing.
+    for(const auto &object:objects_) {
+        if(!object.spawnId || !object.unit)continue;
+        uint16_t sight=0,viewers=0;
+        if(object.active && !object.hidden && object.garrisonedInId<0) {
+            for(const auto &cell:targetSightCells(object))sight|=visibleTiles_[size_t(cell[1])*mapSize_+cell[0]];
+            for(int viewer=1;viewer<=16;++viewer)
+                if((sight&sharedSightMask(viewer)) || (forceSightCheat_ && viewer==localPlayer_))viewers|=uint16_t(1u<<(viewer-1));
+        }
+        visibleTargets_.update(object.spawnId,object.unit->cls,viewers);
+    }
     for(int y=0;y<mapSize_;++y) for(int x=0;x<mapSize_;++x)
         if(tileVisibility(x,y)==2) rememberedTerrain_[size_t(y)*mapSize_+x]=terrain_[size_t(y)*mapSize_+x];
     // A clear view of a remembered location disproves a stale building/resource there.
@@ -9926,6 +9949,7 @@ void Game::acquireAutomaticTarget(Object &source) {
                 const float distanceSquared = dx * dx + dy * dy;
                 if (distanceSquared > (scored ? radius * radius : bestDistanceSquared)) continue;
                 if (scored) {
+                    if (source.player<=0 || visibleTargets_.slot(size_t(source.player-1),candidate.spawnId)==size_t(-1))continue;
                     if (std::any_of(source.targetExclusions.begin(), source.targetExclusions.end(),
                         [&](const auto &entry) { return entry.first == candidate.spawnId; })) continue;
                     float speed = modifiedUnitAttribute(candidate,5,candidate.unit->speed);
@@ -9949,9 +9973,12 @@ void Game::acquireAutomaticTarget(Object &source) {
         const auto classOrder = [&](int cls) { return std::find(std::begin(classes),std::end(classes),cls); };
         candidates.erase(std::remove_if(candidates.begin(),candidates.end(),
             [&](const auto &c) { return classOrder(c.unitClass) == std::end(classes); }),candidates.end());
-        // shortcut: Within-class visibility order, damage and path queries remain native adapters.
-        std::stable_sort(candidates.begin(),candidates.end(),
-            [&](const auto &a,const auto &b) { return classOrder(a.unitClass) < classOrder(b.unitClass); });
+        // shortcut: Query partitions, damage and path callbacks retain native adapters.
+        std::sort(candidates.begin(),candidates.end(),[&](const auto &a,const auto &b) {
+            if(a.unitClass!=b.unitClass)return classOrder(a.unitClass)<classOrder(b.unitClass);
+            return visibleTargets_.slot(size_t(source.player-1),uint32_t(a.id)) <
+                   visibleTargets_.slot(size_t(source.player-1),uint32_t(b.id));
+        });
         if (candidates.size() > 128) candidates.resize(128);
         const bool mobile = std::any_of(candidates.begin(),candidates.end(),[](const auto &c){return c.positiveSpeed;});
         const auto ranked = genieRankTargets(candidates,true,source.player>0 && !players_[size_t(source.player-1)].human);
