@@ -4,6 +4,9 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <cmath>
+#include <limits>
+#include "tactical_command_queue.h"
 #include <vector>
 
 namespace swgb {
@@ -27,6 +30,61 @@ void refreshAiGatherDestinations(std::vector<AiMilitaryGatherGroup> &groups,Look
         if(first==group.members.end())continue;
         if(const auto position=lookup(*first))group.destination=*position;
     }
+}
+
+// The caller supplies resolved551c60 footprint-edge distance, not centre distance.
+// shortcut: Double represents unstored x87 values in the finite controls; wider boundary precision remains caller-owned.
+struct AiMilitaryGatherMember {
+    double edgeDistance;
+    int task=-1,command=-1;
+};
+
+template<class Lookup>
+bool aiMilitaryGatherReady(const AiMilitaryGatherGroup &group,int spacing,Lookup lookup) {
+    for(const auto id:group.members) {
+        if(id<0)continue;
+        if(const auto member=lookup(id,group.destination)) {
+            const float adjusted=std::max(0.f,float(member->edgeDistance-1.0));
+            if(double(adjusted)>spacing)return false;
+        }
+    }
+    return true;
+}
+
+// 5aaa00 uses632bac's truncated64-bit result's LOW32 bits, then caps the signed value at99.
+inline uint8_t aiMilitaryGatherPriority(int sn34,float adjustedDistance) {
+    const double quotient=double(sn34)/adjustedDistance;
+    uint32_t low=0; // x87 invalid conversion writes INT64_MIN, whose low word is zero.
+    if(std::isfinite(quotient) && quotient>=-0x1p63 && quotient<0x1p63)
+        low=uint32_t(int64_t(quotient));
+    const int64_t priority=low<=uint32_t(std::numeric_limits<int32_t>::max())?int64_t(low):int64_t(low)-0x100000000LL;
+    return uint8_t(std::min<int64_t>(priority,99));
+}
+
+// 59b160 state7/12: Stop goes directly to opcode1; moves enter tactical staging as724.
+// Lookup returns optional<AiMilitaryGatherMember>; missing IDs have no command side effects.
+template<class Lookup,class Stop,class Move>
+bool dispatchAiMilitaryGather(AiMilitaryGatherGroup &group,int player,int state,int spacing,
+        int sn34,bool force,Lookup lookup,Stop stop,Move move) {
+    if(state!=7 && state!=12)return false;
+    if(group.retries<255)++group.retries;
+    const float threshold=state==12?1.f:float(spacing);
+    for(const auto id:group.members) {
+        if(id<0)continue;
+        const auto member=lookup(id,group.destination);
+        if(!member || (!force && member->task!=-1 && member->task!=614))continue;
+        const double adjusted=member->edgeDistance-1.0;
+        // The branch retains the unstored distance; priority consumes its rounded float copy.
+        if(adjusted<threshold) {
+            if(member->command!=-1)stop(id);
+        } else {
+            TacticalCommandQueue::Order order{uint32_t(id),player,group.destination[0],group.destination[1]};
+            order.command=724;order.z=group.destination[2];order.range=threshold;
+            order.flagC=aiMilitaryGatherPriority(sn34,float(adjusted));
+            move(order);
+        }
+    }
+    return true;
 }
 
 enum class AiMilitaryReadinessResult {Complete,BudgetExhausted,Unsupported};

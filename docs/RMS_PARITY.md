@@ -6711,3 +6711,57 @@ Local evidence: `rms-empty-owner-closure-findings-2026-11-18.json`,
 `rms-empty-factory-v5-result-2026-11-18.json`,
 `rms-empty-owner-geometry-oracle-2026-11-18.json`, and
 `rms-empty-owner-occupied-worker-gate-oracle-2026-11-18.json`.
+
+
+### Military readiness and movement boundary (18 November 2026)
+
+The standalone military module now has the recovered full-count type100 phase8
+readiness pass and phase7 destination refresh. Eight original phase8 controls
+cover continuation IDs, missing cursors, completed groups, retry10/11, missing
+members and exact host-budget exhaustion. The native tests additionally retain
+unsigned clock wrap and explicit unsupported count-deficit handling. Destination
+refresh follows the first nonnegative member ID rather than a centroid; a missing
+lookup preserves the existing destination.
+
+This is not the full24-phase scheduler. Admission, count-deficit home/region
+callbacks, membership reconciliation and phase9 target planning remain outside
+the helper. The current skirmish policy is unchanged. Six actual command724
+controls accept priorities0,1,50,99,100,255 with forced flags1/0; priority is
+stored, not an immediate sorting/admission gate in that path.
+
+Movement needs separate integration: initial408648 arrival uses direct footprint
+edge distance <= spacing. State4 delegates to4a47b0 instead of repeating that
+check. Path completion/failure requests are reported on the next action update.
+A later point-arrival branch uses distance-spacing <1e-7 only with spacing>0.1
+and qualified path conditions. No universal per-tick distance shortcut follows.
+The existing ordinary point path would overrun military spacing;724 is not
+silently translated into it. No direct RNG calls were found in the inspected
+controllers, but transitive path callbacks remain unverified.
+
+Local evidence: `tactical-readiness-pass-controls-2026-11-18.json`,
+`tactical-command724-priority-controls-2026-11-18.json`, and
+`tactical724-movement-lifecycle-findings-2026-11-18.txt`.
+
+
+Gather dispatch now produces the original724 payload or invokes the local Stop
+callback in member order. It preserves state7/state12 thresholds, force/task
+admission, retry saturation, strict distance comparison and priority conversion.
+Readiness uses the rounded adjusted distance and accepts equality; dispatch
+uses the unstored adjusted distance and moves at equality. Geometry is supplied
+by the caller as footprint-edge distance, not recalculated as centre distance.
+Sixteen original cases agree at explicitly selected53-bit and64-bit precision;
+an additional conversion case verifies signed low32-bit truncation before the
+upper priority cap. Native sanitizer tests include these values and ordered
+mixed Stop/move emission. This still does not connect the original scheduler to
+`Game`: qualified path arrival and group admission remain integration gates.
+Evidence: `tactical-group-gather-fpcw-027f-2026-11-18.json`,
+`tactical-group-gather-fpcw-037f-2026-11-18.json` and the corresponding priority-edge
+capture. Double intermediates cover these finite controls, not all extended
+precision boundaries.
+
+
+Verification: all20 permanent asset-independent algorithm executables pass with
+ASan/UBSan and warnings-as-errors (`script/test_algorithms.py`), including the new
+startup and military checks. Log: external build directory,
+`empty-owner-military-algorithms.log`. No live gameplay or whole-session parity
+claim is added by this run. QuickDesk settings/audio were left untouched.

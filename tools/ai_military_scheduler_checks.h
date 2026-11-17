@@ -51,6 +51,52 @@ static void aiMilitarySchedulerChecks() {
         if(test==7)check(stopped==std::vector<int>({2,3}) && remembered==3,
                         "Missing members do not block type100 readiness transition or remembered-count callback");
     }
+    // Full original59b160 cases; both explicit x87 PC53/PC64 controls have these outcomes.
+    struct GatherCase {double distance;int task,command,spacing,state;bool force,missing;uint8_t retry;int kind,priority;};
+    const GatherCase cases[]={
+        {4.99,-1,700,4,7,true,false,0,1,0},{5.,-1,700,4,7,true,false,0,2,50},
+        {5.01,-1,700,4,7,true,false,0,2,49},{.5,-1,-1,4,7,true,false,0,0,0},
+        {0.,-1,700,4,7,true,false,0,1,0},{8.5,600,700,4,7,false,false,0,0,0},
+        {8.5,-1,700,4,7,false,false,0,2,26},{8.5,614,700,4,7,false,false,0,2,26},
+        {8.5,600,700,4,7,true,false,0,2,26},{8.5,-1,700,4,7,true,true,0,0,0},
+        {8.5,-1,700,4,7,true,false,255,2,26},{8.5,-1,700,4,7,true,false,254,2,26},
+        {2.,-1,700,4,12,true,false,0,2,99},{999.5,-1,700,4,7,true,false,0,2,0},
+        {1.,-1,700,0,7,true,false,0,2,0},{0.,-1,700,-1,7,true,false,0,2,56}};
+    for(const auto &c:cases) {
+        AiMilitaryGatherGroup group{10,1,1,{33},{0,0,0},c.retry};
+        int kind=0,priority=-1;
+        const auto lookup=[&](int32_t,const auto &)->std::optional<AiMilitaryGatherMember> {
+            if(c.missing)return std::nullopt;
+            return AiMilitaryGatherMember{c.distance,c.task,c.command};
+        };
+        check(dispatchAiMilitaryGather(group,2,c.state,c.spacing,200,c.force,lookup,
+            [&](int32_t id){check(id==33,"Original gathering stop keeps member ID");kind=1;},
+            [&](const auto &order){
+                check(order.actor==33 && order.player==2 && order.command==724 && order.target==-1 &&
+                      order.targetPlayer==255 && order.flagA==1 && order.flagB==0 && order.z==0 &&
+                      order.range==(c.state==12?1.f:float(c.spacing)),"Original gathering724 envelope preserves clearance and target sentinels");
+                kind=2;priority=order.flagC;
+            }),"Supported original gather dispatch state");
+        check(kind==c.kind && (kind!=2 || priority==c.priority) && group.retries==std::min(255,int(c.retry)+1),
+              "Original gathering gates, boundary, priority and saturated retry match saved controls");
+    }
+    check(aiMilitaryGatherPriority(std::numeric_limits<int32_t>::max(),.5f)==254,
+          "Original priority truncation uses the signed low32 bits before the upper cap");
+    AiMilitaryGatherGroup ordered{40,1,3,{3,1,2},{7,8,9},0};
+    std::vector<int> order;
+    const auto resolved=[](int32_t id,const auto &)->std::optional<AiMilitaryGatherMember> {
+        return AiMilitaryGatherMember{id==1?5.:2.,-1,700};
+    };
+    dispatchAiMilitaryGather(ordered,2,7,4,200,false,resolved,
+        [&](int32_t id){order.push_back(id);},[&](const auto &move){order.push_back(int(move.actor));});
+    check(order==std::vector<int>({3,1,2}),"Gather callbacks retain original member order across Stop and staged724");
+    check(aiMilitaryGatherReady(ordered,4,resolved),"Readiness accepts adjusted-distance equality");
+    check(!aiMilitaryGatherReady(ordered,3,resolved),"Readiness rejects a resolved member beyond spacing");
+    check(aiMilitaryGatherReady(ordered,4,[](int32_t,const auto &)->std::optional<AiMilitaryGatherMember>{return std::nullopt;}),
+          "Missing members do not prevent original gathering readiness");
+    const auto retry=ordered.retries;
+    check(!dispatchAiMilitaryGather(ordered,2,2,4,200,false,resolved,[](int32_t){},[](const auto &){} ) && ordered.retries==retry,
+          "Unsupported gather states do not change the group");
     groups=fresh();groups[0].desiredCount=2;
     AiMilitaryReadinessPass pass;int calls=0;
     const auto unsupported=pass.advance(groups,0,5,[&]{++calls;return 0u;},
