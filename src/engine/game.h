@@ -136,6 +136,7 @@ public:
     void seedLegacyRandomForTesting(uint32_t state) { legacyRandomState_ = state; worldRandomCheckpoint_=state; }
     void setAmbientRandomForTesting(uint32_t state) { legacyRandomState_=state; }
     uint32_t legacyRandomForTesting() const {return legacyRandomState_;}
+    std::optional<uint32_t> worldCheckpointForTesting() const {return worldRandomCheckpoint_;}
     std::array<uint32_t,3> idleRandomFieldsForTesting(uint32_t id) const {
         const auto *o=findObject(id);
         return o?std::array<uint32_t,3>{o->idleAcquisition.initialOffset,o->idleAcquisition.secondaryThreshold,

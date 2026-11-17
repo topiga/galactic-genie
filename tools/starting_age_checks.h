@@ -44,7 +44,8 @@ create_object UNIT-BIKE-E { number_of_objects 1 set_place_for_every_player min_d
         check(sorted==baseCompleted[size_t(player)-1],"Native RMS research baseline matches original pre-age completed states");
     }
     check(seed==3895143042u,"Original common-border RNG before starting-age research");
-    const uint32_t expectedRng[]={19483,2618,28080,28080};
+    // Original age controls entered from composed post-finalization CRT9653.
+    const uint32_t expectedRng[]={4799,18572,25671,25671};
     size_t caseIndex=0;
     for(const auto &c:cases) {
         swgb::RmsSessionOptions options;options.startingAge=uint32_t(c.age);uint32_t rng=1;
@@ -68,7 +69,9 @@ create_object UNIT-BIKE-E { number_of_objects 1 set_place_for_every_player min_d
                   game.objectHitPoints(scout)==c.scoutHp[size_t(player)-1],
                   "Original starting-age live worker and scout HP changes");
         }
-        uint32_t aiRng=rng;
+        check(game.worldCheckpointForTesting()==std::optional<uint32_t>(10762),
+              "Starting-age upgrades do not overwrite the original finalized world seed");
+        uint32_t aiRng=*game.worldCheckpointForTesting();
         aiRng=swgb::genieRandomDraw(aiRng); // Human player one restores its saved draw.
         swgb::genieRandomDraw(aiRng); // Player two saves its draw, then enters PER.
         const int first=int(swgb::genieRandomDraw(aiRng))+1,second=int(swgb::genieRandomDraw(aiRng))+1;
@@ -79,7 +82,7 @@ create_object UNIT-BIKE-E { number_of_objects 1 set_place_for_every_player min_d
         check(game.loadAiSourceForTesting(2,"post-age-rng",source,{},&error),error.c_str());
         game.update(0,{});
         check(game.aiGoalForTesting(2,990)==1 && game.aiGoalForTesting(2,991)==1 && game.aiGoalForTesting(2,992)==1,
-              "First ordered AI pass continues the original post-upgrade shared random stream");
+              "First ordered AI pass restores the original pre-age world checkpoint");
     }
     std::puts("PASS: original normal starting ages3..6 research order, complete technology sets, statistics and live HP");
 }

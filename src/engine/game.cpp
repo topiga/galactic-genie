@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "../core/genie_graphic_random.h"
 #include "../core/genie_random.h"
+#include "../core/genie_rms_startup.h"
 #include "../core/genie_gather.h"
 #include "../core/genie_target_selection.h"
 #include "game.h"
@@ -1441,6 +1442,20 @@ bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std:
     }
     if(!initRms(script,defines,mapSize,randomState,err,uint32_t(civilizations.size()),civilizations,diplomacy))
         return false;
+    // shortcut: Primary-object/manager callbacks use native implementations until populated startup traces match.
+    genieRmsPrepasses(legacyRandomState_,worldPlayerCount_,[&](uint32_t owner,uint32_t) {
+        updatePlayerObjects(0,int(owner));
+        if(owner)updateAi(int(owner),0);
+    });
+    bool hasStartingObjects=true;
+    for(uint32_t owner=1;owner<=worldPlayerCount_;++owner)
+        hasStartingObjects&=!objectUpdateList(int(owner),0).empty();
+    if(hasStartingObjects) {
+        worldRandomCheckpoint_=genieRandomDraw(legacyRandomState_); // Common61e41b precedes derived starting-age research.
+        for(uint32_t owner=1;owner<=worldPlayerCount_;++owner)
+            legacyRandomState_=genieRandomDraw(legacyRandomState_); // RMS61e495 owner activation save/reseed.
+    }
+    // shortcut: Empty-owner5d1110 building placement must be recovered before claiming its final checkpoint.
     static constexpr float grants[][4]={{200,200,250,100},{200,200,250,100},
                                         {500,500,450,300},{1000,1000,850,700}};
     for(size_t player=1;player<=civilizations.size();++player) {

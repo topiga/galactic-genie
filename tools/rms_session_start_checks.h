@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "../src/engine/rms_map.h"
+#include "rms_finalization_checks.h"
 #include <filesystem>
 #include <fstream>
 
 static void rmsSessionStartChecks(swgb::Assets &assets) {
+    rmsFinalizationChecks();
     const auto fixtures=std::filesystem::path(__FILE__).parent_path()/"fixtures";
     swgb::RmsScript script;std::string error;
     std::ifstream input(fixtures/"owned-scouts.rms");
@@ -40,6 +42,8 @@ static void rmsSessionStartChecks(swgb::Assets &assets) {
     options={};options.aiScripts={"",(fixtures/"session-startup.per").string(),(fixtures/"session-startup.per").string()};
     uint32_t rng=1;
     check(game.initRmsSession(script,{},32,rng,{6,1,6},options,&error),error.c_str());
+    check(game.worldCheckpointForTesting().has_value() && rng==game.legacyRandomForTesting(),
+          "RMS session retains a distinct finalized world seed and exposes its ambient CRT");
     check(game.aiRuleCountForTesting(1)==0,"Session never activates AI for the human slot");
     for(int player=2;player<=3;++player)
         check(game.aiRuleCountForTesting(player)==3 && game.aiGoalForTesting(player,901)==0 &&
