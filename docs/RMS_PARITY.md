@@ -6090,3 +6090,13 @@ render/audio checks. Compatibility retains exactly the same five documented
 baseline failures. Logs: `target-slots-{local,bonus,combat,desktop,fixes}.log`.
 Windows was left at the game menu with reference music/sound Off; the Mac's
 system audio settings were not changed.
+
+Next-event audit: original hit handling41f63e invokes the selector with an
+existing current target, explicit attacker, current-context query origin and
+flags(0,0), then requires the selected ID to equal the attacker before its path
+and replacement gates. The native acquisition entry currently rejects existing
+targets and cannot be reused unchanged. Downstream special-current-class
+retention controls alone do not justify removing the native in-range veto;
+earlier original current-target retention must also run. No speculative polling
+or retaliation change was added. Corrected static contract and limitations:
+`visible-hit-reselection-next-contract-2026-11-17.json`.
