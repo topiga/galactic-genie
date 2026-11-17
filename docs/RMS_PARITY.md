@@ -5957,3 +5957,12 @@ Evidence: `retaliation-selection-findings-2026-11-17.json` and its10 original
 branch controls. Focused ASan/UBSan checks pass (`visibility-retaliation-local.log`).
 Generic controller classification is shared with initial acquisition; class43
 still retains its previously documented sorting adapter.
+
+Final validation of the combined index, dead-target event and retaliation veto:
+focused ASan/UBSan, bonus/research/healing/AI, combat/gathering/garrison and rebuilt
+desktop menu/preferences/60-frame render/audio smoke checks pass. Compatibility
+retains the same five baseline failures with no new failures. Logs:
+`visibility-retaliation-{local,bonus,combat,desktop,fixes}.log`. Research comparisons
+used retained original executable routines with modeled boundaries; no fresh
+live Windows match was run. Exact callback timing, full message-driven selection,
+livestock action-head semantics and external transport planning remain open.
