@@ -64,7 +64,29 @@ static void explorationGameplayChecks(swgb::Assets &assets) {
     std::vector<uint32_t> wave;
     for(int i=0;i<6;++i)wave.push_back(game.spawnObjectForTesting(1,troop,2,home[0]+i*.3f,home[1]+6));
     game.updateSkirmishArmyForTesting(2);
+    check(game.stagedExplorationCountForTesting()>0,"Native tactical planner stages its exploration orders");
+    for(auto id:wave)check(game.explorationStateForTesting(id)==-1,"Staging does not apply an exploration action immediately");
+    game.updatePaused(.1f,{});
+    check(game.stagedExplorationCountForTesting()>0,"Pause does not flush tactical staging");
+    game.update(.05f,{});
+    check(game.stagedExplorationCountForTesting()==0,"Owner update flushes tactical orders into local command storage");
+    for(auto id:wave)check(game.explorationStateForTesting(id)==-1,"Owner flush does not execute the fresh local commands");
+    game.update(.05f,{});
     bool exploring=false;for(auto id:wave)exploring|=game.explorationStateForTesting(id)>=0;
     check(exploring,"Existing native scouting planner now installs exploration parents and movement children");
+    const auto converted=game.spawnObjectForTesting(1,troop,2,home[0]+3,home[1]+8);
+    check(game.queueExploreForTesting(converted,home[0]+10,home[1]+10),"Stage exploration before ownership changes");
+    game.update(.05f,{});
+    check(game.transferObjectForTesting(converted,1),"Transfer queued actor before local application");
+    game.update(.05f,{});
+    check(game.explorationStateForTesting(converted)==-1,"Queued tactical order revalidates owner at apply time");
+    const auto dead=game.spawnObjectForTesting(1,troop,2,home[0]+3,home[1]+8);
+    check(game.queueExploreForTesting(dead,home[0]+10,home[1]+10),"Stage an order before actor destruction");
+    game.damageObjectForTesting(dead,100000);
+    game.update(.05f,{});game.update(.05f,{});
+    check(game.explorationStateForTesting(dead)==-1,"Dead actor does not acquire a queued exploration action");
+    check(game.queueExploreForTesting(wave[0],home[0]+10,home[1]+10),"Stage an order before session replacement");
+    check(game.initScenario(scenario,&error)&&game.stagedExplorationCountForTesting()==0,
+          "Scenario replacement clears tactical staging together with local commands");
     std::puts("PASS: exploration parent/child gameplay, retarget, cancellation, native failure boundary and scouting integration");
 }

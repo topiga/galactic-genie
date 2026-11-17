@@ -34,7 +34,7 @@ static void conquestChecks(swgb::Assets &assets) {
     const auto reinforcement=game.spawnObjectForTesting(3,troop,2,enemyHome[0]+2,enemyHome[1]+6);
     check(reinforcement && game.spawnObjectForTesting(3,troop,2,enemyHome[0]+3,enemyHome[1]+6),"Complete surviving assault group");
     const auto before=game.moveAnchorForTesting(reinforcement);
-    game.updateSkirmishArmyForTesting(2);
+    game.updateSkirmishArmyForTesting(2);game.update(0,{});game.update(0,{});
     check(game.moveAnchorForTesting(reinforcement)!=before,"Conquest AI keeps scouting after losing its original Command Center");
     std::puts("PASS: Conquest survivors, victory/defeat/draw and AI without its original Command Center");
 }

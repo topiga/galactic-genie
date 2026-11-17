@@ -401,6 +401,7 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     localClock_.reset();
     actorOwnerSchedule_ = {};
     localCommands_.reset();
+    tacticalExploreCommands_.reset();
     players_ = {};
     worldPlayerCount_=2;
     resources_ = {};
@@ -849,8 +850,7 @@ void Game::updateSkirmishArmy(int player) {
             const auto destination=goalPoint(goal);
             ++attempted[goal];
             // shortcut: Native waypoint/group selection remains until original exploration planning is ported.
-            if(!issueExplore(soldier,destination[0],destination[1],true) ||
-               soldier.explorationChild.status==GenieMovementStatus::Failed) ++failed[goal];
+            if(!queueExplore(soldier,destination[0],destination[1])) ++failed[goal];
         }
     }
     for(const auto &entry:attempted) if(failed[entry.first]==entry.second) {
@@ -1029,6 +1029,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     localClock_.reset();
     actorOwnerSchedule_ = {};
     localCommands_.reset();
+    tacticalExploreCommands_.reset();
     players_ = scenario.players;
     worldPlayerCount_=scenario.playerSlotCount;
     if(!worldPlayerCount_) {
@@ -11915,6 +11916,34 @@ bool Game::approach(Object &object, const Object &target, float clearance) {
     return issueMove(object, x, y, &target, clearance);
 }
 
+bool Game::queueExplore(Object &object,float x,float y) {
+    if(!std::isfinite(x) || !std::isfinite(y) || x>=mapSize_ || y>=mapSize_ ||
+       ((x<0 || y<0) && !(x==-1 && y==-1)))return false;
+    return tacticalExploreCommands_.enqueue({object.spawnId,object.player,x,y});
+}
+
+void Game::applyExploreCommands(const std::vector<TacticalExploreQueue::Order> &orders) {
+    for(const auto &order:orders) {
+        auto *actor=findObject(order.actor);
+        if(!actor || actor->player!=order.player)continue;
+        // shortcut: Native eligibility/action creation stands in for the original actor-AI queue activation.
+        issueExplore(*actor,order.x,order.y,true);
+    }
+    if(orders.empty())return;
+    const auto &goal=orders.front();
+    if(goal.player<=0 || goal.player>=int(aiPlayers_.size()) || goal.x<0 || goal.y<0)return;
+    const bool approaching=std::any_of(objects_.begin(),objects_.end(),[&](const Object &unit) {
+        return unit.active && unit.player==goal.player && unit.moveGoalActive &&
+               std::abs(unit.moveAnchorX-goal.x)<.01f && std::abs(unit.moveAnchorY-goal.y)<.01f;
+    });
+    if(!approaching) {
+        auto &scouting=aiPlayers_[size_t(goal.player)];
+        const int tile=int(goal.y)*mapSize_+int(goal.x);
+        scouting.scoutRetryAfter[tile]=matchTime_+30.f;
+        if(scouting.scoutGoal==tile)scouting.scoutGoal=-1;
+    }
+}
+
 bool Game::issueExplore(Object &object,float x,float y,bool force) {
     if (!object.active || object.hidden || object.garrisonedInId>=0 || object.unit->speed<=0 ||
         !std::isfinite(x) || !std::isfinite(y) || x>=mapSize_ || y>=mapSize_) return false;
@@ -16511,6 +16540,8 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
         updatePlayerObjects(dt,int(player));
         updateGarrisoning(int(player));
         if(player)updateAi(int(player),dt);
+        // Original61f8cb flushes AI staging after each owner; local dispatch precedes the next traversal.
+        tacticalExploreCommands_.flush(localCommands_,[this](const auto &orders){applyExploreCommands(orders);});
     }
     syncGarrisonedTransports();
     for (Object &object : objects_)

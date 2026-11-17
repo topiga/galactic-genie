@@ -4,6 +4,7 @@
 
 #include "local_simulation_clock.h"
 #include "local_command_queue.h"
+#include "tactical_explore_queue.h"
 #include "assets.h"
 #include "ai_script.h"
 #include "pathfinding.h"
@@ -372,6 +373,10 @@ public:
     std::array<float,2> pointMovementDestinationForTesting(uint32_t id) const {
         const auto *o=findObject(id);return o?std::array<float,2>{o->pointMovement.destinationX,o->pointMovement.destinationY}:std::array<float,2>{-1,-1};
     }
+    bool queueExploreForTesting(uint32_t id,float x,float y) {
+        auto *o=findObject(id);return o && queueExplore(*o,x,y);
+    }
+    size_t stagedExplorationCountForTesting() const {return tacticalExploreCommands_.size();}
     bool issueExploreForTesting(uint32_t id,float x,float y,bool force=false) {
         auto *o=findObject(id);return o && issueExplore(*o,x,y,force);
     }
@@ -1118,6 +1123,8 @@ private:
     bool issueMove(Object &object, float targetX, float targetY,
                    const Object *goalObject = nullptr, float clearance = 0.0f);
     bool issueExplore(Object &object,float x,float y,bool force);
+    bool queueExplore(Object &object,float x,float y);
+    void applyExploreCommands(const std::vector<TacticalExploreQueue::Order> &orders);
     void issueGroupMove(std::vector<Object *> targets, float targetX, float targetY,
                         FormationType formation = FormationType::Line);
     bool findPath(const Object &object, float targetX, float targetY,
@@ -1587,6 +1594,7 @@ private:
     LocalSimulationClock localClock_;
     GenieOwnerSchedule actorOwnerSchedule_;
     LocalCommandQueue localCommands_;
+    TacticalExploreQueue tacticalExploreCommands_;
     int victoryState_ = -1;
     bool keyboardMouseControls_ = false;
     bool classicHud_=false, classicHudRoot_=true, classicHudMenuRequested_=false;
