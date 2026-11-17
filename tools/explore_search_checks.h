@@ -35,6 +35,7 @@ static void exploreSearchChecks() {
           "Original history writer resets the active count after eight entries");
     struct Boundary {float x,y,los,gx,gy;int command,minX,maxX,minY,maxY,outX,outY;};
     const Boundary boundaries[]={
+        {std::nextafter(1.f,0.f),10,2,-1,-1,710,0,5,5,15,0,10},
         {10.9f,8.2f,2.9f,-1,-1,710,5,15,3,13,10,8},
         {-.5f,2.9f,0,-1,-1,710,0,2,0,5,0,2},
         {.2f,.4f,1.9f,-1,-1,710,0,4,0,4,0,0},

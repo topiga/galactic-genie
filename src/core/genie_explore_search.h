@@ -37,7 +37,9 @@ struct GenieExploreSearch {
            std::abs(x)>32767 || std::abs(y)>32767 || std::abs(lineOfSight)>32767 ||
            std::abs(destinationX)>32767 || std::abs(destinationY)>32767)return false;
         const int radius=int(lineOfSight)+3;
-        int minX=int(x-radius),maxX=int(x+radius),minY=int(y-radius),maxY=int(y+radius);
+        // World61ee32 enables extended x87 precision during simulation callbacks.
+        int minX=int(double(x)-radius),maxX=int(double(x)+radius);
+        int minY=int(double(y)-radius),maxY=int(double(y)+radius);
         if(command==730) {
             minX=int(destinationX)-7;maxX=int(destinationX)+7;
             minY=int(destinationY)-7;maxY=int(destinationY)+7;
