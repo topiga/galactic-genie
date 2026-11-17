@@ -5689,3 +5689,37 @@ healing, AI, combat, gathering and garrison checks. Desktop menu/preferences and
 same five baseline failures with no new failures. Logs:
 `attack-stencil-{bonus,combat,desktop,fixes}.log`. The app was rebuilt locally;
 no live Windows match was run in this pass.
+
+### Annex sampling and pursuit completion (2026-11-17)
+
+Normal building annexes now sample their immediate parent's position and stencil,
+while retaining their own target identity. Frozen annexes use their own geometry;
+parent sampling is one hop and does not acquire a task reference. Seven original
+sampling controls support this change. Fresh non-building constructors leave the
+stencil index zero, so their existing center-only sampling is supported. Loaded
+non-building objects can restore nonzero indexes and remain outside this coverage.
+Evidence: `annex-nonbuilding-sight-findings-2026-11-17.json` and
+`annex-sight-sampling-controls-v1-oracle-2026-11-17.json`.
+
+Original attack state6 can enter state7 immediately when readiness succeeds;
+state7 entry initializes the attack but cannot deliver its hit in that update.
+Native pursuit completion now preserves that boundary without adding an extra
+mandatory readiness tick. A zero-frame-delay, zero-reload fixture verifies no
+arrival-update shot and a shot on the next update. Exact movement-controller
+statuses, facing/readiness and reload integration remain adapters. Twelve original
+controller controls establish that only status1 removes the head; status5 alone
+does not. Evidence: `child-controller-status-controls-oracle-2026-11-17.json` and
+`attack-arrival-ready-findings-2026-11-17.json`.
+
+Six original visible-query controls verify insertion order, swap-last loss,
+append-on-reappearance, requested-class order and repeated requested classes.
+These use authored buckets and a zero-distance table to isolate enumeration;
+they do not validate range lookup or final target selection. Different original
+consumers rank damage, HP or other scores, so native nearest-target tie-breaking
+has not been replaced by a universal bucket rule. Evidence:
+`visible-query-order-controls-oracle-2026-11-17.json` and
+`visible-query-consumer-ranking-findings-2026-11-17.json`.
+
+Focused ASan/UBSan checks pass, including attack arrival/release and annex
+parent/frozen/one-hop cases (`annex-arrival-final-local.log`). Original executable
+controls and static analysis were used; no new live Windows match is claimed.

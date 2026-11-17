@@ -547,6 +547,11 @@ public:
         return selectedCanAttackGround();
     }
     int tileVisibilityForTesting(int x,int y) {refreshVisibility();return tileVisibility(x,y);}
+    bool linkAnnexForTesting(uint32_t child, uint32_t parent) {
+        Object *c=findObject(child), *p=findObject(parent);
+        if (!c || !p || c==p || c->unit->type!=dat::UT_Building || p->unit->type!=dat::UT_Building) return false;
+        c->annexParentId=parent;return true;
+    }
     bool targetVisibleForTesting(int viewer, uint32_t id) const {
         const Object *o=findObject(id);return o && playerSeesTarget(viewer,*o);
     }

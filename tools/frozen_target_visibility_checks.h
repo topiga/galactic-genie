@@ -36,5 +36,22 @@ static void frozenTargetVisibilityChecks(swgb::Assets &assets) {
     check(!game.targetVisibleForTesting(1,large),"Normal stencil does not fill unsampled side/interior cells");
     game.moveObjectForTesting(observer,16.5f,15.5f);
     check(game.targetVisibleForTesting(1,large),"Center remains visible independently of perimeter stencil");
+    const auto annex=game.spawnObjectForTesting(1,70,2,25.f,25.f);
+    check(game.linkAnnexForTesting(annex,large),"Attach annex through an explicit non-owning parent link");
+    check(game.targetVisibleForTesting(1,annex) && game.objectTaskReferencesForTesting(large)==0,
+          "Normal annex samples immediate parent geometry without owning a task reference");
+    game.moveObjectForTesting(observer,25.5f,24.5f);
+    check(!game.targetVisibleForTesting(1,annex),"Visible child center does not replace unseen parent sampling");
+    game.setBuildingFrozenForTesting(annex,true);
+    check(game.targetVisibleForTesting(1,annex),"Frozen annex keeps its own manager sampling");
+    game.setBuildingFrozenForTesting(annex,false);
+    const auto grandparent=game.spawnObjectForTesting(1,70,2,25.f,25.f);
+    check(game.linkAnnexForTesting(large,grandparent) && !game.targetVisibleForTesting(1,annex),
+          "Annex sampling resolves one parent hop, not an arbitrary ancestor chain");
+    const auto mobile=game.spawnObjectForTesting(1,307,2,16.f,16.f);
+    game.moveObjectForTesting(observer,15.5f,16.5f);
+    check(!game.targetVisibleForTesting(1,mobile),"Fresh combat object retains center-only visibility");
+    game.moveObjectForTesting(observer,16.5f,15.5f);
+    check(game.targetVisibleForTesting(1,mobile),"Fresh combat center visibility remains available");
     std::puts("PASS: original frozen-target four-cell sampling and small-footprint discriminator");
 }

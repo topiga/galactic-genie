@@ -2,6 +2,10 @@
 #pragma once
 
 static void attackReferenceChecks(swgb::Assets &assets) {
+    auto &troop=const_cast<swgb::dat::DatFile &>(assets.dat()).civs.at(1).units.at(307);
+    struct Restore {swgb::dat::Unit &unit, original;~Restore(){unit=std::move(original);}} restore{troop,troop};
+    troop.frameDelay=0; // Expose same-update firing that a delayed graphic could conceal.
+    troop.reloadTime=0;
     swgb::Game game(assets);std::string error;
     swgb::Scenario scenario;
     scenario.map.width=scenario.map.height=96;scenario.map.tiles.resize(96*96);
@@ -49,8 +53,15 @@ static void attackReferenceChecks(swgb::Assets &assets) {
           "Approach retry releases the discarded movement child before planning again");
     game.update(.1f,{});
     check(game.objectTaskReferencesForTesting(pursued)==2,"Retried pursuit acquires its replacement child");
+    const float arrivalHealth=game.objectHitPoints(pursued);
+    const size_t arrivalProjectiles=game.projectileCountForTesting();
     game.moveObjectForTesting(automatic,34.5f,40.5f);game.update(.1f,{});
+    check(game.objectHitPoints(pursued)==arrivalHealth && game.projectileCountForTesting()<=arrivalProjectiles,
+          "Movement-child retirement cannot damage or launch a projectile in its arrival update");
     check(game.objectTaskReferencesForTesting(pursued)==1,"Reaching firing range releases movement child before attack work");
+    game.update(.1f,{});
+    check(game.objectHitPoints(pursued)<arrivalHealth || game.projectileCountForTesting()>arrivalProjectiles,
+          "Ready zero-delay attack releases on a later update, not the child-completion update");
     game.moveObjectForTesting(automatic,27.f,40.5f);
     check(game.issueAttackForTesting(automatic,pursued),"Restart distant visible pursuit");
     game.update(.1f,{});

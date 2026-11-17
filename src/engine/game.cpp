@@ -9173,10 +9173,14 @@ bool Game::playerSees(int viewer,float x,float y) const {
 }
 
 bool Game::playerSeesTarget(int viewer, const Object &target) const {
-    if (playerSees(viewer,target.x,target.y)) return true;
-    if (target.unit->type != dat::UT_Building || target.annexParentId) return false;
-    const float ox=mapSize_-target.y,oy=target.x;
-    const float rx=target.unit->collisionSize[0],ry=target.unit->collisionSize[1];
+    const Object *geometry=&target;
+    if (target.unit->type == dat::UT_Building && !target.buildingFrozen && target.annexParentId)
+        if (const Object *parent=findObject(target.annexParentId)) geometry=parent;
+    if (playerSees(viewer,geometry->x,geometry->y)) return true;
+    // Fresh non-building constructors leave the stencil index zero.
+    if (target.unit->type != dat::UT_Building) return false;
+    const float ox=mapSize_-geometry->y,oy=geometry->x;
+    const float rx=geometry->unit->collisionSize[0],ry=geometry->unit->collisionSize[1];
     if (!std::isfinite(ox) || !std::isfinite(oy) || ox<0 || oy<0 || ox>=mapSize_ || oy>=mapSize_ ||
         !std::isfinite(rx) || !std::isfinite(ry) || rx<0 || ry<0 || rx>mapSize_ || ry>mapSize_) return false;
     const int x=int(ox),y=int(oy);
@@ -9192,7 +9196,7 @@ bool Game::playerSeesTarget(int viewer, const Object &target) const {
             int(double(ox)+rx-double(.01f)),int(double(oy)+ry-double(.01f)),mapSize_,mapSize_);
         for(const auto &offset:offsets) if(sees(offset[0],offset[1]))return true;
     }
-    // shortcut: Annex-parent and non-building animated stencils remain unported.
+    // shortcut: Loaded non-building objects with saved nonzero stencil indexes are not supported.
     return false;
 }
 
@@ -10793,6 +10797,7 @@ void Game::updateAttack(Object &source, float dt) {
                 source.unit->maxRange));
     if (edgeGap <= maximumRange + 0.1f &&
         edgeGap + 0.05f >= minimumRange(source)) {
+        const bool completedPursuit=source.attackChildReference!=0;
         setTaskReference(source.attackChildReference,0);
         source.path.clear();
         source.pathIndex = 0;
@@ -10805,6 +10810,14 @@ void Game::updateAttack(Object &source, float dt) {
                     attackAnimationPlaying(source)
                 ? State::Attack
                 : State::Idle;
+        if (completedPursuit) {
+            // Original entry6 may enter7 now, but entry7 cannot deliver a hit.
+            if (source.attackCooldown <= 0) {
+                source.attackShotPending=true;
+                source.animTime=0.f;
+            }
+            return;
+        }
         if (source.attackCooldown <= 0 &&
             attackReleaseReady(source)) {
             const int damage = attackDamage(source, *target);
