@@ -3016,6 +3016,11 @@ static int cmdTestCombat(const char *dataDir, const char *out) {
             3, 84, 2, 80.0f, 80.0f);
     const float fortressHealthBefore =
         buildingAttack.objectHitPoints(fortress);
+    // Isolate perimeter spacing from hidden-target cancellation and idle reacquisition.
+    const uint32_t fortressSpotter = buildingAttack.spawnObjectForTesting(1,83,1,84.f,80.f);
+    buildingAttack.setAttackModeForTesting(fortressSpotter,3);
+    buildingAttack.tileVisibilityForTesting(80,80);
+    const bool buildingTargetVisible = fortressSpotter && buildingAttack.targetVisibleForTesting(1,fortress);
     std::vector<uint32_t> buildingAttackers;
     for (int index = 0; index < 10; index++) {
         const uint32_t attacker =
@@ -3064,7 +3069,7 @@ static int cmdTestCombat(const char *dataDir, const char *out) {
     }
     // Attackers can spread along either edge of the building.
     const bool buildingAttackSlotsWorked =
-        buildingAttackers.size() == 10 &&
+        buildingTargetVisible && buildingAttackers.size() == 10 &&
         buildingAttack.objectHitPoints(fortress) <
             fortressHealthBefore &&
         attackersStillEngaged >= 8 &&
