@@ -6027,3 +6027,30 @@ failures (instruction speaker color, resource selection, upgrades menu,
 upgraded drop site, tech-level Command Center), with no new failures. Logs:
 `target-query-{local,integration,bonus,combat,desktop,fixes}.log`. Original-code
 controls use modeled boundaries; no fresh live Windows session was compared.
+
+### Persistent sort slots and class43 acquisition (2026-11-17)
+
+Scored generic acquisition now overlays freshly emitted indices onto a shared
+128-slot bank. The consumer visits min(candidateCount,3) positions, preserving
+unwritten slots and duplicates. A retained index outside the current candidate
+count resolves to a cleared ID0/static record, consumes an attempt and records
+the ten-second fallback exclusion. Native ID0 remains reserved, so that padded
+record is unreachable; original reach callbacks may resolve ID0 if the original
+world actually registers an object there. This is an explicit registry adapter
+boundary, not an original universal invalid-ID rule.
+
+Class43 now joins the scored generic path with preferMobile=false. Its phase0
+therefore accepts static targets even when mobile candidates exist. Other
+supported generic classes retain mobile-first behavior; all update the same
+bank. Original41aafa/41ac7b establish both discriminators. The pure ranking helper
+still returns only the written prefix; GenieTargetSlots owns its persistent
+interpretation. Process lifetime follows the retained global guard/empty
+cleanup evidence; a live new-game reset has not yet been verified. Nonported
+controller families do not contribute their original slot-history writes.
+
+Focused ASan/UBSan tests pass: initial zero-slot duplicates, sequential8→2
+candidate queries with stale slot6, empty-query preservation, and native class43
+selection of a farther static wall over a nearer mobile unit. Existing mobile
+ranking, visibility-query, dead-target and retaliation tests also pass. Evidence:
+`visible-sort-slot-integration-contract-2026-11-17.json` and the previously
+retained sort/consumer oracles. Log: `target-slots-local.log`.

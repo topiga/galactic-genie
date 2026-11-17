@@ -9928,9 +9928,8 @@ void Game::acquireAutomaticTarget(Object &source) {
     const int minY = std::max(0, centerY - cellRadius);
     const int maxY = std::min(mobileObjectGridWidth_ - 1, centerY + cellRadius);
     // The original generic controller uses mobile-first scoring for these classes.
-    // Class43 retains its adapter until persistent unwritten sort slots are modeled.
     const int actorClass = source.unit->cls;
-    const bool scored = genieGenericTroopController(actorClass) && actorClass != 43;
+    const bool scored = genieGenericTroopController(actorClass);
     std::vector<GenieTargetCandidate> candidates;
     if (scored) {
         source.targetExclusions.erase(std::remove_if(source.targetExclusions.begin(), source.targetExclusions.end(),
@@ -9996,13 +9995,20 @@ void Game::acquireAutomaticTarget(Object &source) {
     }
     if (scored) {
         const bool mobile = std::any_of(candidates.begin(),candidates.end(),[](const auto &c){return c.positiveSpeed;});
-        const auto ranked = genieRankTargets(candidates,true,source.player>0 && !players_[size_t(source.player-1)].human);
+        const bool preferMobile=actorClass!=43;
+        const auto ranked = genieRankTargets(candidates,preferMobile,source.player>0 && !players_[size_t(source.player-1)].human);
+        // Original bank is shared across actors/players and survives query resets.
+        static GenieTargetSlots slots;
+        slots.update(ranked);
         for (int phase=0;phase<2 && !best;++phase)
-        for (size_t attempt=0;attempt<std::min<size_t>(3,ranked.indices.size());++attempt) {
-            const auto &record=candidates[ranked.indices[attempt]];
-            if (phase == 0 && mobile && !record.positiveSpeed) continue;
+        for (size_t attempt=0;attempt<std::min<size_t>(3,candidates.size());++attempt) {
+            const auto record=slots.candidate(candidates,attempt);
+            if (phase == 0 && preferMobile && mobile && !record.positiveSpeed) continue;
             Object *candidate=findObject(uint32_t(record.id));
-            if (!candidate) continue;
+            if (!candidate) {
+                if(phase==1)source.targetExclusions.emplace_back(uint32_t(record.id),gameTime_+10.0);
+                continue;
+            }
             std::vector<std::array<float,2>> route;
             const float range=std::max(0.f,modifiedUnitAttribute(source,12,source.unit->maxRange));
             bool reachable=withinInteractionRange(source,*candidate,range);

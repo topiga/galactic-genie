@@ -72,6 +72,20 @@ static void targetSelectionChecks() {
     const auto capped = genieRankTargets(input,true,false);
     check(capped.indices.size()==128 && capped.scores.size()==128 && capped.indices.back()==127,
           "Original candidate cap is128 with stable equal-score order");
+    swgb::GenieTargetSlots slots;
+    input={{10,false,0,0,1,49,0},{11,true,0,0,1,49,0}};
+    slots.update(genieRankTargets(input,false,false));
+    check(slots.candidate(input,0).id==10 && slots.candidate(input,1).id==10,
+          "Initially zeroed original sort slots retain duplicate candidate zero");
+    std::vector<GenieTargetCandidate> prime;
+    for(int i=0;i<8;++i)prime.push_back({100+i,true,0,0,1,49,float(i)});
+    slots.update(genieRankTargets(prime,true,false));
+    slots.update(genieRankTargets(input,false,false));
+    check(slots.candidate(input,0).id==10 && slots.candidate(input,1).id==0 &&
+          !slots.candidate(input,1).positiveSpeed,
+          "Previous query slot6 resolves to cleared ID0, not the omitted mobile candidate");
+    slots.update(genieRankTargets({},true,false));
+    check(slots.candidate(prime,1).id==106,"Empty query preserves shared output slots");
     std::puts("PASS: original target metric, normalization, preference tiers, stable ties and bounded output");
 }
 
@@ -160,5 +174,16 @@ static void targetSelectionGameplayChecks(swgb::Assets &assets) {
     exception.damageObjectForTesting(defender,1,newAttacker);
     check(exception.attackTargetForTesting(defender)==newAttacker,
           "Current class6 is not blocked by the ordinary-target retention veto");
+    troop.cls=43;special=restoreSpecial.original;
+    swgb::Game staticFirst(assets);
+    check(staticFirst.initScenario(scenario,&error),error.c_str());
+    staticFirst.setDiplomacyForTesting(1,2,3);staticFirst.setDiplomacyForTesting(2,1,3);
+    const auto artillery=staticFirst.spawnObjectForTesting(1,307,1,27.f,40.5f);
+    const auto nearerTroop=staticFirst.spawnObjectForTesting(1,307,2,29.f,40.5f);
+    staticFirst.setAttackModeForTesting(nearerTroop,3);
+    const auto fartherWall=staticFirst.spawnObjectForTesting(1,72,2,31.f,41.f);
+    for(int tick=0;tick<20 && !staticFirst.attackTargetForTesting(artillery);++tick)staticFirst.update(.1f,{});
+    check(staticFirst.attackTargetForTesting(artillery)==fartherWall,
+          "Class43 consumes static-first ranking even with a nearer mobile target");
     std::puts("PASS: acquisition, fallback, dead-target reselection and pursuit retention on hit");
 }

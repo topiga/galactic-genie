@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cmath>
 #include <limits>
@@ -104,4 +105,16 @@ inline GenieTargetRanking genieRankTargets(const std::vector<GenieTargetCandidat
     if (!preferMobile) emit([](const auto& c) { return c.positiveSpeed; }, mobileCount);
     return result;
 }
+// Original output slots outlive each query; cleared candidate records resolve to ID0.
+class GenieTargetSlots {
+    std::array<size_t,128> indices_{};
+public:
+    void update(const GenieTargetRanking &ranking) {
+        std::copy_n(ranking.indices.begin(),std::min(ranking.indices.size(),indices_.size()),indices_.begin());
+    }
+    GenieTargetCandidate candidate(const std::vector<GenieTargetCandidate> &input,size_t slot) const {
+        const size_t index=indices_.at(slot);
+        return index<input.size()?input[index]:GenieTargetCandidate{0};
+    }
+};
 } // namespace swgb
