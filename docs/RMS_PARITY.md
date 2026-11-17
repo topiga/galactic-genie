@@ -5868,3 +5868,18 @@ now checks that its endpoint reaches firing range before accepting a candidate.
 The water-barrier fixture verifies fallback to an in-range static target after
 an unreachable mobile candidate. Focused checks including the new distance
 controls and fallback regression pass (`selection-return-final-local.log`).
+
+A broader numerical differential compares original41b300 with FPCW0x037f
+(PC64) against the native helper compiled with clang++-O2:1,500 randomized
+finite float32 candidate sets produce10,898 score values with zero bit
+mismatches. Mixed mobile flags, existing bonuses and histories are included.
+Evidence: `visible-score-decimal-differential-oracle-2026-11-17.json`, retaining
+seed and source/helper/binary hashes. NaN, infinity, overflow, subnormal inputs
+and whole-selector equivalence are outside that check.
+
+Final focused ASan/UBSan, bonus/research/healing/AI, combat/gathering/garrison
+and desktop menu/preferences/60-frame render/audio smoke checks pass.
+Compatibility retains the same five baseline failures, with no new failures.
+Logs: `selection-return-final-{local,bonus,combat,desktop,fixes}.log`.
+The local app is rebuilt. No live Windows session was used in this pass;
+original executable routines were exercised within the documented boundaries.
