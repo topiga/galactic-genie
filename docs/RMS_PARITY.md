@@ -5966,3 +5966,32 @@ retains the same five baseline failures with no new failures. Logs:
 used retained original executable routines with modeled boundaries; no fresh
 live Windows match was run. Exact callback timing, full message-driven selection,
 livestock action-head semantics and external transport planning remain open.
+
+### Original visible-query filtering (2026-11-17)
+
+The scored troop acquisition path now uses original614a00 filtering before
+candidate eligibility and the128-candidate limit. Visible records retain packed
+unsigned coordinates, owner and footprint radius. Requested classes traverse
+persistent buckets, with five independent256-record caps and original diplomacy
+partitions (Gaia0, self1, ally2, neutral3, other4). Humans scan4..2; AI scans4..0.
+Metadata updates preserve bucket slots. The query uses the actual1024-byte table
+constructed by614720, including its non-Euclidean near-distance entries,
+radius+7 broad bounds and building-radius subtraction/minimum-one rule.
+
+Caller41a150 obtains virtual1d0 from409b70 (effective search radius), and takes
+min(15,max(trunc(searchRadius),trunc(LOS)+1)). Coordinates truncate toward zero;
+this is separate from sight-cell sampling. Non-annex buildings pack
+trunc((collisionX+collisionY)/2+0.5); normal annexes use parent coordinates but
+retain their own zero radius. Effective native attribute modifiers supply the
+caller inputs. Original fixture provenance is retained in
+`visible-query-{filter,radius-caller}-findings-2026-11-17.json` and
+`visible-query-distance-controls-oracle-2026-11-17.json`.
+
+This supersedes the query-filter adapter limit above. Visibility callback timing,
+positive eligibility, damage and path callbacks remain native adapters. Saved
+non-building records with a nonzero stored radius are not reproduced. Class43
+still awaits process-persistent sort-slot integration: original unwritten slots
+can refer to cleared ID0 records and must not be compacted. Separate original
+movement-head controls confirm completed children remain observable until
+controller retirement; existing native path fields cannot safely stand in for
+that lifecycle. Neither finding is claimed as integrated gameplay behavior.

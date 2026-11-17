@@ -17,6 +17,40 @@ static void visibleTargetIndexChecks() {
     index.update(10,6,0);
     check(index.slot(0,399)==0 && index.slot(0,10)==size_t(-1),"Growth preserves ID slot repair without record pointers");
     index.clear();check(index.bucket(0,6).empty() && index.slot(0,399)==size_t(-1),"New session clears visible membership");
+    using namespace swgb;
+    check(genieQueryDistance(50,50,5,{1,0,2,55,51})==5,
+          "Original generated distance admits diagonal beyond center radius");
+    check(genieQueryDistance(50,50,5,{1,1,2,56,50})==5 &&
+          genieQueryDistance(50,50,5,{1,7,2,56,50})==1,
+          "Original footprint adjustment and minimum distance");
+    check(genieQueryDistance(50,50,5,{1,255,2,62,50})==1 &&
+          genieQueryDistance(50,50,5,{1,255,2,63,50})==-1,
+          "Coarse query bounds precede footprint subtraction");
+    check(genieQueryDistance(50,50,100,{1,0,2,66,50})==-1 &&
+          genieQueryDistance(50,50,0,{1,0,2,50,50})==0,
+          "Original radius cap and zero-distance record");
+    check(genieTargetQueryRadius(4.9f,6.9f)==7 && genieTargetQueryRadius(12.9f,4.f)==12 &&
+          genieTargetQueryRadius(100.f,100.f)==15,"Query radius truncates search and sight independently");
+    check(genieDiplomacyPartition(1,0,3)==0 && genieDiplomacyPartition(1,1,3)==1 &&
+          genieDiplomacyPartition(1,2,0)==2 && genieDiplomacyPartition(1,2,1)==3 &&
+          genieDiplomacyPartition(1,2,3)==4,"Original diplomacy query partitions");
+    std::array<uint8_t,17> partitions{};
+    const int classes[]={6};
+    for(uint8_t owner=0;owner<5;++owner) {
+        partitions[owner]=owner;
+        for(uint32_t n=0;n<260;++n)index.update(1+owner*260+n,6,1,owner,50,50);
+    }
+    const auto groups=index.query(0,50,50,5,classes,partitions);
+    bool caps=true;
+    for(size_t n=0;n<5;++n)caps=caps && groups[n].size()==256 && groups[n].front().id==1+n*260 &&
+        groups[n].back().id==256+n*260;
+    check(caps,"Five independent 256-record caps preserve bucket order");
+    index.clear();index.update(1,6,1,2,50,50);index.update(2,6,1,2,50,50);
+    index.update(1,6,1,2,90,90);
+    const int repeated[]={6,6};
+    const auto moved=index.query(0,50,50,5,repeated,partitions);
+    check(index.slot(0,1)==0 && moved[2].size()==2 && moved[2][0].id==2 && moved[2][1].id==2,
+          "Metadata moves without bucket reordering; repeated query classes repeat records");
     std::puts("PASS: visible-index append, swap removal, reappearance, class changes and reset");
 }
 static void visibleTargetIndexGameplayChecks(swgb::Assets &assets) {

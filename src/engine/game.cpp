@@ -9284,7 +9284,15 @@ void Game::refreshVisibility() {
             for(int viewer=1;viewer<=16;++viewer)
                 if((sight&viewerMasks[size_t(viewer-1)]) || (forceSightCheat_ && viewer==localPlayer_))viewers|=uint16_t(1u<<(viewer-1));
         }
-        visibleTargets_.update(object.spawnId,object.unit->cls,viewers);
+        const Object *geometry=&object;
+        if(object.unit->type==dat::UT_Building && !object.buildingFrozen && object.annexParentId)
+            if(const auto *parent=findObject(object.annexParentId))geometry=parent;
+        const double size=object.unit->type==dat::UT_Building && !object.annexParentId
+            ?(double(object.unit->collisionSize[0])+object.unit->collisionSize[1])*.5+.5:0.;
+        if(!std::isfinite(geometry->x) || !std::isfinite(geometry->y) || !std::isfinite(size))viewers=0;
+        const auto packed=[](double v) {return std::isfinite(v)?uint8_t(int(std::fmod(std::trunc(double(v)),256.))):uint8_t(0);};
+        visibleTargets_.update(object.spawnId,object.unit->cls,viewers,uint8_t(object.player),
+            packed(mapSize_-geometry->y),packed(geometry->x),packed(size));
     }
     for(int y=0;y<mapSize_;++y) for(int x=0;x<mapSize_;++x)
         if(tileVisibility(x,y)==2) rememberedTerrain_[size_t(y)*mapSize_+x]=terrain_[size_t(y)*mapSize_+x];
@@ -9930,58 +9938,63 @@ void Game::acquireAutomaticTarget(Object &source) {
     }
     Object *best = nullptr;
     float bestDistanceSquared = radius * radius;
-    for (int cellY = minY; cellY <= maxY; cellY++)
-        for (int cellX = minX; cellX <= maxX; cellX++)
-            for (uint32_t index :
-                 combatObjectCells_[
-                     (size_t)cellY * mobileObjectGridWidth_ + cellX]) {
-                Object &candidate = objects_[(size_t)index];
-                // Gaia fauna may be manually hunted, but only hostile Gaia
-                // animals initiate combat. Player-owned passive animals are
-                // never military auto-acquisition targets.
-                if (candidate.player <= 0 ||
-                    (source.player > 0 &&
-                     isPassiveAnimal(candidate)) ||
-                    !isEnemy(source, candidate) ||
-                    !combatTargetVisible(source,candidate) ||
-                    !canAttackTarget(source, candidate))
-                    continue;
-                const float dx = candidate.x - source.x;
-                const float dy = candidate.y - source.y;
-                const float distanceSquared = dx * dx + dy * dy;
-                if (distanceSquared > (scored ? radius * radius : bestDistanceSquared)) continue;
-                if (scored) {
-                    if (source.player<=0 || visibleTargets_.slot(size_t(source.player-1),candidate.spawnId)==size_t(-1))continue;
-                    if (std::any_of(source.targetExclusions.begin(), source.targetExclusions.end(),
-                        [&](const auto &entry) { return entry.first == candidate.spawnId; })) continue;
-                    float speed = modifiedUnitAttribute(candidate,5,candidate.unit->speed);
-                    const auto *graphic = assets_.dat().graphic(objectGraphic(candidate,*candidate.unit));
-                    if (graphic && graphic->speedMultiplier > 0) speed *= graphic->speedMultiplier;
-                    candidates.push_back({int(candidate.spawnId),speed > 0,
-                        genieTargetMetric(candidate.hitPoints,float(attackDamage(source,candidate)),
-                            modifiedUnitAttribute(source,10,source.unit->reloadTime),true),
-                        genieTargetDistance(source.x,source.y,source.unit->collisionSize[0],source.unit->collisionSize[1],
-                            candidate.x,candidate.y,candidate.unit->collisionSize[0],candidate.unit->collisionSize[1]),
-                        modifiedUnitAttribute(candidate,12,candidate.unit->maxRange),
-                        candidate.unit->cls,0});
-                } else {
-                    best = &candidate;
-                    bestDistanceSquared = distanceSquared;
-                }
-            }
-    if (scored) {
+    std::vector<uint32_t> queryIds;
+    if(scored && source.player>0) {
         static constexpr int classes[] = {5,6,7,8,9,10,11,12,13,14,15,16,17,18,32,33,34,35,36,37,38,39,40,
             43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,63,64,62,61};
-        const auto classOrder = [&](int cls) { return std::find(std::begin(classes),std::end(classes),cls); };
-        candidates.erase(std::remove_if(candidates.begin(),candidates.end(),
-            [&](const auto &c) { return classOrder(c.unitClass) == std::end(classes); }),candidates.end());
-        // shortcut: Query partitions, damage and path callbacks retain native adapters.
-        std::sort(candidates.begin(),candidates.end(),[&](const auto &a,const auto &b) {
-            if(a.unitClass!=b.unitClass)return classOrder(a.unitClass)<classOrder(b.unitClass);
-            return visibleTargets_.slot(size_t(source.player-1),uint32_t(a.id)) <
-                   visibleTargets_.slot(size_t(source.player-1),uint32_t(b.id));
-        });
-        if (candidates.size() > 128) candidates.resize(128);
+        std::array<uint8_t,17> partitions{};
+        const auto &player=players_[size_t(source.player-1)];
+        for(int owner=0;owner<=16;++owner)partitions[size_t(owner)]=genieDiplomacyPartition(source.player,owner,
+            size_t(owner)<player.diplomacy.size()?player.diplomacy[size_t(owner)]:3);
+        const auto groups=visibleTargets_.query(size_t(source.player-1),int(mapSize_-source.y),int(source.x),
+            genieTargetQueryRadius(unitSearchRadius(source.player,*source.unit),
+                modifiedUnitAttribute(source,1,source.unit->lineOfSight)),classes,partitions);
+        for(int category=4;category>=(player.human?2:0);--category)
+            for(const auto &record:groups[size_t(category)])queryIds.push_back(record.id);
+    } else {
+        for(int cellY=minY;cellY<=maxY;++cellY)for(int cellX=minX;cellX<=maxX;++cellX)
+            for(uint32_t index:combatObjectCells_[size_t(cellY)*mobileObjectGridWidth_+cellX])
+                queryIds.push_back(objects_[index].spawnId);
+    }
+    for(uint32_t id:queryIds) {
+        Object *object=findObject(id);
+        if(!object)continue;
+        Object &candidate=*object;
+        // Gaia fauna may be manually hunted, but only hostile Gaia
+        // animals initiate combat. Player-owned passive animals are
+        // never military auto-acquisition targets.
+        if (candidate.player <= 0 ||
+            (source.player > 0 &&
+             isPassiveAnimal(candidate)) ||
+            !isEnemy(source, candidate) ||
+            !combatTargetVisible(source,candidate) ||
+            !canAttackTarget(source, candidate))
+            continue;
+        const float dx = candidate.x - source.x;
+        const float dy = candidate.y - source.y;
+        const float distanceSquared = dx * dx + dy * dy;
+        if (!scored && distanceSquared > bestDistanceSquared) continue;
+        if (scored) {
+            if (source.player<=0 || visibleTargets_.slot(size_t(source.player-1),candidate.spawnId)==size_t(-1))continue;
+            if (std::any_of(source.targetExclusions.begin(), source.targetExclusions.end(),
+                [&](const auto &entry) { return entry.first == candidate.spawnId; })) continue;
+            float speed = modifiedUnitAttribute(candidate,5,candidate.unit->speed);
+            const auto *graphic = assets_.dat().graphic(objectGraphic(candidate,*candidate.unit));
+            if (graphic && graphic->speedMultiplier > 0) speed *= graphic->speedMultiplier;
+            candidates.push_back({int(candidate.spawnId),speed > 0,
+                genieTargetMetric(candidate.hitPoints,float(attackDamage(source,candidate)),
+                    modifiedUnitAttribute(source,10,source.unit->reloadTime),true),
+                genieTargetDistance(source.x,source.y,source.unit->collisionSize[0],source.unit->collisionSize[1],
+                    candidate.x,candidate.y,candidate.unit->collisionSize[0],candidate.unit->collisionSize[1]),
+                modifiedUnitAttribute(candidate,12,candidate.unit->maxRange),
+                candidate.unit->cls,0});
+            if(candidates.size()==128)break;
+        } else {
+            best = &candidate;
+            bestDistanceSquared = distanceSquared;
+        }
+    }
+    if (scored) {
         const bool mobile = std::any_of(candidates.begin(),candidates.end(),[](const auto &c){return c.positiveSpeed;});
         const auto ranked = genieRankTargets(candidates,true,source.player>0 && !players_[size_t(source.player-1)].human);
         for (int phase=0;phase<2 && !best;++phase)
