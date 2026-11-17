@@ -923,7 +923,39 @@ void Game::updateSkirmish(float dt) {
 }
 
 bool Game::initScenario(const Scenario &scenario, std::string *err) {
-    return initScenario(scenario,err,false);
+    // Original scenario IDs include zero; native commands reserve it for no object.
+    // Normalize only imported scenarios, leaving the RMS constructor ID stream alone.
+    const auto zeroCount = std::count_if(scenario.units.begin(),scenario.units.end(),
+        [](const ScenarioUnit &unit) { return unit.spawnId == 0; });
+    if (!zeroCount) return initScenario(scenario,err,false);
+    uint64_t replacement = std::max<uint64_t>(1,scenario.nextUnitId);
+    for (const auto &unit : scenario.units)
+        replacement = std::max(replacement,uint64_t(unit.spawnId)+1);
+    if (zeroCount != 1 || replacement >= uint64_t(std::numeric_limits<int32_t>::max())) {
+        if (err) *err = "scenario zero object ID cannot be remapped uniquely";
+        return false;
+    }
+    Scenario imported = scenario;
+    const uint32_t id = uint32_t(replacement);
+    imported.nextUnitId = id+1;
+    for (auto &unit : imported.units) {
+        if (!unit.spawnId) unit.spawnId = id;
+        if (unit.garrisonedInId == 0) unit.garrisonedInId = int32_t(id);
+    }
+    const auto remapField = [id](std::vector<int32_t> &fields,size_t index) {
+        if (index < fields.size() && fields[index] == 0) fields[index] = int32_t(id);
+    };
+    for (auto &trigger : imported.triggers) {
+        for (auto &condition : trigger.conditions) {
+            remapField(condition.fields,2); // Object reference.
+        }
+        for (auto &effect : trigger.effects) {
+            remapField(effect.fields,5); // Location object.
+            for (auto &selected : effect.selectedUnitIds)
+                if (!selected) selected = id;
+        }
+    }
+    return initScenario(imported,err,false);
 }
 
 bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsCompletionOrder,
