@@ -402,7 +402,7 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     localClock_.reset();
     actorOwnerSchedule_ = {};
     localCommands_.reset();
-    tacticalExploreCommands_.reset();
+    tacticalCommands_.reset();
     players_ = {};
     worldPlayerCount_=2;
     resources_ = {};
@@ -842,8 +842,7 @@ void Game::updateSkirmishArmy(int player) {
             if(dx*dx+dy*dy<nearest) {nearest=dx*dx+dy*dy;target=&candidate;}
         }
         if(target && target!=current) {
-            soldier.attackMode=AttackMode::Aggressive;
-            issueAttack(soldier,*target,std::atan2(soldier.y-target->y,soldier.x-target->x));
+            queueTacticalAttack(soldier,*target);
         } else if(!target && !soldier.attackTargetId && launchWave &&
                   !soldier.moveGoalActive && soldier.state==State::Idle) {
             const int goal=chooseGoal(soldier);
@@ -1033,7 +1032,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     localClock_.reset();
     actorOwnerSchedule_ = {};
     localCommands_.reset();
-    tacticalExploreCommands_.reset();
+    tacticalCommands_.reset();
     players_ = scenario.players;
     worldPlayerCount_=scenario.playerSlotCount;
     if(!worldPlayerCount_) {
@@ -11938,17 +11937,30 @@ bool Game::approach(Object &object, const Object &target, float clearance) {
 bool Game::queueExplore(Object &object,float x,float y) {
     if(!std::isfinite(x) || !std::isfinite(y) || x>=mapSize_ || y>=mapSize_ ||
        ((x<0 || y<0) && !(x==-1 && y==-1)))return false;
-    return tacticalExploreCommands_.enqueue({object.spawnId,object.player,x,y});
+    return tacticalCommands_.enqueue({object.spawnId,object.player,x,y});
 }
 
-void Game::applyExploreCommands(const std::vector<TacticalExploreQueue::Order> &orders) {
+bool Game::queueTacticalAttack(Object &actor,const Object &target) {
+    TacticalCommandQueue::Order order{actor.spawnId,actor.player,target.x,target.y};
+    order.command=700;order.target=int32_t(target.spawnId);order.targetPlayer=uint8_t(target.player);order.z=1;
+    return tacticalCommands_.enqueue(order);
+}
+
+void Game::applyTacticalCommands(const std::vector<TacticalCommandQueue::Order> &orders) {
     for(const auto &order:orders) {
         auto *actor=findObject(order.actor);
-        if(!actor || actor->player!=order.player)continue;
-        // shortcut: Native eligibility/action creation stands in for the original actor-AI queue activation.
-        issueExplore(*actor,order.x,order.y,true);
+        if(!actor || !actor->active || actor->hidden || actor->garrisonedInId>=0 || actor->player!=order.player)continue;
+        // shortcut: Native action constructors remain until original actor-AI activation is fully ported.
+        if(order.command==700) {
+            stopUnit(*actor); // Forced activation clears the old task even if the new target is gone.
+            auto *target=findObject(uint32_t(order.target));
+            if(target && target->active && !target->hidden) {
+                actor->attackMode=AttackMode::Aggressive;
+                issueAttack(*actor,*target,std::atan2(actor->y-target->y,actor->x-target->x));
+            }
+        } else if(order.command==705)issueExplore(*actor,order.x,order.y,true);
     }
-    if(orders.empty())return;
+    if(orders.empty() || orders.front().command!=705)return;
     const auto &goal=orders.front();
     if(goal.player<=0 || goal.player>=int(aiPlayers_.size()) || goal.x<0 || goal.y<0)return;
     const bool approaching=std::any_of(objects_.begin(),objects_.end(),[&](const Object &unit) {
@@ -16561,7 +16573,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
         updateGarrisoning(int(player));
         if(player)updateAi(int(player),dt);
         // Original61f8cb flushes AI staging after each owner; local dispatch precedes the next traversal.
-        tacticalExploreCommands_.flush(localCommands_,[this](const auto &orders){applyExploreCommands(orders);});
+        tacticalCommands_.flush(localCommands_,[this](const auto &orders){applyTacticalCommands(orders);});
     }
     syncGarrisonedTransports();
     for (Object &object : objects_)

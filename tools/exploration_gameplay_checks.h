@@ -1,5 +1,38 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+static void tacticalAttackGameplayChecks(swgb::Assets &assets) {
+    swgb::Scenario scenario;scenario.map.width=scenario.map.height=64;scenario.map.tiles.resize(64*64);
+    scenario.nextUnitId=1;scenario.playerSlotCount=2;scenario.civilizations.fill(1);
+    for(int i=0;i<2;++i){scenario.players[i].active=true;scenario.players[i].human=i==0;scenario.players[i].civilization=1;}
+    swgb::Game game(assets);std::string error;uint32_t actor=0,target=0;
+    const auto reset=[&] {
+        check(game.initScenario(scenario,&error),error.c_str());
+        game.setDiplomacyForTesting(1,2,3);game.setDiplomacyForTesting(2,1,3);
+        actor=game.spawnObjectForTesting(1,329,1,20,20);
+        target=game.spawnObjectForTesting(1,83,2,23,20);
+        check(actor && target,"Tactical attack fixture");
+        game.setAttackModeForTesting(actor,3);game.setAttackModeForTesting(target,3);
+    };
+    reset();check(game.queueAttackForTesting(actor,target),"Stage tactical attack");
+    game.updatePaused(1,{});
+    check(game.stagedTacticalCountForTesting()==1 && !game.attackTargetForTesting(actor),"Pause retains unexecuted attack staging");
+    game.update(0,{});
+    check(!game.stagedTacticalCountForTesting() && !game.attackTargetForTesting(actor),"Owner flush does not apply attack");
+    game.update(0,{});
+    check(game.attackTargetForTesting(actor)==target,"Local drain activates the captured attack target");
+    reset();check(game.issuePointMoveForTesting(actor,28,20),"Old movement before rejected forced attack");
+    check(game.queueAttackForTesting(actor,target),"Queue attack before target destruction");game.update(0,{});
+    check(game.damageObjectForTesting(target,100000),"Destroy queued attack target");game.update(0,{});
+    check(!game.attackTargetForTesting(actor) && game.pointMovementStatusForTesting(actor)==-1,
+          "Forced attack clears old task even when its target disappears before activation");
+    reset();check(game.queueAttackForTesting(actor,target),"Queue attack before actor ownership changes");game.update(0,{});
+    check(game.transferObjectForTesting(actor,2),"Transfer queued attacking actor");game.update(0,{});
+    check(!game.attackTargetForTesting(actor),"Tactical attack revalidates actor ownership");
+    reset();check(game.queueAttackForTesting(actor,target),"Queue attack before session replacement");
+    check(game.initScenario(scenario,&error) && !game.stagedTacticalCountForTesting(),"Session reset discards queued attacks");
+    std::puts("PASS: tactical attack staging, pause, delayed activation, missing targets, ownership and reset");
+}
+
 static void explorationGameplayChecks(swgb::Assets &assets) {
     swgb::Scenario scenario;scenario.map.width=scenario.map.height=64;scenario.map.tiles.resize(64*64);
     scenario.nextUnitId=1;scenario.playerSlotCount=2;scenario.civilizations.fill(1);
@@ -64,12 +97,12 @@ static void explorationGameplayChecks(swgb::Assets &assets) {
     std::vector<uint32_t> wave;
     for(int i=0;i<6;++i)wave.push_back(game.spawnObjectForTesting(1,troop,2,home[0]+i*.3f,home[1]+6));
     game.updateSkirmishArmyForTesting(2);
-    check(game.stagedExplorationCountForTesting()>0,"Native tactical planner stages its exploration orders");
+    check(game.stagedTacticalCountForTesting()>0,"Native tactical planner stages its exploration orders");
     for(auto id:wave)check(game.explorationStateForTesting(id)==-1,"Staging does not apply an exploration action immediately");
     game.updatePaused(.1f,{});
-    check(game.stagedExplorationCountForTesting()>0,"Pause does not flush tactical staging");
+    check(game.stagedTacticalCountForTesting()>0,"Pause does not flush tactical staging");
     game.update(.05f,{});
-    check(game.stagedExplorationCountForTesting()==0,"Owner update flushes tactical orders into local command storage");
+    check(game.stagedTacticalCountForTesting()==0,"Owner update flushes tactical orders into local command storage");
     for(auto id:wave)check(game.explorationStateForTesting(id)==-1,"Owner flush does not execute the fresh local commands");
     game.update(.05f,{});
     bool exploring=false;for(auto id:wave)exploring|=game.explorationStateForTesting(id)>=0;
@@ -86,7 +119,8 @@ static void explorationGameplayChecks(swgb::Assets &assets) {
     game.update(.05f,{});game.update(.05f,{});
     check(game.explorationStateForTesting(dead)==-1,"Dead actor does not acquire a queued exploration action");
     check(game.queueExploreForTesting(wave[0],home[0]+10,home[1]+10),"Stage an order before session replacement");
-    check(game.initScenario(scenario,&error)&&game.stagedExplorationCountForTesting()==0,
+    check(game.initScenario(scenario,&error)&&game.stagedTacticalCountForTesting()==0,
           "Scenario replacement clears tactical staging together with local commands");
+    tacticalAttackGameplayChecks(assets);
     std::puts("PASS: exploration parent/child gameplay, retarget, cancellation, native failure boundary and scouting integration");
 }
