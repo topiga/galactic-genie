@@ -8,6 +8,26 @@
 static void targetSelectionChecks() {
     // Actual original 41b050/41b300/41b450 controls retained locally as
     // visible-score-{producer,stage}-controls-oracle-2026-11-17.json.
+    // Actual551b80 controls include overlap, touching, asymmetry, reversed deltas,
+    // and unchanged results with different height/annex metadata (not helper inputs).
+    struct DistanceCase { float v[8]; uint32_t bits; };
+    const DistanceCase distances[] = {
+        {{0.0f,0.0f,0.0f,0.0f,3.0f,4.0f,0.0f,0.0f},1084227584u}, // center_zero_radii
+        {{0.0f,0.0f,0.5f,0.5f,3.0f,4.0f,0.5f,0.5f},1080475994u}, // unit_half_radii
+        {{1.0f,2.0f,2.0f,1.0f,8.0f,6.0f,1.0f,2.0f},1082388603u}, // asymmetric_building
+        {{0.0f,0.0f,1.0f,1.0f,0.5f,0.5f,1.0f,1.0f},0u}, // overlap
+        {{0.0f,0.0f,1.0f,1.0f,2.0f,2.0f,1.0f,1.0f},0u}, // touch
+        {{0.0f,0.0f,1.0f,1.0f,1.0f,5.0f,1.0f,1.0f},1077936128u}, // one_axis_gap
+        {{3.0f,4.0f,0.5f,0.5f,0.0f,0.0f,0.5f,0.5f},1080475994u}, // negative_delta
+        {{0.0f,0.0f,0.5f,0.5f,3.0f,4.0f,0.5f,0.5f},1080475994u}, // height_ignored
+        {{0.0f,0.0f,0.5f,0.5f,3.0f,4.0f,0.5f,0.5f},1080475994u}, // annex_pointer_ignored
+    };
+    for (const auto& c : distances) {
+        const float value = swgb::genieTargetDistance(c.v[0],c.v[1],c.v[2],c.v[3],
+                                                    c.v[4],c.v[5],c.v[6],c.v[7]);
+        uint32_t raw = 0; std::memcpy(&raw,&value,sizeof(raw));
+        check(raw == c.bits, "Original axis-aligned footprint distance matches exact float result");
+    }
     using swgb::GenieTargetCandidate;
     using swgb::genieRankTargets;
     const float metric = swgb::genieTargetMetric(101, 3, 7, false);
@@ -64,7 +84,7 @@ static void targetSelectionGameplayChecks(swgb::Assets &assets) {
     game.setDiplomacyForTesting(1,2,3);game.setDiplomacyForTesting(2,1,3);
     const auto actor=game.spawnObjectForTesting(1,307,1,27.f,40.5f);
     const auto wall=game.spawnObjectForTesting(1,72,2,29.f,40.5f);
-    const auto mobile=game.spawnObjectForTesting(1,307,2,31.f,40.5f);
+    const auto mobile=game.spawnObjectForTesting(1,307,2,30.f,40.5f);
     game.setAttackModeForTesting(mobile,3);
     for(int tick=0;tick<20 && !game.attackTargetForTesting(actor);++tick)game.update(.1f,{});
     check(wall && game.attackTargetForTesting(actor)==mobile,
@@ -77,5 +97,21 @@ static void targetSelectionGameplayChecks(swgb::Assets &assets) {
     for(int tick=0;tick<20 && !game.attackTargetForTesting(tiedActor);++tick)game.update(.1f,{});
     check(game.attackTargetForTesting(tiedActor)==first,
           "Equal candidate scores preserve native query order within one class and cell");
-    std::puts("PASS: integrated mobile-preference and equal-score troop acquisition");
+    auto &troop=const_cast<swgb::dat::DatFile &>(assets.dat()).civs.at(1).units.at(307);
+    struct Restore {swgb::dat::Unit &unit,original;~Restore(){unit=std::move(original);}} restore{troop,troop};
+    troop.maxRange=1;
+    swgb::Game fallback(assets);
+    check(fallback.initScenario(scenario,&error),error.c_str());
+    fallback.setDiplomacyForTesting(1,2,3);fallback.setDiplomacyForTesting(2,1,3);
+    for(int y=17;y<=23;++y)for(int x=30;x<=36;++x)fallback.setTerrainForTesting(x,y,1);
+    fallback.setTerrainForTesting(33,20,0);
+    const auto chooser=fallback.spawnObjectForTesting(1,307,1,28.5f,20.5f);
+    const auto islandTarget=fallback.spawnObjectForTesting(1,307,2,33.5f,20.5f);
+    const auto reachable=fallback.spawnObjectForTesting(1,72,2,27.f,20.5f);
+    fallback.setAttackModeForTesting(islandTarget,3);
+    check(!fallback.positionPassableForTesting(chooser,31.5f,20.5f),"Mobile preference fixture has an impassable water barrier");
+    for(int tick=0;tick<20 && !fallback.attackTargetForTesting(chooser);++tick)fallback.update(.1f,{});
+    check(fallback.attackTargetForTesting(chooser)==reachable,
+          "Failed mobile approach permits a reachable static target in the fallback phase");
+    std::puts("PASS: integrated mobile preference, stable ties and static fallback acquisition");
 }

@@ -5854,3 +5854,17 @@ owned-class1 movement remain outside this change. Evidence:
 Focused ASan/UBSan checks pass (`selection-return-local.log`), including immediate
 post-deposit reference transfer, return completion without premature gathering,
 manual drop-off without a primary, and the new scoring/acquisition checks.
+
+The scorer's distance adapter is now replaced by551b80/551ba0 footprint-edge
+Euclidean distance, with the original stored-float X stages. Nine original
+float-bit controls cover asymmetric radii, overlap, touching, reversed deltas
+and ignored height/annex metadata. Evidence:
+`target-distance-controls-oracle-2026-11-17.json`. Extreme x87 intermediate
+precision remains outside these finite-coordinate controls.
+
+An integration regression also caught an incorrect assumption about native
+pathfinding: a successful `findPath` call may return a partial route. Acquisition
+now checks that its endpoint reaches firing range before accepting a candidate.
+The water-barrier fixture verifies fallback to an in-range static target after
+an unreachable mobile candidate. Focused checks including the new distance
+controls and fallback regression pass (`selection-return-final-local.log`).

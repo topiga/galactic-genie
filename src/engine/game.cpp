@@ -9934,7 +9934,9 @@ void Game::acquireAutomaticTarget(Object &source) {
                     candidates.push_back({int(candidate.spawnId),speed > 0,
                         genieTargetMetric(candidate.hitPoints,float(attackDamage(source,candidate)),
                             modifiedUnitAttribute(source,10,source.unit->reloadTime),true),
-                        std::sqrt(distanceSquared),modifiedUnitAttribute(candidate,12,candidate.unit->maxRange),
+                        genieTargetDistance(source.x,source.y,source.unit->collisionSize[0],source.unit->collisionSize[1],
+                            candidate.x,candidate.y,candidate.unit->collisionSize[0],candidate.unit->collisionSize[1]),
+                        modifiedUnitAttribute(candidate,12,candidate.unit->maxRange),
                         candidate.unit->cls,0});
                 } else {
                     best = &candidate;
@@ -9961,10 +9963,14 @@ void Game::acquireAutomaticTarget(Object &source) {
             if (!candidate) continue;
             std::vector<std::array<float,2>> route;
             const float range=std::max(0.f,modifiedUnitAttribute(source,12,source.unit->maxRange));
-            if (withinInteractionRange(source,*candidate,range) ||
-                findPath(source,candidate->x,candidate->y,route,candidate,range)) {
-                best=candidate;break;
+            bool reachable=withinInteractionRange(source,*candidate,range);
+            if (!reachable && findPath(source,candidate->x,candidate->y,route,candidate,range) && !route.empty()) {
+                // Movement accepts partial routes; target selection requires reaching firing range.
+                Object endpoint=source;
+                endpoint.x=route.back()[0];endpoint.y=route.back()[1];
+                reachable=withinInteractionRange(endpoint,*candidate,range);
             }
+            if (reachable) { best=candidate;break; }
             if (phase == 1) source.targetExclusions.emplace_back(candidate->spawnId,gameTime_+(record.positiveSpeed ? 5.0 : 10.0));
         }
     }

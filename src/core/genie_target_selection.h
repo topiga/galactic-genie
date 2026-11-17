@@ -2,10 +2,25 @@
 #pragma once
 #include <algorithm>
 #include <cstddef>
+#include <cmath>
 #include <limits>
 #include <vector>
 
 namespace swgb {
+// Original551b80/551ba0 uses axis-aligned footprint gaps. Its X delta and
+// X gap are stored as floats; the Y calculation stays in the x87 register.
+// Double models the unstored intermediates here; extreme x87 precision remains
+// outside the finite-coordinate controls, rather than clamping original radii.
+inline float genieTargetDistance(float sourceX, float sourceY, float sourceRadiusX,
+                                 float sourceRadiusY, float targetX, float targetY,
+                                 float targetRadiusX, float targetRadiusY) {
+    const float deltaX = targetX - sourceX;
+    float gapX = static_cast<float>(std::abs(double(deltaX)) - sourceRadiusX - targetRadiusX);
+    double gapY = std::abs(double(targetY) - sourceY) - sourceRadiusY - targetRadiusY;
+    if (gapX < 0) gapX = 0;
+    if (gapY < 0) gapY = 0;
+    return static_cast<float>(std::sqrt(double(gapX) * gapX + gapY * gapY));
+}
 // Original 41b050 stores the first quotient before dividing by the reload interval.
 // This intentionally is not the conventional time-to-kill formula.
 inline float genieTargetMetric(float hp, float damage, float reload, bool fallbackAllowed) {
