@@ -80,5 +80,19 @@ static void visibleTargetIndexGameplayChecks(swgb::Assets &assets) {
     game.moveObjectForTesting(a,29.f,40.f);game.visibleTargetsForTesting(1,cls);
     for(int tick=0;tick<20 && !game.attackTargetForTesting(actor);++tick)game.update(.1f,{});
     check(game.attackTargetForTesting(actor)==b,"Scored acquisition consumes persistent visible order, not spawn or cell order");
+    auto &troop=const_cast<swgb::dat::DatFile &>(assets.dat()).civs.at(1).units.at(307);
+    struct Restore {swgb::dat::Unit &unit,original;~Restore(){unit=std::move(original);}} restore{troop,troop};
+    troop.lineOfSight=6;troop.searchRadius=4;troop.maxRange=1;
+    swgb::Game queryGame(assets);
+    check(queryGame.initScenario(scenario,&error),error.c_str());
+    queryGame.setDiplomacyForTesting(1,2,3);queryGame.setDiplomacyForTesting(2,1,3);
+    const auto spotter=queryGame.spawnObjectForTesting(1,83,1,34.f,38.f);
+    queryGame.setAttackModeForTesting(spotter,3);
+    const auto distant=queryGame.spawnObjectForTesting(1,307,2,34.75f,40.5f);
+    queryGame.setAttackModeForTesting(distant,3);
+    const auto seeker=queryGame.spawnObjectForTesting(1,307,1,27.25f,40.5f);
+    for(int tick=0;tick<20 && !queryGame.attackTargetForTesting(seeker);++tick)queryGame.update(.1f,{});
+    check(queryGame.attackTargetForTesting(seeker)==distant,
+          "Native acquisition uses truncated query coordinates and LOS+1 beyond the old circle");
     std::puts("PASS: native visibility membership and equal-score reacquisition ordering");
 }

@@ -5995,3 +5995,35 @@ can refer to cleared ID0 records and must not be compacted. Separate original
 movement-head controls confirm completed children remain observable until
 controller retirement; existing native path fields cannot safely stand in for
 that lifecycle. Neither finding is claimed as integrated gameplay behavior.
+
+Additional dispatch evidence:11 original movement-head lifecycle checkpoints
+execute409160,4082c0/408220,409800,406bf0 and the getter/cancel/destructor paths.
+A zero-distance child can be complete while its target/destination remain
+observable; unregistering its target clears the resolved ID without clearing the
+stored destination. Retargeting installs a fresh movement head and acquires its
+reference before clearing the old head. Explicit native head identity and
+retirement events are therefore required before porting owned-livestock state6
+and state10. Authored failure state13 and completion-notification boundaries do
+not establish natural path-failure timing. Evidence:
+`movement-head-lifecycle-findings-2026-11-17.json`.
+
+Sequential original sort/consumer controls prime slots7,6,5, then run a class43
+query writing only slot0. The consumer still tries retained slot6, resolving its
+cleared candidate record to ID0. Actual reachability callbacks4a1e80/4a1dd0
+reject that missing registry entry before pathfinding; fallback still excludes0.
+Skipping that slot would incorrectly expose a different candidate. Static and
+runtime evidence supports process-persistent output slots, but exhaustive
+new-game indirect-reset coverage remains open. Evidence:
+`visible-sort-slot-lifecycle-findings-2026-11-17.json` and
+`visible-sort-slot-consumer-controls-oracle-2026-11-17.json`.
+
+Validation: all10 retained original614a00 fixtures match every returned ID and
+byte distance, including the five independent caps. Focused ASan/UBSan tests add
+a native acquisition case7.5 tiles away, admitted by packed coordinates and
+LOS+1 but rejected by the former six-tile circular filter. Bonus/research/healing/AI,
+combat/gathering/garrison and rebuilt desktop menu/preferences/60-frame dummy
+render/audio checks pass. Compatibility reports exactly the same five known
+failures (instruction speaker color, resource selection, upgrades menu,
+upgraded drop site, tech-level Command Center), with no new failures. Logs:
+`target-query-{local,integration,bonus,combat,desktop,fixes}.log`. Original-code
+controls use modeled boundaries; no fresh live Windows session was compared.
