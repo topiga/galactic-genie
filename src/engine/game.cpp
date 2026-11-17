@@ -9997,7 +9997,8 @@ Game::Object *Game::chooseCombatTarget(Object &source,const Object *hitAttacker)
         // never military auto-acquisition targets.
         const bool currentRow=current && id==current->spawnId;
         const bool explicitRow=hitAttacker && id==hitAttacker->spawnId;
-        if (!currentRow && (candidate.player <= 0 ||
+        if(explicitRow && !canAttackTarget(source,candidate))continue;
+        if (!currentRow && !explicitRow && (candidate.player <= 0 ||
             (source.player > 0 &&
              isPassiveAnimal(candidate)) ||
             !isEnemy(source, candidate) ||
