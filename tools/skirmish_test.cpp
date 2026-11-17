@@ -26,6 +26,7 @@ static void check(bool value, const char *message) {
 #include "scenario_ai_checks.h"
 #include "actor_ai_timing_checks.h"
 #include "explore_action_checks.h"
+#include "explore_search_checks.h"
 #include "exploration_gameplay_checks.h"
 #include "ai_source_checks.h"
 #include "conquest_checks.h"
@@ -301,7 +302,7 @@ int main(int argc, char **argv) {
         aiSourceChecks(assets);
         scenarioAiChecks(assets);
         actorAiTimingChecks(assets);
-        exploreActionChecks();
+        exploreActionChecks();exploreSearchChecks();
         explorationGameplayChecks(assets);
         fogEdgeChecks(argv[1]);
         rmsSpawnChecks(assets);
