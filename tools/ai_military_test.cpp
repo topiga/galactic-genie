@@ -14,7 +14,10 @@ static void check(bool value, const char *message) {
     }
 }
 
+#include "ai_military_scheduler_checks.h"
+
 int main() {
+    aiMilitarySchedulerChecks();
     // Fixtures derive from original 4506f0 and final truncation at 5ae726;
     // local research: ai-controller-facts/attack-group-findings.txt.
     std::vector<AiMilitaryCandidate> pair{{10, 0, 0, 1}, {20, 3, 4, 1}};
