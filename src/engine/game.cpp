@@ -2,6 +2,7 @@
 #include "../core/genie_random.h"
 #include "../core/genie_gather.h"
 #include "game.h"
+#include "../core/genie_visibility_stencil.h"
 #include "terrain_draw_scan.h"
 #include "rms_objects.h"
 #include "rms_map.h"
@@ -9172,12 +9173,26 @@ bool Game::playerSees(int viewer,float x,float y) const {
 }
 
 bool Game::playerSeesTarget(int viewer, const Object &target) const {
-    if (!target.buildingFrozen || target.unit->collisionSize[0] < 1.f)
-        return playerSees(viewer,target.x,target.y);
-    const int x=int(mapSize_-target.y), y=int(target.x);
-    // Original frozen manager4464c0 samples these four original-coordinate cells.
-    for(int dy=-1;dy<=0;++dy) for(int dx=-1;dx<=0;++dx)
-        if (playerSees(viewer,float(y+dy)+.5f,float(mapSize_-(x+dx))-.5f)) return true;
+    if (playerSees(viewer,target.x,target.y)) return true;
+    if (target.unit->type != dat::UT_Building || target.annexParentId) return false;
+    const float ox=mapSize_-target.y,oy=target.x;
+    const float rx=target.unit->collisionSize[0],ry=target.unit->collisionSize[1];
+    if (!std::isfinite(ox) || !std::isfinite(oy) || ox<0 || oy<0 || ox>=mapSize_ || oy>=mapSize_ ||
+        !std::isfinite(rx) || !std::isfinite(ry) || rx<0 || ry<0 || rx>mapSize_ || ry>mapSize_) return false;
+    const int x=int(ox),y=int(oy);
+    const auto sees=[&](int dx,int dy) {
+        return playerSees(viewer,float(y+dy)+.5f,float(mapSize_-(x+dx))-.5f);
+    };
+    if (target.buildingFrozen) {
+        if (rx<1.f) return false;
+        for(int dy=-1;dy<=0;++dy) for(int dx=-1;dx<=0;++dx)
+            if (sees(dx,dy)) return true;
+    } else {
+        const auto offsets=genieVisibilityStencil(x,y,int(double(ox)-rx),int(double(oy)-ry),
+            int(double(ox)+rx-double(.01f)),int(double(oy)+ry-double(.01f)),mapSize_,mapSize_);
+        for(const auto &offset:offsets) if(sees(offset[0],offset[1]))return true;
+    }
+    // shortcut: Annex-parent and non-building animated stencils remain unported.
     return false;
 }
 
@@ -9603,6 +9618,7 @@ void Game::issueAttack(Object &source, Object &target, float approachAngle,
         !canAttackTarget(source, target))
         return;
     source.rememberedAttackId=0;
+    setTaskReference(source.attackChildReference,0);
     if (!automatic)
         clearUnitCommandOrder(source);
     setGatherTarget(source, 0);
@@ -9765,6 +9781,7 @@ void Game::finishAttack(Object &source, bool returnToPost) {
 }
 
 void Game::retryAttackApproach(Object &source) {
+    setTaskReference(source.attackChildReference,0);
     source.attackSlotRetries++;
     const float handedness = (source.spawnId & 1u) ? 1.0f : -1.0f;
     source.attackApproachAngle +=

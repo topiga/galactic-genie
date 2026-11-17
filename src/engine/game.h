@@ -422,14 +422,18 @@ public:
     }
     void setTextureBudget(size_t bytes) { textureBudget_ = bytes; }
     int reseedQueueForTesting(int player) const { return reseedQueue_[(size_t)player]; }
-    bool issueAttackForTesting(uint32_t sourceId, uint32_t targetId) {
+    bool issueAttackForTesting(uint32_t sourceId, uint32_t targetId, bool automatic = false) {
         Object *a = findObject(sourceId);
         Object *b = findObject(targetId);
         if (!a || !b || !isEnemy(*a, *b) ||
             !canAttackTarget(*a, *b))
             return false;
-        issueAttack(*a, *b, std::atan2(a->y - b->y, a->x - b->x));
+        issueAttack(*a, *b, std::atan2(a->y - b->y, a->x - b->x),automatic);
         return true;
+    }
+    bool retryAttackForTesting(uint32_t id) {
+        Object *o=findObject(id);if(!o || !o->attackTargetId)return false;
+        retryAttackApproach(*o);return true;
     }
     bool canAttackTargetForTesting(
         uint32_t sourceId, uint32_t targetId) const {

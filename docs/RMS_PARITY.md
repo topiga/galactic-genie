@@ -5649,3 +5649,36 @@ cancellation, and attack-to-garrison replacement. Frozen visibility tests check
 all four contributing cells, the small-radius discriminator and an adjacent
 noncontributing cell. The fixtures use empty scenarios to isolate reference
 counts from other autonomous attackers. Log: `attack-visibility-local.log`.
+
+### Shared building visibility stencils (2026-11-17)
+
+The normal-building gap above is now addressed through the shared4912f0
+algorithm, not a square-building special case. Normalize bounds, emit corners,
+then alternating edge samples at stride2, excluding duplicates and the center.
+Do not fill the rectangle interior. Wholly outside and single-cell rectangles
+return no extra offsets; partially outside rectangles retain their samples.
+198 original controls compare exact ordered offsets, including widths/heights
+1..8, multiple center positions, reversed/border cases and translation.
+
+Native target visibility combines the center with this stencil for ordinary
+buildings. Original557040 bounds use truncation of position−radius and
+position+radius−float32(0.01). Frozen buildings keep their distinct four-cell or
+center-only rule. Tests verify visibility across thaw, fractional centers, the
+small-radius difference, and rejection of unsampled side/interior cells.
+Malformed/nonfinite or beyond-map-size radii are rejected by the native sampling
+adapter. The original stencil cache and its byte-packed alias behavior are not
+reproduced; native searches use the offsets directly. Annex-parent and non-building
+animated stencils, target-index tie order and renderer visibility remain gaps.
+
+Evidence: `building-sight-stencil-controls-v1-oracle-2026-11-17.json`,
+`building-stencil-general-findings-2026-11-17.json` and
+`building-stencil-matrix-v1-oracle-2026-11-17.json`. Bounds/stencil instructions
+execute original code; map/object allocation and spatial registration boundaries
+remain explicitly modeled. No full live Windows match comparison is implied.
+
+Focused ASan/UBSan checks pass for all198 stencil controls and native
+freeze/thaw/geometry cases. Attack tests additionally cover same-target automatic
+restart and approach retry: both explicitly release the discarded movement child
+before the replacement is created. This fixes stale child ownership after a
+route reset without changing same-slot primary reassignment semantics. Log:
+`attack-stencil-final-local.log`.

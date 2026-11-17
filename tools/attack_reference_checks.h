@@ -41,6 +41,14 @@ static void attackReferenceChecks(swgb::Assets &assets) {
     check(game.issueAttackForTesting(automatic,pursued),"Start visible object pursuit");
     game.update(.1f,{});
     check(game.objectTaskReferencesForTesting(pursued)==2,"Visible pursuit has separate parent and movement-child references");
+    check(game.issueAttackForTesting(automatic,pursued,true) && game.objectTaskReferencesForTesting(pursued)==1,
+          "Same-target automatic attack resets movement child without dropping primary ownership");
+    game.update(.1f,{});
+    check(game.objectTaskReferencesForTesting(pursued)==2,"Restarted automatic pursuit creates its new child");
+    check(game.retryAttackForTesting(automatic) && game.objectTaskReferencesForTesting(pursued)==1,
+          "Approach retry releases the discarded movement child before planning again");
+    game.update(.1f,{});
+    check(game.objectTaskReferencesForTesting(pursued)==2,"Retried pursuit acquires its replacement child");
     game.moveObjectForTesting(automatic,34.5f,40.5f);game.update(.1f,{});
     check(game.objectTaskReferencesForTesting(pursued)==1,"Reaching firing range releases movement child before attack work");
     game.moveObjectForTesting(automatic,27.f,40.5f);

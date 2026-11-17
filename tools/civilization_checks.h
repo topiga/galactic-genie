@@ -10,6 +10,7 @@
 #include "support_task_reference_checks.h"
 #include "attack_reference_checks.h"
 #include "frozen_target_visibility_checks.h"
+#include "visibility_stencil_checks.h"
 #include "felling_animation_checks.h"
 #include "combined_upgrade_checks.h"
 #include "allied_bonus_checks.h"
@@ -38,6 +39,7 @@ static void civilizationBonusChecks(swgb::Assets &assets) {
     supportTaskReferenceChecks(assets);
     attackReferenceChecks(assets);
     frozenTargetVisibilityChecks(assets);
+    visibilityStencilChecks();
     fellingAnimationChecks(assets);
     hitPointEffectChecks(assets);
     combinedUpgradeChecks(assets);

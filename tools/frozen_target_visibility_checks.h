@@ -25,5 +25,16 @@ static void frozenTargetVisibilityChecks(swgb::Assets &assets) {
     }
     game.moveObjectForTesting(observer,14.5f,16.5f);
     check(!game.targetVisibleForTesting(1,large),"Adjacent cells outside original four-cell mask do not admit target");
+    game.moveObjectForTesting(observer,15.5f,16.5f);
+    game.setBuildingFrozenForTesting(large,false);
+    check(game.targetVisibleForTesting(1,large),"Integer-center radius1 visibility survives thaw through normal stencil");
+    game.setBuildingFrozenForTesting(small,false);
+    check(game.targetVisibleForTesting(1,small),"Normal small-radius integer-center stencil differs from frozen center-only sampling");
+    game.moveObjectForTesting(large,16.5f,15.5f);
+    check(game.targetVisibleForTesting(1,large),"Fractional-center normal footprint includes its outer corner");
+    game.moveObjectForTesting(observer,16.5f,16.5f);
+    check(!game.targetVisibleForTesting(1,large),"Normal stencil does not fill unsampled side/interior cells");
+    game.moveObjectForTesting(observer,16.5f,15.5f);
+    check(game.targetVisibleForTesting(1,large),"Center remains visible independently of perimeter stencil");
     std::puts("PASS: original frozen-target four-cell sampling and small-footprint discriminator");
 }
