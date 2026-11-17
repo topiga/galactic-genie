@@ -10,6 +10,7 @@
 #include "../core/scenario.h"
 #include "../core/genie_work_attack.h"
 #include "../core/genie_movement_action.h"
+#include "../core/genie_explore_action.h"
 #include "../core/genie_ai_timing.h"
 #include "../core/genie_visible_targets.h"
 #include "../core/genie_update_list.h"
@@ -19,6 +20,7 @@
 #include <deque>
 #include <functional>
 #include <map>
+#include <optional>
 #include <random>
 #include <set>
 #include <string>
@@ -144,7 +146,8 @@ public:
     bool initCompactTestMap(
         uint32_t seed, int mapSize,
         std::string *err);
-    bool initScenario(const Scenario &scenario, std::string *err, int difficulty = 2);
+    // Resolved startup CRT seed; the default remains deterministic, without host-time selection.
+    bool initScenario(const Scenario &scenario, std::string *err, int difficulty = 2, uint32_t initialRandomState = 1);
     // Original default ungrouped timber row; requires an empty, flat initialized map.
     bool populateRmsTimber(uint32_t count, uint32_t &randomState, std::string *err = nullptr);
     // Diagnostic RMS world; explicit civilization context is required for supported owned starts.
@@ -368,6 +371,20 @@ public:
     }
     std::array<float,2> pointMovementDestinationForTesting(uint32_t id) const {
         const auto *o=findObject(id);return o?std::array<float,2>{o->pointMovement.destinationX,o->pointMovement.destinationY}:std::array<float,2>{-1,-1};
+    }
+    bool issueExploreForTesting(uint32_t id,float x,float y,bool force=false) {
+        auto *o=findObject(id);return o && issueExplore(*o,x,y,force);
+    }
+    int explorationStateForTesting(uint32_t id) const {
+        const auto *o=findObject(id);return o && o->exploration?o->exploration->state:-1;
+    }
+    int explorationChildStatusForTesting(uint32_t id) const {
+        const auto *o=findObject(id);return o && o->explorationChild.present?int(o->explorationChild.status):-1;
+    }
+    std::array<float,2> explorationDestinationForTesting(uint32_t id) const {
+        const auto *o=findObject(id);return o && o->exploration
+            ?std::array<float,2>{o->exploration->destinationX,o->exploration->destinationY}
+            :std::array<float,2>{-1,-1};
     }
     bool moveObjectForTesting(uint32_t spawnId, float x, float y);
     int objectPlayer(uint32_t spawnId) const;
@@ -727,7 +744,7 @@ public:
 
 private:
     bool initScenario(const Scenario &scenario, std::string *err, bool rmsCompletionOrder,
-                      const uint32_t *postRmsRandomState = nullptr);
+                      const uint32_t *postRmsRandomState = nullptr, uint32_t initialRandomState = 1);
     bool initializeStartingAge(int player,int rawAge);
     enum class State : uint8_t {
         Idle,
@@ -911,6 +928,8 @@ private:
         uint8_t farmMoveStep = 0;
         bool farmMoveActive = false;
         GenieMovementAction pointMovement;
+        std::optional<GenieExploreAction> exploration;
+        GenieMovementAction explorationChild;
         uint32_t pathGoalId = 0;      // object approached (region goal), 0 = point
         float pathGoalClearance = 0;
         uint8_t repathCount = 0;
@@ -1098,6 +1117,7 @@ private:
     bool inSourceArea(const Object &object, int x1, int y1, int x2, int y2) const;
     bool issueMove(Object &object, float targetX, float targetY,
                    const Object *goalObject = nullptr, float clearance = 0.0f);
+    bool issueExplore(Object &object,float x,float y,bool force);
     void issueGroupMove(std::vector<Object *> targets, float targetX, float targetY,
                         FormationType formation = FormationType::Line);
     bool findPath(const Object &object, float targetX, float targetY,

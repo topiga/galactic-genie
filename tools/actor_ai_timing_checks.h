@@ -33,5 +33,17 @@ static void actorAiTimingChecks(swgb::Assets &assets) {
     check(scanned,"Integration crosses at least one idle scan");
     const auto before=game.idleClockForTesting(1);const auto owner=game.selectedActorOwnerForTesting();game.updatePaused(3,{});
     check(game.idleClockForTesting(1)==before&&game.selectedActorOwnerForTesting()==owner,"Pause freezes actor clock and owner scheduling");
-    std::puts("PASS: original constructor RNG, strict idle scans, retained phase, owner rotation/elapsed and pause");
+    auto second=troop;second.spawnId=2;second.player=2;second.x=20;second.y=20;
+    scenario.units.push_back(second);scenario.nextUnitId=3;
+    struct SeedCase {uint32_t seed,first,second;};
+    for(const auto &c: {SeedCase{0,1312,1160},SeedCase{1,1375,1233},
+                       SeedCase{24305,1138,1322},SeedCase{0xffffffffu,1766,1320}}) {
+        check(game.initScenario(scenario,&error,2,c.seed),error.c_str());
+        check(game.idleClockForTesting(1)==std::array<uint32_t,2>{0,c.first}&&
+              game.idleClockForTesting(2)==std::array<uint32_t,2>{0,c.second},
+              "Resolved startup seed reaches both generic constructors before their four-draw slices");
+        check(game.initScenario(scenario,&error,2,c.seed)&&game.idleClockForTesting(1)[1]==c.first,
+              "Explicit startup seed reproduces native constructor phases on reload");
+    }
+    std::puts("PASS: original constructor RNG, strict idle scans, retained phase, owner rotation/elapsed, pause and explicit startup seeds");
 }

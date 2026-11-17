@@ -846,10 +846,10 @@ void Game::updateSkirmishArmy(int player) {
             const int goal=chooseGoal(soldier);
             if(goal<0) continue;
             const auto destination=goalPoint(goal);
-            soldier.moveAnchorX=destination[0];soldier.moveAnchorY=destination[1];
             ++attempted[goal];
-            soldier.moveGoalActive=issueMove(soldier,destination[0],destination[1]);
-            if(!soldier.moveGoalActive) ++failed[goal];
+            // shortcut: Native waypoint/group selection remains until original exploration planning is ported.
+            if(!issueExplore(soldier,destination[0],destination[1],true) ||
+               soldier.explorationChild.status==GenieMovementStatus::Failed) ++failed[goal];
         }
     }
     for(const auto &entry:attempted) if(failed[entry.first]==entry.second) {
@@ -923,7 +923,7 @@ void Game::updateSkirmish(float dt) {
     if (matchTime_ >= 45) updateSkirmishArmy(player);
 }
 
-bool Game::initScenario(const Scenario &scenario, std::string *err, int difficulty) {
+bool Game::initScenario(const Scenario &scenario, std::string *err, int difficulty, uint32_t initialRandomState) {
     if (difficulty < 0 || difficulty > 4) {
         if (err) *err = "scenario difficulty must be between hardest (0) and easiest (4)";
         return false;
@@ -956,7 +956,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, int difficul
         state.loaded = state.scripted = true;
     }
     const auto initialize = [&](const Scenario &imported) {
-        if (!initScenario(imported,err,false)) return false;
+        if (!initScenario(imported,err,false,nullptr,initialRandomState)) return false;
         difficulty_ = difficulty;
         for (size_t player = 1; player < computers.size(); ++player)
             computers[player].age = aiTechLevel(int(player));
@@ -999,7 +999,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, int difficul
 }
 
 bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsCompletionOrder,
-                        const uint32_t *postRmsRandomState) {
+                        const uint32_t *postRmsRandomState, uint32_t initialRandomState) {
     if(scenario.playerSlotCount>players_.size()) {
         if(err)*err="scenario player table exceeds supported slots";
         return false;
@@ -1022,7 +1022,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     }
 
     rng_.seed(1);
-    legacyRandomState_=1;
+    legacyRandomState_=initialRandomState;
     aiRandomNumbers_.fill(-1);
     gameTime_ = 0;
     localClock_.reset();
@@ -4914,6 +4914,8 @@ std::string Game::unitCommandHelp(
 void Game::clearUnitCommandOrder(
     Object &unit, bool preserveGather) {
     unit.pointMovement.cancel();
+    unit.exploration.reset();
+    unit.explorationChild.cancel();
     setTaskReference(unit.gatherChildReference,0);
     if (!preserveGather) {
         setGatherTarget(unit,0);
@@ -9751,6 +9753,8 @@ void Game::issueAttack(Object &source, Object &target, float approachAngle,
         return;
     source.rememberedAttackId=0;
     source.pointMovement.cancel();
+    source.exploration.reset();
+    source.explorationChild.cancel();
     setTaskReference(source.attackChildReference,0);
     if (!automatic)
         clearUnitCommandOrder(source);
@@ -9988,7 +9992,7 @@ bool Game::combatTargetVisible(const Object &source,const Object &target) const 
 void Game::acquireAutomaticTarget(Object &source) {
     if (!canAttack(source) || source.attackTargetId || source.unloadActive ||
         source.attackMode == AttackMode::Passive || source.state != State::Idle ||
-        source.moveGoalActive || source.pointMovement.present ||
+        source.moveGoalActive || source.pointMovement.present || source.exploration ||
         mobileObjectGridWidth_ <= 0 ||
         combatObjectCells_.size() !=
             (size_t)mobileObjectGridWidth_ * mobileObjectGridWidth_)
@@ -10967,7 +10971,7 @@ void Game::updateAttack(Object &source, float dt) {
     bool idleScan = false;
     if (originalIdleClock && actorOwnerSchedule_.selected == uint32_t(source.player)) {
         const bool idle = !source.attackTargetId && !source.attackGroundActive &&
-            source.state == State::Idle && !source.moveGoalActive && !source.pointMovement.present;
+            source.state == State::Idle && !source.moveGoalActive && !source.pointMovement.present && !source.exploration;
         idleScan = source.idleAcquisition.advance(actorOwnerSchedule_.delta(uint32_t(source.player)),idle);
     } else if (!originalIdleClock) source.autoAcquireTime -= dt;
     if (source.attackGroundActive) {
@@ -11902,9 +11906,35 @@ bool Game::approach(Object &object, const Object &target, float clearance) {
     return issueMove(object, x, y, &target, clearance);
 }
 
+bool Game::issueExplore(Object &object,float x,float y,bool force) {
+    if (!object.active || object.hidden || object.garrisonedInId>=0 || object.unit->speed<=0 ||
+        !std::isfinite(x) || !std::isfinite(y) || x>=mapSize_ || y>=mapSize_) return false;
+    // Object445980 reuses an existing parent; actor41cfd0 admission remains in the caller.
+    if (object.exploration && !force) return true;
+    if (!object.exploration && !force &&
+        (object.state!=State::Idle || object.attackTargetId || object.moveGoalActive || object.pointMovement.present)) return false;
+    if (!object.exploration && (x<0 || y<0) && !(x==-1 && y==-1)) return false;
+    const auto previous=object.exploration;
+    clearUnitCommandOrder(object);
+    object.exploration=previous.value_or(GenieExploreAction{});
+    const auto transition=previous?object.exploration->retarget(true,x,y,1):object.exploration->begin(x,y,1);
+    setTaskReference(object.repairTargetId,0);
+    object.attackAutomatic=false;object.attackGroundActive=false;object.attackShotPending=false;
+    object.path.clear();object.pathIndex=0;object.pathGoalId=0;
+    object.moveGoalActive=false;object.moveGroupId=0;object.marchGroupId=0;object.moveSpeedLimit=0;
+    object.state=State::Idle;object.wander=false;
+    if (transition.rebuildChild) {
+        object.explorationChild.begin(x,y);
+        object.moveAnchorX=x;object.moveAnchorY=y;object.moveGoalActive=true;
+        if (!issueMove(object,x,y)) object.moveGoalActive=false;
+    }
+    return true;
+}
+
 bool Game::issueMove(Object &object, float targetX, float targetY,
                      const Object *goalObject, float clearance) {
     if(object.pointMovement.present)object.pointMovement.status=GenieMovementStatus::Active;
+    if(object.explorationChild.present)object.explorationChild.status=GenieMovementStatus::Active;
     object.targetX = targetX;
     object.targetY = targetY;
     object.pathIndex = 0;
@@ -11920,6 +11950,7 @@ bool Game::issueMove(Object &object, float targetX, float targetY,
         if (!goalObject) {
             object.moveGoalActive = false;
             object.pointMovement.complete();
+            object.explorationChild.complete();
         }
         return true;
     }
@@ -11976,6 +12007,7 @@ bool Game::issueMove(Object &object, float targetX, float targetY,
         object.path.clear();
         object.state = State::Idle;
         object.pointMovement.fail();
+        object.explorationChild.fail();
         return false;
     }
     object.state = State::Walk;
@@ -12183,6 +12215,7 @@ void Game::issueGroupMove(std::vector<Object *> targets, float targetX, float ta
         object->rememberedAttackId=0;
         if (object->hidden || object->unit->speed <= 0)
             continue;
+        object->exploration.reset();object->explorationChild.cancel();
         object->pointMovement.begin(targetX,targetY);
         if (movesIndependently(*object)) {
             independentTargets.push_back(object);
@@ -15034,6 +15067,12 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
         }
         if (!o.active) return false;
         o.pointMovement.retire();
+        if (o.exploration && o.explorationChild.present &&
+            o.explorationChild.status==GenieMovementStatus::Completed) {
+            o.exploration->update(1);
+            o.explorationChild.cancel();
+        }
+        // shortcut: Native failed paths retain the child until retarget; original failure statuses need callback parity.
         if (o.resourceDeathState == 2) {
             // Base constructor's zero-HP child enters3 on its first same-owner pass.
             o.resourceDeathState = 3;
@@ -15173,6 +15212,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                     o.path.clear();
                     o.pathIndex = 0;
                     o.pointMovement.complete();
+                    o.explorationChild.complete();
                     o.moveGoalActive = false;
                     o.moveSpeedLimit = 0;
                     o.facing = std::atan2(goal->y - o.y, goal->x - o.x);
@@ -15197,6 +15237,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                         o.y = o.targetY;
                     }
                     o.pointMovement.complete();
+                    o.explorationChild.complete();
                     o.moveGoalActive = false;
                     o.moveSpeedLimit = 0;
                     o.path.clear();
@@ -15224,6 +15265,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                 if (o.moveGoalActive &&
                     goalDx * goalDx + goalDy * goalDy <= arrival * arrival) {
                     o.pointMovement.complete();
+                    o.explorationChild.complete();
                     o.moveGoalActive = false;
                     o.moveSpeedLimit = 0;
                 }
@@ -15425,6 +15467,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                             goalDx * goalDx + goalDy * goalDy <=
                                 arrival * arrival) {
                             o.pointMovement.complete();
+                            o.explorationChild.complete();
                             o.moveGoalActive = false;
                             o.moveSpeedLimit = 0;
                         }
@@ -15453,6 +15496,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                     o.path.clear();
                     o.pathIndex = 0;
                     o.pointMovement.complete();
+                    o.explorationChild.complete();
                     o.moveGoalActive = false;
                     o.moveSpeedLimit = 0;
                     return false;
@@ -15474,6 +15518,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                     o.path.clear();
                     o.pathIndex = 0;
                     o.pointMovement.complete();
+                    o.explorationChild.complete();
                     o.moveGoalActive = false;
                     o.moveSpeedLimit = 0;
                     return false;
@@ -15543,6 +15588,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                         o.path.clear();
                         o.pathIndex = 0;
                         o.pointMovement.fail();
+                        o.explorationChild.fail();
                         o.moveGoalActive = false;
                         o.moveSpeedLimit = 0;
                         o.repathCount = 0;
