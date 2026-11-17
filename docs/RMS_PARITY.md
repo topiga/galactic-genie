@@ -6398,3 +6398,95 @@ exactly its five prior failures: instruction speaker color, resource selection,
 upgrade menu, upgraded drop site and Tech Level Command Center sound. Logs:
 `exploration-startup-{local,bonus,combat,desktop,fixes}.log` in the external build
 directory. No full-game or startup RNG parity claim is made.
+
+### Destination callbacks and graphic constructor RNG (2026-11-17)
+
+`genie_explore_search.h` ports the original local picker and eight-entry history.
+Sanitizer checks compare recovered jitter/tie outcomes, fractional/clipped bounds,
+command730, one-coordinate destination sentinels, empty rectangles, history,
+and final path rejection. It is a recovered core component, not yet a replacement
+for the native tactical planner. Candidate and final path callbacks stay explicit.
+Evidence: `exploration-picker-boundary-controls-2026-11-17.json` and the preceding
+local/history controls. The integration must distinguish actor-AI command/XY from
+movement-action XY; arrival alone does not reset the former.
+
+Executed original callback controls establish candidate4a1b30 terrain-mask and
+footprint-collision admission, final4a1d50 bridge to4bcf90, and shared visibility
+mask construction624330/getter615430. Local picking excludes explored tiles;
+sharing uses mutual allies when enabled, or all nonGaia players with the reveal
+attribute. The final path starts from the actor's separate path-position fields,
+not automatically its displayed position. Actual collision-query and path-search
+internals remain outside these controls. See `exploration-callback-contract-2026-11-17.json`.
+
+A fresh350-sample read-only live capture retains actor command, task, actor-AI XY
+and action XY separately. Scout3 first appears as705/605 with unknown destination,
+then(75,77); later command/task resets to-1 retain those coordinates before the
+next705 destination(71,81). Two executed notification-route controls explain this:
+failed local picker → reset → player notification →586a70 spiral → tactical ring
+retry → enqueue fresh705. Player notification saves a rand() result and reseeds
+with it after callbacks. The spiral accepts explored-but-hidden tiles, uses a
+separate information grid, and has a random fallback on failed path validation;
+eleven full-function controls cover these branches. Do not repeatedly call the
+local picker on known705 as a substitute. See `exploration-reissue-contract-2026-11-17.json`,
+`exploration-spiral-controls-2026-11-17.json` and `live-explore-command-analysis-2026-11-17.json`.
+Queue application, information-grid lifecycle and complete path parity remain open.
+
+Scenario import now consumes the verified standing-graphic constructor stages
+before generic troop AI initialization. This is driven by sequence flags and
+angle count: base facet, sprite base frame, optional animated phase, then heading.
+It applies to supported generic troop controllers with leaf graphics and no
+sprite audio; imported frame/facing override the discarded constructor values.
+RMS import retains its existing externally-accounted constructor RNG boundary.
+Delta/audio sprites, other controller families, and fresh gameplay spawns remain
+outside this change. No hardcoded unit ID or compensating RNG skip was added.
+
+Evidence includes64 actual graphic-stage controls, three bounded actual559e00
+constructor-prefix controls for mounted trooper329, and seven normal-startup
+seed/checkpoint controls. The constructor prefix executes original sprite,
+rotation and action factories, while modeling allocation, spatial placement,
+owner registration and list classification. Its nonlocal owner skips creation
+audio. These are not complete world-startup controls. Files:
+`constructor-graphic-stages-controls-2026-11-17.json`,
+`unit329-pre-ai-construction-controls-2026-11-17.json`, and
+`normal-startup-checkpoint-controls-2026-11-17.json`.
+
+The live capture spans editor and gameplay startup: the completed gameplay
+snapshot records initial seed13575 in application+4c. Supplying13575 to the native
+shared scenario still yields five different initial troop thresholds (0/5 exact).
+`startup-graphic-phase-comparison-2026-11-17.json` records all values and ID0→5
+mapping. Earlier player construction, normal-startup checkpoint callbacks and
+other constructor boundaries remain missing; matching the input seed alone is
+not matching the full startup sequence. No seed fitting was performed.
+
+A subsequent static trace confirms modern scenario units use the fresh constructor:
+605cc0→623540→owner factory5ce480→master factory5c91f0→559e00 for329. Saved facing
+is applied at5ce51b and saved frame at6239b5 after construction. This supports
+consuming constructor RNG while retaining imported visual fields. Player-order
+analysis also finds Gaia first, then active owners in ascending order. The base
+player constructor draws/reseeds, later draws for owner+1d98, and Gaia adds its
+own subsequent draw. Research, AI construction and other callbacks remain part
+of the unresolved complete player RNG sequence; no flat per-player skip was added.
+
+`genie_explore_spiral.h` now ports the separate outward spiral, current-visibility
+and information-grid gates, reservations and randomized quarter fallback. Tests
+cover four rotations, exhaustion, class58, failed-path marking, weighted quarters,
+corner order and production CRT advancement. Fifteen original-function controls
+support these branches. This remains a core component with explicit callbacks;
+it does not bypass the still-missing tactical queue/information-grid lifecycle.
+
+Precision controls caught a one-tile local-search bound difference near an integer.
+The initial isolated emulator inherited single precision, which is not evidence of
+the game's runtime mode. Original world61ee32 explicitly installs extended/nearest
+precision before owner/object/action callbacks, restoring it at61f9cf. Under that
+scope, nextafter(1,0)+5 truncates to5 rather than a float-rounded6. The native
+simulation picker now uses double intermediates for its bounds. Evidence:
+`exploration-simulation-fpcw-contract-2026-11-17.json` and explicit control-word
+controls. This scope is not generalized to unrelated UI execution.
+
+Final gameplay validation for the constructor change: focused lifecycle/startup,
+bonus/research/AI, combat and desktop smoke checks pass. Compatibility retains the
+same five failures, with no new failures (`startup-graphics-fixes.log`). The two
+new destination components also pass standalone ASan/UBSan checks. Reference
+music/sound settings were left muted throughout; QuickDesk later disconnected,
+so no further remote input or final paused-state claim was made. The SSH master
+was closed and the user's untracked screenshot was preserved byte-for-byte.
