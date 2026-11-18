@@ -37,6 +37,15 @@ static void aiFogChecks(swgb::Assets &assets) {
         const auto home=match.objectPosition(match.commandCenterId(2));
         std::vector<uint32_t> wave;
         for(int i=0;i<6;++i) wave.push_back(match.spawnObjectForTesting(1,troop,2,home[0]+i*.3f,home[1]+6));
+        // Isolate scouting knowledge: admit the entire fixture already within gather spacing.
+        check(match.loadAiSourceForTesting(2,"fog-ready-wave",R"(
+(defrule (true) =>
+ (set-strategic-number sn-percent-attack-soldiers 100)
+ (set-strategic-number sn-group-form-distance 128)
+ (set-strategic-number sn-attack-group-gather-spacing 100)
+ (set-strategic-number sn-zero-priority-distance 50)
+ (attack-now) (disable-self))
+)",{},&error),error.c_str());
         return wave;
     };
     auto wave=prepareWave(game);

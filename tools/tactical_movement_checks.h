@@ -77,5 +77,12 @@ static void tacticalMovementGameplayChecks(swgb::Assets &assets) {
     game.update(.05f,{});game.update(.05f,{});
     game.stopUnitForTesting(worker);
     check(game.tacticalMovementStateForTesting(worker)==-1,"Stop clears tactical movement without resurrection");
+    const swgb::dat::Unit *mobileTransform=nullptr;
+    for(const auto &unit:assets.dat().civs[1].units)if(unit.exists && unit.cls==34 && unit.speed>0) {mobileTransform=&unit;break;}
+    check(mobileTransform!=nullptr,"Class34 mobile transformation fixture exists");
+    const auto transform=game.spawnObjectForTesting(1,mobileTransform->id,1,40,40);
+    check(transform && game.queueTacticalMoveForTesting(transform,40,40,1),"Mobile class34 accepts ordinary724 without transformation");
+    game.update(0,{});game.update(0,{});
+    check(game.tacticalMovementStateForTesting(transform)==1,"Class34 dispatch reaches initial spacing completion");
     std::puts("PASS: queued724 movement, pause, range arrival, deferred retirement and Stop");
 }

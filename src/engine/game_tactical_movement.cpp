@@ -14,7 +14,7 @@ bool Game::queueTacticalMove(Object &object,float x,float y,float range) {
 
 bool Game::issueTacticalMove(Object &object,const TacticalCommandQueue::Order &order) {
     if(!object.active || object.hidden || object.garrisonedInId>=0 || !object.unit ||
-       object.unit->speed<=0 || object.unit->cls==34 || object.unit->cls==36 || order.target!=-1 || order.flagA!=1 || order.flagB!=0 ||
+       object.unit->speed<=0 || object.unit->cls==36 || order.target!=-1 || order.flagA!=1 || order.flagB!=0 ||
        !std::isfinite(order.x) || !std::isfinite(order.y) || !std::isfinite(order.range) ||
        order.x<0 || order.y<0 || order.x>=mapSize_ || order.y>=mapSize_ || order.range<0)return false;
     stopUnit(object);

@@ -6765,3 +6765,68 @@ ASan/UBSan and warnings-as-errors (`script/test_algorithms.py`), including the n
 startup and military checks. Log: external build directory,
 `empty-owner-military-algorithms.log`. No live gameplay or whole-session parity
 claim is added by this run. QuickDesk settings/audio were left untouched.
+
+### Gameplay integration: empty owners and military orders (18 November 2026)
+
+`initRmsSession` now invokes the recovered empty-owner controller before saving
+its world checkpoint. The owner-aware gate uses original-coordinate footprint
+bounds, terrain multipliers, CC slope rejection, the eight-tile search window,
+clearance-versus-collision extents and directed alliance policy. New original
+controls cover33 CC and16 worker obstacle cases. Important correction to early
+notes: object+28 points to its tile, so the dead-tree predicate reads terrain,
+not a sprite subtype. Unstarted construction ghosts differ from merely pending
+foundation graphics.
+
+Starting109/83/293 creation now interleaves constructor RNG, native registration,
+resource accounting, completion research and the post-completion worker-count
+read. Local foundations paint before worker placement; remote foundations retain
+the deferred renderer path. Clearable overlapping scenery enters deferred death.
+Negative worker counts produce no workers. A native100000-candidate safety limit
+aborts otherwise unbounded worker retries; this is deliberately not original
+failure behavior. These are stock-master startup callbacks, not arbitrary mod
+factory support. The desktop launcher still uses its native skirmish map path;
+RMS startup is connected to the session API, not a new launcher map mode.
+
+Production PER `attack-now` now admits ordered land groups, uses recovered
+terrain regions/grouping, and dispatches gathering through queued724 or local
+Stop. The original default profile supplies SN34=50,41=4,227=75,230=20;
+script overrides remain per player. Constructor596d10 and49 actual597300
+profile dispatches establish those defaults (`tactical-default-profile-oracle-
+2026-11-18.json`), not raw tactical-constructor initialization. Native fallback
+skirmishes also admit new waves without stranding reinforcements. Group removal
+preserves desired count; empty groups disappear, and scenario owners are not
+limited to the two-entry skirmish center registry.
+
+The724 controller now owns its range, priority and original action state.
+Initial arrival uses footprint distance; movement completion and failure remain
+attached until their following action update. Stop clears both native and
+military action state. The pathfinder remains native: terminal-point paths
+substitute for original qualified path flags, and original505/506 notification
+side effects are still incomplete. Class36 requests transformation before movement and remains unsupported by
+this point-movement bridge; mobile class34 uses normal movement. Original
+transformation actions124/125 are not yet represented.
+
+Military phase7/8 runs at the existing native PER evaluation cadence with a
+native2ms budget, not the complete original24-phase driver. Count-deficit groups,
+phase9 target/scouting selection, zone-cache lifecycle and actor task metadata
+still use explicit native adapters. These integrations are playable steps toward
+parity, not a complete original AI or pathfinding implementation.
+
+Verification for this integration: the full local simulation/action regression,
+RMS session/starting-age checks, bonus/research/healing/AI checks, fog/scouting
+and conquest-state checks pass under ASan/UBSan. The previous immediate-wave
+fixtures now explicitly account for readiness; the fog fixture supplies100%
+admission and generous spacing to isolate its unchanged knowledge assertions.
+Class34 ordinary724 movement has a dedicated production regression.
+
+The unchanged scripted-player conquest driver also wins against the running
+native AI at2103.0 simulated seconds (35:03), using normal gathering, construction,
+training costs and combat, without resource/unit/damage cheats. This is one
+complete native match, not a seed-matched Windows playthrough or general AI parity
+proof. Its log and victory image are in the external build directory under
+`startup-military-match.log` and `startup-military-match/`.
+
+The rebuilt desktop app passes60 update/render/present smoke frames, effects,
+streamed music and EOF looping with dummy drivers. No new audible comparison is
+claimed. Other validation logs use `startup-military-` prefixes. QuickDesk audio
+and settings were not changed, and research artifacts remain local.
