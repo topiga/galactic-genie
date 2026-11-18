@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <charconv>
 #include <cstdio>
+#include <fstream>
+#include <iterator>
 #include <string_view>
 #include <stdexcept>
 
@@ -363,6 +365,32 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
     check(allPassed,"Every original-personality seed must win through normal combat");
 }
 
+// The original scenario lobby reserves slot 1 for the observing human.
+[[gnu::noinline]] static void scenarioDuel(swgb::Assets &assets,const char *path,uint32_t seed) {
+    std::ifstream input(path,std::ios::binary);
+    check(input.is_open(),"Could not open scenario");
+    const std::vector<uint8_t> data{std::istreambuf_iterator<char>(input),{}};
+    swgb::Scenario scenario;
+    std::string error;
+    if(!scenario.load(data,&error)) throw std::runtime_error(error);
+    swgb::Game game(assets);
+    if(!game.initScenario(scenario,&error,2,seed)) throw std::runtime_error(error);
+    check(scenario.players[0].human && !game.aiRuleCountForTesting(1) &&
+          game.aiRuleCountForTesting(2) && game.aiRuleCountForTesting(3),
+          "Expected a human observer and two computer players in slots 2 and 3");
+    for(int frame=0;frame<=30*36000;++frame) {
+        if(frame%1800==0 || game.matchResult()>=0) {
+            std::printf("scenario seed=%u time=%.3f population=%.0f/%.0f observer_result=%d attacks=%u\n",
+                seed,frame/30.0,game.populationUsedForTesting(2),game.populationUsedForTesting(3),
+                game.matchResult(),unsigned(game.combatStats().attacksLanded));
+            std::fflush(stdout);
+        }
+        if(game.matchResult()>=0) return;
+        if(frame<30*36000) game.update(1.f/30,{});
+    }
+    throw std::runtime_error("Scenario still running after 36000 simulated seconds");
+}
+
 // Keep independent fixture batches out of one oversized sanitizer stack frame.
 [[gnu::noinline]] static void aiAndMovementChecks(swgb::Assets &assets) {
     scenarioImportChecks(assets);
@@ -468,24 +496,26 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
 int main(int argc, char **argv) {
     const bool originalAi=argc==3 && std::string(argv[2])=="--original-ai";
     const bool duel=(argc==3 || argc==4) && std::string(argv[2])=="--ai-duel";
+    const bool scenarioReplay=argc==5 && std::string_view(argv[2])=="--scenario-duel";
     uint32_t duelSeed=1;
-    if(duel && argc==4) {
-        const std::string_view value(argv[3]);
+    if((duel && argc==4) || scenarioReplay) {
+        const std::string_view value(argv[argc-1]);
         const auto end=value.data()+value.size();
         const auto parsed=std::from_chars(value.data(),end,duelSeed);
         if(parsed.ec!=std::errc{} || parsed.ptr!=end) {
-            std::fprintf(stderr,"Expected an unsigned 32-bit map seed.\n");
+            std::fprintf(stderr,"Expected an unsigned 32-bit seed.\n");
             return 2;
         }
     }
     const bool allCivilizations=argc==3 && std::string(argv[2])=="--civilizations";
     const bool conquestMatch=argc==3 && std::string(argv[2])=="--conquest";
     const bool playerConquest=argc==3 && std::string(argv[2])=="--player-conquest";
-    if (argc != 2 && !allCivilizations && !conquestMatch && !playerConquest && !originalAi && !duel) return 2;
+    if (argc != 2 && !allCivilizations && !conquestMatch && !playerConquest && !originalAi && !duel && !scenarioReplay) return 2;
     try {
         swgb::SoftRenderer renderer;
         swgb::Assets assets(&renderer); std::string error;
         check(assets.init(argv[1], &error), error.c_str());
+        if(scenarioReplay) {scenarioDuel(assets,argv[3],duelSeed);return 0;}
         if(originalAi || duel) {originalAiMatches(assets,duel,duelSeed);return 0;}
         if(allCivilizations || conquestMatch) {civilizationMatches(assets,conquestMatch);return 0;}
         if(playerConquest) {swgb::Game game(assets);playerMatch(game,assets,renderer,true);return 0;}

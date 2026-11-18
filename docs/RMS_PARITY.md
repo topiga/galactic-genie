@@ -7827,7 +7827,10 @@ The standalone Windows scenario lobby retains a human in slot 1. For the
 paired comparison that slot has an idle Command Center and worker, neutral
 to both Empire computers in slots 2 and 3. Each engine loads the same SC1.
 Difficulty is Moderate. The measured Windows scenario session seed is 30795.
-Times below use the simulation clock. The Windows Achievements screen rounds
+Replay an imported fixture with
+`swgb-skirmish-test <Data> --scenario-duel <scenario.sc1> 30795`. The result
+code refers to the observer. Population and army ownership identify the
+surviving computer in the combat fixtures. Times below use the simulation clock. The Windows Achievements screen rounds
 to whole seconds.
 
 | Scenario | Galactic Genie | Windows Clone Campaigns |
@@ -7837,7 +7840,7 @@ to whole seconds.
 
 In the island match, Windows first showed the losing army empty at 13.368 s.
 Achievements showed a 14-second victory for the red computer. On open ground
-one of the blue-green army's survivors traveled across the map. A constant
+one of the green army's survivors traveled across the map. A constant
 adjustment to the native attack rate cannot explain both observations. Combat
 acquisition, exploration orders and victory dispatch can be compared separately
 using these fixtures. The island scenario SHA-256 is
