@@ -54,6 +54,7 @@
     for(int type=0;type<4;++type)game.setResourceForTesting(1,type,1000);
     check(game.loadAiSourceForTesting(1,"queued-worker",
         R"((defrule (can-train 83) => (train 83) (disable-self))
+(defrule (unit-type-count-total 83 == 4) (can-train 83) => (set-goal 985 1))
 (defrule (unit-type-count 83 == 3) (unit-type-count-total 83 == 4)
          (unit-type-count 293 == 1) (unit-type-count-total 293 == 1)
          (unit-type-count 259 == 1) (unit-type-count-total 259 == 1)
@@ -62,6 +63,8 @@
     check(game.aiQueuedUnitCountForTesting(1,83)>0 && game.aiGoalForTesting(2,980)==3 &&
           game.aiGoalForTesting(1,984)==2,
           "Real pending worker production is excluded from CC current worker aggregate");
+    check(game.aiQueuedUnitCountForTesting(1,83)==1 && game.aiGoalForTesting(1,985)==0,
+          "A busy Command Center cannot accept another AI worker order");
     check(game.cancelProductionForTesting(center),"Cancel queued fixture before garrison timing");
     check(game.loadAiSourceForTesting(1,"passive-enemy","",{},&error),error.c_str());
     evaluate();

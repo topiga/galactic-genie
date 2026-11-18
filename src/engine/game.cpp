@@ -14419,6 +14419,19 @@ void Game::snapBuildPositionForAi(const dat::Unit &unit,float &x,float &y) const
     snapBuildingPosition(unit,x,y);
 }
 
+Game::Object *Game::aiTrainer(int player, const dat::Unit &unit, bool line) {
+    for (Object &building : objects_) {
+        if (building.player != player || !building.active || building.hidden ||
+            building.underConstruction || !building.productionQueue.empty())
+            continue;
+        const auto options = productionOptions(building);
+        for (const auto *option : options)
+            if (option && (option->id == unit.id || (line && option->id == unit.baseId)))
+                return &building;
+    }
+    return nullptr;
+}
+
 bool Game::aiTrain(
     int player, const dat::Unit &unit,const dat::Unit *queuedUnit) {
     if (!(queuedUnit?aiLineUnitAvailable(player,unit.id):unitAvailable(player, unit.id)) ||
@@ -14432,28 +14445,7 @@ bool Game::aiTrain(
             populationCapacity(player) +
                 0.001f)
         return false;
-    Object *producer = nullptr;
-    for (Object &building : objects_) {
-        if (!building.active ||
-            building.hidden ||
-            building.underConstruction ||
-            building.player != player ||
-            building.productionQueue.size() >=
-                5)
-            continue;
-        const auto &options =
-            productionOptions(building);
-        if (std::find_if(
-                options.begin(),
-                options.end(),
-                [&](const dat::Unit *option) {
-                    return option &&
-                           (option->id == unit.id || (queuedUnit && option->id==unit.baseId));
-                }) != options.end()) {
-            producer = &building;
-            break;
-        }
-    }
+    Object *producer = aiTrainer(player, unit, queuedUnit != nullptr);
     if (!producer) return false;
     for (const dat::ResourceCost &cost :
          unitCosts(player,unit))
@@ -14979,27 +14971,7 @@ Game::AiTruth Game::evaluateAiCondition(
                 populationCapacity(player) +
                     0.001f)
             return AiTruth::False;
-        for (const Object &building :
-             objects_) {
-            if (!building.active ||
-                building.hidden ||
-                building.underConstruction ||
-                building.player != player ||
-                building.productionQueue.size() >=
-                    5)
-                continue;
-            const auto &options =
-                productionOptions(building);
-            if (std::find_if(
-                    options.begin(),
-                    options.end(),
-                    [&](const dat::Unit *option) {
-                        return option &&
-                               (option->id == unit->id || (line && option->id==unit->baseId));
-                    }) != options.end())
-                return AiTruth::True;
-        }
-        return AiTruth::False;
+        return aiTrainer(player, *unit, line != nullptr) ? AiTruth::True : AiTruth::False;
     }
 
     size_t comparison = 0;

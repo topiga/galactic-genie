@@ -1765,6 +1765,7 @@ private:
     void completeAiBuildRequest(Object &building);
     void cancelAiBuildRequest(Object &building);
     void snapBuildPositionForAi(const dat::Unit&,float &x,float &y) const;
+    Object *aiTrainer(int player, const dat::Unit &unit, bool line);
     bool aiTrain(
         int player, const dat::Unit &unit,const dat::Unit *queuedUnit=nullptr);
     bool aiResearch(
