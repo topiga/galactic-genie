@@ -42,6 +42,7 @@ static void check(bool value, const char *message) {
 #include "tactical_explore_queue_checks.h"
 #include "tactical_movement_checks.h"
 #include "military_gameplay_checks.h"
+#include "group_default_task_gameplay_checks.h"
 #include "explore_spiral_checks.h"
 #include "exploration_gameplay_checks.h"
 #include "ai_source_checks.h"
@@ -367,7 +368,7 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
     scenarioAiChecks(assets);
     actorAiTimingChecks(assets);
     exploreActionChecks();exploreSearchChecks();tacticalExploreQueueChecks();exploreSpiralChecks();
-    militaryGameplayChecks(assets);militaryAdmissionGameplayChecks(assets);militaryDifficultyGameplayChecks(assets);
+    militaryGameplayChecks(assets);groupDefaultTaskGameplayChecks(assets);militaryAdmissionGameplayChecks(assets);militaryDifficultyGameplayChecks(assets);
     tacticalMovementChecks();tacticalMovementGameplayChecks(assets);
     explorationGameplayChecks(assets);
 }

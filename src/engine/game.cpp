@@ -9404,6 +9404,25 @@ Game::Object *Game::issueGroupAttack(const std::vector<Object *> &selected,Objec
             continue;
         else
             attackers.push_back(source);
+    if (attackers.empty() && !acknowledgement && !selected.empty()) {
+        // 481560 selects one default task for the group; no task enters
+        // movement (481860), rather than discarding the order. Formation and
+        // path solving below still use the native movement adapter.
+        const bool pendingConversion = std::any_of(selected.begin(), selected.end(),
+            [&](const Object *source) {
+                return conversionEligible(*source, *enemy, true);
+            });
+        std::vector<Object *> movers;
+        if (!pendingConversion)
+            for (Object *source : selected)
+                if (source->active && !source->hidden && source->unit->speed > 0 &&
+                    isEnemy(*source, *enemy))
+                    movers.push_back(source);
+        if (!movers.empty()) {
+            acknowledgement = movers.front();
+            issueGroupMove(std::move(movers), enemy->x, enemy->y);
+        }
+    }
     float centroidX = 0, centroidY = 0;
     for (const Object *source : attackers) {
         centroidX += source->x;

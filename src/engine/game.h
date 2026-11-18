@@ -604,6 +604,16 @@ public:
         issueAttack(*a, *b, std::atan2(a->y - b->y, a->x - b->x),automatic);
         return true;
     }
+    bool issueGroupAttackForTesting(const std::vector<uint32_t> &sourceIds, uint32_t targetId) {
+        Object *target=findObject(targetId);if(!target)return false;
+        std::vector<Object *> sources;
+        for(uint32_t id:sourceIds) {
+            Object *source=findObject(id);
+            if(!source || !source->active)return false;
+            sources.push_back(source);
+        }
+        return issueGroupAttack(sources,*target)!=nullptr;
+    }
     bool retryAttackForTesting(uint32_t id) {
         Object *o=findObject(id);if(!o || !o->attackTargetId)return false;
         retryAttackApproach(*o);return true;
