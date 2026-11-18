@@ -484,6 +484,10 @@ public:
         uint32_t spawnId, bool locked);
     bool positionPassableForTesting(
         uint32_t spawnId, float x, float y) const;
+    bool segmentClearForTesting(uint32_t id,float ax,float ay,float bx,float by) const {
+        const auto *object=findObject(id);
+        return object && segmentClear(*object,ax,ay,bx,by);
+    }
     bool issueHealForTesting(uint32_t source, uint32_t target) {
         auto *a=findObject(source), *b=findObject(target);
         return a && b && issueHealCommand(*a,*b);

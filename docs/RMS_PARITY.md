@@ -7509,3 +7509,17 @@ boundaries. They establish the stated generation outputs, not complete Windows
 session equivalence or every object property. Private evidence is retained in
 `rms-arid-fresh-comparison-2026-11-18.json` and
 `rms-arid-fresh-findings-2026-11-18.md` in the local research directory.
+
+### Siege overlap route geometry (2026-11-18)
+
+A production-asset regression reproduced a heavy siege unit sliding indefinitely
+inside a Command Center footprint: route smoothing ignored footprints containing
+the route start, while movement rejected steps into their deeper interior. The
+shared swept-footprint test now rejects increased penetration while allowing
+outward and tangential escape. This corrects the native path adapter; it does not
+claim to reproduce the original pathfinder. Three orientations reach the far side
+of the building, and direct geometry checks reject routes through opposite shallow
+edges/corners. Focused military, movement, crowd and delivery regressions pass
+under ASan/UBSan in `siege-retention-check.log`. The long-match actor2477 remains
+a separate replay comparison. Local original evidence and reproducer details:
+`siege-overlap-movement-findings-2026-11-18.md`.

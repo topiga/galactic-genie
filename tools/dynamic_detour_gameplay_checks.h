@@ -1,7 +1,49 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+// Native movement-adapter regression, not an original pathfinder parity claim.
+[[gnu::noinline]] static void overlappingStartMovementChecks(swgb::Assets &assets) {
+    swgb::Scenario scenario;scenario.map.width=scenario.map.height=64;
+    scenario.map.tiles.resize(64*64);scenario.nextUnitId=1;
+    scenario.playerSlotCount=1;scenario.civilizations.fill(1);
+    scenario.players[0].active=true;scenario.players[0].human=true;scenario.players[0].civilization=1;
+    for(const auto direction:std::array<std::array<float,2>,3>{{{1,0},{0,1},{-1,0}}}) {
+        auto game=std::make_unique<swgb::Game>(assets);std::string error;
+        check(game->initScenario(scenario,&error),error.c_str());
+        const float x=20+2.1f*direction[0],y=20+2.1f*direction[1];
+        const auto building=game->spawnObjectForTesting(1,109,1,20,20);
+        const auto siege=game->spawnObjectForTesting(1,691,1,x,y);
+        check(building && siege,"Create a siege unit overlapping a Command Center edge");
+        game->update(0,{});
+        check(!game->positionPassableForTesting(siege,20,20),
+              "Overlap escape must not permit movement into the deeper building interior");
+        check(!game->segmentClearForTesting(siege,x,y,20-2.1f*direction[0],20-2.1f*direction[1]),
+              "Shallow endpoints across a building do not permit crossing its deeper interior");
+        check(game->segmentClearForTesting(siege,x,y,x+3*direction[0],y+3*direction[1]),
+              "An overlapping unit can escape directly outward");
+        for(float side:{-1.f,1.f}) {
+            check(game->segmentClearForTesting(siege,x,y,x+3*side*direction[1],y+3*side*direction[0]),
+                  "Constant-penetration tangents can escape in either direction");
+        }
+        check(game->segmentClearForTesting(siege,22.1f,22.1f,25,25),
+              "A diagonal corner overlap can escape outward");
+        check(!game->segmentClearForTesting(siege,22.1f,22.1f,17.9f,17.9f),
+              "Opposite shallow corners cannot cross the building interior");
+        const float goalX=20-5*direction[0]+.001f*direction[1];
+        const float goalY=20-5*direction[1]+.001f*direction[0];
+        check(game->issuePointMoveForTesting(siege,goalX,goalY),
+              "Find a route out of an overlap and around the building");
+        bool arrived=false;
+        for(int frame=0;frame<1800 && !arrived;++frame) {
+            game->update(1.f/30,{});
+            const auto position=game->objectPosition(siege);
+            arrived=std::hypot(position[0]-goalX,position[1]-goalY)<.5f;
+        }
+        check(arrived,"An overlapping siege unit escapes and reaches the opposite side instead of sliding forever");
+    }
+}
 // Keep large Game fixtures out of the combined sanitizer driver's stack frame.
 [[gnu::noinline]] static void dynamicDetourGameplayChecks(swgb::Assets &assets) {
+    overlappingStartMovementChecks(assets);
     swgb::Scenario scenario;scenario.map.width=scenario.map.height=64;
     scenario.map.tiles.resize(64*64);scenario.nextUnitId=1;
     scenario.playerSlotCount=1;scenario.civilizations.fill(1);

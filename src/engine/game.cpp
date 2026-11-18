@@ -12027,13 +12027,24 @@ bool Game::segmentClear(const Object &object, float ax, float ay, float bx,
     const bool air = isAirUnit(object);
     // Exact swept test against footprints (strict interior, like
     // positionPassable), so paths cannot clip a corner between samples.
-    // Footprints that already contain the start are ignored: the unit is
-    // allowed to back out of an overlap.
+    // An overlapping start may escape without increasing penetration. Ignoring
+    // that entire footprint would let smoothing route through its deeper interior,
+    // a segment the movement step's positionPassable check cannot follow.
     auto hitsBox = [&](float px, float py, float qx, float qy,
                        const Object &other) {
-        const float ex = std::max(0.05f, other.unit->collisionSize[0]) + radius - 0.01f;
-        const float ey = std::max(0.05f, other.unit->collisionSize[1]) + radius - 0.01f;
-        if (std::abs(ax - other.x) < ex && std::abs(ay - other.y) < ey) return false;
+        float ex = std::max(0.05f, other.unit->collisionSize[0]) + radius - 0.01f;
+        float ey = std::max(0.05f, other.unit->collisionSize[1]) + radius - 0.01f;
+        const float startDx = std::abs(ax - other.x), startDy = std::abs(ay - other.y);
+        if (startDx < ex && startDy < ey) {
+            // The inset rectangle contains exactly the positions that penetrate
+            // farther than the start (with positionPassable's rounding tolerance).
+            // Test the whole segment: a shallow endpoint on the opposite side
+            // still crosses the forbidden interior.
+            const float penetration = std::min(ex - startDx, ey - startDy) + 1e-5f;
+            ex -= penetration;
+            ey -= penetration;
+            if (ex <= 0 || ey <= 0) return false;
+        }
         float t0 = 0.0f, t1 = 1.0f;
         const float d[2] = {qx - px, qy - py};
         const float p[2] = {px - other.x, py - other.y};
