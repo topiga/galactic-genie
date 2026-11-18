@@ -76,8 +76,25 @@ create_object 83 { set_place_for_every_player min_distance_to_players 6 max_dist
             if(id)return false;bytes.assign(unsupported.begin(),unsupported.end());return true;
         },{},&error),error.c_str());
         uint32_t state=1;swgb::RmsMap map;
-        check(!swgb::generateRmsMap(rejected,{},32,32,assets.dat(),state,map,&error,3,{1,2,3}) &&
-              state==1 && map.ownedObjects.empty(),"Unproven stock-worker variants fail without changing RNG");
+        if(attributes.find("number_of_objects 2")!=std::string::npos) {
+            // Explicit quantity is supported by the shared row controller;
+            // keep this an integration check rather than a new original golden.
+            check(swgb::generateRmsMap(rejected,{},32,32,assets.dat(),state,map,&error,3,{1,2,3}),error.c_str());
+            std::array<int,4> workers{},centers{};
+            for(const auto &object:map.ownedObjects) {
+                check(object.owner>=1 && object.owner<=3,"Explicit worker quantity retains valid owners");
+                if(object.unitId==109)++centers[size_t(object.owner)];
+                else {
+                    check(object.unitId==83 || object.unitId==293,"Explicit worker quantity creates worker prototypes");
+                    ++workers[size_t(object.owner)];
+                }
+            }
+            for(size_t owner=1;owner<=3;++owner)
+                check(centers[owner]==1 && workers[owner]==2,"Explicit worker quantity gives each owner two workers and its starting center");
+        } else {
+            check(!swgb::generateRmsMap(rejected,{},32,32,assets.dat(),state,map,&error,3,{1,2,3}) &&
+                  state==1 && map.ownedObjects.empty(),"Unsupported stock-worker distances/radii fail without changing RNG");
+        }
     }
     const auto explicitDefaults=prefix+"create_object 83 { set_place_for_every_player number_of_objects 1 "
         "min_distance_to_players 6 max_distance_to_players 6 group_placement_radius 3 }";
