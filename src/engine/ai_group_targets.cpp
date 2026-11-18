@@ -46,14 +46,45 @@ bool aiGroupNormalPrioritySupported(int prototypeId, int unitClass) {
            prototypeId != 104 && prototypeId != 276;
 }
 
+std::optional<AiTargetPriority> resolveAiGroupTargetPriority(
+    int prototype, int unitClass, const AiGroupTargetPriorityInputs &input) {
+    if (unitClass == 46) {
+        if (!input.terminateMode) return std::nullopt;
+        if (*input.terminateMode) return AiTargetPriority::Force100;
+    }
+    if (unitClass == 51 || prototype == 104) {
+        if (!input.ownerFlag114) return std::nullopt;
+        if (*input.ownerFlag114) {
+            if (!input.rememberedMarkerOne) return std::nullopt;
+            return *input.rememberedMarkerOne ? AiTargetPriority::Force100 : AiTargetPriority::Force99Point9;
+        }
+    }
+    if (prototype == 104) {
+        if (!input.sn106) return std::nullopt;
+        if (*input.sn106 == 1) return AiTargetPriority::Force100;
+    }
+    if (unitClass == 8) {
+        if (!input.sn107) return std::nullopt;
+        if (*input.sn107 == 1) return AiTargetPriority::Force100;
+    }
+    if (prototype == 276) {
+        if (!input.sn108) return std::nullopt;
+        if (*input.sn108 == 1) return AiTargetPriority::Force100;
+        if (!input.ownerFlag109) return std::nullopt;
+        if (*input.ownerFlag109) return AiTargetPriority::Force100;
+    }
+    return AiTargetPriority::Normal;
+}
+
 bool aiGroupThreatInRange(bool enemy, bool resolved, int status, float hp, float distance, float range) {
     return enemy && resolved && status <= 2 && hp >= 1 && distance <= range;
 }
 
 std::optional<AiTargetCandidate> buildAiGroupTargetMetric(
     const std::vector<AiGroupCombatMember> &members, bool threatListEmpty,
-    float targetHp, float distance, bool sameRegion, int prototype, int unitClass) {
-    if (!aiGroupNormalPrioritySupported(prototype, unitClass)) return std::nullopt;
+    float targetHp, float distance, bool sameRegion, int prototype, int unitClass,
+    std::optional<AiTargetPriority> resolvedPriority) {
+    if (!resolvedPriority && !aiGroupNormalPrioritySupported(prototype, unitClass)) return std::nullopt;
     constexpr float epsilon = 1.0e-7f;
     const float maximum = std::numeric_limits<float>::max();
     auto dps = [](const AiGroupDamageInput &input) -> std::optional<double> {
@@ -93,7 +124,8 @@ std::optional<AiTargetCandidate> buildAiGroupTargetMetric(
         preferred = std::find(std::begin(excluded), std::end(excluded), prototype) == std::end(excluded);
     }
     return AiTargetCandidate{killTime, vulnerability, distance, preferred,
-        unitClass == 6 || unitClass == 8, sameRegion, unitClass == 6};
+        unitClass == 6 || unitClass == 8, sameRegion, unitClass == 6,
+        resolvedPriority.value_or(AiTargetPriority::Normal)};
 }
 
 AiGroupTargetRetention retainAiGroupTarget(const AiGroupRetainedTarget &target) {

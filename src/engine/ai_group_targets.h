@@ -43,6 +43,16 @@ AiGroupTargetAdmission filterAiGroupTarget(const AiTargetGroup &, const AiGroupT
 // information flags, strategic-number or remembered-record overrides at 592a02.
 // Until callers resolve those inputs, they must defer them rather than use Normal.
 bool aiGroupNormalPrioritySupported(int prototypeId, int unitClass);
+// Recovered 592a02 override inputs. nullopt means the caller has not resolved
+// that input; unrelated unknowns do not prevent a decision. rememberedMarkerOne
+// is false for a missing original record as well as record+28 != 1.
+struct AiGroupTargetPriorityInputs {
+    std::optional<bool> terminateMode, ownerFlag114, ownerFlag109, rememberedMarkerOne;
+    std::optional<int> sn106, sn107, sn108;
+};
+std::optional<AiTargetPriority> resolveAiGroupTargetPriority(
+    int prototypeId, int unitClass, const AiGroupTargetPriorityInputs &);
+
 // Original 591580 membership test; callers preserve known-record order and dedup IDs.
 bool aiGroupThreatInRange(bool enemy, bool resolved, int status, float hp,
                           float footprintDistance, float range);
@@ -61,7 +71,8 @@ struct AiGroupCombatMember {
 // failed: threatListEmpty is not inferred from filtered contribution vectors.
 std::optional<AiTargetCandidate> buildAiGroupTargetMetric(
     const std::vector<AiGroupCombatMember> &, bool threatListEmpty,
-    float targetHp, float distance, bool sameRegion, int prototypeId, int unitClass);
+    float targetHp, float distance, bool sameRegion, int prototypeId, int unitClass,
+    std::optional<AiTargetPriority> resolvedPriority = std::nullopt);
 
 enum class AiGroupTargetRetention { Retain, Reset, ResetAndStop };
 struct AiGroupRetainedTarget {

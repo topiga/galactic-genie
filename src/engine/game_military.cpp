@@ -231,7 +231,14 @@ void Game::updateAiMilitaryTargets(int player,uint32_t budget) {
             std::vector<AiTargetCandidate> metrics;
             for(const auto &record:state.militaryKnownObjects) {
                 const auto *target=findObject(uint32_t(record.id));
-                if(!target || !target->active || !aiGroupNormalPrioritySupported(target->unit->id,target->unit->cls))continue;
+                if(!target || !target->active)continue;
+                AiGroupTargetPriorityInputs priorities;
+                // shortcut: Current match modes have no Terminate/victory-event controller; connect events109..115 before adding those modes.
+                priorities.terminateMode=false;priorities.ownerFlag114=false;priorities.ownerFlag109=false;
+                priorities.sn106=state.strategicNumbers.at(106);priorities.sn107=state.strategicNumbers.at(107);
+                priorities.sn108=state.strategicNumbers.at(108);
+                const auto priority=resolveAiGroupTargetPriority(target->unit->id,target->unit->cls,priorities);
+                if(!priority)continue;
                 const auto targetRegion=region(*first,*target);if(!targetRegion)continue;
                 AiGroupTargetFilter filter;
                 filter.recordId=record.id;filter.recordOwner=record.owner;filter.allied=allied(target->player);
@@ -258,7 +265,7 @@ void Game::updateAiMilitaryTargets(int player,uint32_t budget) {
                 }
                 const auto metric=buildAiGroupTargetMetric(combat,threats.empty(),target->hitPoints,
                     distance(*target,aggregate->centroid[0],aggregate->centroid[2]),*targetRegion==aggregate->region,
-                    target->unit->id,target->unit->cls);
+                    target->unit->id,target->unit->cls,*priority);
                 if(!metric)continue;
                 group.targetCandidates.push_back(record.id);metrics.push_back(*metric);
                 if(metrics.size()==1024)break;

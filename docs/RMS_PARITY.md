@@ -6975,3 +6975,21 @@ for the player at2231.4 seconds (37:11) and for the AI against an idle player at
 510.7 seconds (8:31), on both standard and explored maps. No units/resources/damage
 are injected by those match drivers. Logs use `military-group-target-` prefixes.
 These are native regression matches, not seed-matched Windows full games.
+
+### Specialized target priorities (18 November 2026)
+
+Seventeen actual original controls establish priority precedence for Terminate
+class46, victory-event owner flags, prototype104/SN106, gate class8/SN107, and
+prototype276/SN108. Only SN value1 enables each override. Original constructor
+and all49 profile events confirm fresh SN106/107/108 values are-1, now retained
+in native player state. The shared resolver keeps unknown relevant inputs
+unsupported rather than assigning a normal priority implicitly.
+
+The native Conquest/Command-Center match bridge supplies its non-Terminate mode
+and explicit no-victory-event adapter, plus current per-player strategic numbers.
+It no longer excludes every specialized target category. The original victory
+manager/event109..115 lifecycle and conversion eligibility remain unported.
+Evidence: `tactical-target-priority-controls-2026-11-18.json` and
+`tactical-priority-profile-oracle-2026-11-18.json`. Pure helper checks pass with
+sanitizers and warnings as errors; the updated local simulation checks pass in
+`arid-match-local.log`.

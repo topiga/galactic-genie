@@ -26,6 +26,37 @@ int main() {
     check(!aiGroupNormalPrioritySupported(104,3) && !aiGroupNormalPrioritySupported(109,8) &&
           aiGroupNormalPrioritySupported(109,3), "Special original priority inputs cannot silently default to Normal");
 
+    // Exact17 original592a02 priority controls. The remembered-missing case
+    // maps to markerOne=false, as the original lookup explicitly does.
+    struct PriorityCase {int prototype,cls,mode,flag114,flag109,marker,sn106,sn107,sn108;AiTargetPriority expected;};
+    const auto normal=AiTargetPriority::Normal,force=AiTargetPriority::Force100,almost=AiTargetPriority::Force99Point9;
+    const PriorityCase priorityCases[]={
+        {109,18,0,0,0,0,0,0,0,normal},{109,46,0,0,0,0,0,0,0,normal},
+        {109,46,1,0,0,0,0,0,0,force},{109,46,2,0,0,0,0,0,0,normal},
+        {109,8,0,0,0,0,0,0,0,normal},{109,8,0,0,0,0,0,1,0,force},
+        {109,8,0,0,0,0,0,2,0,normal},{104,18,0,0,0,0,1,0,0,force},
+        {276,18,0,0,0,0,0,0,1,force},{276,18,0,0,1,0,0,0,0,force},
+        {276,18,0,1,0,0,0,0,0,normal},{109,51,0,1,0,1,0,0,0,force},
+        {109,51,0,1,0,0,0,0,0,almost},{109,51,0,1,0,0,0,0,0,almost},
+        {104,18,0,1,0,0,1,0,0,almost},{109,18,0,1,1,0,0,0,0,normal},
+        {104,46,1,1,0,0,0,0,0,force}};
+    for(const auto &c:priorityCases) {
+        AiGroupTargetPriorityInputs inputs{c.mode==1,c.flag114==1,c.flag109==1,c.marker==1,
+                                           c.sn106,c.sn107,c.sn108};
+        check(resolveAiGroupTargetPriority(c.prototype,c.cls,inputs)==c.expected,
+              "Original priority override and precedence golden");
+    }
+    AiGroupTargetPriorityInputs unknown;
+    check(resolveAiGroupTargetPriority(109,18,unknown)==normal &&
+          !resolveAiGroupTargetPriority(109,46,unknown) && !resolveAiGroupTargetPriority(104,18,unknown),
+          "Unknown relevant priority inputs defer; ordinary units need no defaults");
+    unknown.terminateMode=true;
+    check(resolveAiGroupTargetPriority(104,46,unknown)==force,
+          "Original first priority wins without demanding later unknown fields");
+    unknown={};unknown.sn107=0;
+    check(resolveAiGroupTargetPriority(109,8,unknown)==normal,
+          "Class8 requires only its strategic-number input");
+
     // Saved 27 original candidate-filter controls, standard land subset.
     AiGroupTargetFilter target;target.recordId=77;target.recordOwner=2;target.hp=100;target.visibility=15;
     const auto accepted=[&] {return filterAiGroupTarget(*group,target)==AiGroupTargetAdmission::Accepted;};
@@ -57,6 +88,15 @@ int main() {
     check(fractionalMetric && fractionalMetric->killTime==51.42857360839844f &&
           fractionalMetric->vulnerability==53.468353271484375f,
           "Original fractional DPS keeps division unrounded until accumulation store");
+    check(!buildAiGroupTargetMetric(combat,false,100,1,true,109,8),
+          "Legacy callers still defer unresolved special target priorities");
+    const auto wallMetric=buildAiGroupTargetMetric(combat,false,100,1,true,109,8,normal);
+    check(wallMetric && wallMetric->wallLike && wallMetric->priority==normal,
+          "Explicit resolved priority enables class8 without changing original wall flag");
+    const auto forcedMetric=buildAiGroupTargetMetric(combat,false,100,1,true,104,18,almost);
+    check(forcedMetric && forcedMetric->priority==almost,
+          "Original priority is carried into the shared ranker");
+
     // Five original592430 zero-reload controls: unordered sums select FLT_MAX.
     for (int test=0;test<5;++test) {
         auto zero=combat;
