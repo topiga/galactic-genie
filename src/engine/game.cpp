@@ -11845,6 +11845,21 @@ const Game::Object *Game::unitBlockerAt(const Object &object, float x,
 bool Game::detourAround(Object &object, float goalX, float goalY) {
     // Original4a9cc0 omits moving objects except explicit collision blockers.
     // Pending native routes approximate its velocity predicate here.
+    struct Obstacle { float x, y, separation; };
+    std::vector<Obstacle> obstacles;
+    const float radius = collisionRadius(object);
+    const bool air = isAirUnit(object);
+    // Every search/thinning segment lies within this four-tile square.
+    // Extra margin keeps this broad-phase test conservative at float edges.
+    const float reach = 4.01f;
+    for (uint32_t index : mobileObjectIndices_) {
+        const Object &other = objects_[(size_t)index];
+        if (&other == &object || !other.active || other.hidden || isAirUnit(other) != air) continue;
+        if (other.spawnId != object.blockerId && other.state == State::Walk && other.pathIndex < other.path.size()) continue;
+        const float separation = radius + collisionRadius(other) + 0.05f;
+        if (std::abs(other.x-object.x)>reach+separation || std::abs(other.y-object.y)>reach+separation) continue;
+        obstacles.push_back({other.x,other.y,separation});
+    }
     const auto attempt = [&](float kStep,int kHalf,bool sweptOnly) {
     const int kSize = kHalf * 2 + 1;
     const float originX = object.x - kHalf * kStep;
@@ -11859,20 +11874,15 @@ bool Game::detourAround(Object &object, float goalX, float goalY) {
     const int goalCX = (int)std::lround((tx - originX) / kStep);
     const int goalCY = (int)std::lround((ty - originY) / kStep);
     std::vector<uint8_t> open(kSize * kSize, 0);
-    const float radius = collisionRadius(object);
     // A local detour must preserve the mobile obstacles used by its search.
     // Static-only string pulling would straighten the path through the blocker.
     const auto clearDetourSegment = [&](float ax, float ay, float bx, float by) {
         if (!segmentClear(object, ax, ay, bx, by)) return false;
         const float dx = bx - ax, dy = by - ay;
         const float lengthSquared = dx * dx + dy * dy;
-        for (uint32_t index : mobileObjectIndices_) {
-            const Object &other = objects_[(size_t)index];
-            if (&other == &object || !other.active || other.hidden ||
-                isAirUnit(other) != isAirUnit(object)) continue;
-            if (other.spawnId != object.blockerId && other.state == State::Walk && other.pathIndex < other.path.size()) continue;
+        for (const auto &other : obstacles) {
             const float ox = ax - other.x, oy = ay - other.y;
-            const float separation = radius + collisionRadius(other) + 0.05f;
+            const float separation = other.separation;
             const float startSquared = ox * ox + oy * oy;
             const float direction = ox * dx + oy * dy;
             // Permit monotonically separating from an existing overlap.
@@ -11890,14 +11900,9 @@ bool Game::detourAround(Object &object, float goalX, float goalY) {
             cellPos(cx, cy, x, y);
             bool ok = staticPassableAt(object, x, y);
             if (ok)
-                for (uint32_t index : mobileObjectIndices_) {
-                    const Object &other = objects_[(size_t)index];
-                    if (&other == &object || !other.active || other.hidden ||
-                        isAirUnit(other) != isAirUnit(object))
-                        continue;
-                    if (other.spawnId != object.blockerId && other.state == State::Walk && other.pathIndex < other.path.size()) continue;
+                for (const auto &other : obstacles) {
                     const float dx = x - other.x, dy = y - other.y;
-                    const float sep = radius + collisionRadius(other) + 0.05f;
+                    const float sep = other.separation;
                     if (dx * dx + dy * dy < sep * sep) {
                         ok = false;
                         break;
@@ -11944,11 +11949,11 @@ bool Game::detourAround(Object &object, float goalX, float goalY) {
             if (!sweptOnly && d[0] && d[1] &&
                 (!open[cy * kSize + nx] || !open[ny * kSize + cx]))
                 continue;
+            const float nc = cost[n.i] + ((d[0] && d[1]) ? 1.41421356f : 1.0f);
+            if (nc >= cost[ni]) continue;
             float ax, ay, bx, by;
             cellPos(cx, cy, ax, ay);cellPos(nx, ny, bx, by);
             if (!clearDetourSegment(ax, ay, bx, by)) continue;
-            const float nc = cost[n.i] + ((d[0] && d[1]) ? 1.41421356f : 1.0f);
-            if (nc >= cost[ni]) continue;
             cost[ni] = nc;
             parent[ni] = n.i;
             queue.push({nc + h(ni), ni});
