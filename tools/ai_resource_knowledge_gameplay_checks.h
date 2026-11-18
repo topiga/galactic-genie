@@ -35,12 +35,16 @@ static void aiResourceKnowledgeGameplayChecks(swgb::Assets &assets) {
     check(game.aiGoalForTesting(2,931)==1,"Production resource-found stays true after losing sight");
 
     reset();
-    check(game.spawnObjectForTesting(1,83,2,20,20) && game.spawnObjectForTesting(0,animal,0,21,20),
+    check(game.spawnObjectForTesting(1,83,2,20,20) && game.spawnObjectForTesting(0,animal,0,21,20) &&
+          game.spawnObjectForTesting(0,ore,0,20,21),
           "Visible animal food fixture");
-    load("(defrule (resource-found food) => (set-goal 932 1))"
+    load("(defconst FOOD 2) (defconst goal-alias FOOD) (defconst resource-alias food)"
+         "(defrule (resource-found metal) (resource-found goal-alias) (not (resource-found resource-alias))"
+         " => (set-goal 940 FOOD))"
+         "(defrule (resource-found food) => (set-goal 932 1))"
          "(defrule (not (resource-found food)) => (set-goal 933 1))");
     advance(10);
-    check(game.aiGoalForTesting(2,932)==0 && game.aiGoalForTesting(2,933)==1,
+    check(game.aiGoalForTesting(2,932)==0 && game.aiGoalForTesting(2,933)==1 && game.aiGoalForTesting(2,940)==2,
           "Visible food animal is not the original berries-found fact");
 
     reset();

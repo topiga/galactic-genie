@@ -399,6 +399,17 @@ static std::unordered_map<std::string,int> defaultAiConstants() {
     };
 }
 
+void AiProgram::defineConstant(const std::string &name,int value) {
+    exactConstants_[name]=value;
+    constants[normalizeAiSymbol(name)]=value;
+}
+
+void AiProgram::initializeConstants(const std::unordered_map<std::string,int> &initial) {
+    constants=defaultAiConstants();
+    exactConstants_=constants;
+    for(const auto &[name,value]:initial) defineConstant(name,value);
+}
+
 bool AiProgram::load(
     const std::string &entryPath,
     const std::unordered_set<std::string> &defines,
@@ -406,16 +417,13 @@ bool AiProgram::load(
     const std::unordered_map<std::string,int> &initialConstants) {
     sourceLoader_ = std::move(loader);
     rules.clear();
-    constants.clear();
     files.clear();
     loaded_.clear();
     defines_.clear();
     for (const std::string &define : defines)
         defines_.insert(
             normalizeAiSymbol(define));
-    constants = defaultAiConstants();
-    for(const auto &[name,value]:initialConstants)
-        constants[normalizeAiSymbol(name)]=value;
+    initializeConstants(initialConstants);
     const bool result = loadFile(entryPath, err);
     sourceLoader_ = {};
     return result;
@@ -429,16 +437,13 @@ bool AiProgram::loadSource(
     const std::unordered_map<std::string,int> &initialConstants) {
     sourceLoader_ = std::move(loader);
     rules.clear();
-    constants.clear();
     files.clear();
     loaded_.clear();
     defines_.clear();
     for (const std::string &define : defines)
         defines_.insert(
             normalizeAiSymbol(define));
-    constants = defaultAiConstants();
-    for(const auto &[name,value]:initialConstants)
-        constants[normalizeAiSymbol(name)]=value;
+    initializeConstants(initialConstants);
     std::string key=normalizeAiSymbol(name);
     std::replace(key.begin(),key.end(),'\\','/');
     loaded_.insert(key);
@@ -541,12 +546,8 @@ bool AiProgram::processSource(
             if (!parseInteger(
                     form.children[2].value,
                     value)) {
-                const std::string reference =
-                    normalizeAiSymbol(
-                        form.children[2].value);
-                const auto found =
-                    constants.find(reference);
-                if (found == constants.end()) {
+                const auto &reference=form.children[2].value;
+                if (!hasConstant(reference)) {
                     if (err)
                         *err = name + ":" +
                                std::to_string(
@@ -556,12 +557,9 @@ bool AiProgram::processSource(
                                "'";
                     return false;
                 }
-                value = found->second;
+                value = constant(reference);
             }
-            constants[
-                normalizeAiSymbol(
-                    form.children[1].value)] =
-                value;
+            defineConstant(form.children[1].value,value);
             continue;
         }
         if (command != "defrule")
@@ -606,6 +604,9 @@ int AiProgram::constant(
     int number = 0;
     if (parseInteger(name, number))
         return number;
+    // Original symbol entries distinguish food (resource) from FOOD (script goal).
+    const auto exact=exactConstants_.find(name);
+    if(exact!=exactConstants_.end())return exact->second;
     const auto found =
         constants.find(
             normalizeAiSymbol(name));

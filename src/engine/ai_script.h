@@ -61,6 +61,9 @@ public:
     std::vector<std::string> files;
 
 private:
+    std::unordered_map<std::string,int> exactConstants_;
+    void initializeConstants(const std::unordered_map<std::string,int> &initial);
+    void defineConstant(const std::string &name,int value);
     SourceLoader sourceLoader_;
     std::unordered_set<std::string> defines_;
     std::unordered_set<std::string> loaded_;
