@@ -6929,3 +6929,49 @@ session/starting-age and fog/conquest checks pass under ASan/UBSan in
 original personality; it does not expose RMS in desktop setup or establish full
 original PER/controller behavior. The path-acceptance build also completed the
 unchanged conquest match at2092.2 seconds (`military-path-request-match.log`).
+
+### Group target selection in gameplay (18 November 2026)
+
+Ready standard land groups now build one target plan instead of independently
+issuing tactical700 attacks for each soldier. The shared stages use recovered
+5941a0 member aggregation,5934a9 candidate gates,591580 nearby-threat gates,
+592430 metrics, existing592980/592c30 ranking,593938 direct-path continuation,
+and5a31c0 retention. A selected target produces one local command containing the
+ordered member list. Human and AI group attacks share the existing native
+formation placement provider; the original44adb0 grouping executor is not ported.
+
+Valid targets are retained without repeated dispatch. Hidden mobile targets reset
+the group without Stop; hidden buildings remain retained. Missing/dead/allied
+targets reset and queue Stop. Ranked continuation preserves its candidate order
+and cursor; the first attempted record remains exempt from the host-time budget.
+Unimplemented blocker/transport fallback stays unsupported instead of pretending
+that failed native direct pathfinding proves original rejection. Native scouting
+still supplies the no-supported-target behavior; full phase9 state18/11 planning,
+area metadata callbacks and the complete24-phase driver remain unfinished.
+
+Original controls include group aggregation,27 candidate filters,10 threat queries,
+16 metric cases plus fractional and five zero-reload cases,14 target-retention
+cases and12 ranked-path cases. Zero divided by zero produces the original
+unordered-sum FLT_MAX sentinel; positive damage divided by zero produces infinite
+DPS and zero kill-time. Fractional divisions stay unrounded until the float
+accumulation store. This does not emulate arbitrary extended-x87 boundary cases.
+Artifacts use `tactical-target-*` and `tactical-phase9-retention-controls-*`
+2026-11-18 names in the local reference directory.
+
+The native bridge supplies observed ID/owner records in native append order,
+current active-object lookup, native damage/range providers and terrain regions.
+Original AI knowledge admission/retirement, frozen-record lifetime, owner-state
+callbacks, special-motion virtual300, conversion eligibility, specialized victory
+priorities and path-service behavior remain adapters or explicit unsupported
+branches. Observed record ownership drives threat diplomacy; live master metadata
+drives metric preferences. This is a connected standard-land subset, not full AI
+parity or a claim that hidden destruction timing matches the original registry.
+
+Verification: the new pure helpers pass ASan/UBSan with warnings as errors; the
+local production regression covers shared attack targets, paused queue dispatch,
+closer-enemy retention, hidden mobile/building distinction and deferred Stop.
+Fog/scouting and conquest-state checks pass. Unchanged complete-game drivers win
+for the player at2231.4 seconds (37:11) and for the AI against an idle player at
+510.7 seconds (8:31), on both standard and explored maps. No units/resources/damage
+are injected by those match drivers. Logs use `military-group-target-` prefixes.
+These are native regression matches, not seed-matched Windows full games.

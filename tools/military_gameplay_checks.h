@@ -108,5 +108,40 @@ static void militaryGameplayChecks(swgb::Assets &assets) {
                   "Next phase7 honors original attack-now flag8 and releases the reduced group");
         }
     }
-    std::puts("PASS: production PER military admission, gather movement, pause, ownership and reset");
+    for(int targetType:{329,109}) {
+        scenario.players[0].diplomacy[2]=3;scenario.players[1].diplomacy[1]=3;
+        check(game.initScenario(scenario,&error),error.c_str());
+        const auto one=game.spawnObjectForTesting(1,329,2,20,20);
+        const auto two=game.spawnObjectForTesting(1,329,2,21,20);
+        const auto target=game.spawnObjectForTesting(1,targetType,1,24,20);
+        check(one && two && target && game.formAiMilitaryGroupsForTesting(2),"Group target selection fixture");
+        game.setAttackModeForTesting(one,3);game.setAttackModeForTesting(two,3);
+        game.updateAiMilitaryForTesting(2,UINT32_MAX);
+        check(game.militaryGroupsForTesting(2).size()==1 && game.militaryGroupsForTesting(2)[0].targetId==int32_t(target),
+              "Ready group acquires an observed target through original metric/ranking stages");
+        check(game.stagedTacticalCountForTesting()==0,"Group attack uses one local packet instead of per-unit tactical700 staging");
+        game.updatePaused(1,{});
+        check(!game.attackTargetForTesting(one) && !game.attackTargetForTesting(two),"Pause retains queued group attack without dispatch");
+        game.update(0,{});
+        check(game.attackTargetForTesting(one)==target && game.attackTargetForTesting(two)==target,
+              "Local group packet dispatches the same target to both members");
+        const auto closer=game.spawnObjectForTesting(1,329,1,21,21);
+        check(closer!=0,"Introduce a closer target after acquisition");
+        game.updateAiMilitaryForTesting(2,UINT32_MAX);
+        check(game.militaryGroupsForTesting(2)[0].targetId==int32_t(target),"Valid group target is retained instead of nearest-target reselection");
+        check(game.moveObjectForTesting(target,55,55),"Target leaves group sight");
+        game.updateAiMilitaryForTesting(2,UINT32_MAX);
+        check(game.militaryGroupsForTesting(2)[0].targetId==(targetType==109?int32_t(target):-1) &&
+              game.militaryGroupsForTesting(2)[0].state==(targetType==109?2:1),
+              "Original retention keeps hidden buildings and resets hidden mobile targets");
+        if(targetType==109) {
+            check(game.damageObjectForTesting(target,100000),"Destroy retained group target");
+            game.updateAiMilitaryForTesting(2,UINT32_MAX);
+            check(game.militaryGroupsForTesting(2)[0].targetId==-1 && game.militaryGroupsForTesting(2)[0].state==1,
+                  "Destroyed target resets group planning and queues Stop");
+            game.update(0,{});
+            check(!game.attackTargetForTesting(one) && !game.attackTargetForTesting(two),"Deferred group Stop clears both attacks");
+        }
+    }
+    std::puts("PASS: production PER military admission, group targeting, movement, pause, ownership and reset");
 }

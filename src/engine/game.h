@@ -1009,7 +1009,13 @@ private:
     };
 
     struct AiPlayerState {
+        struct KnownMilitaryObject {
+            int32_t id=-1;
+            int owner=0;
+        };
         AiProgram program;
+        std::vector<KnownMilitaryObject> militaryKnownObjects;
+        std::unordered_map<int32_t,size_t> militaryKnownSlots;
         std::vector<int32_t> militarySoldiers;
         std::vector<int32_t> militaryHomes;
         std::vector<AiMilitaryGatherGroup> militaryGroups;
@@ -1446,6 +1452,7 @@ private:
         int player=0;
         FormationType formation=FormationType::Line;
     };
+    Object *issueGroupAttack(const std::vector<Object *> &selected,Object &target);
     void executeContextCommand(const ContextCommand &command);
     void commandAtScreen(float screenX, float screenY, int screenW, int screenH);
     void cycleSelectedAttackMode();
@@ -1514,6 +1521,8 @@ private:
     std::optional<AiMilitaryGroups> availableAiMilitaryGroups(int player,std::optional<int> requested);
     bool aiMilitaryCanUseNativePolicy(int player,uint32_t id) const;
     void updateAiMilitary(int player,uint32_t budget=2);
+    void updateAiMilitaryTargets(int player,uint32_t budget);
+    void queueAiMilitaryAttack(int player,const AiMilitaryGatherGroup &group,const Object &target);
     void updatePlayerObjects(float dt,int player, bool auxiliary = false);
     void updateAiPlayer(
         int player, AiPlayerState &state);

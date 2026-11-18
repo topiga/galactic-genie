@@ -855,14 +855,16 @@ void Game::updateSkirmishArmy(int player) {
            !aiMilitaryCanUseNativePolicy(player,soldier.spawnId)) continue;
         Object *current=findObject(soldier.attackTargetId);
         Object *target=current && current->active && combatTargetVisible(soldier,*current)?current:nullptr;
+        const bool grouped=std::any_of(scouting.militaryGroups.begin(),scouting.militaryGroups.end(),[&](const auto &group) {
+            return std::find(group.members.begin(),group.members.end(),int32_t(soldier.spawnId))!=group.members.end();});
         float nearest=launchWave?std::numeric_limits<float>::max():64.f;
-        for(auto &candidate:objects_) {
+        if(!grouped)for(auto &candidate:objects_) {
             if(!isEnemy(soldier,candidate) || !canAttackTarget(soldier,candidate) ||
                !combatTargetVisible(soldier,candidate)) continue;
             const float dx=candidate.x-soldier.x,dy=candidate.y-soldier.y;
             if(dx*dx+dy*dy<nearest) {nearest=dx*dx+dy*dy;target=&candidate;}
         }
-        if(target && target!=current) {
+        if(!grouped && target && target!=current) {
             queueTacticalAttack(soldier,*target);
         } else if(!target && !soldier.attackTargetId && launchWave &&
                   !soldier.moveGoalActive && soldier.state==State::Idle) {
@@ -9116,6 +9118,154 @@ void Game::commandAtScreen(float screenX, float screenY, int screenW, int screen
     localCommands_.enqueue([this,command] {executeContextCommand(command);});
 }
 
+Game::Object *Game::issueGroupAttack(const std::vector<Object *> &selected,Object &target) {
+    Object *enemy=&target;
+    struct ReservedAttackSlot {
+        float x, y, radius;
+    };
+    Object *acknowledgement = nullptr;
+    std::vector<Object *> attackers;
+    for (Object *source : selected)
+        if (!isEnemy(*source, *enemy) ||
+            !canAttackTarget(*source, *enemy))
+            continue;
+        else
+            attackers.push_back(source);
+    float centroidX = 0, centroidY = 0;
+    for (const Object *source : attackers) {
+        centroidX += source->x;
+        centroidY += source->y;
+    }
+    const float baseAngle =
+        attackers.empty()
+            ? 0
+            : std::atan2(centroidY / attackers.size() - enemy->y,
+                         centroidX / attackers.size() - enemy->x);
+    std::stable_sort(
+        attackers.begin(), attackers.end(),
+        [&](const Object *a, const Object *b) {
+            return attackRange(*a, *enemy) <
+                   attackRange(*b, *enemy);
+        });
+    std::vector<ReservedAttackSlot> reserved;
+    reserved.reserve(attackers.size());
+    for (Object *source : attackers) {
+        if (isWorker(*source))
+            clearConstructionAssignment(*source);
+        const float sourceRadius = collisionRadius(*source);
+        const float contact =
+            sourceRadius + collisionRadius(*enemy) + 0.08f;
+        const float maximumDistance =
+            std::max(contact, attackRange(*source, *enemy) - 0.05f);
+        const float minimumDistance =
+            minimumRange(*source) > 0
+                ? std::min(maximumDistance,
+                           std::max(contact,
+                                    minimumRange(*source) + 0.2f))
+                : contact;
+        const float preferredDistance =
+            std::max(minimumDistance,
+                     std::min(maximumDistance,
+                              attackRange(*source, *enemy) * 0.8f));
+        const float sourceAngle =
+            std::atan2(source->y - enemy->y,
+                       source->x - enemy->x);
+        const float radialStep =
+            std::max(0.35f, sourceRadius * 2.0f + 0.12f);
+        float slotAngle = sourceAngle;
+        float slotDistance = preferredDistance;
+        bool foundSlot = false;
+        auto slotOpen = [&](float angle, float distance) {
+            float x = 0.0f, y = 0.0f;
+            attackApproachPoint(
+                *source, *enemy, angle, distance,
+                x, y);
+            if (!positionPassable(*source, x, y, false))
+                return false;
+            for (const ReservedAttackSlot &slot : reserved) {
+                const float dx = x - slot.x;
+                const float dy = y - slot.y;
+                const float separation =
+                    sourceRadius + slot.radius + 0.08f;
+                if (dx * dx + dy * dy <
+                    separation * separation)
+                    return false;
+            }
+            return true;
+        };
+        for (int band = 0; band <= 12 && !foundSlot; band++) {
+            const float offsets[] = {
+                band == 0 ? 0.0f : -band * radialStep,
+                band == 0 ? 0.0f : band * radialStep};
+            for (float radialOffset : offsets) {
+                const float distance =
+                    preferredDistance + radialOffset;
+                if (distance < minimumDistance - 0.001f ||
+                    distance > maximumDistance + 0.001f)
+                    continue;
+                const float separation =
+                    sourceRadius * 2.0f + 0.12f;
+                const int samples =
+                    std::max(16, std::min(
+                                     96,
+                                     (int)std::ceil(
+                                         2.0f * kPi * distance /
+                                         separation)));
+                for (int sample = 0; sample < samples; sample++) {
+                    const int alternating =
+                        sample == 0
+                            ? 0
+                            : ((sample + 1) / 2) *
+                                  (sample & 1 ? 1 : -1);
+                    const float angle =
+                        sourceAngle +
+                        alternating *
+                            (2.0f * kPi / samples);
+                    if (!slotOpen(angle, distance))
+                        continue;
+                    slotAngle = angle;
+                    slotDistance = distance;
+                    foundSlot = true;
+                    break;
+                }
+                if (foundSlot) break;
+            }
+        }
+        for (int ring = 1; ring <= 16 && !foundSlot; ring++) {
+            const float distance =
+                maximumDistance + ring * radialStep;
+            const int samples =
+                std::max(16, std::min(
+                                 96,
+                                 (int)std::ceil(
+                                     2.0f * kPi * distance /
+                                     (sourceRadius * 2.0f + 0.12f))));
+            for (int sample = 0; sample < samples; sample++) {
+                const float angle =
+                    baseAngle +
+                    (sample + (ring & 1) * 0.5f) *
+                        (2.0f * kPi / samples);
+                if (!slotOpen(angle, distance))
+                    continue;
+                slotAngle = angle;
+                slotDistance = distance;
+                foundSlot = true;
+                break;
+            }
+        }
+        float slotX = 0.0f, slotY = 0.0f;
+        attackApproachPoint(
+            *source, *enemy, slotAngle, slotDistance,
+            slotX, slotY);
+        reserved.push_back(
+            {slotX, slotY, sourceRadius});
+        issueAttack(*source, *enemy, slotAngle, false,
+                    slotDistance);
+        if (!acknowledgement) acknowledgement = source;
+    }
+    return acknowledgement;
+}
+
 void Game::executeContextCommand(const ContextCommand &command) {
     std::vector<Object *> selected;
     for (uint32_t id:command.actors) {
@@ -9225,149 +9375,7 @@ void Game::executeContextCommand(const ContextCommand &command) {
 
     Object *enemy = live(command.enemy);
     if (enemy) {
-        struct ReservedAttackSlot {
-            float x, y, radius;
-        };
-        Object *acknowledgement = nullptr;
-        std::vector<Object *> attackers;
-        for (Object *source : selected)
-            if (!isEnemy(*source, *enemy) ||
-                !canAttackTarget(*source, *enemy))
-                continue;
-            else
-                attackers.push_back(source);
-        float centroidX = 0, centroidY = 0;
-        for (const Object *source : attackers) {
-            centroidX += source->x;
-            centroidY += source->y;
-        }
-        const float baseAngle =
-            attackers.empty()
-                ? 0
-                : std::atan2(centroidY / attackers.size() - enemy->y,
-                             centroidX / attackers.size() - enemy->x);
-        std::stable_sort(
-            attackers.begin(), attackers.end(),
-            [&](const Object *a, const Object *b) {
-                return attackRange(*a, *enemy) <
-                       attackRange(*b, *enemy);
-            });
-        std::vector<ReservedAttackSlot> reserved;
-        reserved.reserve(attackers.size());
-        for (Object *source : attackers) {
-            if (isWorker(*source))
-                clearConstructionAssignment(*source);
-            const float sourceRadius = collisionRadius(*source);
-            const float contact =
-                sourceRadius + collisionRadius(*enemy) + 0.08f;
-            const float maximumDistance =
-                std::max(contact, attackRange(*source, *enemy) - 0.05f);
-            const float minimumDistance =
-                minimumRange(*source) > 0
-                    ? std::min(maximumDistance,
-                               std::max(contact,
-                                        minimumRange(*source) + 0.2f))
-                    : contact;
-            const float preferredDistance =
-                std::max(minimumDistance,
-                         std::min(maximumDistance,
-                                  attackRange(*source, *enemy) * 0.8f));
-            const float sourceAngle =
-                std::atan2(source->y - enemy->y,
-                           source->x - enemy->x);
-            const float radialStep =
-                std::max(0.35f, sourceRadius * 2.0f + 0.12f);
-            float slotAngle = sourceAngle;
-            float slotDistance = preferredDistance;
-            bool foundSlot = false;
-            auto slotOpen = [&](float angle, float distance) {
-                float x = 0.0f, y = 0.0f;
-                attackApproachPoint(
-                    *source, *enemy, angle, distance,
-                    x, y);
-                if (!positionPassable(*source, x, y, false))
-                    return false;
-                for (const ReservedAttackSlot &slot : reserved) {
-                    const float dx = x - slot.x;
-                    const float dy = y - slot.y;
-                    const float separation =
-                        sourceRadius + slot.radius + 0.08f;
-                    if (dx * dx + dy * dy <
-                        separation * separation)
-                        return false;
-                }
-                return true;
-            };
-            for (int band = 0; band <= 12 && !foundSlot; band++) {
-                const float offsets[] = {
-                    band == 0 ? 0.0f : -band * radialStep,
-                    band == 0 ? 0.0f : band * radialStep};
-                for (float radialOffset : offsets) {
-                    const float distance =
-                        preferredDistance + radialOffset;
-                    if (distance < minimumDistance - 0.001f ||
-                        distance > maximumDistance + 0.001f)
-                        continue;
-                    const float separation =
-                        sourceRadius * 2.0f + 0.12f;
-                    const int samples =
-                        std::max(16, std::min(
-                                         96,
-                                         (int)std::ceil(
-                                             2.0f * kPi * distance /
-                                             separation)));
-                    for (int sample = 0; sample < samples; sample++) {
-                        const int alternating =
-                            sample == 0
-                                ? 0
-                                : ((sample + 1) / 2) *
-                                      (sample & 1 ? 1 : -1);
-                        const float angle =
-                            sourceAngle +
-                            alternating *
-                                (2.0f * kPi / samples);
-                        if (!slotOpen(angle, distance))
-                            continue;
-                        slotAngle = angle;
-                        slotDistance = distance;
-                        foundSlot = true;
-                        break;
-                    }
-                    if (foundSlot) break;
-                }
-            }
-            for (int ring = 1; ring <= 16 && !foundSlot; ring++) {
-                const float distance =
-                    maximumDistance + ring * radialStep;
-                const int samples =
-                    std::max(16, std::min(
-                                     96,
-                                     (int)std::ceil(
-                                         2.0f * kPi * distance /
-                                         (sourceRadius * 2.0f + 0.12f))));
-                for (int sample = 0; sample < samples; sample++) {
-                    const float angle =
-                        baseAngle +
-                        (sample + (ring & 1) * 0.5f) *
-                            (2.0f * kPi / samples);
-                    if (!slotOpen(angle, distance))
-                        continue;
-                    slotAngle = angle;
-                    slotDistance = distance;
-                    foundSlot = true;
-                    break;
-                }
-            }
-            float slotX = 0.0f, slotY = 0.0f;
-            attackApproachPoint(
-                *source, *enemy, slotAngle, slotDistance,
-                slotX, slotY);
-            reserved.push_back(
-                {slotX, slotY, sourceRadius});
-            issueAttack(*source, *enemy, slotAngle, false,
-                        slotDistance);
-            if (!acknowledgement) acknowledgement = source;
-        }
+        Object *acknowledgement=issueGroupAttack(selected,*enemy);
         if (!acknowledgement) return;
         attackOrdersIssued_++;
         playUnitAcknowledgement(*acknowledgement, true);

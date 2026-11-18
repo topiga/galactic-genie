@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+#include "ai_group_targets.h"
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -20,6 +21,11 @@ struct AiMilitaryGatherGroup {
     uint8_t retries=0;
     uint32_t lastMemberAdded=0;
     uint32_t flags=0;
+    int32_t targetId=-1;
+    AiGroupTargetContinuation targetContinuation{};
+    AiTargetRanking targetRanking{};
+    std::vector<int32_t> targetCandidates{};
+    float targetRange=0;
 };
 
 // 59fa80 admits these classes before testing the master air/boat trait.

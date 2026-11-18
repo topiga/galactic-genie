@@ -130,10 +130,159 @@ bool Game::aiMilitaryCanUseNativePolicy(int player,uint32_t id) const {
     const auto &groups=aiPlayers_[size_t(player)].militaryGroups;
     for(const auto &group:groups)if(std::find(group.members.begin(),group.members.end(),int32_t(id))!=group.members.end())
         return aiPlayers_[size_t(player)].militaryCycle.phase==AiMilitaryPhase::Planning &&
-               group.state==2;
+               group.state==2 && group.targetId<0;
     const auto *object=findObject(id);
     const bool unsupported=object && (!aiMilitarySoldierClass(object->unit->cls) || object->unit->cls==51);
     return !aiPlayers_[size_t(player)].scripted && (groups.empty() || unsupported);
+}
+
+void Game::queueAiMilitaryAttack(int player,const AiMilitaryGatherGroup &group,const Object &target) {
+    const auto members=group.members;const auto targetId=target.spawnId;
+    // Original44d720 emits one local opcode2 packet. Formation placement remains the shared native provider.
+    localCommands_.enqueue([this,player,members,targetId] {
+        auto *enemy=findObject(targetId);
+        if(!enemy || !enemy->active || enemy->hidden)return;
+        std::vector<Object*> actors;
+        for(int32_t id:members) {
+            auto *actor=id>=0?findObject(uint32_t(id)):nullptr;
+            if(actor && actor->active && !actor->hidden && actor->garrisonedInId<0 && actor->player==player)
+                actors.push_back(actor);
+        }
+        issueGroupAttack(actors,*enemy);
+    });
+}
+
+void Game::updateAiMilitaryTargets(int player,uint32_t budget) {
+    auto &state=aiPlayers_[size_t(player)];
+    const auto visible=[&](const Object &object) {
+        return visibleTargets_.slot(size_t(player-1),object.spawnId)!=size_t(-1);
+    };
+    // shortcut: Observed native objects supply append/update order until original AI knowledge callbacks are ported.
+    for(const auto &object:objects_)if(object.active && object.unit && object.spawnId<=uint32_t(INT32_MAX) && visible(object)) {
+        const int32_t id=int32_t(object.spawnId);
+        auto slot=state.militaryKnownSlots.emplace(id,state.militaryKnownObjects.size());
+        if(slot.second)state.militaryKnownObjects.push_back({});
+        auto &record=state.militaryKnownObjects[slot.first->second];
+        record={id,object.player};
+    }
+    std::map<int,std::vector<uint8_t>> zones;
+    const auto region=[&](const Object &member,const Object &sample)->std::optional<uint8_t> {
+        const int restriction=member.unit->terrainRestriction;
+        auto found=zones.find(restriction);
+        if(found==zones.end()) {
+            std::vector<uint8_t> tiles;
+            if(!buildAiMilitaryRegions(restriction,tiles))return std::nullopt;
+            found=zones.emplace(restriction,std::move(tiles)).first;
+        }
+        const float x=float(mapSize_)-sample.y,y=sample.x;
+        if(!std::isfinite(x) || !std::isfinite(y) || x<0 || y<0 || x>=mapSize_ || y>=mapSize_)return std::nullopt;
+        return found->second[size_t(int(y))*mapSize_+int(x)];
+    };
+    const auto allied=[&](int owner) {
+        return owner==player || (owner>=0 && size_t(owner)<players_[size_t(player-1)].diplomacy.size() &&
+                                players_[size_t(player-1)].diplomacy[size_t(owner)]==0);
+    };
+    const auto distance=[&](const Object &object,float originalX,float originalY) {
+        return float(geniePointFootprintDistance(float(mapSize_)-object.y,object.x,originalX,originalY,
+                                                object.unit->collisionSize[1],object.unit->collisionSize[0]));
+    };
+    const auto range=[&](const Object &object) {return modifiedUnitAttribute(object,12,object.unit->maxRange);};
+    const auto damage=[&](const Object &source,const Object &target) {
+        return AiGroupDamageInput{float(canAttackTarget(source,target)?attackDamage(source,target):0),
+            modifiedUnitAttribute(source,10,source.unit->reloadTime),source.unit->cls==50};
+    };
+    const auto clock=[] {return uint32_t(std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count());};
+    const uint32_t started=clock();
+    for(auto &group:state.militaryGroups) {
+        if(group.state!=2)continue;
+        auto *first=group.members.empty()?nullptr:findObject(uint32_t(group.members.front()));
+        if(group.targetId>=0) {
+            const auto *target=findObject(uint32_t(group.targetId));
+            AiGroupRetainedTarget retained;
+            retained.resolved=target && target->active;
+            retained.memberResolved=first && first->active;
+            if(target) {
+                retained.hp=target->hitPoints;retained.allied=allied(target->player);
+                retained.visibility=visible(*target)?1:0;retained.unitType=target->unit->type;
+            }
+            const auto decision=retainAiGroupTarget(retained);
+            if(decision==AiGroupTargetRetention::Retain)continue;
+            if(decision==AiGroupTargetRetention::ResetAndStop)
+                for(int32_t id:group.members)queueAiMilitaryStop(player,id);
+            group.targetId=-1;group.state=1;group.targetCandidates.clear();group.targetRanking={};group.targetContinuation={};
+            continue;
+        }
+        if(!first || !first->active)continue;
+        if(!group.targetContinuation.active) {
+            std::vector<AiGroupMemberInput> members;
+            bool supported=true;
+            for(int32_t id:group.members) {
+                const auto *object=findObject(uint32_t(id));
+                if(!object || !object->active){supported=false;break;}
+                const auto own=region(*object,*object);
+                if(!own){supported=false;break;}
+                members.push_back({id,true,*own,object->unit->trait,object->unit->cls,
+                    {float(mapSize_)-object->y,object->heightAboveGround,object->x},object->hitPoints,range(*object)});
+            }
+            const auto aggregate=supported?aggregateAiTargetGroup(members):std::nullopt;
+            if(!aggregate || !aggregate->landMode || aggregate->allClass50)continue;
+            group.targetCandidates.clear();group.targetRanking={};group.targetRange=aggregate->minRange;
+            std::vector<AiTargetCandidate> metrics;
+            for(const auto &record:state.militaryKnownObjects) {
+                const auto *target=findObject(uint32_t(record.id));
+                if(!target || !target->active || !aiGroupNormalPrioritySupported(target->unit->id,target->unit->cls))continue;
+                const auto targetRegion=region(*first,*target);if(!targetRegion)continue;
+                AiGroupTargetFilter filter;
+                filter.recordId=record.id;filter.recordOwner=record.owner;filter.allied=allied(target->player);
+                filter.hp=target->hitPoints;filter.unitType=target->unit->type;filter.prototypeId=target->unit->id;
+                filter.unitClass=target->unit->cls;filter.trait=target->unit->trait;filter.visibility=visible(*target)?1:0;
+                filter.region=*targetRegion;
+                // shortcut: Native active-owner/target admission substitutes for original virtual300 and owner-state callbacks.
+                filter.excludedByVirtual300=target->hidden || target->garrisonedInId>=0;
+                if(filterAiGroupTarget(*aggregate,filter)!=AiGroupTargetAdmission::Accepted)continue;
+                std::vector<const Object*> threats;
+                for(const auto &known:state.militaryKnownObjects) {
+                    const auto *threat=findObject(uint32_t(known.id));
+                    const bool enemy=known.owner>0 && size_t(known.owner)<players_[size_t(player-1)].diplomacy.size() &&
+                        players_[size_t(player-1)].diplomacy[size_t(known.owner)]==3;
+                    if(threat && threat->unit && aiGroupThreatInRange(enemy,threat->active,2,threat->hitPoints,
+                        distance(*threat,float(mapSize_)-target->y,target->x),range(*threat)))threats.push_back(threat);
+                }
+                std::vector<AiGroupCombatMember> combat;
+                for(int32_t id:group.members) {
+                    const auto *object=findObject(uint32_t(id));
+                    AiGroupCombatMember member;member.hp=object->hitPoints;member.attack=damage(*object,*target);
+                    for(const auto *threat:threats)member.threats.push_back(damage(*threat,*object));
+                    combat.push_back(std::move(member));
+                }
+                const auto metric=buildAiGroupTargetMetric(combat,threats.empty(),target->hitPoints,
+                    distance(*target,aggregate->centroid[0],aggregate->centroid[2]),*targetRegion==aggregate->region,
+                    target->unit->id,target->unit->cls);
+                if(!metric)continue;
+                group.targetCandidates.push_back(record.id);metrics.push_back(*metric);
+                if(metrics.size()==1024)break;
+            }
+            const auto ranking=rankAiTargets(metrics);
+            if(!ranking){group.targetCandidates.clear();continue;}
+            group.targetRanking=*ranking;
+        }
+        const auto selected=selectAiGroupTarget(group.targetRanking,group.targetContinuation,started,budget,clock,[&](size_t index) {
+            const auto *target=findObject(uint32_t(group.targetCandidates[index]));
+            if(!target || !target->active)return AiGroupTargetAdmission::Rejected;
+            std::vector<std::array<float,2>> path;
+            // shortcut: Native direct target-path solver replaces4bd560; blocker/transport fallback remains unsupported.
+            if(findPath(*first,target->x,target->y,path,target,group.targetRange))return AiGroupTargetAdmission::Accepted;
+            const auto own=region(*first,*first),other=region(*first,*target);
+            return own && other && *own!=*other?AiGroupTargetAdmission::Rejected:AiGroupTargetAdmission::Unsupported;
+        });
+        if(group.targetContinuation.active)group.flags|=64u;else group.flags&=~64u;
+        if(selected.status==AiGroupTargetSelectionStatus::Selected) {
+            group.targetId=group.targetCandidates[selected.index];group.flags|=32u;
+            if(const auto *target=findObject(uint32_t(group.targetId)))queueAiMilitaryAttack(player,group,*target);
+            group.targetCandidates.clear();group.targetRanking={};
+        }
+    }
 }
 
 void Game::updateAiMilitary(int player,uint32_t budget) {
@@ -210,6 +359,6 @@ void Game::updateAiMilitary(int player,uint32_t budget) {
             return state.militaryReadiness.nextGroupId==-1;
         }
         return result==AiMilitaryReadinessResult::Complete;
-    },[&] {updateSkirmishArmy(player);});
+    },[&] {updateAiMilitaryTargets(player,budget);updateSkirmishArmy(player);});
 }
 } // namespace swgb
