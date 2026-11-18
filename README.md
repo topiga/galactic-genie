@@ -27,7 +27,7 @@ The table below records the upstream baseline, not the current macOS acceptance 
 | Vita: renderer, camera controls, original cursors, unit selection/status markers, formation movement, and debug minimap | done |
 | PC `swgbtool`: data inspection, CPX/SCX listing, and procedural/scenario PNG rendering | done |
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for what comes next.
+The upstream plan is retained in [docs/ROADMAP.md](docs/ROADMAP.md). Use [EXPERIENCE.md](EXPERIENCE.md) for the current macOS acceptance priorities.
 
 ## Layout
 
