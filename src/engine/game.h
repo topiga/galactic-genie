@@ -6,6 +6,7 @@
 #include "ai_military.h"
 #include "ai_attack_memory.h"
 #include "ai_resource_knowledge.h"
+#include "ai_session_context.h"
 
 #include "local_simulation_clock.h"
 #include "local_command_queue.h"
@@ -120,9 +121,12 @@ struct RmsSessionOptions {
     uint32_t resourceTier = 0;
     uint32_t startingAge = 2; // Original setup value: 2 is the base age.
     uint32_t mapId = 0;
+    uint32_t populationLimit = 200;
+    int difficulty = 2;
+    std::optional<int> mapSizeIndex, victory;
     // One entry per player; empty means no script. Player one is human.
     std::vector<std::string> aiScripts;
-    std::unordered_set<std::string> aiDefines{"DIFFICULTY-MODERATE"};
+    std::unordered_set<std::string> aiDefines;
 };
 
 class Game {
@@ -1545,6 +1549,8 @@ private:
     void updateAiMilitaryTargets(int player,uint32_t budget);
     void queueAiMilitaryAttack(int player,const AiMilitaryGatherGroup &group,const Object &target);
     void updatePlayerObjects(float dt,int player, bool auxiliary = false);
+    AiSessionContext aiScriptContext(int player, const std::unordered_set<std::string> &defines) const;
+    AiSessionContext aiScriptContext(AiSessionContextSettings settings, const std::unordered_set<std::string> &defines) const;
     void updateAiResourceKnowledge(int player);
     void reevaluateAiResourceFound(int player);
     void updateAiPlayer(
@@ -1661,6 +1667,7 @@ private:
     std::array<std::vector<int>, 17> civilizationEffects_{}, playerEffects_{};
     std::array<AiPlayerState, 17> aiPlayers_{};
     std::optional<uint32_t> aiMapId_;
+    AiSessionContextSettings aiSessionContext_;
     std::vector<uint16_t> powerTiles_;
     std::array<std::array<float,4>,17> aiEscrow_{},aiEscrowPercent_{};
     std::array<std::set<int>, 17> disabledTechs_{};

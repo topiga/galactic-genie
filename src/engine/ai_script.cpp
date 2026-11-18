@@ -402,7 +402,8 @@ static std::unordered_map<std::string,int> defaultAiConstants() {
 bool AiProgram::load(
     const std::string &entryPath,
     const std::unordered_set<std::string> &defines,
-    std::string *err, SourceLoader loader) {
+    std::string *err, SourceLoader loader,
+    const std::unordered_map<std::string,int> &initialConstants) {
     sourceLoader_ = std::move(loader);
     rules.clear();
     constants.clear();
@@ -413,6 +414,8 @@ bool AiProgram::load(
         defines_.insert(
             normalizeAiSymbol(define));
     constants = defaultAiConstants();
+    for(const auto &[name,value]:initialConstants)
+        constants[normalizeAiSymbol(name)]=value;
     const bool result = loadFile(entryPath, err);
     sourceLoader_ = {};
     return result;
@@ -422,7 +425,8 @@ bool AiProgram::loadSource(
     const std::string &name,
     const std::string &source,
     const std::unordered_set<std::string> &defines,
-    std::string *err, SourceLoader loader) {
+    std::string *err, SourceLoader loader,
+    const std::unordered_map<std::string,int> &initialConstants) {
     sourceLoader_ = std::move(loader);
     rules.clear();
     constants.clear();
@@ -433,6 +437,8 @@ bool AiProgram::loadSource(
         defines_.insert(
             normalizeAiSymbol(define));
     constants = defaultAiConstants();
+    for(const auto &[name,value]:initialConstants)
+        constants[normalizeAiSymbol(name)]=value;
     std::string key=normalizeAiSymbol(name);
     std::replace(key.begin(),key.end(),'\\','/');
     loaded_.insert(key);

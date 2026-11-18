@@ -40,13 +40,15 @@ public:
         const std::string &entryPath,
         const std::unordered_set<std::string> &defines,
         std::string *err = nullptr,
-        SourceLoader loader = {});
+        SourceLoader loader = {},
+        const std::unordered_map<std::string,int> &initialConstants = {});
     bool loadSource(
         const std::string &name,
         const std::string &source,
         const std::unordered_set<std::string> &defines,
         std::string *err = nullptr,
-        SourceLoader loader = {});
+        SourceLoader loader = {},
+        const std::unordered_map<std::string,int> &initialConstants = {});
 
     int constant(
         const std::string &name,

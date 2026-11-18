@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "game.h"
+#include <cmath>
+#include <limits>
+
+namespace swgb {
+namespace {
+int contextDefineGroup(const std::string &symbol) {
+    const auto name=normalizeAiSymbol(symbol);
+    if(name.rfind("difficulty-",0)==0)return 1;
+    if(name.rfind("population-cap-",0)==0)return 2;
+    if(name.rfind("victory-",0)==0)return 3;
+    if(name.rfind("tech-level-",0)==0 || name.rfind("post-tech-level-",0)==0)return 4;
+    if(name=="low-resources-start" || name=="medium-resources-start" || name=="high-resources-start")return 5;
+    for(const char *size:{"tiny-map","small-map","medium-map","normal-map","large-map","giant-map"})
+        if(name==size)return 6;
+    return 0;
+}
+}
+AiSessionContext Game::aiScriptContext(AiSessionContextSettings settings,
+        const std::unordered_set<std::string> &defines) const {
+    std::vector<std::string> civilizations;
+    for(const auto &civilization:assets_.dat().civs)civilizations.push_back(civilization.name2);
+    auto context=makeAiSessionContext(settings,civilizations);
+    // Explicit compiler defines override the corresponding setup category;
+    // otherwise a custom personality could see two difficulty/population modes.
+    for(const auto &symbol:defines) {
+        const int group=contextDefineGroup(symbol);
+        if(group)for(auto it=context.defines.begin();it!=context.defines.end();) {
+            if(contextDefineGroup(*it)==group)it=context.defines.erase(it);else ++it;
+        }
+    }
+    context.defines.insert(defines.begin(),defines.end());
+    return context;
+}
+AiSessionContext Game::aiScriptContext(int player,const std::unordered_set<std::string> &defines) const {
+    auto settings=aiSessionContext_;
+    settings.player=player;settings.civilization=civilizationForPlayer(player);settings.difficulty=difficulty_;
+    const float population=players_[size_t(player-1)].populationLimit;
+    settings.population=std::isfinite(population) && population>=0 && double(population)<=INT32_MAX
+        ?int(population):-1;
+    return aiScriptContext(settings,defines);
+}
+} // namespace swgb

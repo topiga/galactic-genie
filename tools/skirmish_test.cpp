@@ -35,6 +35,7 @@ static void check(bool value, const char *message) {
 #include "explore_spiral_checks.h"
 #include "exploration_gameplay_checks.h"
 #include "ai_source_checks.h"
+#include "ai_context_gameplay_checks.h"
 #include "conquest_checks.h"
 #include "fog_edge_checks.h"
 #include "rms_spawn_checks.h"
@@ -306,6 +307,7 @@ int main(int argc, char **argv) {
         if(playerConquest) {swgb::Game game(assets);playerMatch(game,assets,renderer,true);return 0;}
         scenarioImportChecks(assets);
         aiSourceChecks(assets);
+    aiContextGameplayChecks(assets);
         scenarioAiChecks(assets);
         actorAiTimingChecks(assets);
         exploreActionChecks();exploreSearchChecks();tacticalExploreQueueChecks();exploreSpiralChecks();

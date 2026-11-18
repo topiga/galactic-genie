@@ -423,6 +423,7 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     playerEffects_ = {};
     aiPlayers_ = {};
     aiMapId_.reset();
+    aiSessionContext_={};
     powerTiles_.clear();
     aiEscrow_ = {};
     aiEscrowPercent_ = {};
@@ -821,6 +822,8 @@ bool Game::initAridSkirmish(uint32_t seed,std::string *err,bool initiallyExplore
         "TINY_MAP","FIXED_POSITIONS","DEFAULT_RESOURCES","RANDOM_MAP","2_PLAYERS"};
     RmsSessionOptions options;
     options.mapId=9; // Original5c9f25 maps desert9 to packaged resource54201.
+    options.mapSizeIndex=0;options.populationLimit=uint32_t(populationLimit);
+    if(conquest)options.victory=1;
     uint32_t randomState=seed;
     if(!initRmsSession(script,defines,120,randomState,{1,1},options,err))return false;
     difficulty_=2;
@@ -1028,10 +1031,15 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, int difficul
         const std::string normalized = normalizeAiSymbol(name);
         if (normalized.size() < 4 || normalized.substr(normalized.size()-4) != ".per") name += ".per";
         auto &state = computers[i+1];
-        const std::unordered_set<std::string> defines{difficultyDefines[difficulty]};
+        AiSessionContextSettings settings;
+        settings.player=int(i+1);settings.civilization=int(player.civilization);
+        settings.difficulty=difficulty;settings.population=std::isfinite(player.populationLimit) &&
+            player.populationLimit>=0 && double(player.populationLimit)<=INT32_MAX?int(player.populationLimit):-1;
+        settings.victory=scenario.victoryType;
+        const auto context=aiScriptContext(settings,{difficultyDefines[difficulty]});
         const bool loaded = player.aiSource.empty()
-            ? state.program.load(name, defines, err, sourceLoader)
-            : state.program.loadSource(name, player.aiSource, defines, err, sourceLoader);
+            ? state.program.load(name, context.defines, err, sourceLoader,context.constants)
+            : state.program.loadSource(name, player.aiSource, context.defines, err, sourceLoader,context.constants);
         if (!loaded) return false;
         state.loaded = state.scripted = true;
     }
@@ -1129,6 +1137,8 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     playerEffects_ = {};
     aiPlayers_ = {};
     aiMapId_.reset();
+    aiSessionContext_={};
+    aiSessionContext_.victory=scenario.victoryType;
     powerTiles_.clear();
     aiEscrow_ = {};
     aiEscrowPercent_ = {};
@@ -1646,14 +1656,14 @@ void Game::focusRmsStart() {
 // Select one source namespace for the whole include tree. A malformed or unreadable
 // local entry must not be replaced by a packaged script with the same name.
 static bool loadGameAiProgram(AiProgram &program,Assets &assets,const std::string &path,
-                              const std::unordered_set<std::string> &defines,std::string *err) {
-    if(path.find_first_of("/\\")!=std::string::npos)return program.load(path,defines,err);
+                              const AiSessionContext &context,std::string *err) {
+    if(path.find_first_of("/\\")!=std::string::npos)return program.load(path,context.defines,err,{},context.constants);
     FILE *file=std::fopen(path.c_str(),"rb");
-    if(file) {std::fclose(file);return program.load(path,defines,err);}
-    if(errno!=ENOENT)return program.load(path,defines,err);
-    return program.load(path,defines,err,[&assets](const std::string &name,std::string &source,std::string *error) {
+    if(file) {std::fclose(file);return program.load(path,context.defines,err,{},context.constants);}
+    if(errno!=ENOENT)return program.load(path,context.defines,err,{},context.constants);
+    return program.load(path,context.defines,err,[&assets](const std::string &name,std::string &source,std::string *error) {
         return assets.readAiSource(name,source,error);
-    });
+    },context.constants);
 }
 
 bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std::string> &defines,
@@ -1662,15 +1672,24 @@ bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std:
                           std::string *err, const std::vector<std::vector<uint8_t>> &diplomacy) {
     const auto fail=[&](const char *message) {if(err)*err=message;return false;};
     if(civilizations.empty() || civilizations.size()>8 || options.resourceTier>3 ||
-       options.startingAge<2 || options.startingAge>6)
-        return fail("RMS session requires 1..8 players, resource tier 0..3 and starting age 2..6");
+       options.startingAge<2 || options.startingAge>6 || options.populationLimit<25 ||
+       options.populationLimit>250 || options.populationLimit%25 ||
+       options.difficulty<0 || options.difficulty>4 || options.mapId>INT32_MAX ||
+       (options.mapSizeIndex && (*options.mapSizeIndex<0 || *options.mapSizeIndex>5)) ||
+       (options.victory && (*options.victory<0 || *options.victory>4)))
+        return fail("RMS session requires valid player, resource, age, population, difficulty and map settings");
     if(!options.aiScripts.empty() && (options.aiScripts.size()!=civilizations.size() || !options.aiScripts[0].empty()))
         return fail("RMS AI scripts must match player slots and leave human player one empty");
+    AiSessionContextSettings settings;
+    settings.startingAge=int(options.startingAge);settings.resources=int(options.resourceTier);
+    settings.mapId=int(options.mapId);settings.mapSizeIndex=options.mapSizeIndex;
+    settings.victory=options.victory;settings.difficulty=options.difficulty;settings.population=int(options.populationLimit);
     std::array<AiPlayerState,17> computers;
     for(size_t i=1;i<options.aiScripts.size();++i) {
         if(options.aiScripts[i].empty())continue;
         auto &state=computers[i+1];
-        if(!loadGameAiProgram(state.program,assets_,options.aiScripts[i],options.aiDefines,err))return false;
+        settings.player=int(i+1);settings.civilization=civilizations[i];
+        if(!loadGameAiProgram(state.program,assets_,options.aiScripts[i],aiScriptContext(settings,options.aiDefines),err))return false;
         state.loaded=state.scripted=true;
     }
     if(!initRms(script,defines,mapSize,randomState,err,uint32_t(civilizations.size()),civilizations,diplomacy))
@@ -1703,6 +1722,8 @@ bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std:
         computers[player].age=aiTechLevel(int(player));
     aiPlayers_=std::move(computers);
     aiMapId_=options.mapId;
+    aiSessionContext_=settings;difficulty_=options.difficulty;
+    for(size_t i=0;i<civilizations.size();++i)players_[i].populationLimit=float(options.populationLimit);
     randomState=legacyRandomState_;
     refreshPowerFields();
     return true;
@@ -1741,7 +1762,7 @@ bool Game::loadAiScript(
         return false;
     }
     AiPlayerState state;
-    if (!loadGameAiProgram(state.program,assets_,path,defines,err))
+    if (!loadGameAiProgram(state.program,assets_,path,aiScriptContext(player,defines),err))
         return false;
     state.loaded = true;
     state.scripted = true;
@@ -1772,8 +1793,9 @@ bool Game::loadAiSourceForTesting(
         return false;
     }
     AiPlayerState state;
+    const auto context=aiScriptContext(player,defines);
     if (!state.program.loadSource(
-            name, source, defines, err))
+            name, source, context.defines, err,{},context.constants))
         return false;
     state.loaded = true;
     state.scripted = true;
