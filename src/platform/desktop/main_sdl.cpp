@@ -447,6 +447,10 @@ int run(const std::string &root, bool smoke) {
         require(menu.populationLimit()==75 && menu.conquest());
         key(SDLK_TAB);key(SDLK_RETURN);key(SDLK_DOWN);key(SDLK_RETURN);
         require(!menu.conquest());
+        // Return to Conquest to exercise the real original-personality menu entry.
+        click.button.x=700;click.button.y=360;click.type=SDL_MOUSEBUTTONDOWN;menu.event(click,false);
+        click.type=SDL_MOUSEBUTTONUP;menu.event(click,false);key(SDLK_UP);key(SDLK_RETURN);
+        require(menu.conquest());
         // Real RMS launch, retained settings, error recovery and same-seed restart.
         click.button.x=700;click.button.y=130;click.type=SDL_MOUSEBUTTONDOWN;menu.event(click,false);
         click.type=SDL_MOUSEBUTTONUP;menu.event(click,false);
@@ -458,16 +462,20 @@ int run(const std::string &root, bool smoke) {
         key(SDLK_RETURN);require(menu.screen()==desktop::Screen::Setup && menu.aridMap() && menu.populationLimit()==75);
         require(key(SDLK_RETURN)==desktop::Action::Start && startMatch());
         const auto aridCount=game.activeObjectCount();const auto aridCheckpoint=game.worldCheckpointForTesting();
-        require(aridCount>1000 && game.skirmishActive() && game.resource(1,0)==200);
+        require(aridCount>1000 && game.skirmishActive() && game.resource(1,0)==200 && game.aiRuleCountForTesting(2)>0);
         for(int frame=0;frame<3;++frame) {game.update(1.f/30,{});game.render(renderer,960,544);}
         require(renderer.savePng("arid-gameplay-smoke.png"));
         menu.pause();key(SDLK_DOWN);key(SDLK_RETURN);require(key(SDLK_RETURN)==desktop::Action::Start && startMatch());
-        require(game.activeObjectCount()==aridCount && game.worldCheckpointForTesting()==aridCheckpoint && game.matchTime()==0);
+        require(game.activeObjectCount()==aridCount && game.worldCheckpointForTesting()==aridCheckpoint && game.matchTime()==0 && game.aiRuleCountForTesting(2)>0);
         menu.startFailed("Return to setup for the existing small-match fixture.");key(SDLK_RETURN);
         click.button.x=700;click.button.y=130;click.type=SDL_MOUSEBUTTONDOWN;menu.event(click,false);
         click.type=SDL_MOUSEBUTTONUP;menu.event(click,false);
         key(SDLK_UP);key(SDLK_RETURN);
         require(!menu.aridMap() && menu.humanCiv()==1 && menu.aiCiv()==3);
+        // Restore the Command Center objective used by the existing Custom fixture.
+        click.button.x=700;click.button.y=360;click.type=SDL_MOUSEBUTTONDOWN;menu.event(click,false);
+        click.type=SDL_MOUSEBUTTONUP;menu.event(click,false);key(SDLK_DOWN);key(SDLK_RETURN);
+        require(!menu.conquest());
         key(SDLK_ESCAPE); require(menu.screen()==desktop::Screen::SinglePlayer);
         key(SDLK_ESCAPE); require(menu.screen()==desktop::Screen::Main);
         key(SDLK_DOWN); key(SDLK_RETURN); require(menu.screen()==desktop::Screen::Options);
@@ -516,7 +524,7 @@ int run(const std::string &root, bool smoke) {
         key(SDLK_ESCAPE); require(menu.screen()==desktop::Screen::Pause);
         key(SDLK_DOWN); key(SDLK_RETURN); require(key(SDLK_RETURN)==desktop::Action::Start);
         require(menu.playing());
-        require(startMatch());
+        require(startMatch() && game.aiRuleCountForTesting(2)==0);
         require(!menu.initiallyExplored() && game.tileVisibilityForTesting(60,2)==0);
         game.render(renderer,960,544);
         float workerX,workerY; require(game.objectScreenPosition(8,960,544,workerX,workerY));

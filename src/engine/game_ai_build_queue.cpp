@@ -42,21 +42,28 @@ bool Game::chooseAiBuildPosition(int player,const dat::Unit &unit,float &x,float
     }
     if(!anchor)return false;
     float centerX=anchor->x,centerY=anchor->y;
-    const std::string symbol=normalizeAiSymbol(unit.name2.empty()?unit.name:unit.name2);
-    int resourceType=-1;
-    if(symbol.find("dropcarbon")!=std::string::npos)resourceType=1;
-    else if(symbol.find("dropchow")!=std::string::npos)resourceType=0;
-    else if(symbol.find("dropnova")!=std::string::npos)resourceType=3;
-    else if(symbol.find("dropmetal")!=std::string::npos)resourceType=2;
-    const Object *resource=nullptr;float best=std::numeric_limits<float>::max();
-    if(resourceType>=0)for(const auto &candidate:objects_) {
-        if(!isGatherable(candidate) || candidate.resourceType!=resourceType ||
-           !playerSees(player,candidate.x,candidate.y))continue;
-        const float dx=candidate.x-anchor->x,dy=candidate.y-anchor->y,d=dx*dx+dy*dy;
-        if(d<best){best=d;resource=&candidate;}
+    bool resourceAnchored=false;
+    if(unit.id==68 || unit.id==562 || unit.id==323 || unit.id==584) {
+        refreshAiEconomyKnowledge(player);
+        // Original depot compatibility follows stable master identity, including
+        // upgraded masters whose display/internal names change. The surrounding
+        // nearest-anchor/radial placement policy remains a native adapter.
+        float best=std::numeric_limits<float>::max();
+        const auto &resources=aiPlayers_[size_t(player)].economy.resources;
+        for(size_t bucket=0;bucket<resources.size();++bucket) {
+            for(const auto &record:resources[bucket].records) {
+                if(record.invalid==1 || record.x>=mapSize_ || record.y>=mapSize_)continue;
+                const Object *known=findObject(uint32_t(record.id));
+                if(!known || !known->unit || !aiResourceDepotCompatible(known->unit->cls,unit.id,false))continue;
+                // Only admitted knowledge supplies position/validity. Hidden
+                // live movement, destruction or depletion cannot change it here.
+                const float rx=float(record.y),ry=float(mapSize_)-record.x;
+                const float dx=rx-anchor->x,dy=ry-anchor->y,d=dx*dx+dy*dy;
+                if(d<best) {best=d;centerX=rx;centerY=ry;resourceAnchored=true;}
+            }
+        }
     }
-    if(resource){centerX=resource->x;centerY=resource->y;}
-    else for(const auto &building:objects_)if(building.active && !building.hidden &&
+    if(!resourceAnchored)for(const auto &building:objects_)if(building.active && !building.hidden &&
         !building.underConstruction && building.player==player && building.unit && building.unit->type==dat::UT_Building) {
         centerX=building.x;centerY=building.y;break;
     }

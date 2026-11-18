@@ -7072,6 +7072,9 @@ Ordinary gather delivery40585d credits raw fractional cargo to the player, then4
 
 Prefab placement uses the original category10 scoring grid and X-major scan:36 complete original-grid fingerprints cover resources, terrain, owned structures, known structures and combined stages; candidate tests cover ties/RNG, footprints and rejection. The Command Center's protected access rectangle is restored, and existing housing contributes the original clustering score. Known-building hostility uses recorded ownership. SN74/SN168 defaults and the initial placement draw are verified. Native occupancy/range/placement validation and exhaustive scheduling remain adapters; attack rectangles, planned walls, failed-site reservations and other building categories remain incomplete. Unsupported contexts retain the documented native placement fallback; a supported no-site result does not.
 
+Category11/13 resource-depot scoring is now covered by standalone original controls, including the expanded scan footprint and status1 planned-position proximity penalty. Status1 is populated by owned-building registration and consumed preset plans; it is not a synonym for a failed location. These pure helpers are not yet connected to Game placement because the native hard-rejection list does not represent that persistent status registry. The existing resource-aware radial policy remains an explicit native adapter.
+
+
 Two independent native movement bugs were also fixed: every route now initializes its progress baseline, and avoidance cooldown expires during walking/sliding as well as blocking. The old stall counter could accumulate during ordinary motion, so its former520-second value is not evidence of a stationary unit. Crowd/path fidelity still needs complete-match comparison.
 
 All36 algorithm suites passed in economy-lifecycle-algorithms.log; expanded prefab-grid tests were rerun after the known-building stage. The full local ASan/UBSan regression passed in economy-prefab-local.log, covering real loaded-worker retries, depot addition/removal, actual delivery credit, movement/pause, and PER-created prefab clearance. Complete original-personality match validation remains separate.
@@ -7341,3 +7344,49 @@ helper now uses interface kind. Pure tests deliberately distinguish the two
 fields; a regression applies the installed Tech Level2 effect and checks current,
 total and production PER building facts. This is a counter correction, not an AI
 policy change; validation of the changed helper is pending the next build.
+
+### 2026-11-18: dropsite identity and remembered-resource placement adapter
+
+The seed3 original-personality run exposed another native placement defect: at
+4000 simulated seconds it had22 completed carbon processors and one foundation,
+yet no completed prerequisite for Tech Level3's hidden two-building gate. Counts
+were correct. The original carbon script legitimately requests another processor
+while its cached dropsite distance exceeds5; native placement classified depots
+through English name substrings, which did not recognize the real upgraded
+`BLDG-DROPTIMBER2` master. It repeatedly placed processors around the Command
+Center instead of the resources.
+
+The bounded native fallback now recognizes original stable depot identities
+68/562/323/584 and uses the existing recovered class/depot compatibility. It
+considers only admitted resource records, using their retained byte coordinates
+and invalidation status. Resolving a known record supplies prototype class only;
+hidden live position, amount, activity and HP do not choose the anchor. The
+nearest-anchor and radial placement policy remains explicitly native, pending
+integration of the full original category-specific scoring controller.
+
+Eight focused AddressSanitizer cases pass: all four depots before/after the
+installed age-up, production PER through the construction queue, hidden remembered
+resources moved and depleted independently, and a closer never-observed decoy.
+The foundation remains near the remembered compatible resource. These are native
+regression checks, not full original placement equivalence.
+
+### 2026-11-18: refresh authored terrain fixtures against full original RMS
+
+The Water/Forest21 and Forest21/forage12 fixtures originally executed object
+placement on native-authored geometry. Their terrain references predated the
+recovered shallow-water flat-terrain default. A private reversal of that default
+reproduced the old references exactly; production retains the original rule.
+Six fresh full-original RMS controls now independently establish the replacement
+references: two seeds for Water/Forest21, and the same seeds with/without Nerfs
+for forage12. Current native terrain, elevation, slopes, RNG and ordered object
+poses agree. The refreshed fixtures also retain resource helper-row endpoints,
+eligibility checks and explicit conversion of ordinary sprite time to excess
+initial hold. Focused ASan/UBSan checks pass. Old references and original replay
+outputs remain in local research; these are new original oracles, not expected
+values copied from native output.
+
+The general resource controller also supports omitted ore grouping radius3.
+The integration test now compares omitted and explicit3 and distinguishes them
+from retained radius2 references. This is a parser/controller consistency check;
+it does not claim another original-executable golden. Restricted low-level
+radius2 checks remain intact.

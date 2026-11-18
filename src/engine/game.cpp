@@ -834,11 +834,11 @@ bool Game::initAridSkirmish(uint32_t seed,std::string *err,bool initiallyExplore
     options.sessionSeed=seed;
     options.mapId=9; // Original5c9f25 maps desert9 to packaged resource54201.
     options.mapSizeIndex=0;options.populationLimit=uint32_t(populationLimit);
-    if(conquest)options.victory=1;
+    if(conquest) {options.victory=1;options.aiScripts={"","RandomGame.per"};}
     uint32_t randomState=seed;
     if(!initRmsSession(script,defines,120,randomState,{1,1},options,err))return false;
     difficulty_=2;
-    return activateTwoPlayerMatch(initiallyExplored,populationLimit,conquest,true,err);
+    return activateTwoPlayerMatch(initiallyExplored,populationLimit,conquest,!conquest,err);
 }
 
 void Game::finishSkirmish(int result) {

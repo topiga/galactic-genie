@@ -15,6 +15,7 @@ static void rmsMatchChecks(swgb::Assets &assets) {
     swgb::Game reference(assets),game(assets);uint32_t rng=1;
     check(reference.initRmsSession(script,defines,120,rng,{1,1},{},&error),error.c_str());
     check(game.initAridSkirmish(1,&error,false,75,true),error.c_str());
+    check(game.aiRuleCountForTesting(2)>0,"Arid Conquest loads the original personality during normal startup");
     check(game.skirmishActive() && game.matchResult()==-1 && game.matchTime()==0,
           "Packaged Arid enters a real playable match lifecycle");
     check(game.worldCheckpointForTesting()==reference.worldCheckpointForTesting() && game.legacyRandomForTesting()==rng,
@@ -43,6 +44,7 @@ static void rmsMatchChecks(swgb::Assets &assets) {
     check(game.initAridSkirmish(1,&error,true,100,false),error.c_str());
     check(game.matchResult()==-1 && game.matchTime()==0 && game.objectPosition(game.commandCenterId(1))==center &&
           game.worldCheckpointForTesting()==checkpoint,"Restarting the same RMS seed preserves its opening and resets the result");
+    check(game.aiRuleCountForTesting(2)==0,"Arid Command Center objective retains the native fallback opponent");
     check(game.tileVisibilityForTesting(0,0)>=1,"Explored reveal survives RMS match initialization");
     // Probe the normal runtime facts after opening assertions, without adding units/resources.
     const int headroom=100-int(game.populationUsedForTesting(1));

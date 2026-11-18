@@ -50,6 +50,7 @@ static void check(bool value, const char *message) {
 #include "unit_line_gameplay_checks.h"
 #include "ai_counter_identity_checks.h"
 #include "ai_prefab_placement_gameplay_checks.h"
+#include "ai_dropsite_placement_gameplay_checks.h"
 #include "movement_progress_gameplay_checks.h"
 #include "dynamic_detour_gameplay_checks.h"
 #include "crowd_yield_gameplay_checks.h"
@@ -325,8 +326,7 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
     for(uint32_t seed:{1u,2u,3u,4u}) {
         swgb::Game game(assets);std::string error;
         check(game.initAridSkirmish(seed,&error,false,75,true),error.c_str());
-        check(game.loadAiScript(2,"RandomGame.per",{},&error),error.c_str());
-        check(game.aiRuleCountForTesting(2)>0,"Packaged original personality is loaded");
+        check(game.aiRuleCountForTesting(2)>0,"Normal Arid Conquest entry loads the packaged original personality");
         for(int frame=0;frame<30*12000 && game.matchResult()<0;++frame) {
             game.update(1.f/30,{});
             if(frame%(30*600)==0) {
@@ -352,7 +352,7 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
     aiContextGameplayChecks(assets);
     playerMilitaryFactsGameplayChecks(assets);aiKnownCategoryChecks();playerBuildingFactGameplayChecks(assets);playerUnitFactGameplayChecks(assets);
     deliveryCorridorGameplayChecks(assets);
-    aiConstructorMetadataChecks();rmsConstructorMetadataGameplayChecks(assets);exploreRevisitChecks();exploreRevisitGameplayChecks(assets);movementProgressGameplayChecks(assets);dynamicDetourGameplayChecks(assets);crowdYieldGameplayChecks(assets);economyGameplayChecks(assets);unitLineGameplayChecks(assets);aiCounterIdentityChecks();aiCounterIdentityGameplayChecks(assets);aiPrefabPlacementGameplayChecks(assets);
+    aiConstructorMetadataChecks();rmsConstructorMetadataGameplayChecks(assets);exploreRevisitChecks();exploreRevisitGameplayChecks(assets);movementProgressGameplayChecks(assets);dynamicDetourGameplayChecks(assets);crowdYieldGameplayChecks(assets);economyGameplayChecks(assets);unitLineGameplayChecks(assets);aiCounterIdentityChecks();aiCounterIdentityGameplayChecks(assets);aiPrefabPlacementGameplayChecks(assets);aiDropsitePlacementGameplayChecks(assets);
     civilianExploreGameplayChecks(assets);
     scenarioAiChecks(assets);
     actorAiTimingChecks(assets);

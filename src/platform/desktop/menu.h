@@ -404,7 +404,7 @@ public:
                 if(i!=8 && i!=7 && i!=10 && i!=2) text(values[i],650,65+i*29);
             }
             text(aridMap_?"Arid: original opening, two Galactic Empires.":"Choose factions, population, visibility and victory.",395,510);
-            text(aridMap_?"Same map on restart. Custom computer opponent.":"Other settings describe this test skirmish.",395,532);
+            text(aridMap_?(conquest_?"Original AI personality. Same map on restart.":"Same map on restart. Custom computer opponent."):"Other settings describe this test skirmish.",395,532);
         } else {
             image(background_,0,0); image(logo_,3,5); image(zone_,75,91);
             const auto navigation=buttons(muted);
