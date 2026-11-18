@@ -7732,3 +7732,39 @@ Filtering obstacles once per local search preserved the ordered results of all
 4.668 to 2.558 seconds. The two-AI replay still has both Command Centers at
 2,500 HP at 15,600 simulated seconds. At 9,000 seconds the Moderate script
 required 30 defending soldiers. The players had 25 and 27 respectively.
+
+### Mixed anti-air groups, base exits and the late-game economy
+
+The attack branch after 481560 also uses group movement. In six executable
+controls, 481ed0 and 551b80 separated members by weapon range and footprint
+distance. A member exactly in range received the individual task callback.
+Both distant members stayed in the group passed to 481860. A mixed native
+group now brings distant anti-air along while its ground-capable members
+attack. The anti-air has no ground attack target.
+
+The seed-1 market-enabled replay exposed a separate artillery jam in a
+one-tile exit. Unit 2369 stayed at (31.49, 20.11) between a Mech Factory and
+Troop Center from 6,000 through 9,000 seconds. Its next waypoint was clear
+of buildings, and an approaching worker blocked the passage. In the reduced
+case, the four-tile detour could not find a way around either building.
+After three seconds without progress, exhausting those searches now allows
+one eight-tile search. A regression with the captured surrounding units
+checks that the artillery leaves the base and clears the buildings on each
+update. The exact original path around that worker remains unverified.
+
+In the earlier replay, neither AI could afford its heavy mech despite owning
+idle factories and more than 1,200 nova. At 9,001 seconds the unit cost 350
+nova, while only 158 and 67 were available outside escrow. The packaged PER
+also buys and sells at Spaceports. The native script evaluator now handles
+these orders, shared prices, player transaction fees and escrow. The recovered
+price functions agreed on all three commodities across 600 trades each with
+x87 control word 0x037f. Transactions execute synchronously in Galactic Genie.
+
+One AI built 35 prefabs under a population limit of 75. Original 57c950 reads
+unused housing directly, including supply above the limit. Original 57dd40
+subtracts used population and unused housing from the limit. Forty-eight
+original executable comparisons cover ordinary, excess, negative and fractional
+values. Native scripts now see those two facts separately while the playable
+population remains capped. Run the optional full match with
+`swgb-skirmish-test <Data> --ai-duel`. Both sides run the packaged
+RandomGame personality. Player one still has the local human actor policy.
