@@ -12,7 +12,13 @@ struct AiMilitaryCandidate {
     float x;
     float y;
     uint8_t ownRegion;
+    bool eligible=true; // Preserve rejected flag1 candidates as holes inside the first40 slots.
 };
+
+// Original5ae450: speed is virtual188, including held-actor and sprite modifiers.
+inline bool aiExploreCandidateEligible(uint8_t heroMode,double speed) {
+    return heroMode==0 && speed>=double(.81f);
+}
 
 using AiMilitaryGroups = std::vector<std::vector<int>>;
 

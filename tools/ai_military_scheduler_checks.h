@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "../src/engine/ai_military_scheduler.h"
+#include "../src/core/genie_explore_records.h"
 
 static void aiMilitarySchedulerChecks() {
     using namespace swgb;
@@ -17,6 +18,56 @@ static void aiMilitarySchedulerChecks() {
             "Completing readiness at the deadline retains planning for the next callback");
         tick();check(cycle.phase==AiMilitaryPhase::Refresh && refreshed==1 && planned==1,
             "Pending planning runs before the next destination refresh");
+    }
+
+    {
+        check(aiExploreGroupCount(0,1,1)==0 && aiExploreGroupCount(3,2,4)==2 &&
+              aiExploreGroupCount(9,1,1)==1,"Original exploration count uses ceil soldiers/minimum capped by SN42");
+        const std::vector<int32_t> pool{10,20,30};
+        for(int cls:{47,48,63,64}) {
+            const auto id=firstAiPreferredExplorer(pool,[&](int32_t id)->std::optional<int>{return id==20?cls:32;});
+            check(id==20,"Original singleton exploration prefers all four recovered scout classes");
+        }
+        check(!firstAiPreferredExplorer(pool,[](int32_t)->std::optional<int>{return 32;}),
+              "No preferred explorer leaves flag1 grouping to the caller");
+        std::vector<AiMilitaryGatherGroup> explore{{1,1,1,{10}}};explore[0].type=101;
+        AiMilitaryReadinessPass pass;int remembered=0,stops=0;
+        pass.advance(explore,0,2,[]{return 0u;},[](const auto&){return true;},[](auto&){},
+            [&](int32_t){++stops;},[&]{++remembered;});
+        check(explore[0].state==6 && stops==1 && remembered==0,
+              "Original type101 readiness enters exploration state6 without remembered-target lookup");
+    }
+
+    {
+        struct Record {int id,owner;std::array<uint8_t,3> position;};
+        // Original exploration-fallback-controls2026-11-17; callbacks model map/zone/path boundaries.
+        for(int test=0;test<8;++test) {
+            std::vector<Record> records{{1,1,{60,50,0}},{2,3,{70,50,0}}};
+            if(test==1)records={{1,1,{60,50,0}},{2,2,{55,50,0}},{3,0,{52,50,0}},{4,3,{65,50,0}}};
+            if(test==6)records={{1,1,{60,50,0}},{2,3,{59,54,0}}};
+            if(test==7)records.clear();
+            int paths=0,marked=-1;
+            const auto result=genieExploreRememberedDestination(test==5?0:7,2,100,100,records,
+                [&](int x,int){return test==2 && x==60?0:255;},
+                [&](int x,int){return test!=3 || x!=60;},
+                [](int x,int y,int){return std::hypot(double(x-50),double(y-50));},
+                [&](int,int){++paths;return test!=4;},[&](int,int,int value){marked=value;});
+            const bool accepted=test!=4 && test!=5 && test!=7;
+            check(bool(result)==accepted,"Original remembered exploration fallback admission and path result");
+            if(result)check((*result)==(test==6?std::array<int,2>{59,54}:std::array<int,2>{test==2 || test==3?70:60,50}),
+                "Remembered exploration uses truncated distance and retains first ties");
+            check(paths==(test==5 || test==7?0:1) && marked==(test==5 || test==7?-1:test==4?1:0),
+                "Only the winning remembered destination is tested and marked, with no retry after path failure");
+        }
+    }
+
+    {
+        struct Retry {uint32_t flags,last,now;int limit;bool expected;};
+        for(const auto c:std::vector<Retry>{{1,1000,5999,4,false},{1,1000,6000,4,true},
+            {1,1000,6999,4,true},{1,1000,5000,4,false},{0,0,100000,4,false},
+            {1,0,999,0,false},{1,0,1000,0,true},{1,0xffffffffu-999,4000,4,true}})
+            check(aiExploreGroupRetry(c.flags,c.last,c.now,c.limit)==c.expected,
+                "Original initialized exploration retry requires all-idle and strict unsigned whole-second timeout");
     }
 
     const auto fresh=[] {

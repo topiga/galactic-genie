@@ -43,8 +43,9 @@ std::optional<AiMilitaryGroups> selectAiMilitaryGroups(
     if (requestedCount == 0 || n == 0)
         return groups;
     bool remaining[40];
-    std::fill_n(remaining, n, true);
-    int remainingCount = static_cast<int>(n);
+    int remainingCount = 0;
+    for(size_t i=0;i<n;++i) {remaining[i]=candidates[i].eligible;if(remaining[i])++remainingCount;}
+    if(!remainingCount)return groups;
     int emitted = 0;
     do {
         size_t center = n;

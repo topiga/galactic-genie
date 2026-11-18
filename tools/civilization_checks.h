@@ -15,6 +15,8 @@
 #include "frozen_target_visibility_checks.h"
 #include "visibility_stencil_checks.h"
 #include "visibility_refresh_checks.h"
+#include "ai_attack_memory_gameplay_checks.h"
+#include "exploration_reissue_gameplay_checks.h"
 #include "felling_animation_checks.h"
 #include "combined_upgrade_checks.h"
 #include "allied_bonus_checks.h"
@@ -51,7 +53,7 @@ static void civilizationBonusChecks(swgb::Assets &assets) {
     runMovementActionChecks();
     movementActionGameplayChecks(assets);
     frozenTargetVisibilityChecks(assets);
-    visibilityStencilChecks();visibilityRefreshChecks(assets);
+    visibilityStencilChecks();visibilityRefreshChecks(assets);aiAttackMemoryGameplayChecks(assets);explorationReissueGameplayChecks(assets);
     fellingAnimationChecks(assets);
     hitPointEffectChecks(assets);
     combinedUpgradeChecks(assets);

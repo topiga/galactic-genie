@@ -84,10 +84,10 @@ static void explorationGameplayChecks(swgb::Assets &assets) {
     const auto stranded=game.spawnObjectForTesting(1,83,1,27.f,40.5f);
     check(game.issueExploreForTesting(stranded,45,45,true),"Accept exploration with no reachable land destination");
     check(game.explorationChildStatusForTesting(stranded)==2&&game.explorationStateForTesting(stranded)==11,
-          "Native path failure is retained without inventing an original child-controller status");
+          "Native path failure remains attached until the owner controller update");
     game.update(.05f,{});
-    check(game.explorationChildStatusForTesting(stranded)==2&&game.explorationStateForTesting(stranded)==11,
-          "Unknown failed-child mapping does not falsely complete or rebuild the parent");
+    check(game.explorationChildStatusForTesting(stranded)==-1&&game.explorationStateForTesting(stranded)==3,
+          "Failed movement returns the exploration parent to its destination-request state");
     check(game.issueExploreForTesting(stranded,-1,-1,true)&&game.explorationChildStatusForTesting(stranded)==-1&&
           game.explorationStateForTesting(stranded)==3,
           "Native planner can explicitly replace a retained failed child with a destination request");
@@ -102,13 +102,17 @@ static void explorationGameplayChecks(swgb::Assets &assets) {
     for(auto id:wave)check(game.explorationStateForTesting(id)==-1,"Admission does not apply exploration immediately");
     game.updatePaused(.1f,{});
     check(game.militaryGroupsForTesting(2)[0].state==1,"Pause retains military readiness");
-    for(int i=0;i<400 && game.militaryGroupsForTesting(2)[0].state!=2;++i)game.update(.05f,{});
-    check(game.militaryGroupsForTesting(2)[0].state==2,"Native wave completes its bounded gather/readiness phase");
-    check(game.stagedTacticalCountForTesting()==0,"Owner update flushes newly ready exploration orders into local command storage");
-    for(auto id:wave)check(game.explorationStateForTesting(id)==-1,"Owner flush does not execute fresh local commands");
+    for(int i=0;i<400 && game.militaryGroupsForTesting(2)[0].state!=18;++i)game.update(.05f,{});
+    check(game.militaryGroupsForTesting(2)[0].state==18,
+          "Unopposed military wave completes gathering and enters original idle-timeout search");
+    check(game.stagedTacticalCountForTesting()==0,
+          "Original group search emits one local targetless packet instead of tactical exploration orders");
+    const auto attackMembers=game.militaryGroupsForTesting(2)[0].members;
+    for(auto id:attackMembers)check(game.explorationStateForTesting(uint32_t(id))==-1,
+                          "Attack-group search does not install independent exploration parents");
     game.update(.05f,{});
-    bool exploring=false;for(auto id:wave)exploring|=game.explorationStateForTesting(id)>=0;
-    check(exploring,"Ready military wave installs exploration parents through delayed command drain");
+    bool groupMoving=false;for(auto id:attackMembers)groupMoving|=game.pointMovementStatusForTesting(uint32_t(id))>=0;
+    check(groupMoving,"Original search packet reaches group movement through delayed local command drain");
     const auto converted=game.spawnObjectForTesting(1,troop,2,home[0]+3,home[1]+8);
     check(game.queueExploreForTesting(converted,home[0]+10,home[1]+10),"Stage exploration before ownership changes");
     game.update(.05f,{});

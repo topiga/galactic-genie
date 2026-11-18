@@ -31,64 +31,52 @@ static void aiFogChecks(swgb::Assets &assets) {
     check(game.attackTargetForTesting(hunter)==0 && game.objectTaskReferencesForTesting(target)==0,
           "Registered unit death releases the target before the lost-sight branch");
 
-    auto prepareWave=[&](swgb::Game &match) {
-        // Conquest keeps the simulation running after the unseen enemy center is removed.
+    const auto prepareScout=[&](swgb::Game &match) {
         check(match.initSkirmish(0x5A17,&error,true,1,3,200,true),error.c_str());
         const auto home=match.objectPosition(match.commandCenterId(2));
-        std::vector<uint32_t> wave;
-        for(int i=0;i<6;++i) wave.push_back(match.spawnObjectForTesting(1,troop,2,home[0]+i*.3f,home[1]+6));
-        // Isolate scouting knowledge: admit the entire fixture already within gather spacing.
-        check(match.loadAiSourceForTesting(2,"fog-ready-wave",R"(
-(defrule (true) =>
- (set-strategic-number sn-percent-attack-soldiers 100)
- (set-strategic-number sn-group-form-distance 128)
- (set-strategic-number sn-attack-group-gather-spacing 100)
- (set-strategic-number sn-zero-priority-distance 50)
- (attack-now) (disable-self))
+        const auto scout=match.spawnObjectForTesting(3,550,2,home[0]+3,home[1]+3);
+        check(scout!=0,"Original singleton scouting fixture");
+        check(match.loadAiSourceForTesting(2,"fog-exploration",R"(
+(defrule (true) => (set-strategic-number sn-number-explore-groups 1)
+ (set-strategic-number sn-minimum-explore-group-size 1) (disable-self))
 )",{},&error),error.c_str());
-        return wave;
+        return scout;
     };
-    auto wave=prepareWave(game);
-    game.updateSkirmishArmyForTesting(2);game.updateAiMilitaryForTesting(2);game.update(0,{});game.update(0,{});
-    for(auto id:wave) check(game.attackTargetForTesting(id)==0,"Searching wave does not target unseen command center");
-    const auto search=game.moveAnchorForTesting(wave.front());
-    check(!game.observedForTesting(2,int(search[0]),int(search[1])),"Explored map still scouts genuinely unobserved ground");
-    for(auto id:wave) check(game.moveAnchorForTesting(id)==search,"Wave keeps a coherent discovery destination");
-
-    swgb::Game changedEnemy(assets);
-    const auto changedWave=prepareWave(changedEnemy);
+    const auto dispatch=[&](swgb::Game &match,uint32_t scout) {
+        for(int i=0;i<8 && match.explorationStateForTesting(scout)!=11;++i) {
+            match.update(0,{});match.updateAiMilitaryForTesting(2,UINT32_MAX);
+        }
+        check(match.explorationStateForTesting(scout)==11,"Exploration group dispatches its singleton scout");
+    };
+    const auto scout=prepareScout(game);dispatch(game,scout);
+    check(game.attackTargetForTesting(scout)==0,"Initial scout does not target unseen Command Center");
+    const auto search=game.explorationDestinationForTesting(scout);
+    check(!game.observedForTesting(2,int(search[0]),int(search[1])),
+          "Explored map still chooses genuinely unobserved exploration information");
+    swgb::Game changedEnemy(assets);const auto changedScout=prepareScout(changedEnemy);
     check(changedEnemy.moveObjectForTesting(changedEnemy.commandCenterId(1),3.5f,60.5f),"Relocate unseen enemy base");
     check(changedEnemy.damageObjectForTesting(changedEnemy.commandCenterId(1),100000),"Remove unseen enemy base");
-    changedEnemy.updateSkirmishArmyForTesting(2);changedEnemy.updateAiMilitaryForTesting(2);changedEnemy.update(0,{});changedEnemy.update(0,{});
-    check(changedEnemy.moveAnchorForTesting(changedWave.front())==search,"Scouting choice does not read unseen enemy base position or death");
-
-    // Observe the old destination, then put the wave back: only knowledge changed.
-    const auto start=game.objectPosition(wave.front());
-    check(game.moveObjectForTesting(wave.front(),search[0],search[1]),"Scout observes chosen region");
-    check(game.observedForTesting(2,int(search[0]),int(search[1])),"Scouting records actual observation");
-    check(game.moveObjectForTesting(wave.front(),start[0],start[1]),"Scout returns to initial position");
-    for(auto id:wave) check(game.stopUnitForTesting(id),"Stop wave fixture");
-    game.updateSkirmishArmyForTesting(2);game.updateAiMilitaryForTesting(2);game.update(0,{});game.update(0,{});
-    check(game.moveAnchorForTesting(wave.front())!=search,"Discovery history advances search instead of repeating old waypoint");
-    wave=prepareWave(game);
-    game.setDiplomacyForTesting(2,1,1);
+    dispatch(changedEnemy,changedScout);
+    check(changedEnemy.explorationDestinationForTesting(changedScout)==search,
+          "Initial scouting destination ignores unseen enemy position and destruction");
+    const auto start=game.objectPosition(scout);
+    check(game.moveObjectForTesting(scout,search[0],search[1]) && game.observedForTesting(2,int(search[0]),int(search[1])),
+          "Scout records actual observation at its destination");
+    check(game.moveObjectForTesting(scout,start[0],start[1]) && game.reissueExploreForTesting(scout),
+          "Observation notification requests the next original exploration destination");
+    game.update(0,{});game.update(0,{});
+    check(game.explorationDestinationForTesting(scout)!=search,
+          "Persistent information reservations prevent repeating the same waypoint");
     const auto surveyor=game.spawnObjectForTesting(1,83,2,1.5f,1.5f);
-    for(int y=2;y<64;y+=4) for(int x=2;x<64;x+=4) {
+    for(int y=2;y<64;y+=4)for(int x=2;x<64;x+=4) {
         check(game.moveObjectForTesting(surveyor,x+.5f,y+.5f),"Survey revisit fixture");
-        check(game.observedForTesting(2,x,y),"Revisit fixture records actual sight");
+        check(game.observedForTesting(2,x,y),"Survey records first-ever sight");
     }
     check(game.moveObjectForTesting(surveyor,60.5f,60.5f),"Park surveyor");
-    game.updateSkirmishArmyForTesting(2);game.updateAiMilitaryForTesting(2);game.update(0,{});game.update(0,{});
-    const auto revisit=game.moveAnchorForTesting(wave.front());
-    check(game.observedForTesting(2,int(revisit[0]),int(revisit[1])),"Completed exploration enters revisit scouting");
-    check(game.stopUnitForTesting(wave.front()) && game.moveObjectForTesting(wave.front(),4.5f,4.5f),
-          "Relocate idle reinforcement away from travelling wave");
-    game.updateSkirmishArmyForTesting(2);game.updateAiMilitaryForTesting(2);game.update(0,{});game.update(0,{});
-    check(game.moveAnchorForTesting(wave.front())==revisit,
-          "Reinforcement keeps shared revisit destination until renewed sight, not historical observation");
-    check(game.moveObjectForTesting(wave.front(),revisit[0],revisit[1]) && game.stopUnitForTesting(wave.front()),
-          "Complete shared revisit");
-    game.updateSkirmishArmyForTesting(2);game.updateAiMilitaryForTesting(2);game.update(0,{});game.update(0,{});
-    check(game.moveAnchorForTesting(wave.front())!=revisit,"Completed revisit advances search");
-    std::printf("PASS: AI fog acquisition, last-seen pursuit and observation-based scouting\n");
+    check(!game.reissueExploreForTesting(scout),"Fully observed information exhausts the first spiral");
+    check(game.reissueExploreForTesting(scout),"Exhaustion reopens known hidden same-zone cells for a subsequent search");
+    game.update(0,{});game.update(0,{});
+    const auto revisit=game.explorationDestinationForTesting(scout);
+    check(game.observedForTesting(2,int(revisit[0]),int(revisit[1])),"Revisit uses genuinely known terrain");
+    std::printf("PASS: AI fog acquisition, last-seen pursuit and original exploration information\n");
 }

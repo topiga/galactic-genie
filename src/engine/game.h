@@ -4,6 +4,7 @@
 #include "../core/genie_tactical_movement.h"
 #include "ai_military_scheduler.h"
 #include "ai_military.h"
+#include "ai_attack_memory.h"
 
 #include "local_simulation_clock.h"
 #include "local_command_queue.h"
@@ -391,6 +392,9 @@ public:
     }
     bool formAiMilitaryGroupsForTesting(int player) {return formAiMilitaryGroups(player);}
     AiMilitaryPhase militaryPhaseForTesting(int player) const {return aiPlayers_.at(size_t(player)).militaryCycle.phase;}
+    AiAttackMemoryQuarter attackMemoryQuarterForTesting(int player,size_t quarter) const {return aiPlayers_.at(player).explorationQuarters.at(quarter);}
+    size_t attackMemoryVictimCountForTesting(int player) const {return aiPlayers_.at(player).processedAttackMemoryVictims.size();}
+    void setGameTimeForTesting(float seconds) { gameTime_=seconds; }
     void updateAiMilitaryForTesting(int player,uint32_t budget=2) {refreshVisibility();refreshAiMilitaryMembers(player);updateAiMilitary(player,budget);}
     const std::vector<AiMilitaryGatherGroup>& militaryGroupsForTesting(int player) const {return aiPlayers_.at(size_t(player)).militaryGroups;}
     bool queueTacticalMoveForTesting(uint32_t id,float x,float y,float range) {
@@ -398,6 +402,9 @@ public:
     }
     int tacticalMovementStateForTesting(uint32_t id) const {
         const auto *object=findObject(id);return object && object->tacticalMovement.present?object->tacticalMovement.state:-1;
+    }
+    bool reissueExploreForTesting(uint32_t id) {
+        auto *o=findObject(id);return o && reissueAiExploreDestination(*o);
     }
     bool queueExploreForTesting(uint32_t id,float x,float y) {
         auto *o=findObject(id);return o && queueExplore(*o,x,y);
@@ -1014,9 +1021,13 @@ private:
         struct KnownMilitaryObject {
             int32_t id=-1;
             int owner=0;
+            std::array<uint8_t,3> position{};
         };
         AiProgram program;
         std::vector<KnownMilitaryObject> militaryKnownObjects;
+        std::vector<uint8_t> explorationInformation, explorationObserved;
+        std::array<AiAttackMemoryQuarter,16> explorationQuarters{};
+        std::vector<uint32_t> processedAttackMemoryVictims;
         std::unordered_map<int32_t,size_t> militaryKnownSlots;
         std::vector<int32_t> militarySoldiers;
         std::vector<int32_t> militaryHomes;
@@ -1028,7 +1039,7 @@ private:
         std::map<int, double> timers;
         // Verified fresh profile events run before the original's first PER evaluation.
         std::unordered_map<int, int> strategicNumbers = {
-            {0,34}, {2,66}, {4,2}, {34,50}, {41,4}, {227,75}, {230,20}, {42,0}, {74,20}, {106,-1}, {107,-1}, {108,-1}, {118,0}, {120,0}, {143,1}, {226,0}
+            {0,34}, {2,66}, {4,2}, {34,50}, {41,4}, {227,75}, {230,20}, {42,0}, {74,20}, {76,15}, {106,-1}, {107,-1}, {108,-1}, {118,0}, {120,0}, {143,1}, {168,50}, {226,0}
         };
         std::unordered_set<std::string>
             warnedFacts;
@@ -1521,7 +1532,12 @@ private:
     bool buildAiMilitaryRegions(int restriction,std::vector<uint8_t> &tiles) const;
     void queueAiMilitaryStop(int player,int32_t id);
     bool formAiMilitaryGroups(int player);
-    std::optional<AiMilitaryGroups> availableAiMilitaryGroups(int player,std::optional<int> requested);
+    void formAiExploreGroups(int player);
+    bool queueAiExploreDestination(Object &object);
+    void updateAiExplorationInformation(int player);
+    void notifyAiAttackMemory(Object &victim,const Object *attacker);
+    bool reissueAiExploreDestination(Object &object);
+    std::optional<AiMilitaryGroups> availableAiMilitaryGroups(int player,std::optional<int> requested,bool exploring=false);
     bool aiMilitaryCanUseNativePolicy(int player,uint32_t id) const;
     void updateAiMilitary(int player,uint32_t budget=2);
     void updateAiMilitaryTargets(int player,uint32_t budget);

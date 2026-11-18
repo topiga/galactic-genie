@@ -788,6 +788,10 @@ bool Game::activateTwoPlayerMatch(bool initiallyExplored,int populationLimit,boo
         state.strategicNumbers[120]=35;
         state.strategicNumbers[119]=0;
         state.strategicNumbers[118]=15;
+        // Packaged sn-homebase.per admits a singleton explorer independently of attack groups.
+        state.strategicNumbers[42]=1;
+        state.strategicNumbers[43]=1;
+        state.strategicNumbers[44]=1;
         aiPlayers_[2]=std::move(state);
     }
     skirmish_ = true;
@@ -10633,6 +10637,7 @@ void Game::damageObject(Object &object, int damage, uint32_t attackerId) {
         0.0f, object.hitPoints - hitPointDamage);
     object.flashTime = std::max(object.flashTime, 0.15f);
     attacksLanded_++;
+    notifyAiAttackMemory(object,attacker);
     if (object.hitPoints <= 0) {
         killObject(object);
         return;
@@ -14914,7 +14919,11 @@ void Game::updateAi(int player,float dt) {
     if(!state.loaded && !state.militaryGroups.empty() && ++state.updateCount>=20) {
         state.updateCount=0;militaryTick=true;
     }
-    if(militaryTick)updateAiMilitary(player);
+    if(militaryTick) {
+        // Original59dcd0 resets notification dedup before each admitted tactical update.
+        state.processedAttackMemoryVictims.clear();
+        updateAiMilitary(player);
+    }
     legacyRandomState_=saved;
 }
 
@@ -15851,11 +15860,13 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
         if(updateTacticalMovement(o,previousGraphic))return false;
         o.pointMovement.retire();
         if (o.exploration && o.explorationChild.present &&
-            o.explorationChild.status==GenieMovementStatus::Completed) {
-            o.exploration->update(1);
+            o.explorationChild.status!=GenieMovementStatus::Active) {
+            const auto transition=o.exploration->update(o.explorationChild.status==GenieMovementStatus::Completed?1:3);
             o.explorationChild.cancel();
+            if(transition && transition->requestDestination && aiPlayers_[size_t(o.player)].loaded &&
+               o.exploration->destinationX>=0 && o.exploration->destinationY>=0)
+                if(!reissueAiExploreDestination(o))queueAiMilitaryStop(o.player,int32_t(o.spawnId));
         }
-        // shortcut: Native failed paths retain the child until retarget; original failure statuses need callback parity.
         if (o.resourceDeathState == 2) {
             // Base constructor's zero-HP child enters3 on its first same-owner pass.
             o.resourceDeathState = 3;

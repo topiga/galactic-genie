@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+#include "../src/core/genie_random.h"
 static void militaryGameplayChecks(swgb::Assets &assets) {
     using namespace swgb;
     check(aiMilitarySoldierClass(32) && aiMilitarySoldierClass(51) && !aiMilitarySoldierClass(43),
@@ -16,6 +17,37 @@ static void militaryGameplayChecks(swgb::Assets &assets) {
     for(int i=0;i<2;++i){scenario.players[i].active=true;scenario.players[i].human=i==0;scenario.players[i].civilization=1;}
     Game game(assets);std::string error;
     check(game.initScenario(scenario,&error),error.c_str());
+    for(int count:{1,2}) {
+        Game explorer(assets);check(explorer.initScenario(scenario,&error),error.c_str());
+        const auto home=explorer.spawnObjectForTesting(1,109,2,30,30);
+        const auto scout=explorer.spawnObjectForTesting(1,550,2,31,31);
+        const auto secondScout=count==2?explorer.spawnObjectForTesting(1,550,2,32,31):0;
+        check(home && scout && (count==1 || secondScout),"Initial exploration home and scout fixture");
+        check(explorer.loadAiSourceForTesting(2,"initial-exploration",std::string("(defrule (true) => (set-strategic-number sn-minimum-explore-group-size ")+std::to_string(count)+R"()
+ (set-strategic-number sn-number-explore-groups 1)
+ (disable-self))
+)",{},&error),error.c_str());
+        for(int i=0;i<8 && (explorer.explorationStateForTesting(scout)!=11 ||
+            (count==2 && explorer.explorationStateForTesting(secondScout)!=11));++i)explorer.update(0,{});
+        const auto &groups=explorer.militaryGroupsForTesting(2);
+        check(groups.size()==1 && groups[0].type==101 && groups[0].members==(count==1?std::vector<int32_t>{int32_t(scout)}:
+                  std::vector<int32_t>{int32_t(scout),int32_t(secondScout)}) &&
+              groups[0].state==6 && groups[0].initialized,
+              "Original singleton preference and multiunit flag1 grouping enter exploration without a six-soldier wave");
+        check(explorer.stagedTacticalCountForTesting()>0 || explorer.explorationStateForTesting(scout)>=0,
+              "Initial exploration ring stages a concrete705 destination through the shared tactical queue");
+        check(explorer.stopUnitForTesting(scout) && (count==1 || explorer.stopUnitForTesting(secondScout)),
+              "Stop exploration actors without removing their original group");
+        const auto beforeRetry=explorer.stagedTacticalCountForTesting();
+        explorer.setGameTimeForTesting(15.999f);
+        explorer.updateAiMilitaryForTesting(2,1000);
+        check(explorer.stagedTacticalCountForTesting()==beforeRetry,"Default SN76 retains stopped exploration through15999ms");
+        explorer.setGameTimeForTesting(16.f);
+        explorer.updateAiMilitaryForTesting(2,1000);
+        check(explorer.stagedTacticalCountForTesting()>beforeRetry &&
+              explorer.militaryGroupsForTesting(2)[0].search.lastBusyTime==16000,
+              "Initialized idle exploration retries with forced705 after sixteen whole seconds");
+    }
     const uint32_t first=game.spawnObjectForTesting(1,329,2,20,20);
     const uint32_t second=game.spawnObjectForTesting(1,329,2,29,20);
     check(first && second,"Military admission fixture");
@@ -74,8 +106,8 @@ static void militaryGameplayChecks(swgb::Assets &assets) {
           "Finished readiness retains pending planning at the deadline");
     const auto beforePlan=game.stagedTacticalCountForTesting();
     game.updateAiMilitaryForTesting(2,0);
-    check(game.militaryPhaseForTesting(2)==AiMilitaryPhase::Refresh && game.stagedTacticalCountForTesting()>beforePlan,
-          "Pending native planning emits commands without another refresh");
+    check(game.militaryPhaseForTesting(2)==AiMilitaryPhase::Refresh && game.stagedTacticalCountForTesting()==beforePlan,
+          "Pending original planning waits for idle timeout without native waypoint commands");
     game.updateAiMilitaryForTesting(2,0);
     check(game.militaryGroupsForTesting(2)[1].destination!=destination,"Only the following cycle refreshes the moving leader");
     // Home lookup follows admission order, not proximity; both region samples use the member's restriction.
@@ -97,15 +129,15 @@ static void militaryGameplayChecks(swgb::Assets &assets) {
         check(game.transferObjectForTesting(lost,1),"Remove one member through ownership change");
         game.updateAiMilitaryForTesting(2,UINT32_MAX);
         const auto &deficit=game.militaryGroupsForTesting(2)[0];
-        check(deficit.members.size()==2 && deficit.desiredCount==(homeCase==0?2:3) && deficit.state==(homeCase==0?2:1),
-              "Disconnected first home releases a smaller group; same-region or absent home waits");
+        check(deficit.members.size()==2 && deficit.desiredCount==(homeCase==0?2:3) && deficit.state==1,
+              "Disconnected home shrinks demand before no-target wait; same-region or absent home retains deficit");
         if(homeCase!=0) {
             const auto queued=game.stagedTacticalCountForTesting();
             game.updateSkirmishArmyForTesting(2);
             check(game.stagedTacticalCountForTesting()==queued,"Native fallback does not launch a waiting deficit group");
             game.updateAiMilitaryForTesting(2,UINT32_MAX);
-            check(game.militaryGroupsForTesting(2)[0].desiredCount==2 && game.militaryGroupsForTesting(2)[0].state==2,
-                  "Next phase7 honors original attack-now flag8 and releases the reduced group");
+            check(game.militaryGroupsForTesting(2)[0].desiredCount==2 && game.militaryGroupsForTesting(2)[0].state==1,
+                  "Next phase7 shrinks attack-now demand before original no-target wait");
         }
     }
     for(int targetType:{329,109}) {
@@ -143,5 +175,38 @@ static void militaryGameplayChecks(swgb::Assets &assets) {
             check(!game.attackTargetForTesting(one) && !game.attackTargetForTesting(two),"Deferred group Stop clears both attacks");
         }
     }
+    check(game.initScenario(scenario,&error),error.c_str());
+    const auto searcher=game.spawnObjectForTesting(1,329,2,20,20);
+    check(searcher && game.formAiMilitaryGroupsForTesting(2),"No-target group search fixture");
+    check(game.militaryGroupsForTesting(2)[0].flags==40,"Fresh runtime group preserves constructor32 and attack-now8");
+    game.setGameTimeForTesting(4.999f);game.setAmbientRandomForTesting(12345);
+    game.updateAiMilitaryForTesting(2,UINT32_MAX);
+    check(game.militaryGroupsForTesting(2)[0].state==1 && game.legacyRandomForTesting()==12345,
+          "No-target group waits4999ms without consuming search RNG");
+    game.setGameTimeForTesting(5.f);game.updateAiMilitaryForTesting(2,UINT32_MAX);
+    const auto searchOrigin=game.militaryGroupsForTesting(2)[0].search.origin;
+    uint32_t expectedSearchRng=12345;
+    const auto searchPoint=aiGroupSearchPoint(game.militaryGroupsForTesting(2)[0].search,64,64,[&] {
+        return genieRandomDraw(expectedSearchRng);
+    });
+    check(searchPoint && game.militaryGroupsForTesting(2)[0].state==18 &&
+          game.legacyRandomForTesting()==expectedSearchRng && searchOrigin==std::array<float,3>{44,0,20},
+          "Exact5000ms search captures centroid and consumes exactly two shared original RNG draws");
+    game.updatePaused(1,{});
+    check(game.pointMovementStatusForTesting(searcher)==-1,"Pause retains targetless group packet without moving");
+    game.update(0,{});
+    const auto searchDestination=game.pointMovementDestinationForTesting(searcher);
+    check(searchDestination==std::array<float,2>{float((*searchPoint)[1]),64.f-float((*searchPoint)[0])},
+          "Targetless local group packet reaches shared native group movement with original selected point");
+    game.setGameTimeForTesting(30.f);game.updateAiMilitaryForTesting(2,UINT32_MAX);
+    check(game.militaryGroupsForTesting(2)[0].state==18,"Busy search retains state at exact25000ms");
+    game.setGameTimeForTesting(30.001f);game.updateAiMilitaryForTesting(2,UINT32_MAX);
+    check(game.militaryGroupsForTesting(2)[0].state==1 && !(game.militaryGroupsForTesting(2)[0].flags&32u),
+          "Busy search expires after25000ms and clears origin capture only after queuing Stop");
+    game.update(0,{});
+    game.setGameTimeForTesting(35.001f);game.updateAiMilitaryForTesting(2,UINT32_MAX);
+    check(game.militaryGroupsForTesting(2)[0].state==18 &&
+          game.militaryGroupsForTesting(2)[0].search.origin==searchOrigin,
+          "Repeated no-target search retains its prior origin until a successful target acquisition");
     std::puts("PASS: production PER military admission, group targeting, movement, pause, ownership and reset");
 }

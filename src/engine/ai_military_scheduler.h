@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "ai_group_targets.h"
+#include "ai_group_search.h"
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -20,12 +21,15 @@ struct AiMilitaryGatherGroup {
     std::array<float,3> destination{};
     uint8_t retries=0;
     uint32_t lastMemberAdded=0;
-    uint32_t flags=0;
+    uint32_t flags=32; // Original599f80 constructor sets flag5 before attack-now adds flag3.
     int32_t targetId=-1;
     AiGroupTargetContinuation targetContinuation{};
     AiTargetRanking targetRanking{};
     std::vector<int32_t> targetCandidates{};
     float targetRange=0;
+    AiGroupSearchState search{};
+    bool initialized=false, targetSearchUnsupported=false;
+    int type=100; // Original group+10: land attack100, land exploration101.
 };
 
 // 59fa80 admits these classes before testing the master air/boat trait.
@@ -35,6 +39,24 @@ inline bool aiMilitarySoldierClass(int cls) {
     case 50:case 51:case 52:case 53:case 54:case 55:case 56:case 57:return true;
     default:return false;
     }
+}
+// 5aad79 bounds exploration groups by the entire soldier registry, not available scouts.
+inline int aiExploreGroupCount(size_t soldiers,int minimum,int maximumGroups) {
+    if(minimum<=0 || maximumGroups<=0)return 0;
+    return int(std::min<uint64_t>((uint64_t(soldiers)+uint64_t(minimum)-1)/uint64_t(minimum),uint64_t(maximumGroups)));
+}
+inline bool aiPreferredExplorerClass(int cls) {
+    return cls==47 || cls==48 || cls==63 || cls==64;
+}
+// Type101 singleton branch of5ab090; fallback4506f0 flag1 remains a separate callback.
+template<class ClassOf>
+std::optional<int32_t> firstAiPreferredExplorer(const std::vector<int32_t> &pool,ClassOf classOf) {
+    for(int32_t id:pool)if(const auto cls=classOf(id);cls && aiPreferredExplorerClass(*cls))return id;
+    return std::nullopt;
+}
+//5a1ce5: initialized state6 retries only after a whole-group idle interval.
+inline bool aiExploreGroupRetry(uint32_t flags,uint32_t lastBusy,uint32_t now,int sn76) {
+    return (flags&1u) && uint32_t(now-lastBusy)/1000u>uint32_t(sn76);
 }
 // 5ae520 multiplies by the float32 constant .01 before upward rounding.
 inline int aiMilitaryAttackCount(size_t count,int percentage) {
@@ -184,8 +206,8 @@ struct AiMilitaryReadinessPass {
             }
             if(release) {
                 for(const auto id:group.members)if(id>=0)stop(id);
-                remembered();
-                group.state=2;
+                if(group.type==100)remembered();
+                group.state=group.type==101?6:2;
             } else if(!isReady)gather(group);
             nextGroupId=index+1<groups.size()?groups[index+1].id:-1;
             if(uint32_t(clock()-started)>=budget)

@@ -51,6 +51,18 @@ int main() {
     groups = selectAiMilitaryGroups(many, regions, 200, 1000);
     check(groups && groups->size() == 1 && groups->front().size() == 40, "oversized request bounded by candidates");
 
+    check(aiExploreCandidateEligible(0,.81f) && !aiExploreCandidateEligible(1,2) &&
+          !aiExploreCandidateEligible(0,.8f) && !aiExploreCandidateEligible(0,std::numeric_limits<double>::quiet_NaN()),
+          "Original flag1 admission rejects heroes, slow actors and unordered speed");
+    std::vector<AiMilitaryCandidate> holes{{10,0,0,1,false},{20,1,0,1,true},{30,2,0,1,false},{40,3,0,1,true}};
+    groups=selectAiMilitaryGroups(holes,std::vector<uint8_t>(16,1),4,10);
+    check(groups && *groups==AiMilitaryGroups{{20,40}},"Rejected exploration candidates preserve slots and ordered survivors");
+    many.assign(41,{0,0,0,1,false});
+    for(int i=0;i<41;++i)many[i].id=i;
+    many[40].eligible=true;
+    check(selectAiMilitaryGroups(many,regions,41,10)->empty(),
+          "Rejected first40 slots do not promote candidate41 into the original selection window");
+
     check(selectAiMilitaryGroups({}, {}, 0, 1)->empty(), "empty candidates");
     check(selectAiMilitaryGroups(pair, {1, 0, 2, 2}, 0, 1)->empty(), "zero request");
     check(!selectAiMilitaryGroups(pair, {}, 1, 1), "missing region data rejected");
