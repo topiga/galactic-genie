@@ -138,5 +138,21 @@
     const auto inAnimalHalo=[](float x,float y) {return std::abs(x-46.f)<=5 && std::abs(y-44.f)<=5;};
     check(inAnimalHalo(afterX,afterY) && !inAnimalHalo(beforeX,beforeY),
           "Real food-depot completion activates original animal attraction in production placement");
+    scenario.players[1].human=false;
+    check(game.initScenario(scenario,&error),error.c_str());
+    for(int player : {1,2}) {
+        const float y=16.f*player;
+        check(game.loadAiSourceForTesting(player,"capture-herd","",{},&error),error.c_str());
+        check(game.spawnObjectForTesting(1,109,player,44,y) &&
+              game.spawnObjectForTesting(1,68,player,20,y) &&
+              game.spawnObjectForTesting(1,550,player,31,y),"Set up captured herd and two food sites");
+    }
+    const auto humanAnimal=game.spawnObjectForTesting(0,833,0,30,16);
+    const auto computerAnimal=game.spawnObjectForTesting(0,833,0,30,32);
+    for(int i=0;i<200;++i)game.update(.1f,{});
+    check(game.objectPlayer(humanAnimal)==1 && game.objectPosition(humanAnimal)[0]==30.f,
+          "A human keeps control of newly captured livestock");
+    check(game.objectPlayer(computerAnimal)==2 && game.objectPosition(computerAnimal)[0]<24.f,
+          "A computer brings captured livestock within reach of its nearer food depot");
     std::puts("PASS: original four resource-depot grids in normal gameplay, upgrades and hidden stationary resources");
 }

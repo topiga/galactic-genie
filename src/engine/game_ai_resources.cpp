@@ -4,14 +4,6 @@
 #include <algorithm>
 #include <cmath>
 namespace swgb {
-namespace {
-//551b80/551ba0: collision-box edge distance, rounded tofloat by590d25.
-float resourceEdgeDistance(float x,float y,float ax,float ay,float bx,float by) {
-    const float dx=std::max(0.0f,float(std::abs(double(x))-double(ax)-double(bx)));
-    const double dy=std::max(0.0,std::abs(double(y))-double(ay)-double(by));
-    return float(std::sqrt(double(dx)*dx+dy*dy));
-}
-}
 void Game::updateAiResourceKnowledge(int player) {
     if(player<=0 || size_t(player)>=aiPlayers_.size() || mapSize_<=0)return;
     auto &state=aiPlayers_[size_t(player)];auto &knowledge=state.resourceKnowledge;

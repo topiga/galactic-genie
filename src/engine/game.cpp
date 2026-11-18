@@ -2515,6 +2515,29 @@ void Game::updateLivestockOwnership() {
         if (closestPlayer > 0 &&
             closestPlayer != livestock.player) {
             setObjectOwner(livestock, closestPlayer);
+            // shortcut: Dispatch on AI capture until the original herd command scheduler is wired.
+            if (aiPlayers_[closestPlayer].loaded && !players_[closestPlayer-1].human &&
+                livestock.state == State::Idle) {
+                const Object *home = nullptr;
+                float nearest = std::numeric_limits<float>::max();
+                for (const Object &site : objects_) {
+                    if (!site.active || site.hidden || site.underConstruction ||
+                        site.player != closestPlayer || !site.unit ||
+                        (site.unit->id != 109 && site.unit->id != 68)) continue;
+                    const float dx = site.x - livestock.x, dy = site.y - livestock.y;
+                    const float distance = dx * dx + dy * dy;
+                    if (distance < nearest) {
+                        home = &site;
+                        nearest = distance;
+                    }
+                }
+                if (home) {
+                    const auto &a = livestock.unit->collisionSize, &b = home->unit->collisionSize;
+                    const float gap = resourceEdgeDistance(home->y-livestock.y, home->x-livestock.x,
+                                                           a[1], a[0], b[1], b[0]);
+                    if (gap > 3.f && gap < 30.f) approach(livestock, *home, 0.35f);
+                }
+            }
             if (closestPlayer == localPlayer_)
                 playInterfaceFeedback(
                     kInterfaceCaptureAnimalSound);

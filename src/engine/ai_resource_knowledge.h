@@ -1,11 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+#include <algorithm>
+#include <cmath>
 #include <array>
 #include <cstdint>
 #include <cstddef>
 #include <unordered_set>
 #include <vector>
 namespace swgb {
+//551b80/551ba0: collision-box edge distance, rounded tofloat by590d25.
+inline float resourceEdgeDistance(float x,float y,float ax,float ay,float bx,float by) {
+    const float dx=std::max(0.0f,float(std::abs(double(x))-double(ax)-double(bx)));
+    const double dy=std::max(0.0,std::abs(double(y))-double(ay)-double(by));
+    return float(std::sqrt(double(dx)*dx+dy*dy));
+}
+
 // Original57deb0 reads four sticky fields, not a current-visibility query.
 struct AiResourceKnowledge {
     std::array<bool,4> found{}; // food, carbon, ore, nova
