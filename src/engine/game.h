@@ -1756,6 +1756,8 @@ private:
     bool aiBuildPositionRejected(int player,int prototype,float x,float y) const;
     void registerAiBuildPosition(const Object &object);
     bool chooseAiBuildPosition(int player,const dat::Unit&,float &x,float &y);
+    uint32_t nearestAiBuilder(int player,float x,float y);
+    void resumeAiConstruction(int player);
     uint32_t chooseAiBuildWorker(int player,const dat::Unit&,float x,float y);
     void updateAiBuildRequests(int player);
     void failAiBuildRequest(int player,int sequence,int code,float x,float y);

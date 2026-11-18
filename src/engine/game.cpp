@@ -15395,6 +15395,7 @@ void Game::updateAi(int player,float dt) {
         state.processedAttackMemoryVictims.clear();
         updateAiBuildRequests(player);
         updateAiMilitary(player);
+        resumeAiConstruction(player);
         // Original59ddf2 ends same-pass worker reservations after tactical dispatch.
         state.economy.pendingCivilianAssignments.clear();
     }

@@ -84,7 +84,7 @@ bool Game::chooseAiBuildPosition(int player,const dat::Unit &unit,float &x,float
     return false;
 }
 
-uint32_t Game::chooseAiBuildWorker(int player,const dat::Unit &unit,float x,float y) {
+uint32_t Game::nearestAiBuilder(int player,float x,float y) {
     const auto &economy=aiPlayers_[size_t(player)].economy;
     std::vector<AiBuilderCandidate> candidates;
     for(int32_t id:economy.civilianIds) {
@@ -107,8 +107,13 @@ uint32_t Game::chooseAiBuildWorker(int player,const dat::Unit &unit,float x,floa
         return geniePointFootprintDistance(float(mapSize_)-worker.y,worker.x,float(int(float(mapSize_)-y)),float(int(x)),
             worker.unit->collisionSize[1],worker.unit->collisionSize[0]);
     });
-    if(id<0)return 0;
-    const auto *worker=findObject(uint32_t(id));
+    return id<0?0:uint32_t(id);
+}
+
+uint32_t Game::chooseAiBuildWorker(int player,const dat::Unit &unit,float x,float y) {
+    const auto id=nearestAiBuilder(player,x,y);
+    if(!id)return 0;
+    const auto *worker=findObject(id);
     // shortcut: Native synchronous path solving supplies the original direct
     // reach/path-service provider. It runs AFTER original worker selection.
     // Original initial4bd5b0 uses zone reachability; transport-specific23c
@@ -130,6 +135,49 @@ uint32_t Game::chooseAiBuildWorker(int player,const dat::Unit &unit,float x,floa
         return 0;
     }
     return uint32_t(id);
+}
+
+// Tactical phase 15 (59f2a6) revisits the existing foundation, independently of BuildAI requests.
+void Game::resumeAiConstruction(int player) {
+    auto &state=aiPlayers_[size_t(player)];
+    const auto cap=state.strategicNumbers.find(4);
+    if(cap==state.strategicNumbers.end() || cap->second<=0)return;
+    const auto required=state.strategicNumbers.find(167);
+    if(gameTime_<90 && required!=state.strategicNumbers.end() && required->second>0) {
+        const auto mask=sharedSightMask(player);
+        const auto explored=std::count_if(observedTiles_.begin(),observedTiles_.end(),
+            [mask](uint16_t tile){return (tile&mask)!=0;});
+        if(observedTiles_.empty() || 100*size_t(explored)/observedTiles_.size()<size_t(required->second))return;
+    }
+    std::unordered_set<uint32_t> staffed;
+    int builders=0,wallBuilders=0;
+    for(auto id:state.economy.civilianIds) {
+        const auto *worker=findObject(id);
+        if(!worker || !worker->active || worker->player!=player || !worker->constructionTargetId)continue;
+        staffed.insert(worker->constructionTargetId);
+        if(++builders>=cap->second)return;
+        const auto *site=findObject(worker->constructionTargetId);
+        if(site && site->unit->cls==6)++wallBuilders;
+    }
+    for(auto id:state.economy.depotIds) {
+        const auto *site=findObject(id);
+        if(!site || !site->active || site->player!=player || !site->underConstruction)continue;
+        if(site->unit->id!=276 && (staffed.count(site->spawnId) || (site->unit->cls==6 && wallBuilders>=2)))continue;
+        const auto workerId=nearestAiBuilder(player,site->x,site->y);
+        if(!workerId)continue;
+        auto *worker=findObject(workerId);
+        // The shared movement provider checks the real foundation's footprint.
+        float x=0,y=0;
+        if(!freeInteractionPoint(*worker,*site,.35f*.6f,x,y))interactionPoint(*worker,*site,.35f,x,y);
+        std::vector<std::array<float,2>> path;
+        if(!findPath(*worker,x,y,path,site,.35f))continue;
+        state.economy.pendingCivilianAssignments.push_back(int32_t(workerId));
+        localCommands_.enqueue([this,player,workerId,id] {
+            auto *worker=findObject(workerId);auto *site=findObject(id);
+            if(worker && worker->active && worker->player==player && site)assignBuilder(*worker,*site);
+        });
+        return;
+    }
 }
 
 void Game::updateAiBuildRequests(int player) {

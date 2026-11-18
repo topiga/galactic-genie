@@ -40,6 +40,21 @@
     check(game.aiPendingBuildsForTesting(1,70)==0,"Original completion acknowledgement releases pending prototype");
     check(game.admitAiBuildForTesting(1,prefab),"A later request is admitted after construction completes");
 
+    reset();
+    check(game.loadAiSourceForTesting(1,"replacement-builder",
+        "(defrule (true) => (set-strategic-number sn-cap-civilian-builders 2) (disable-self))",{},&error),error.c_str());
+    check(game.admitAiBuildForTesting(1,prefab),"Admit a shelter before its worker is lost");
+    game.updateAiBuildRequestsForTesting(1);
+    game.update(0,{});
+    foundations=prefabFoundations();
+    check(foundations.size()==1,"Replacement fixture creates one original shelter");
+    const auto orphan=foundations.front();
+    const auto firstBuilder=game.constructionBuilderId(orphan);
+    check(firstBuilder && game.damageObjectForTesting(firstBuilder,10000),"Lose the assigned builder during construction");
+    for(int tick=0;tick<30*180 && game.aiPendingBuildsForTesting(1,70);++tick)game.update(1.f/30,{});
+    check(!game.aiPendingBuildsForTesting(1,70) && game.objectHitPoints(orphan)>0 && prefabFoundations().empty(),
+          "A surviving worker finishes the same shelter and acknowledges its request");
+
     reset();check(game.admitAiBuildForTesting(1,prefab),"Admit failure-and-retry fixture");
     game.updateAiBuildRequestsForTesting(1);
     for(const auto &cost:costs)if(cost.flag && cost.type>=0 && cost.amount>0)game.setResourceForTesting(1,cost.type,0);

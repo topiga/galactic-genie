@@ -7768,3 +7768,19 @@ values. Native scripts now see those two facts separately while the playable
 population remains capped. Run the optional full match with
 `swgb-skirmish-test <Data> --ai-duel`. Both sides run the packaged
 RandomGame personality. Player one still has the local human actor policy.
+
+### Replacement builders after a casualty
+
+In the two-script Arid replay, worker 2218 began shelter 2302 at 2,348 seconds
+and died at 2,360. Its foundation still had 442.7 HP at both 3,000 and 6,000
+seconds. The owner had 50 population and a completed unit waiting for housing.
+
+Clone Campaigns revisits existing foundations during tactical phase 15
+(59f2a6). Nine local executable controls cover a missing or present builder,
+the civilian builder cap, completed sites, the class-6 worker limit, prototype
+276, worker lookup and command rejection. The native pass reuses the economy
+registry, builder selection and shared construction action on the surviving
+foundation. A gameplay check kills the assigned builder and verifies completion
+of the same object and acknowledgement of its original construction request.
+The native tactical cadence, path provider and registry ordering remain
+approximations. Destruction of a foundation is a separate event.
