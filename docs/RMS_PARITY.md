@@ -8077,3 +8077,24 @@ game counted 3,794 landed attacks. A repeat after the building-type check
 produced identical checkpoint output through victory. This was 915.375 s
 earlier than the Windows match that supplied the clock. In the previous
 native comparison both centers were still standing at the end of that clock.
+
+The fresh Windows match also finished with a P3 victory. Its clock froze
+at 4,388.114 s (1:13:08 on the Achievements screen). P2 lost its Command
+Center and P3 kept its own. The two Windows finishes on this scenario were
+403.019 s apart. The native recorded-clock finish preceded both.
+
+A third Windows opening tracked the same eight Banthas by object ID and
+position. P3's four animals came within four tiles of its Command Center
+by 15.8 s. P2 captured all four of its animals in the 13.5 s sample, and
+all four came within four tiles of its center by 32.4 s. Each animal moved
+at least seven tiles from its spawn in this opening. In the native replay
+all eight stayed at their spawn coordinates for the entire 167 s probe.
+The scout route and the movement order given to captured livestock can
+therefore be compared independently of worker gather and deposit rates.
+
+With fixed 30 Hz updates, P2 bought Tech Level 2 at 1,183.333 s and
+finished at 1,283.367 s. P3 bought it at 1,330.000 s and finished at
+1,430.033 s. At the 9,000 s checkpoint (over twice the longer Windows
+match), both centers were standing with 3,605 landed attacks. The same
+scenario and session seed can therefore yield different research order and
+match duration under different simulation schedules.
