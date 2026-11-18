@@ -36,7 +36,7 @@
 #include "world_rng_checks.h"
 #include "local_simulation_clock_checks.h"
 
-static void civilizationBonusChecks(swgb::Assets &assets) {
+[[gnu::noinline]] static void objectReferenceFixtureChecks(swgb::Assets &assets) {
     gatherArithmeticChecks();
     gatherResourceHealthChecks(assets);
     baseObjectDamageChecks(assets);
@@ -50,6 +50,9 @@ static void civilizationBonusChecks(swgb::Assets &assets) {
     targetSelectionChecks();
     targetSelectionGameplayChecks(assets);
     hitReselectionGameplayChecks(assets);
+}
+
+[[gnu::noinline]] static void objectVisibilityFixtureChecks(swgb::Assets &assets) {
     runMovementActionChecks();
     movementActionGameplayChecks(assets);
     frozenTargetVisibilityChecks(assets);
@@ -58,6 +61,9 @@ static void civilizationBonusChecks(swgb::Assets &assets) {
     hitPointEffectChecks(assets);
     combinedUpgradeChecks(assets);
     upgradeRngChecks(assets);
+}
+
+[[gnu::noinline]] static void simulationSchedulingFixtureChecks(swgb::Assets &assets) {
     objectAnimationLifecycleChecks(assets);
     targetCommandQueueChecks(assets);
     hudCommandQueueChecks(assets);
@@ -66,6 +72,9 @@ static void civilizationBonusChecks(swgb::Assets &assets) {
     localSimulationClockChecks();
     localSimulationChecks(assets);
     worldRngChecks(assets);
+}
+
+[[gnu::noinline]] static void sessionStartupFixtureChecks(swgb::Assets &assets) {
     alliedBonusChecks(assets);
     multiownerBonusChecks(assets);
     rmsSessionPlayerChecks(assets);
@@ -73,6 +82,14 @@ static void civilizationBonusChecks(swgb::Assets &assets) {
     rmsSessionStartChecks(assets);
     rmsMatchChecks(assets);
     startingAgeChecks(assets);
+}
+
+// Separate fixture batches keep sanitizer stack frames below the macOS limit.
+[[gnu::noinline]] static void civilizationBonusChecks(swgb::Assets &assets) {
+    objectReferenceFixtureChecks(assets);
+    objectVisibilityFixtureChecks(assets);
+    simulationSchedulingFixtureChecks(assets);
+    sessionStartupFixtureChecks(assets);
     const int units[]={1212,1212,933,579,1208,933,104,933};
     const int attributes[]={101,100,1,13,12,1,100,2};
     const float expected[]={90,50,101,110,103,105,90,105};
@@ -130,7 +147,7 @@ static void civilizationBonusChecks(swgb::Assets &assets) {
     std::puts("PASS: original civilization effects, directional startup alliances, duplicate teams and research order");
 }
 
-static void civilizationChecks(swgb::Assets &assets,swgb::SoftRenderer &renderer) {
+[[gnu::noinline]] static void civilizationChecks(swgb::Assets &assets,swgb::SoftRenderer &renderer) {
     civilizationBonusChecks(assets);
     swgb::Game game(assets);std::string error;
     for(int civ=1;civ<=8;++civ) {

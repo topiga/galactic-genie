@@ -6,11 +6,19 @@ static void pointMoveChecks(swgb::Assets &assets) {
     scenario.map.width=scenario.map.height=32;
     scenario.map.tiles.resize(32*32);
     scenario.nextUnitId=1;
+    scenario.playerSlotCount=1;
+    scenario.players[0].active=true;
+    scenario.players[0].human=true;
+    scenario.players[0].civilization=1;
+    auto &workerType=const_cast<swgb::dat::DatFile &>(assets.dat()).civs[1].units[83];
+    struct Restore {
+        swgb::dat::Unit &unit;float x,y;
+        ~Restore(){unit.collisionSize[0]=x;unit.collisionSize[1]=y;}
+    } restore{workerType,workerType.collisionSize[0],workerType.collisionSize[1]};
+    workerType.collisionSize[0]=.5f;workerType.collisionSize[1]=.25f;
+    // Startup snapshots effective prototypes; author the fixture before it runs.
     swgb::Game game(assets);std::string error;
     check(game.initScenario(scenario,&error),error.c_str());
-    auto &workerType=const_cast<swgb::dat::DatFile &>(assets.dat()).civs[1].units[83];
-    const float oldX=workerType.collisionSize[0],oldY=workerType.collisionSize[1];
-    workerType.collisionSize[0]=.5f;workerType.collisionSize[1]=.25f;
     const auto worker=game.spawnObjectForTesting(1,83,1,10,10);
     check(worker!=0,"Independent point-move fixture");
     auto moving=[&](uint32_t id) {
@@ -27,7 +35,6 @@ static void pointMoveChecks(swgb::Assets &assets) {
     const bool outsideMoves=moving(worker);
     game.groupMoveForTesting({worker},10.5f,10.2501f);
     const bool shortAxisMoves=moving(worker);
-    workerType.collisionSize[0]=oldX;workerType.collisionSize[1]=oldY;
     check(previousPath && cornerComplete && stayed,
           "Original point action completes at rectangular footprint corner and cancels old path");
     check(outsideMoves && shortAxisMoves,"Point just beyond either footprint axis still requests movement");

@@ -672,9 +672,18 @@ int main(int argc, char **argv) {
         check(positioned.empty(),"Distant alarm uses original minus30dB cutoff");
         game.setSpatialInterfaceSoundPlayer({});
 
+        swgb::Scenario sightScenario;
+        sightScenario.map.width=sightScenario.map.height=64;
+        sightScenario.map.tiles.resize(64*64);
+        sightScenario.nextUnitId=1;sightScenario.playerSlotCount=3;sightScenario.civilizations.fill(1);
+        for(int player=0;player<3;++player) {
+            auto &slot=sightScenario.players[size_t(player)];
+            slot.active=true;slot.human=true;slot.civilization=1;
+            slot.diplomacy.fill(3);slot.diplomacy[size_t(player+1)]=0;
+        }
         {
             swgb::Game sight(assets);
-            check(sight.initSkirmish(0x5A17,&error),error.c_str());
+            check(sight.initScenario(sightScenario,&error),error.c_str());
             sight.setLocalPlayerForTesting(3);
             check(!sight.worldSoundVisibleForTesting(20.5f,20.5f),"Enemy ownership does not grant audio sight");
             const auto scout=sight.spawnObjectForTesting(1,83,3,20.5f,20.5f);
@@ -717,7 +726,7 @@ int main(int argc, char **argv) {
         }
         {
             swgb::Game fog(assets);
-            check(fog.initSkirmish(0x5A17,&error),error.c_str());
+            check(fog.initScenario(sightScenario,&error),error.c_str());
             fog.setLocalPlayerForTesting(3);fog.setInitiallyExploredForTesting(false);
             const auto scout=fog.spawnObjectForTesting(1,83,3,20.5f,20.5f);
             const auto building=fog.spawnObjectForTesting(1,109,2,21.5f,20.5f);
@@ -734,7 +743,7 @@ int main(int argc, char **argv) {
         }
         {
             swgb::Game allied(assets);
-            check(allied.initSkirmish(0x5A17,&error),error.c_str());
+            check(allied.initScenario(sightScenario,&error),error.c_str());
             allied.setLocalPlayerForTesting(3);allied.setInitiallyExploredForTesting(false);
             const auto allyScout=allied.spawnObjectForTesting(1,83,2,30.5f,30.5f);
             check(allyScout!=0,"Allied sight fixture");

@@ -3,6 +3,11 @@
 
 static void aiTimerChecks(swgb::Assets &assets) {
     swgb::Game game(assets); std::string error;
+    // PER runs on owner callbacks, independently of elapsed simulation time.
+    const auto advanceAndEvaluate=[&](float dt) {
+        game.update(dt,{});
+        for(int i=0;i<20;++i)game.update(0,{});
+    };
     check(game.init(0x5A17,64,&error,1,1),error.c_str());
     const std::string source=
         "(defconst t-test 1)\n"
@@ -18,18 +23,18 @@ static void aiTimerChecks(swgb::Assets &assets) {
     check(game.loadAiSourceForTesting(1,"original-timer-pattern",source,{},&error),error.c_str());
     check(game.loadAiSourceForTesting(2,"timer-isolation",
           "(defrule (timer-triggered 1) => (set-goal 701 1))",{},&error),error.c_str());
-    game.update(0,{});
-    game.update(.75f,{});
+    advanceAndEvaluate(0);
+    advanceAndEvaluate(.75f);
     game.updatePaused(10,{});
     check(game.aiGoalForTesting(1,701)==0,"AI timers wait for simulation time and freeze on pause");
-    game.update(.25f,{});
+    advanceAndEvaluate(.25f);
     check(game.aiGoalForTesting(1,701)==1 && game.aiGoalForTesting(1,702)==0,
           "Timer expires at deadline; disable/re-enable starts a fresh interval");
-    game.update(1.f,{});
+    advanceAndEvaluate(1.f);
     check(game.aiGoalForTesting(1,702)==0 && game.aiGoalForTesting(1,703)==1 &&
           game.aiGoalForTesting(1,704)==1 && game.aiGoalForTesting(1,705)==1,
           "Triggered timers stay latched across rules; re-enable overwrites an active deadline");
-    game.update(1.f,{});
+    advanceAndEvaluate(1.f);
     check(game.aiGoalForTesting(1,702)==1 && game.aiGoalForTesting(1,706)==1,
           "Restarted timer expires after its new interval and disabling clears triggered state");
     check(game.aiGoalForTesting(2,701)==0,"AI timers belong to individual players");
@@ -37,12 +42,12 @@ static void aiTimerChecks(swgb::Assets &assets) {
         "(defrule (true) => (enable-timer 0 0) (enable-timer 21 0) (enable-timer -1 0) (enable-timer 2 -1) (enable-timer 4 0) (disable-self))\n"
         "(defrule (timer-triggered 4) (not (timer-triggered 0)) (not (timer-triggered 21)) (not (timer-triggered -1)) (not (timer-triggered 2)) => (set-goal 707 1) (disable-self))\n";
     check(game.loadAiSourceForTesting(1,"timer-bounds",invalid,{},&error),error.c_str());
-    game.update(0,{});
+    advanceAndEvaluate(0);
     check(game.aiGoalForTesting(1,707)==1,"Zero delay is immediate; invalid IDs and negative delays are rejected");
     check(game.init(0x5A17,64,&error,1,1),error.c_str());
     check(game.loadAiSourceForTesting(1,"timer-reset",
           "(defrule (timer-triggered 4) => (set-goal 707 1))",{},&error),error.c_str());
-    game.update(10,{});
+    advanceAndEvaluate(10);
     check(game.aiGoalForTesting(1,707)==0,"New games clear AI timers");
     check(game.loadAiSourceForTesting(1,"original-nand-pattern",
           "(defrule (nand (true) (true)) => (set-goal 708 1))"
@@ -52,7 +57,7 @@ static void aiTimerChecks(swgb::Assets &assets) {
           "(defrule (nand (unimplemented-fact) (true)) => (set-goal 712 1))"
           "(defrule (nand (unimplemented-fact) (false)) => (set-goal 713 1))"
           "(defrule (nand (true) (not (false))) => (set-goal 714 1))",{},&error),error.c_str());
-    game.update(0,{});
+    advanceAndEvaluate(0);
     check(game.aiGoalForTesting(1,708)==0 && game.aiGoalForTesting(1,709)==1 &&
           game.aiGoalForTesting(1,710)==1 && game.aiGoalForTesting(1,711)==1 &&
           game.aiGoalForTesting(1,712)==0 && game.aiGoalForTesting(1,713)==1 &&

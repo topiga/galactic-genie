@@ -2,9 +2,18 @@
 #pragma once
 
 static void memoryInspectionChecks(swgb::Assets &assets,swgb::SoftRenderer &renderer) {
+    swgb::Scenario scenario;
+    scenario.map.width=scenario.map.height=64;
+    scenario.map.tiles.resize(64*64);
+    scenario.nextUnitId=1;scenario.playerSlotCount=3;scenario.civilizations.fill(1);
+    for(int i=0;i<3;++i) {
+        scenario.players[i].active=true;scenario.players[i].human=true;
+        scenario.players[i].civilization=1;
+        scenario.players[i].diplomacy.fill(3);scenario.players[i].diplomacy[size_t(i+1)]=0;
+    }
     swgb::Game game(assets);
     std::string error;
-    check(game.initSkirmish(0x5A17,&error),error.c_str());
+    check(game.initScenario(scenario,&error),error.c_str());
     game.setLocalPlayerForTesting(3);game.setClassicHud(true);
     const auto building=game.spawnObjectForTesting(1,109,2,30.5f,30.5f);
     const auto scout=game.spawnObjectForTesting(1,83,3,29.5f,30.5f);
@@ -45,11 +54,11 @@ static void memoryInspectionChecks(swgb::Assets &assets,swgb::SoftRenderer &rend
     game.updatePaused(0,{});game.render(renderer,960,544);
     check(game.selectedObjectCount()==0 && !game.rememberedForTesting(building),
           "Revisiting the destroyed site removes the stale building memory");
-    check(game.initSkirmish(0x5A17,&error),error.c_str());game.render(renderer,960,544);
+    check(game.initScenario(scenario,&error),error.c_str());game.render(renderer,960,544);
     check(game.selectedObjectCount()==0,"New match clears memory inspection");
     const auto target=game.spawnObjectForTesting(1,109,2,30.5f,30.5f);
     const auto observer=game.spawnObjectForTesting(1,83,3,29.5f,30.5f);
-    const auto soldier=game.spawnObjectForTesting(1,game.objectUnitId(11),3,20.5f,30.5f);
+    const auto soldier=game.spawnObjectForTesting(1,307,3,20.5f,30.5f);
     game.setLocalPlayerForTesting(3);game.setClassicHud(true);
     game.setDiplomacyForTesting(3,2,3);game.setAttackModeForTesting(soldier,3);
     game.lookAt(30.5f,30.5f);game.render(renderer,960,544);
