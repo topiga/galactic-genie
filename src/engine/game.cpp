@@ -11589,6 +11589,29 @@ bool Game::detourAround(Object &object, float goalX, float goalY) {
     const int goalCY = (int)std::lround((ty - originY) / kStep);
     std::vector<uint8_t> open(kSize * kSize, 0);
     const float radius = collisionRadius(object);
+    // A local detour must preserve the mobile obstacles used by its search.
+    // Static-only string pulling would straighten the path through the blocker.
+    const auto clearDetourSegment = [&](float ax, float ay, float bx, float by) {
+        if (!segmentClear(object, ax, ay, bx, by)) return false;
+        const float dx = bx - ax, dy = by - ay;
+        const float lengthSquared = dx * dx + dy * dy;
+        for (uint32_t index : mobileObjectIndices_) {
+            const Object &other = objects_[(size_t)index];
+            if (&other == &object || !other.active || other.hidden ||
+                isAirUnit(other) != isAirUnit(object)) continue;
+            const float ox = ax - other.x, oy = ay - other.y;
+            const float separation = radius + collisionRadius(other) + 0.05f;
+            const float startSquared = ox * ox + oy * oy;
+            const float direction = ox * dx + oy * dy;
+            // Permit monotonically separating from an existing overlap.
+            if (startSquared < separation * separation && direction >= 0) continue;
+            const float t = lengthSquared > 0
+                ? std::max(0.0f, std::min(1.0f, -direction / lengthSquared)) : 0.0f;
+            const float nearX = ox + t * dx, nearY = oy + t * dy;
+            if (nearX * nearX + nearY * nearY < separation * separation) return false;
+        }
+        return true;
+    };
     for (int cy = 0; cy < kSize; cy++)
         for (int cx = 0; cx < kSize; cx++) {
             float x, y;
@@ -11647,6 +11670,9 @@ bool Game::detourAround(Object &object, float goalX, float goalY) {
             if (!open[ni]) continue;
             if (d[0] && d[1] && (!open[cy * kSize + nx] || !open[ny * kSize + cx]))
                 continue;
+            float ax, ay, bx, by;
+            cellPos(cx, cy, ax, ay);cellPos(nx, ny, bx, by);
+            if (!clearDetourSegment(ax, ay, bx, by)) continue;
             const float nc = cost[n.i] + ((d[0] && d[1]) ? 1.41421356f : 1.0f);
             if (nc >= cost[ni]) continue;
             cost[ni] = nc;
@@ -11669,7 +11695,7 @@ bool Game::detourAround(Object &object, float goalX, float goalY) {
     for (size_t i = 0; i < detour.size();) {
         size_t far = i;
         for (size_t j = detour.size(); j-- > i + 1;)
-            if (segmentClear(object, fromX, fromY, detour[j][0], detour[j][1])) {
+            if (clearDetourSegment(fromX, fromY, detour[j][0], detour[j][1])) {
                 far = j;
                 break;
             }
@@ -11687,10 +11713,10 @@ bool Game::detourAround(Object &object, float goalX, float goalY) {
     const std::array<float, 2> detourEnd =
         thinned.empty() ? std::array<float, 2>{object.x, object.y} : thinned.back();
     while (rest.size() > 1 &&
-           segmentClear(object, detourEnd[0], detourEnd[1], rest[1][0], rest[1][1]))
+           clearDetourSegment(detourEnd[0], detourEnd[1], rest[1][0], rest[1][1]))
         rest.erase(rest.begin());
     if (!rest.empty() &&
-        !segmentClear(object, detourEnd[0], detourEnd[1], rest.front()[0],
+        !clearDetourSegment(detourEnd[0], detourEnd[1], rest.front()[0],
                       rest.front()[1]))
         return false;
     object.path = thinned;

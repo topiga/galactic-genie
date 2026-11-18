@@ -414,6 +414,10 @@ public:
     bool reissueExploreForTesting(uint32_t id) {
         auto *o=findObject(id);return o && reissueAiExploreDestination(*o);
     }
+    std::vector<std::array<float,2>> localDetourForTesting(uint32_t id,float x,float y) {
+        auto *object=findObject(id);
+        return object && detourAround(*object,x,y)?object->path:std::vector<std::array<float,2>>{};
+    }
     std::array<float,3> movementProgressForTesting(uint32_t id) const {
         const auto *o=findObject(id);
         return o?std::array<float,3>{o->moveBestDistance,o->moveStallTime,o->detourTime}:std::array<float,3>{};
