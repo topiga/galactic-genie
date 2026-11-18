@@ -1,6 +1,6 @@
 # Original-experience target and verification
 
-Updated 2026-11-06. The product target is the original disk-launcher and Clone Campaigns experience on native macOS, followed by optional EF-inspired graphics improvements. A completed custom skirmish is an engine milestone, not completion of that target.
+Updated 2026-11-18. The product target is the original disk-launcher and Clone Campaigns experience on native macOS, followed by optional EF-inspired graphics improvements. A completed custom skirmish is an engine milestone, not completion of that target.
 
 ## Visual references supplied by the user
 
@@ -13,7 +13,7 @@ The EF launcher is not the original disk launcher. The Sikarugir wrapper launche
 
 Reference images are retained locally under `~/Library/Application Support/Galactic Genie/Research/` as `disk-launcher-reference.png` and `clone-campaigns-menu-reference.png`. Do not bundle these screenshots as interface assets or publish them. Obtain presentation assets from the user's installed game and keep those outside the source repository.
 
-## Verification performed
+## Initial verification — 6 November 2026
 
 Fresh runs of the existing built executables on 2026-11-06 returned exit code 0 for all three checks:
 
@@ -39,16 +39,35 @@ This is a native C++ engine based on Galactic Genie, using the original installe
 | Setup | Custom64 map with eight civilizations; packaged Arid/Tiny120 with two Empire players; reveal, population and victory choices | General packaged-map selection, seeds, player counts/teams, starting settings and exact original setup behavior |
 | HUD/input | Original panel/icon/font assets, command positions, formation/garrison controls, minimap, additive selection and control groups | Remaining unit abilities, hotkey editor, all selected-unit combinations and pixel/interaction comparisons |
 | Match lifecycle | Pause allows inspection/camera but blocks orders; confirmed restart/resign; win/loss and return to menu | Save/load, complete original results/statistics and campaign progression |
-| Gameplay | Gathering, construction, queues/research, combat, healing, repair, garrison/alarm and fog memory have regression coverage; completed custom-map matches are verified | Complete small matches using the original personality, original path/action timing, remaining specialized abilities and full defeat/victory semantics |
-| Original AI | Packaged PER loading with civilization/setup context; recovered facts, military/scouting controllers and worker allocation connected | Full24-phase scheduling, all command acknowledgements, construction placement, economic lifecycle and unsupported facts/actions |
+| Gameplay | Gathering, construction, queues/research, combat, healing, repair, garrison/alarm and fog memory have regression coverage; native Arid Conquest victories with the original personality are verified on four seeds | Full human UI playthroughs, original path/action timing, remaining specialized abilities and full defeat/victory semantics |
+| Original AI | Arid Conquest loads the packaged original personality through menu startup; recovered facts, military/scouting controllers and worker allocation connected | Full24-phase scheduling, all command acknowledgements, construction placement, economic lifecycle and unsupported facts/actions |
 | RMS/startup | Original-script pipeline with extensive executable-backed terrain/object/startup controls; Arid connected to desktop | Broader seed/map/civilization/player combinations with complete startup RNG and session-state comparisons; no universal1:1 claim |
 | Rendering/audio | Native SDL frontend and software renderer; original terrain/sprite/UI assets, fog edges, positional effects and streamed music | Original-resolution fidelity, remaining renderer/audio edge cases, window/display controls and full reference comparison |
 | EF/base SWGB | Clone Campaigns is the current data/behavior reference | Separate validated EF and base-game profiles; importing artwork alone does not establish rules compatibility |
 | Multiplayer/enhanced graphics | Deferred | Windows-compatible multiplayer, Metal and optional enhanced art after core fidelity |
 
-The immediate acceptance sequence is: finish shared economy/construction/movement controllers; complete original-personality small matches; broaden seed-matched session comparisons; then extend frontend/profile coverage. There is no defensible whole-project completion percentage yet.
+The immediate acceptance sequence is: finish shared economy/construction/movement controllers; compare completed original-personality matches with Windows; broaden seed-matched session comparisons; then extend frontend/profile coverage. There is no defensible whole-project completion percentage yet.
 
 Do not treat screen resemblance as feature completion. Every enabled control must work; unsupported legacy destinations must be visibly unavailable. The Zone reference should not be wired to an unverified modern destination. Multiplayer remains deferred.
+
+## Overnight verification — 18 November 2026
+
+- **Playable original-AI opening:** Arid Conquest loads the installed `RandomGame.per` through normal startup. Four seeds finish against an idle human at 3345.367, 2528.300, 4562.733 and 2680.934 simulated seconds, using normal starting resources and paid production. The menu currently exposes seed 1 with two Empire players. This does not prove complete Windows match equivalence.
+- **Shared economy and placement fixes:** corrected upgraded-prototype counting, connected original worker/build queues and food/nova/carbon/ore placement scoring, preserved planned-building history, and improved deliveries around crowded depots. Original-executable controls and native gameplay fixtures cover these changes; native path/occupancy providers remain adapters.
+- **Fresh map comparisons:** three additional Arid seeds match the original full-stage generator on all 6,071 ordered live object records, 129,600 terrain/elevation/slope bytes and final RNG states. These controls also caught and fixed premature rounding of worker startup animation delays; the exact imported timer is now a regression assertion. The original harness retains explicit floating-point and callback-provider boundaries.
+- **Broader native matches:** normal Arid seed 1 also completes at the exposed population limits of 25 and 200. A separate two-sided PER stress test reaches Tech Level 4 and 8,877 landed attacks but no winner within 360,000 simulation updates (about 12,000 seconds). That diagnostic attaches the personality to the human owner without changing its actor policy; it is neither a proven deadlock nor an original two-computer lobby comparison.
+- **Rendering:** reuse the already-built frame visibility snapshot in the world and minimap. Six before/after screenshots are byte-identical. Three paired headless trials reduced mean world/HUD CPU render time from a median 31.1207 ms to 5.2990 ms (5.87×); SDL presentation and platform text rendering are excluded.
+- **Match clock:** derive reported match time from the existing session clock instead of accumulating another float. The old reporting counter lost about 24 seconds over the long stress run; the main simulation clock was already separate. Direct-step and local integer-clock tests cover drift, pause and rebasing. Earlier logs retain their old reported times.
+- **Regression checks:** the complete asset-dependent ASan/UBSan suite and all 41 asset-independent algorithm suites pass. Separate custom-map Conquest tests finish for all eight civilizations, and a scripted player wins through ordinary gathering, construction, paid recruitment and combat. The CLI combat/RMS checks and rebuilt desktop navigation/audio smoke also pass.
+- **Evidence boundaries:** the native match results are not seed-matched Windows full games. Original-executable emulation uses explicitly recorded provider boundaries. QuickDesk remained disconnected and silent; no fresh interactive Windows playthrough was performed. Audio smoke used dummy output; previous audible confirmation comes from the user.
+
+Local evidence is retained outside the checkout in `~/.local/share/swgb/galactic-genie-build/` and `~/Library/Application Support/Galactic Genie/Research/windows-reference/`. Key retained records are `native-original-ai-all-depot-grids-2026-11-18.json`, `native-render-visibility-performance-2026-11-18.json`, `overnight-final-full-skirmish.log`, `overnight-final-original-ai-matrix.log`, `food-nova-algorithms.log`, `overnight-final-desktop-smoke.log`, `rms-arid-fresh-comparison-2026-11-18.json`, and `native-population-boundaries-and-duel-2026-11-18.json`.
+
+A fresh native-window keyboard check reached Arid Conquest from the disk launcher, panned while paused, restarted, resigned and returned to the main menu. The test app was closed afterward. Automated mouse actions did not reliably reach the app in this computer-control session, so this is not a fresh mouse-playthrough claim. Sound was not independently listened to.
+
+The long stress diagnostic isolated a siege route stalled for roughly 838 simulated seconds, an anti-air-only surviving group retaining a ground target, and the explicitly unsupported all-Jedi group-targeting branch. Anti-air units correctly cannot attack that building; the group replanning behavior still needs original comparison. These are focused next investigations, not evidence that every long match deadlocks.
+
+Remaining unsupported original-AI operations are logged rather than silently claimed as implemented: difficulty retreat behavior, town-under-attack callbacks, commodity trading, walls/gates, holocron-control events, taunts and chat. The full original 24-phase scheduler and defense-group/path callbacks remain priorities before declaring original AI timing or complete-game parity.
 
 ## Implementation constraints
 

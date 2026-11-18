@@ -1,13 +1,15 @@
 # Galactic Genie
 
-For the native macOS skirmish frontend, controls and tests, see [DESKTOP.md](DESKTOP.md).
+This fork currently targets native macOS skirmishes with the original Clone Campaigns assets. For launch instructions, controls and verified matches, see [DESKTOP.md](DESKTOP.md); for the current whole-project status and remaining parity work, see [EXPERIENCE.md](EXPERIENCE.md#current-status-and-acceptance-order--18-november-2026).
 
 
-A from-scratch, portable reimplementation of the Genie engine, as used by *Star Wars: Galactic Battlegrounds Saga*. The current targets are PS Vita and PC. It loads the original Clone Campaigns data files from your own copy of the game; no game assets are included in this repository.
+A from-scratch, portable reimplementation of the Genie engine, as used by *Star Wars: Galactic Battlegrounds Saga*. The upstream targets are PS Vita and PC; those platforms have not been revalidated during this macOS work. It loads the original Clone Campaigns data files from your own copy of the game; no game assets are included in this repository.
 
-It is written clean-room style: file formats come from public documentation (openage, genieutils). Game behaviour is to be matched by observation, and by using Ghidra only to answer "how does X work" questions. Decompiled code is never copied into the tree.
+File-format work builds on public documentation from projects such as openage and genieutils. Behavior is reconstructed through controlled game comparisons and targeted binary analysis. Original executable controls are kept separate from the portable implementation; proprietary game files and extracted assets stay local.
 
-## Status: milestone 3 (simulation core, in progress)
+## Upstream baseline: milestone 3 (simulation core, in progress)
+
+The table below records the upstream baseline, not the current macOS acceptance checklist linked above.
 
 | Area | State |
 |---|---|
