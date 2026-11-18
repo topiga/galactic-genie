@@ -74,7 +74,7 @@ std::optional<AiTargetCandidate> buildAiGroupTargetMetric(
     float targetHp, float distance, bool sameRegion, int prototypeId, int unitClass,
     std::optional<AiTargetPriority> resolvedPriority = std::nullopt);
 
-enum class AiGroupTargetRetention { Retain, Reset, ResetAndStop };
+enum class AiGroupTargetRetention { Retain, Reset, ResetAndStop, NeedsPath, Redispatch };
 struct AiGroupRetainedTarget {
     bool resolved = true;
     int status = 2;
@@ -82,8 +82,11 @@ struct AiGroupRetainedTarget {
     bool allied = false, memberResolved = true;
     uint8_t visibility = 0, fogMode = 0;
     int unitType = 70;
+    uint32_t groupFlags = 0;
+    std::optional<int> pathResult; // Original4bd560: zero fails; every nonzero result succeeds.
 };
-// 5a31c0, without flag0's additional path/redispatch branch. Reset clears target
+// 5a31c0. Flag0 requests path validation only after ordinary retention gates.
+// NeedsPath leaves state untouched until the caller can supply that provider. Reset clears target
 // and initialization; ResetAndStop dispatches state1 before the caller restores
 // state2 when its prior target-list count was nonzero.
 AiGroupTargetRetention retainAiGroupTarget(const AiGroupRetainedTarget &);

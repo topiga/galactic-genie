@@ -198,6 +198,30 @@ static void militaryGameplayChecks(swgb::Assets &assets) {
             check(!game.attackTargetForTesting(one) && !game.attackTargetForTesting(two),"Deferred group Stop clears both attacks");
         }
     }
+    for(bool disconnected:{false,true}) {
+        check(game.initScenario(scenario,&error),error.c_str());
+        const auto attacker=game.spawnObjectForTesting(1,329,2,20,20);
+        const auto building=game.spawnObjectForTesting(1,109,1,24,20);
+        check(attacker && building && game.formAiMilitaryGroupsForTesting(2),"Idle retained target path fixture");
+        game.setAttackModeForTesting(attacker,3);
+        game.updateAiMilitaryForTesting(2,UINT32_MAX);game.update(0,{});
+        check(game.attackTargetForTesting(attacker)==building,"Initial group attack reaches the actor");
+        check(game.stopUnitForTesting(attacker),"Stop member without removing its group target");
+        if(disconnected) {
+            check(game.moveObjectForTesting(building,45,20),"Retained building crosses terrain regions");
+            for(int y=0;y<64;++y)for(int x=30;x<=34;++x)
+                check(game.setTerrainForTesting(x,y,1),"Create full water separator for land route");
+        }
+        game.updateAiMilitaryForTesting(2,UINT32_MAX);
+        const auto &retained=game.militaryGroupsForTesting(2).front();
+        check((retained.flags&1u)!=0,"Normal phase7 records the stopped group's idle flag");
+        check(retained.targetId==(disconnected?-1:int32_t(building)) && retained.state==(disconnected?1:2),
+              "Idle retained target resets only when its route is rejected");
+        check(game.stagedTacticalCountForTesting()==0,"Failed retained route does not enqueue Stop");
+        game.update(0,{});
+        check(game.attackTargetForTesting(attacker)==(disconnected?0:building),
+              "Successful retained route redispatches attack to the idle member");
+    }
     check(game.initScenario(scenario,&error),error.c_str());
     const auto searcher=game.spawnObjectForTesting(1,329,2,20,20);
     check(searcher && game.formAiMilitaryGroupsForTesting(2),"No-target group search fixture");

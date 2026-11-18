@@ -134,6 +134,10 @@ AiGroupTargetRetention retainAiGroupTarget(const AiGroupRetainedTarget &target) 
     if (!target.memberResolved || (target.unitType != 80 &&
         (!target.visibility || (target.visibility == 128 && !target.fogMode))))
         return AiGroupTargetRetention::Reset;
+    if(target.groupFlags&1u) {
+        if(!target.pathResult)return AiGroupTargetRetention::NeedsPath;
+        return *target.pathResult?AiGroupTargetRetention::Redispatch:AiGroupTargetRetention::Reset;
+    }
     return AiGroupTargetRetention::Retain;
 }
 

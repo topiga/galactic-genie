@@ -333,8 +333,24 @@ void Game::updateAiMilitaryTargets(int player,uint32_t budget) {
                 retained.hp=target->hitPoints;retained.allied=allied(target->player);
                 retained.visibility=visible(*target)?1:0;retained.unitType=target->unit->type;
             }
-            const auto decision=retainAiGroupTarget(retained);
-            if(decision==AiGroupTargetRetention::Retain)continue;
+            retained.groupFlags=group.flags;
+            auto decision=retainAiGroupTarget(retained);
+            if(decision==AiGroupTargetRetention::NeedsPath) {
+                // shortcut: Shared native direct-path/region provider replaces4bd560;
+                // unavailable same-region blocker/transport outcomes remain unsupported.
+                std::vector<std::array<float,2>> path;
+                const auto own=region(*first,*first),other=region(*first,*target);
+                if(own && other && *own!=*other)retained.pathResult=0;
+                else if(findPath(*first,target->x,target->y,path,target,group.targetRange))retained.pathResult=1;
+                decision=retainAiGroupTarget(retained);
+            }
+            if(decision==AiGroupTargetRetention::Redispatch) {
+                // Original59b160 opcode2 force1 reaches the same local group command;
+                // issueGroupAttack replaces eligible actors' actions, retaining native formation placement.
+                queueAiMilitaryAttack(player,group,*target);
+                continue;
+            }
+            if(decision==AiGroupTargetRetention::Retain || decision==AiGroupTargetRetention::NeedsPath)continue;
             if(decision==AiGroupTargetRetention::ResetAndStop)
                 for(int32_t id:group.members)queueAiMilitaryStop(player,id);
             group.targetId=-1;group.state=1;group.initialized=false;group.targetCandidates.clear();group.targetRanking={};group.targetContinuation={};

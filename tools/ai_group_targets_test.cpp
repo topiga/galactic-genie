@@ -131,6 +131,20 @@ int main() {
     retained.hp=.5f;check(retainAiGroupTarget(retained)==AiGroupTargetRetention::ResetAndStop,"Low HP dispatches Stop before first-member lookup");
     retained.hp=1;retained.memberResolved=true;check(retainAiGroupTarget(retained)==AiGroupTargetRetention::Retain,"Exact one HP retained");
     retained.allied=true;check(retainAiGroupTarget(retained)==AiGroupTargetRetention::ResetAndStop,"Allied retained target resets and stops");
+    retained.allied=false;
+    for(uint32_t flags:{40u,41u})for(int path:{0,1,2}) {
+        retained.groupFlags=flags;retained.pathResult=path;
+        const auto expected=flags==40?AiGroupTargetRetention::Retain:
+            path?AiGroupTargetRetention::Redispatch:AiGroupTargetRetention::Reset;
+        check(retainAiGroupTarget(retained)==expected,"Original six flag/path controls preserve zero versus any-nonzero semantics");
+    }
+    retained.pathResult.reset();
+    check(retainAiGroupTarget(retained)==AiGroupTargetRetention::NeedsPath,"Idle retention requires a resolved path provider");
+    retained.memberResolved=false;
+    check(retainAiGroupTarget(retained)==AiGroupTargetRetention::Reset,"Missing member resets before requesting path validation");
+    retained.memberResolved=true;retained.allied=true;
+    check(retainAiGroupTarget(retained)==AiGroupTargetRetention::ResetAndStop,"Allied target stops before path validation");
+
 
     // Original ranked-path controls: first rank attempted despite an expired host budget.
     AiTargetRanking ranking{{100,90,80},{2,0,1}};

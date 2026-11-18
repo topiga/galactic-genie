@@ -7523,3 +7523,18 @@ edges/corners. Focused military, movement, crowd and delivery regressions pass
 under ASan/UBSan in `siege-retention-check.log`. The long-match actor2477 remains
 a separate replay comparison. Local original evidence and reproducer details:
 `siege-overlap-movement-findings-2026-11-18.md`.
+
+### Retained military target after casualties (2026-11-18)
+
+Ten executed original controls distinguish member removal from idle-group path
+revalidation. `59ad00`/`5ad360` compact membership and remove empty groups; surviving
+groups preserve their target even when only anti-air units remain. `5a31c0` checks
+a route when flag bit0 is set: result zero resets without Stop, and any nonzero
+result reissues the group order. The native controller now performs that omitted
+branch, preserving ordinary target-validation order. It uses the existing native
+region/path and formation providers; unresolved same-region path failures remain
+unsupported. Pure tests and actual-asset idle-member redispatch/disconnected-target
+regressions pass with ASan/UBSan. This does not invent capability-based target
+resetting or claim full original path/formation parity. Evidence:
+`tactical-retained-target-casualty-findings-2026-11-18.md`; native test log:
+`siege-retention-check.log`.
