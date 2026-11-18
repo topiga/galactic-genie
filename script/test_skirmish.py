@@ -15,4 +15,5 @@ command = ['xcrun', 'clang++', '-std=c++17', '-O1', '-g', '-fsanitize=address,un
            '-fno-sanitize-recover=all', *[str(root/p) for p in sources], '-lz', '-o', str(build/'skirmish-test')]
 with (build/'test-build.log').open('w') as log:
     subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=180, check=True)
-subprocess.run([str(build/'skirmish-test'), str(game/'Data')], cwd=build, timeout=180, check=True)
+# Full RMS reference cases and sanitizer matches exceed the old smoke-test limit.
+subprocess.run([str(build/'skirmish-test'), str(game/'Data')], cwd=build, timeout=1800, check=True)
