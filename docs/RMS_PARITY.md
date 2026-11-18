@@ -8098,3 +8098,46 @@ finished at 1,283.367 s. P3 bought it at 1,330.000 s and finished at
 match), both centers were standing with 3,605 landed attacks. The same
 scenario and session seed can therefore yield different research order and
 match duration under different simulation schedules.
+
+### Bringing captured livestock home (seed 2)
+
+Scripted computer players now route newly captured idle livestock toward the
+nearest completed owned Command Center or Food Processing Center. The original
+owned-resource action searches these two building types by squared center
+distance and uses a strict footprint gap of more than 3 and less than 30 tiles
+for a fresh order. The native implementation dispatches when ownership changes.
+The worker's original child-action timing and its propagation of the order to
+nearby animals are still open. A gameplay test checks the nearer food depot
+and verifies that a human retains control of captured livestock.
+
+| Event (simulation seconds) | Windows | Native before | Native after |
+| --- | ---: | ---: | ---: |
+| P2 last starting Bantha within four tiles of home | 32.4 | none through 167 | 87.1 |
+| P3 last starting Bantha within four tiles of home | 15.8 | none through 167 | 18.3 |
+| P2 first food delivery | 64.6 | 148.2 | 122.9 |
+| P3 first food delivery | 46.9 | 49.8 | 42.8 |
+| P2 completes Tech Level 2 | 802.4 | never reached | 865.9 |
+| P3 completes Tech Level 2 | 714.1 | 1,109.2 | 1,097.2 |
+
+The Windows movement and economy columns come from the separate opening
+captures above. The native runs share the same recorded clock. The new native
+age purchases occurred at 765.9 and 997.1 s. P2's first farm foundation moved
+from 109.7 to 617.3 s (Windows 519.6 s). P3 still started a farm at 229.8 s
+while Windows P3 had none through 1,013 s.
+
+P2 scout 1963 starts at (38.5, 14.5) on both engines. At 3.0 s Windows
+sampled it at (32.0, 13.0), and by 6.0 s it was at (34.2, 6.8). At 2.855 s
+the native picker read (27, 13) as unexplored and in the current zone. It
+sent the scout there from (32.1, 13.0). This identifies an early decision at
+which to compare the Windows information grid, reachability and arrival
+notification. The position samples alone do not identify the Windows command.
+
+Two subsequent live Windows restarts read the four candidate cells directly.
+In the second capture, at 2.929 s the scout was exactly at (32, 13). The
+information byte for (27, 13) had changed from 255 to 0 and the player's
+explored bit was set there. By 3.155 s the information byte for (37, 3) was
+also 0, while the tile still had neither the player's visible bit nor its
+explored bit. This matches the original waypoint routine reserving a cell
+before the scout reaches it. The first capture showed the same sequence.
+Native selected (27, 13) while it was still unexplored. The first discrepancy
+to resolve is which tiles are marked explored at arrival.
