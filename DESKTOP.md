@@ -54,6 +54,20 @@ The second command builds with AddressSanitizer and UndefinedBehaviorSanitizer. 
 
 The full sanitizer suite includes extensive RMS controls and may take several minutes. The built `skirmish-test` also accepts `/path/to/Game/Data --civilizations` for eight complete Command Center matches, `--conquest` for eight complete Conquest matches, and `--player-conquest` for the scripted player's Conquest path. `--original-ai` runs four Arid Conquest seeds through normal startup with the installed original personality and normal starting resources. These longer checks run separately from the default suite. Run them from the external build directory so their captures stay outside the checkout.
 
+To run both sides with the installed AI, use `--ai-duel <map-seed>` on the
+skirmish test executable. For example, `--ai-duel 4` runs Tiny Arid at
+Moderate difficulty with 75 population. Each duel ends on Conquest victory
+or fails the check after 36,000 simulated seconds.
+
+To compare an exported Windows scenario, use
+`--scenario-duel <scenario.sc1> <session-seed> [clock.csv]`. This mode
+expects a human observer in slot 1 and computers in slots 2 and 3. The
+optional CSV supplies successive Windows world-clock readings and step
+lengths in milliseconds for normal-speed playback. Without it, the replay
+advances at 30 simulation updates per second. The printed result is from
+the observer's perspective. Supply the game's Data directory before either
+option.
+
 Run `python3 script/test_algorithms.py` for asset-independent RMS and military-group checks with strict warnings and sanitizers. It writes binaries outside the checkout using the same build-directory override. These tests validate recovered algorithms; they do not imply the complete original map generator or AI is active in the playable app. CMake users can enable `-DSWGB_BUILD_ALGORITHM_TESTS=ON`, build the algorithm test targets and run `ctest --test-dir <build-dir>`.
 
 With CMake, configure `-DSWGB_BUILD_DESKTOP=ON -DSWGB_BUILD_SKIRMISH_TEST=ON` and build `swgb-desktop`, `swgb-skirmish-test` and `swgbtool`. Run `swgb-skirmish-test /path/to/Game/Data` and `swgbtool test-combat /path/to/Game/Data`. Desktop options are off by default; Vita and headless tool entry points remain available.
