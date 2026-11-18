@@ -11853,9 +11853,10 @@ bool Game::detourAround(Object &object, float goalX, float goalY) {
     std::vector<Obstacle> obstacles;
     const float radius = collisionRadius(object);
     const bool air = isAirUnit(object);
-    // Every search/thinning segment lies within this four-tile square.
+    // Include the larger search window only after a sustained movement stall.
     // Extra margin keeps this broad-phase test conservative at float edges.
-    const float reach = 4.01f;
+    const bool widen=object.moveStallTime>=3.f;
+    const float reach = widen ? 8.01f : 4.01f;
     for (uint32_t index : mobileObjectIndices_) {
         const Object &other = objects_[(size_t)index];
         if (&other == &object || !other.active || other.hidden || isAirUnit(other) != air) continue;
@@ -12015,7 +12016,8 @@ bool Game::detourAround(Object &object, float goalX, float goalY) {
     // Otherwise closed orthogonal samples may hide a clear diagonal between
     // circular footprints. Every fallback edge still passes the same exact
     // swept static/mobile checks; no collision clearance is relaxed.
-    return attempt(.25f,16,true) || attempt(.125f,32,true) || attempt(.0625f,64,true);
+    return attempt(.25f,16,true) || attempt(.125f,32,true) || attempt(.0625f,64,true) ||
+           (widen && attempt(.25f,32,true));
 }
 
 // A closed gate only stops units it would not open for: enemies, or
