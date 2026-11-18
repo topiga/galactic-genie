@@ -1780,6 +1780,7 @@ private:
     float populationUse(const dat::Unit &unit) const;
     float populationUsed(int player) const;
     float buildingPopulationCapacity(int player) const;
+    float housingCapacity(int player) const;
     float populationCapacity(int player) const;
     void log(const std::string &message) const;
     int playerColorBase(int player) const;

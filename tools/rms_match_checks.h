@@ -47,11 +47,22 @@ static void rmsMatchChecks(swgb::Assets &assets) {
     check(game.aiRuleCountForTesting(2)==0,"Arid Command Center objective retains the native fallback opponent");
     check(game.tileVisibilityForTesting(0,0)>=1,"Explored reveal survives RMS match initialization");
     // Probe the normal runtime facts after opening assertions, without adding units/resources.
-    const int headroom=100-int(game.populationUsedForTesting(1));
+    const int headroom=100-int(game.populationCapacityForTesting(1));
     const std::string probe="(defrule (population-headroom == "+std::to_string(headroom)+
         ") (difficulty == moderate) (map-type desert) (not (map-type forest)) => (set-goal 925 1) (disable-self))";
     check(game.loadAiSourceForTesting(1,"rms-match-settings",probe,{},&error),error.c_str());
     game.update(0,{});
     check(game.aiGoalForTesting(1,925)==1,"RMS match runtime observes selected population limit and moderate difficulty");
+    const auto opening=game.populationCapacityForTesting(1);
+    const auto used=game.populationUsedForTesting(1);
+    for(int i=0;i<21;++i)
+        check(game.spawnObjectForTesting(1,70,1,20.f+2*(i%7),20.f+2*(i/7))!=0,"Create extra prefabs");
+    const int built=int(opening+21*5);
+    const std::string overbuilt="(defrule (housing-headroom == "+std::to_string(int(built-used))+
+        ") (population-headroom == "+std::to_string(100-built)+") => (set-goal 925 2))";
+    check(game.loadAiSourceForTesting(1,"extra-housing",overbuilt,{},&error),error.c_str());
+    game.update(0,{});
+    check(game.aiGoalForTesting(1,925)==2 && game.populationCapacityForTesting(1)==100,
+          "Surplus housing remains visible to PER while the playable population cap stays at 100");
     std::puts("PASS: packaged Arid match lifecycle, original opening, settings, checkpoint, pause and restart");
 }

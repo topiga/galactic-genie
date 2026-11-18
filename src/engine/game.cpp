@@ -6078,15 +6078,18 @@ float Game::buildingPopulationCapacity(int player) const {
     return capacity;
 }
 
+float Game::housingCapacity(int player) const {
+    return playerAttribute(player,4)+buildingPopulationCapacity(player)+
+           startupPopulationAdjustment_[size_t(player)];
+}
+
 float Game::populationCapacity(int player) const {
     if (player <= 0 || (size_t)player > players_.size()) return 0.0f;
-    const float capacity=std::max(0.f,playerAttribute(player,4)+
-        buildingPopulationCapacity(player)+startupPopulationAdjustment_[size_t(player)]);
     const float scenarioLimit = std::max(
         0.0f,
         players_[(size_t)player - 1]
             .populationLimit);
-    return std::min(capacity, scenarioLimit);
+    return std::clamp(housingCapacity(player),0.f,scenarioLimit);
 }
 
 bool Game::queueUnitForTesting(uint32_t buildingId, int unitId) {
@@ -14626,18 +14629,13 @@ bool Game::evaluateAiFactValue(
         return true;
     }
     if (fact == "housing-headroom") {
-        value = (int)std::floor(
-            populationCapacity(player) -
-            populationUsed(player));
+        // Original 57c950 reads resource 4, including housing above the match cap.
+        value=int(housingCapacity(player)-populationUsed(player));
         return true;
     }
     if (fact == "population-headroom") {
-        const float limit =
-            players_[(size_t)player - 1]
-                .populationLimit;
-        value = (int)std::floor(
-            limit -
-            populationUsed(player));
+        // 57dd40 subtracts used population plus unused housing from the limit.
+        value=int(players_[size_t(player)-1].populationLimit-housingCapacity(player));
         return true;
     }
     if (fact == "food-amount" ||
