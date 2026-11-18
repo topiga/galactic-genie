@@ -6911,3 +6911,21 @@ an unreachable-route assertion on the first admitted action update, immediate
 path callback results, deferred notifications, forced reissue, pause and Stop.
 The previous casualty-handling desktop build separately passed its menu/render/
 audio dummy-driver smoke (`military-deficit-desktop.log`).
+
+### Packaged RMS computer personalities (18 November 2026)
+
+`initRmsSession` and public `loadAiScript` now resolve missing bare personality
+names from the installed game archives, including RandomGame and its include
+tree. Existing local entry files and explicit paths retain filesystem loading.
+Source mode is selected once: malformed or unreadable local files never fall
+back to a packaged personality, and packaged includes cannot be shadowed by
+unrelated files in the working directory. Failed loading remains atomic for the
+running world and AI state.
+
+Session checks cover mixed packaged/file personalities, relative custom includes,
+local-name precedence, malformed local files and explicit missing paths. The
+session/starting-age and fog/conquest checks pass under ASan/UBSan in
+`rms-packaged-ai-*.log`. This makes the normal RMS API capable of loading the
+original personality; it does not expose RMS in desktop setup or establish full
+original PER/controller behavior. The path-acceptance build also completed the
+unchanged conquest match at2092.2 seconds (`military-path-request-match.log`).

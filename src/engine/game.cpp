@@ -19,6 +19,8 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cerrno>
+#include <cstdio>
 #include <cmath>
 #include <iomanip>
 #include <limits>
@@ -1579,6 +1581,19 @@ void Game::focusRmsStart() {
     lookAt(objects_[selected].x,objects_[selected].y);
 }
 
+// Select one source namespace for the whole include tree. A malformed or unreadable
+// local entry must not be replaced by a packaged script with the same name.
+static bool loadGameAiProgram(AiProgram &program,Assets &assets,const std::string &path,
+                              const std::unordered_set<std::string> &defines,std::string *err) {
+    if(path.find_first_of("/\\")!=std::string::npos)return program.load(path,defines,err);
+    FILE *file=std::fopen(path.c_str(),"rb");
+    if(file) {std::fclose(file);return program.load(path,defines,err);}
+    if(errno!=ENOENT)return program.load(path,defines,err);
+    return program.load(path,defines,err,[&assets](const std::string &name,std::string &source,std::string *error) {
+        return assets.readAiSource(name,source,error);
+    });
+}
+
 bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std::string> &defines,
                           int mapSize, uint32_t &randomState,
                           const std::vector<uint16_t> &civilizations, const RmsSessionOptions &options,
@@ -1593,7 +1608,7 @@ bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std:
     for(size_t i=1;i<options.aiScripts.size();++i) {
         if(options.aiScripts[i].empty())continue;
         auto &state=computers[i+1];
-        if(!state.program.load(options.aiScripts[i],options.aiDefines,err))return false;
+        if(!loadGameAiProgram(state.program,assets_,options.aiScripts[i],options.aiDefines,err))return false;
         state.loaded=state.scripted=true;
     }
     if(!initRms(script,defines,mapSize,randomState,err,uint32_t(civilizations.size()),civilizations,diplomacy))
@@ -1662,8 +1677,7 @@ bool Game::loadAiScript(
         return false;
     }
     AiPlayerState state;
-    if (!state.program.load(
-            path, defines, err))
+    if (!loadGameAiProgram(state.program,assets_,path,defines,err))
         return false;
     state.loaded = true;
     state.scripted = true;

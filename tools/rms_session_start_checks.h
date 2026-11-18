@@ -5,6 +5,7 @@
 #include "empty_owner_gameplay_checks.h"
 #include <filesystem>
 #include <fstream>
+#include <chrono>
 
 static void rmsStartCameraChecks(swgb::Assets &assets) {
     // Three original5d1110/4af610 controls, positions in original world axes.
@@ -28,7 +29,7 @@ static void rmsSessionStartChecks(swgb::Assets &assets) {
     rmsFinalizationChecks();
     emptyOwnerGameplayChecks(assets);
     rmsStartCameraChecks(assets);
-    const auto fixtures=std::filesystem::path(__FILE__).parent_path()/"fixtures";
+    const auto fixtures=std::filesystem::absolute(std::filesystem::path(__FILE__).parent_path()/"fixtures");
     swgb::RmsScript script;std::string error;
     std::ifstream input(fixtures/"owned-scouts.rms");
     check(bool(input),"Read session RMS fixture");
@@ -94,5 +95,39 @@ static void rmsSessionStartChecks(swgb::Assets &assets) {
     game.update(0,{});
     check(game.aiGoalForTesting(2,901)==0 && game.aiGoalForTesting(2,903)==1 && game.resource(2,0)==151,
           "First AI pass observes the selected starting age and initialized funds");
+    options=valid;options.aiScripts[1]="RandomGame.per";rng=1;
+    check(game.initRmsSession(script,{},32,rng,{6,1,6},options,&error),error.c_str());
+    check(game.aiRuleCountForTesting(2)>3 && game.aiRuleCountForTesting(3)==3 && game.aiGoalForTesting(3,901)==0,
+          "RMS session loads packaged RandomGame includes alongside a filesystem personality without evaluation");
+    check(game.loadAiScript(3,"RandomGame.per",options.aiDefines,&error),error.c_str());
+    const auto packagedCount=game.aiRuleCountForTesting(3);
+    check(packagedCount>3,"Public AI loading resolves the packaged original personality");
+    check(!game.loadAiScript(3,(fixtures/"missing"/"RandomGame.per").string(),options.aiDefines,&error) &&
+          game.aiRuleCountForTesting(3)==packagedCount,"Explicit missing paths do not fall back to a same-named package or replace running AI");
+    {
+        const auto directory=std::filesystem::temp_directory_path()/
+            ("swgb-session-ai-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        const bool created=std::filesystem::create_directory(directory);
+        check(created,"Create isolated local personality fixture");
+        if(!created)return;
+        struct RestoreDirectory {
+            std::filesystem::path previous,temporary;
+            ~RestoreDirectory(){std::error_code ignored;std::filesystem::current_path(previous,ignored);std::filesystem::remove_all(temporary,ignored);}
+        } restoreDirectory{std::filesystem::current_path(),directory};
+        {std::ofstream file(directory/"RandomGame.per");file<<"(load \"local-child\")";}
+        {std::ofstream file(directory/"local-child.per");file<<"(defrule (true) => (set-goal 920 1))";}
+        std::filesystem::current_path(directory);
+        check(game.loadAiScript(3,"RandomGame.per",options.aiDefines,&error) && game.aiRuleCountForTesting(3)==1,
+              "Existing local entry wins over packaged name and keeps relative filesystem includes");
+        {std::ofstream file("RandomGame.per");file<<"(defrule";}
+        check(!game.loadAiScript(3,"RandomGame.per",options.aiDefines,&error) &&
+              error.find("unterminated list")!=std::string::npos && game.aiRuleCountForTesting(3)==1,
+              "Malformed local personality is reported without package fallback or AI replacement");
+        const auto objects=game.activeObjectCount();const auto money=game.resource(2,0);rng=12345;
+        check(!game.initRmsSession(script,{},32,rng,{6,1,6},options,&error) && rng==12345 &&
+              error.find("unterminated list")!=std::string::npos && game.activeObjectCount()==objects &&
+              game.resource(2,0)==money && game.aiRuleCountForTesting(3)==1,
+              "Malformed local RMS personality preserves the existing world, RNG and other AI");
+    }
     std::puts("PASS: original starting-resource tiers and atomic multi-player AI activation");
 }
