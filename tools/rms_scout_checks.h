@@ -150,7 +150,7 @@ create_object 550 { set_place_for_every_player min_distance_to_players 7 max_dis
               "Unsupported or extra scout rows reject atomically");
     }
     uint32_t state=12345;swgb::RmsMap map;
-    check(!swgb::generateRmsMap(scripts[0],{},32,32,assets.dat(),state,map,&error,3,{1,2,3}) && state==12345,
-          "Unverified scout owner counts remain rejected");
+    check(!swgb::generateRmsMap(scripts[0],{},32,32,assets.dat(),state,map,&error,9,{1,2,3,4,5,6,7,8,1}) && state==12345,
+          "Scout owner counts beyond the original eight-player limit reject atomically");
     std::puts("PASS: original three-row scout startup across all civilizations and forest contexts");
 }

@@ -77,16 +77,32 @@ create_object 550 { set_place_for_every_player min_distance_to_players 7 max_dis
         {"min_distance_group_placement 7","min_distance_group_placement 6"},{"max_distance_to_other_zones 7",""},
         {"set_tight_grouping","set_loose_grouping"},{"set_gaia_object_only",""},{"create_object 66","create_object 102"}}) {
         auto row=nova;row.replace(row.find(change.first),change.first.size(),change.second);
-        swgb::RmsScript invalid;check(load(grass+starts+row,invalid),error.c_str());
+        swgb::RmsScript variant;check(load(grass+starts+row,variant),error.c_str());
         uint32_t state=12345;swgb::RmsMap map;
-        check(!swgb::generateRmsMap(invalid,{},32,32,assets.dat(),state,map,&error,2,{1,1}) &&
-              state==12345 && map.terrain.empty() && map.resourcesAfterOwned.empty(),"Unproven Nova modifiers reject atomically");
+        if(change.first=="set_gaia_object_only") {
+            check(!swgb::generateRmsMap(variant,{},32,32,assets.dat(),state,map,&error,2,{1,1}) &&
+                  state==12345 && map.terrain.empty() && map.resourcesAfterOwned.empty(),
+                  "Owned Nova resource construction remains unsupported and rejects atomically");
+        } else {
+            // The general object controller now accepts these modifiers. This
+            // is a supported-path smoke check, not another original golden.
+            check(swgb::generateRmsMap(variant,{},32,32,assets.dat(),state,map,&error,2,{1,1}),error.c_str());
+            check(map.terrain.size()==32*32 && map.ownedObjects.size()==10 && !map.resourcesAfterOwned.empty(),
+                  "General resource modifiers retain terrain, starting actors and resource output");
+            const int expectedUnit=change.first=="create_object 66"?102:66;
+            for(const auto &object:map.resourcesAfterOwned)
+                check(object.unitId==expectedUnit && std::isfinite(object.x) && std::isfinite(object.y) &&
+                      object.x>=0 && object.x<32 && object.y>=0 && object.y<32,
+                      "General resource modifier output has the requested prototype and valid map coordinates");
+        }
     }
     uint32_t state=12345;swgb::RmsMap map;
     check(!swgb::generateRmsMap(scripts[0],{},32,32,assets.dat(),state,map,&error,2,{1,2}) && state==12345,
           "Unproven Nova civilization composition remains rejected");
-    check(!swgb::generateRmsMap(scripts[0],{},64,64,assets.dat(),state,map,&error,2,{1,1}) && state==12345,
-          "Unproven Nova dimensions remain rejected");
+    check(swgb::generateRmsMap(scripts[0],{},64,64,assets.dat(),state,map,&error,2,{1,1}),error.c_str());
+    check(map.terrain.size()==64*64 && map.ownedObjects.size()==10 && map.resourcesAfterOwned.size()==14,
+          "General resource controller supports64-square Nova startup (smoke, not original golden)");
+    state=12345;
     check(!swgb::generateRmsMap(scripts[0],{"FIXED_POSITIONS"},32,32,assets.dat(),state,map,&error,2,{1,1}) && state==12345,
           "Unproven fixed-start Nova composition remains rejected");
     std::puts("PASS: original composed per-player Nova after CC/workers/scouts on grass and forest");

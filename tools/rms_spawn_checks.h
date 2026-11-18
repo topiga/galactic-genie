@@ -371,6 +371,10 @@ static void rmsSpawnChecks(swgb::Assets &assets) {
         resourceScenario.map.width=resourceScenario.map.height=16;
         resourceScenario.map.tiles.resize(256);
         resourceScenario.nextUnitId=1;
+        resourceScenario.playerSlotCount=1;
+        resourceScenario.players[0].active=true;
+        resourceScenario.players[0].human=true;
+        resourceScenario.players[0].civilization=1;
         check(game.initScenario(resourceScenario,&error),error.c_str());
         const auto resource=game.spawnObjectForTesting(0,resourceId,0,6.5f,5.5f);
         const auto worker=game.spawnObjectForTesting(1,83,1,5.5f,5.5f);

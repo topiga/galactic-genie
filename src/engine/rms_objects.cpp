@@ -789,7 +789,7 @@ bool generateRmsHolocronPlacements(uint32_t width,uint32_t height,
         if(start.x<2 || start.y<2 || start.x>int(width)-2 || start.y>int(height)-2) return fail("invalid land center");
     if(std::any_of(terrain.begin(),terrain.end(),[&](uint8_t t) {
         return t!=0 && t!=27 && (width!=120 || (t!=1 && t!=2 && t!=4 && t!=5 && t!=6 && t!=9 && t!=10 && t!=12 && t!=18 && t!=20 && t!=21 && t!=22 && t!=23 && t!=24 && t!=25 && t!=38 && t!=41 && t!=44 && t!=14 && t!=45 && t!=46 && t!=50 && t!=19 && t!=26 && t!=32 && t!=33 && t!=34 && t!=36 && t!=49 && t!=13 && t!=35 && t!=37 && t!=47 && t!=16 && t!=42 && t!=11 && t!=17));
-    }) || (width==64 && !occupiedTiles.empty()))
+    }))
         return fail("requires verified grass or120-square forest terrain");
     if(rowEligibility && !rowEligibility->empty() &&
        (rowEligibility->size()!=terrain.size() ||
