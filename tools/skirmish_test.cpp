@@ -25,6 +25,7 @@ static void check(bool value, const char *message) {
 #include "ai_build_admission_gameplay_checks.h"
 #include "ai_build_queue_gameplay_checks.h"
 #include "dropsite_fact_gameplay_checks.h"
+#include "military_admission_gameplay_checks.h"
 #include "ai_resource_knowledge_gameplay_checks.h"
 #include "selection_checks.h"
 #include "civilization_checks.h"
@@ -329,7 +330,7 @@ int main(int argc, char **argv) {
         scenarioAiChecks(assets);
         actorAiTimingChecks(assets);
         exploreActionChecks();exploreSearchChecks();tacticalExploreQueueChecks();exploreSpiralChecks();
-        militaryGameplayChecks(assets);
+        militaryGameplayChecks(assets);militaryAdmissionGameplayChecks(assets);
         tacticalMovementChecks();tacticalMovementGameplayChecks(assets);
         explorationGameplayChecks(assets);
         fogEdgeChecks(argv[1]);

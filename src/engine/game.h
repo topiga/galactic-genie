@@ -1081,7 +1081,7 @@ private:
         std::map<int, double> timers;
         // Verified fresh profile events run before the original's first PER evaluation.
         std::unordered_map<int, int> strategicNumbers = {
-            {0,34}, {2,66}, {4,2}, {34,50}, {41,4}, {227,75}, {230,20}, {42,0}, {74,20}, {76,15}, {86,25}, {87,100}, {106,-1}, {107,-1}, {108,-1}, {118,0}, {120,0}, {143,1}, {162,2}, {168,50}, {226,0}
+            {0,34}, {2,66}, {4,2}, {16,4}, {26,10}, {34,50}, {36,0}, {41,4}, {227,75}, {230,20}, {42,0}, {43,1}, {74,20}, {76,15}, {86,25}, {87,100}, {98,1}, {106,-1}, {107,-1}, {108,-1}, {118,0}, {120,0}, {143,1}, {162,2}, {168,50}, {226,0}
         };
         std::unordered_set<std::string>
             warnedFacts;
@@ -1575,7 +1575,7 @@ private:
     bool buildAiMilitaryRegions(int restriction,std::vector<uint8_t> &tiles) const;
     void queueAiMilitaryStop(int player,int32_t id);
     bool formAiMilitaryGroups(int player);
-    void formAiExploreGroups(int player);
+    void reconcileAiMilitaryGroups(int player);
     bool queueAiExploreDestination(Object &object);
     void updateAiExplorationInformation(int player);
     void updateAiExplorationRevisit(int player);

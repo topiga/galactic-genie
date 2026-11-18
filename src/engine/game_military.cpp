@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "game.h"
 #include "ai_military.h"
+#include "ai_military_admission.h"
 #include "rms_zones.h"
 #include "../core/genie_tactical_movement.h"
 #include "../core/genie_random.h"
@@ -117,18 +118,34 @@ std::optional<AiMilitaryGroups> Game::availableAiMilitaryGroups(int player,std::
         float(state.strategicNumbers.at(230)));
 }
 
-void Game::formAiExploreGroups(int player) {
+void Game::reconcileAiMilitaryGroups(int player) {
     auto &state=aiPlayers_[size_t(player)];
-    if(!state.strategicNumbers.count(42) || !state.strategicNumbers.count(43))return;
-    const int minimum=state.strategicNumbers.at(43);
-    if(minimum<=0 || state.strategicNumbers.at(42)<=0)return;
+    for(int key:{16,26,36,42,43,98})if(!state.strategicNumbers.count(key))return;
     refreshAiMilitaryMembers(player);
-    const int wanted=aiExploreGroupCount(state.militarySoldiers.size(),minimum,state.strategicNumbers.at(42));
-    int count=int(std::count_if(state.militaryGroups.begin(),state.militaryGroups.end(),[](const auto &g){return g.type==101;}));
-    while(count<wanted && state.nextMilitaryGroup<INT32_MAX) {
-        AiMilitaryGatherGroup group{state.nextMilitaryGroup++,1,minimum,{}};group.type=101;
-        state.militaryGroups.push_back(std::move(group));++count;
+    if(state.militarySoldiers.size()>size_t(INT32_MAX))return;
+    std::vector<AiMilitaryAdmissionGroup> existing;
+    for(const auto &group:state.militaryGroups)
+        existing.push_back({group.id,group.type,group.state,int(group.members.size()),group.flags});
+    const AiMilitaryAdmissionSettings settings{int(state.militarySoldiers.size()),
+        state.strategicNumbers.at(43),state.strategicNumbers.at(42),
+        state.strategicNumbers.at(16),state.strategicNumbers.at(26),
+        state.strategicNumbers.at(36),state.strategicNumbers.at(98)};
+    // shortcut: Ordinary100/101 admission shares native refresh cadence;
+    // original phase0 and the separate special112 source registry remain unported.
+    const auto plan=planAiMilitaryAdmission(std::move(existing),settings,state.nextMilitaryGroup,legacyRandomState_);
+    if(!plan)return;
+    for(const auto &operation:plan->operations) {
+        if(operation.create) {
+            AiMilitaryGatherGroup group{operation.id,1,operation.desired,{}};
+            group.type=operation.type;
+            state.militaryGroups.push_back(std::move(group));
+        } else {
+            // Original5acee0 releases the registry entry without stopping members.
+            state.militaryGroups.erase(std::remove_if(state.militaryGroups.begin(),state.militaryGroups.end(),
+                [&](const auto &group){return group.id==operation.id;}),state.militaryGroups.end());
+        }
     }
+    state.nextMilitaryGroup=plan->nextId;legacyRandomState_=plan->randomState;
 }
 
 bool Game::queueAiExploreDestination(Object &object) {
@@ -411,7 +428,7 @@ void Game::updateAiMilitaryTargets(int player,uint32_t budget) {
 void Game::updateAiMilitary(int player,uint32_t budget) {
     if(player<=0 || size_t(player)>=aiPlayers_.size())return;
     auto &state=aiPlayers_[size_t(player)];
-    if(state.militaryCycle.phase==AiMilitaryPhase::Refresh)formAiExploreGroups(player);
+    if(state.militaryCycle.phase==AiMilitaryPhase::Refresh)reconcileAiMilitaryGroups(player);
     if(state.militaryGroups.empty())return;
     for(int key:{34,41})if(!state.strategicNumbers.count(key))return;
     const auto number=[&](int key) {return state.strategicNumbers.at(key);};

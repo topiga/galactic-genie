@@ -7143,3 +7143,14 @@ the test driver searches the whole64-tile map rather than only the enemy base
 perimeter; it does not read hidden survivor positions. RMS session-finalization,
 starting resource/age and fog/Conquest checks also pass. These completed matches
 use the fallback opponent, not a certified full original RandomGame personality.
+
+### 2026-11-18: ordinary military-group admission
+
+The original ordinary group reconciliation now replaces exploration-only
+admission: ordered empty-group cleanup, exploration quotas/trimming, normal
+attack quotas, randomized capped group size, and protected attack-now groups.
+Sixteen original-executable goldens and production PER checks pass with the
+combined sanitizer regression. Removing a group does not issue a Stop command.
+Fresh original defaults keep the normal attack-group quota at zero; this change
+does not force RandomGame to attack earlier than its script allows. The native
+admission cadence and separate type112 pool remain explicit gaps.
