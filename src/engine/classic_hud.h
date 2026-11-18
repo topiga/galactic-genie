@@ -57,7 +57,7 @@ std::array<Game::HudButton,16> Game::classicHudButtons() {
     std::array<HudButton,16> slots{};
     Object *subject=findObject(classicHudSubject_);
     if(!subject || subject->player!=localPlayer_ || !isInspectable(*subject)) return slots;
-    if(healingCursorActive()) {
+    if(healingCursorActive() || conversionCursorActive()) {
         slots[14].kind=HudButton::CancelTarget; slots[14].icon=0; slots[14].label="Cancel";
         return slots;
     }
@@ -121,7 +121,7 @@ std::array<Game::HudButton,16> Game::classicHudButtons() {
                 HudButton b; b.kind=HudButton::Action; b.tab=ActionMenuTab::Commands; b.option=i;
                 if(isWorker(*subject) && commands[i]!=UnitCommand::Stop) continue;
                 if(canAttackGround(*subject) && commands[i]!=UnitCommand::Stop && commands[i]!=UnitCommand::AttackGround && commands[i]!=UnitCommand::Unload) continue;
-                b.preferred=commands[i]==UnitCommand::Unload?13:commands[i]==UnitCommand::Stop?3:commands[i]==UnitCommand::Guard?1:commands[i]==UnitCommand::Follow?2:0;
+                b.preferred=(commands[i]==UnitCommand::Unload || commands[i]==UnitCommand::Convert)?13:commands[i]==UnitCommand::Stop?3:commands[i]==UnitCommand::Guard?1:commands[i]==UnitCommand::Follow?2:0;
                 b.icon=unitCommandIcon(commands[i]); b.label=unitCommandTitle(commands[i]); entries.push_back(b);
             }
             if(!isWorker(*subject) && canAttack(*subject)) for(size_t i=0;i<4;++i) {
@@ -180,7 +180,7 @@ std::vector<Game::Object *> Game::classicGarrisonMembers() {
 }
 
 void Game::handleClassicHudInput(InputState &in,bool allowOrders) {
-    if(in.menuBack && healingCursorActive()) {
+    if(in.menuBack && (healingCursorActive() || conversionCursorActive())) {
         unitCommandCursorActive_=false; unitCommandJustBegun_=false; in.menuBack=false;
     }
     syncClassicHud();
@@ -351,6 +351,10 @@ void Game::renderClassicHud(Renderer &r,int width,int height) {
         rect(180,99,40*std::clamp(subject->shieldPoints/subject->maxShieldPoints,0.f,1.f),3,240,185,40);
         text(std::to_string(int(subject->shieldPoints))+"/"+std::to_string(int(subject->maxShieldPoints)),223,94,10);
     }
+    if(subject->unit->cls==50 && !aiConversionSourceVirtual30(subject->unit->id,subject->unit->copyId)) {
+        icon(50731,10,280,94,16);
+        text(std::to_string(int(subject->conversionCharge+.5f))+"%",300,94,10);
+    }
     }
     if(selected.size()>1) {
         for(size_t i=0;i<std::min(size_t(12),selected.size());++i) {
@@ -411,14 +415,15 @@ void Game::renderClassicHud(Renderer &r,int width,int height) {
        buttons[size_t(hover)].tab==ActionMenuTab::Commands && subject->unit->type!=dat::UT_Building) {
         const auto commands=unitCommands(*subject);
         const auto option=buttons[size_t(hover)].option;
-        if(option<commands.size() && commands[option]==UnitCommand::Heal) {
-            std::string help=unitCommandHelp(UnitCommand::Heal);
+        if(option<commands.size() && (commands[option]==UnitCommand::Heal || commands[option]==UnitCommand::Convert)) {
+            const auto command=commands[option];
+            std::string help=unitCommandHelp(command);
             for(const char *tag:{"<b>","</b>","<B>","<i>","<I>"})
                 for(size_t at=help.find(tag);at!=std::string::npos;at=help.find(tag)) help.erase(at,std::char_traits<char>::length(tag));
             r.fillRect(layout.x(4)*unit,layout.y(-130)*unit,540*layout.scale*unit,114*layout.scale*unit,0,0,0,170);
-            text(unitCommandTitle(UnitCommand::Heal),5,-128);
+            text(unitCommandTitle(command),5,-128);
             float y=-108;
-            for(const auto &line:wrapText(help+" (Y)",75)) {text(line,5,y); y+=14;}
+            for(const auto &line:wrapText(help+(command==UnitCommand::Heal?" (Y)":""),75)) {text(line,5,y); y+=14;}
             return;
         }
     }

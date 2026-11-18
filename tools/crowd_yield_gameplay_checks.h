@@ -25,7 +25,7 @@
         game.update(.05f,{});
         const auto blockerProgress=game.movementProgressForTesting(blocker);
         if(bothSidesBlocked)
-            check(blockerProgress[0]==0,"An idle blocker receives no side-step route when both destinations are occupied");
+            check(blockerProgress[0]>0,"An idle blocker searches beyond two occupied perpendicular destinations");
         else {
             check(blockerProgress[0]>0,"An idle blocker can still yield to the unoccupied alternative side");
             for(int i=0;i<10;++i)game.update(.05f,{});
@@ -39,5 +39,28 @@
             arrived=std::hypot(position[0]-25,position[1]-20)<.5f;
         }
         check(arrived,"The mover bypasses the friendly cluster and reaches its destination");
+    }
+    {
+        auto game=std::make_unique<swgb::Game>(assets);std::string error;
+        check(game->initScenario(scenario,&error),error.c_str());
+        const float bx=20+separation+.005f;
+        const auto mover=game->spawnObjectForTesting(1,83,1,20,20);
+        const auto blocker=game->spawnObjectForTesting(1,83,1,bx,20);
+        // A fully occupied neighborhood, not merely the two legacy side points.
+        // Keep both starting centers clear so this exercises mobile blocking.
+        for(int iy=-7;iy<=7;++iy)for(int ix=-7;ix<=7;++ix){
+            const float x=bx+ix*.5f,y=20+iy*.5f;
+            if(std::hypot(x-bx,y-20)<separation ||
+               std::hypot(x-20,y-20)<separation)continue;
+            check(game->spawnObjectForTesting(1,83,1,x,y)!=0,
+                  "Fill the idle blocker's surrounding destinations");
+        }
+        game->update(0,{});
+        check(game->issuePointMoveForTesting(mover,25,20),"Request movement into the fully occupied neighborhood");
+        const auto before=game->objectPosition(blocker);
+        game->update(.05f,{});
+        check(game->movementProgressForTesting(blocker)[0]==0 &&
+              game->objectPosition(blocker)==before,
+              "A fully enclosed idle blocker receives no invalid escape route");
     }
 }

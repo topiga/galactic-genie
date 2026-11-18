@@ -16,6 +16,7 @@
 #include "../core/genie_gather.h"
 #include "../core/genie_target_selection.h"
 #include "game.h"
+#include "ai_conversion_eligibility.h"
 #include "../core/genie_visibility_stencil.h"
 #include "terrain_draw_scan.h"
 #include "rms_objects.h"
@@ -2131,6 +2132,97 @@ void Game::setObjectOwner(Object &object, int player) {
     registerAiBuildPosition(object);
 }
 
+bool Game::canTransferConvertedObject(const Object &object,int player) const {
+    if(!object.active || !object.unit || object.hitPoints<=0 ||
+       (object.unit->type!=dat::UT_Creatable && object.unit->type!=dat::UT_Building) ||
+       object.gate || object.garrisonedInId>=0 ||
+       player<0 || uint32_t(player)>worldPlayerCount_)return false;
+    const int civilization=civilizationForPlayer(player);
+    return findUnit(civilization,object.unit->id) &&
+        (!object.jobUnit || findUnit(civilization,object.jobUnit->id));
+}
+
+bool Game::transferConvertedObject(Object &object,int player) {
+    if(!canTransferConvertedObject(object,player))return false;
+    const bool building=object.unit->type==dat::UT_Building;
+    const bool ejectOccupants=building || object.unit->cls==53;
+    std::vector<uint32_t> occupants;
+    if(ejectOccupants) {
+        for(const auto &passenger:objects_)
+            if(passenger.active && passenger.garrisonedInId==int32_t(object.spawnId))occupants.push_back(passenger.spawnId);
+        std::stable_sort(occupants.begin(),occupants.end(),[&](uint32_t a,uint32_t b) {
+            return findObject(a)->garrisonAdmission>findObject(b)->garrisonAdmission;
+        });
+    }
+    // Original555c90 clears research actions and5577f0 refunds queued units to the OLD owner.
+    if(building)while(!object.productionQueue.empty())cancelProductionItem(object,0,false);
+    const auto *recipient=effectiveUnitForPlayer(player,findUnit(civilizationForPlayer(player),object.unit->id));
+    // Original55b820 snapshots the source master, not the recipient's upgrades.
+    // Its existing private master survives later transfers; copy-on-write isolates temporary Object copies.
+    auto captured=std::make_shared<UnitPrototype>(object.privatePrototype?*object.privatePrototype:
+        UnitPrototype{*object.unit,objectUnitCommands(object)});
+    captured->unit.fogVisibility=recipient->fogVisibility;
+    if(captured->unit.cls==1)captured->unit.lineOfSight=recipient->lineOfSight;
+    if(object.jobUnit) {
+        auto job=std::make_shared<UnitPrototype>(object.privateJobPrototype?*object.privateJobPrototype:
+            UnitPrototype{*object.jobUnit,unitCommands(object.player,object.jobUnit->id)});
+        job->unit.fogVisibility=effectiveUnitForPlayer(player,
+            findUnit(civilizationForPlayer(player),job->unit.id))->fogVisibility;
+        object.privateJobPrototype=std::move(job);object.jobUnit=&object.privateJobPrototype->unit;
+    }
+    object.privatePrototype=std::move(captured);object.unit=&object.privatePrototype->unit;
+    // shortcut: Native owner lists/counter projections stand in for original124/120 registration.
+    setObjectOwner(object,player);
+    // Original421f50 discards deferred notifications before the new-owner523 action reset.
+    object.pendingConversionThreats.clear();
+    // Original523→4205b3→actor224 clears actions/references and restores standing, retaining cargo.
+    stopUnit(object);
+    if(ejectOccupants) {
+        // shortcut: Original reverse-entry ordering and failure policy use the existing native radial exit provider.
+        for(uint32_t id:occupants) {
+            auto *passenger=findObject(id);
+            if(!passenger || !passenger->active)continue;
+            if(!ejectGarrisonedUnit(object,*passenger,0) && !building)break;
+        }
+        for(uint32_t id:occupants) {
+            auto *passenger=findObject(id);
+            if(passenger && passenger->active && passenger->garrisonedInId==int32_t(object.spawnId)) {
+                passenger->garrisonedInId=-1;passenger->hidden=false;
+                killObject(*passenger,false);
+            }
+        }
+    }
+    if(building) {
+        // shortcut: Native annex ownership and building-service projections replace individual original service callbacks.
+        for(auto &part:objects_)if(part.active && &part!=&object && part.annexParentId==object.spawnId)setObjectOwner(part,player);
+        refreshAllAutomaticTechnologies();rebuildAdjacency();
+    }
+    return true;
+}
+
+bool Game::prepareConvertedWorkerRole(Object &worker,const dat::Unit *role) {
+    if(!worker.privatePrototype)return true;
+    if(!isWorker(worker) || !role)return false;
+    const int baseId=worker.unit->id;
+    const int oldRoleId=worker.jobUnit?worker.jobUnit->id:baseId;
+    const auto *old=effectiveUnitForPlayer(worker.player,findUnit(civilizationForPlayer(worker.player),oldRoleId));
+    const auto *base=effectiveUnitForPlayer(worker.player,findUnit(civilizationForPlayer(worker.player),baseId));
+    const auto *next=effectiveUnitForPlayer(worker.player,role);
+    if(!old || !base || !next)return false;
+    Object probe;probe.player=worker.player;probe.unit=old;
+    const float oldMaximum=modifiedUnitAttribute(probe,0,old->hitPoints);
+    probe.unit=next;
+    const float newMaximum=modifiedUnitAttribute(probe,0,next->hitPoints);
+    if(oldMaximum<=0)return false;
+    // Original55abf0 restores recipient old-role master BEFORE5503b0's HP ratio.
+    // shortcut: Native workers split base identity and jobUnit; both private snapshots retire together.
+    worker.hitPoints=float((double(worker.hitPoints)/oldMaximum+double(1.0e-7f))*newMaximum);
+    worker.maxHitPoints=newMaximum;
+    worker.unit=base;worker.jobUnit=next;
+    worker.privatePrototype.reset();worker.privateJobPrototype.reset();
+    return true;
+}
+
 Game::Object *Game::addObject(const dat::Unit *unit, int player, float x, float y, float facing,
                               uint32_t spawnId, uint16_t initialFrame, bool hidden,
                               int32_t garrisonedInId, bool triggerAddressable) {
@@ -2167,6 +2259,7 @@ Game::Object *Game::addObject(const dat::Unit *unit, int player, float x, float 
     object.draw = unit->name.rfind("ENGINE-", 0) != 0 &&
                   unit->name.rfind("OBJ-FLAG", 0) != 0;
     object.garrisonedInId = garrisonedInId;
+    if(garrisonedInId>=0)object.garrisonAdmission=nextGarrisonAdmission_++;
     object.triggerAddressable = triggerAddressable;
     object.sleepRequested = unit->type < dat::UT_Flag && object.hitPoints > 0.f;
     object.auxiliaryUpdate = unit->type == dat::UT_25;
@@ -3527,7 +3620,7 @@ float Game::modifiedUnitAttribute(const Object &object,
     if (object.player < 0 ||
         (size_t)object.player >= researchedTechs_.size())
         return value;
-    for (const auto &command:unitCommands(object.player,object.unit->id)) {
+    for (const auto &command:objectUnitCommands(object)) {
             if (command.c != attribute)
                 continue;
             if (attribute==0)
@@ -3542,19 +3635,29 @@ float Game::modifiedUnitAttribute(const Object &object,
     return value;
 }
 
+namespace {
+std::array<dat::ResourceCost,3> adjustedUnitCosts(const dat::Unit &unit,
+                                                const std::vector<dat::EffectCommand> &commands) {
+    auto costs=unit.costs;
+    for (auto &cost:costs) cost.flag &= 0xff;
+    for (const auto &command:commands) {
+        const int type=command.c==103?0:command.c==104?1:command.c==105?3:command.c==106?2:-1;
+        if (command.c!=100 && type<0) continue;
+        for (auto &cost:costs)
+            if (cost.flag && (command.c==100 || cost.type==type))
+                cost.amount=applyShortEffect(cost.amount,command);
+    }
+    return costs;
+}
+}
+
 std::array<dat::ResourceCost,3> Game::unitCosts(int player,const dat::Unit &unit) const {
     const auto *prototype=effectiveUnitForPlayer(player,&unit);
-    auto costs=prototype->costs;
-    for (auto &cost:costs) cost.flag &= 0xff;
-    if (player<0 || size_t(player)>=playerEffects_.size()) return costs;
-    for (const auto &command:unitCommands(player,unit.id)) {
-            const int type=command.c==103?0:command.c==104?1:command.c==105?3:command.c==106?2:-1;
-            if (command.c!=100 && type<0) continue;
-            for (auto &cost:costs)
-                if ((cost.flag & 0xff) && (command.c==100 || cost.type==type))
-                    cost.amount=applyShortEffect(cost.amount,command);
-        }
-    return costs;
+    return adjustedUnitCosts(*prototype,unitCommands(player,unit.id));
+}
+
+std::array<dat::ResourceCost,3> Game::unitCosts(const Object &object) const {
+    return adjustedUnitCosts(*object.unit,objectUnitCommands(object));
 }
 
 std::array<Game::ResearchCost,3> Game::researchCosts(int player,const dat::Tech &technology) const {
@@ -3619,6 +3722,10 @@ float Game::unitSearchRadius(int player,const dat::Unit &unit) const {
     return modifiedUnitAttribute(candidate,23,candidate.unit->searchRadius);
 }
 
+float Game::unitSearchRadius(const Object &object) const {
+    return modifiedUnitAttribute(object,23,object.unit->searchRadius);
+}
+
 float Game::unitTrainingTime(int player,const dat::Unit &unit) const {
     int16_t duration=effectiveUnitForPlayer(player,&unit)->trainTime;
     if (player>=0 && size_t(player)<playerEffects_.size())
@@ -3635,7 +3742,7 @@ int Game::modifiedAttackAmount(
     if (source.player < 0 ||
         (size_t)source.player >= researchedTechs_.size())
         return attack.amount;
-    for (const auto &command:unitCommands(source.player,source.unit->id)) {
+    for (const auto &command:objectUnitCommands(source)) {
             if (command.c != 9)
                 continue;
             if (command.type != 0 && command.type != 4 && command.type != 5)
@@ -3672,7 +3779,7 @@ int Game::modifiedArmourAmount(const Object &target,
     if (target.player < 0 ||
         (size_t)target.player >= researchedTechs_.size())
         return (int)std::lround(amount);
-    for (const auto &command:unitCommands(target.player,target.unit->id)) {
+    for (const auto &command:objectUnitCommands(target)) {
             if (command.c != 8)
                 continue;
             if (command.type != 0 && command.type != 4 && command.type != 5)
@@ -4810,6 +4917,12 @@ const std::vector<dat::EffectCommand> &Game::unitCommands(int player,int unitId)
     return found==cache.end()?empty:found->second.commands;
 }
 
+const std::vector<dat::EffectCommand> &Game::objectUnitCommands(const Object &object) const {
+    if(object.privatePrototype && object.unit==&object.privatePrototype->unit)return object.privatePrototype->commands;
+    if(object.privateJobPrototype && object.unit==&object.privateJobPrototype->unit)return object.privateJobPrototype->commands;
+    return unitCommands(object.player,object.unit->id);
+}
+
 const dat::Unit *Game::effectiveUnitForPlayer(int player,const dat::Unit *unit) const {
     if(!unit || player<0 || size_t(player)>=unitPrototypes_.size())return unit;
     ensureUnitPrototypes(player);
@@ -4875,6 +4988,10 @@ int Game::objectGraphic(const Object &o,const dat::Unit &base) const {
     if ((o.state == State::Attack || o.state == State::Heal) &&
         base.attackGraphic >= 0)
         gid = base.attackGraphic;
+    if (o.state==State::Convert) {
+        const auto *task=conversionTask(o);
+        if (task && task->workingGraphic>=0) gid=task->workingGraphic;
+    }
     return gid;
 }
 
@@ -4939,12 +5056,37 @@ void Game::applyUnitUpgrades(int player,const std::vector<int> &previousEffects)
         for(size_t index=0;index<effects.size();++index)
             for(const auto &command:assets_.dat().effects[size_t(effects[index])].commands) {
                 dat::Unit previousUpgrade;
-                if(index>=previousEffects.size() && command.type==3 && prototypes.count(command.a))
+                std::optional<UnitPrototype> convertedRamUpgrade;
+                int16_t recipientRamMaximum=0;
+                if(index>=previousEffects.size() && command.type==3 && prototypes.count(command.a)) {
                     previousUpgrade=prototypes.at(command.a).unit;
+                    if(prototypes.count(command.b)) {
+                        convertedRamUpgrade=prototypes.at(command.b);
+                        recipientRamMaximum=previousUpgrade.hitPoints;
+                        for(const auto &prior:prototypes.at(command.a).commands)
+                            if(prior.c==0)recipientRamMaximum=applyShortEffect(recipientRamMaximum,prior);
+                    }
+                }
                 const auto changed=applyPrototypeCommand(player,command,prototypes);
                 if(index<previousEffects.size())continue;
                 for(Object &object:objects_) {
-                    if(!object.active || object.player!=player || !object.unit ||
+                    // Original5d4b10 upgrades private rams on the primary list before the shared-master copy.
+                    if(object.active && object.player==player && object.unit && object.privatePrototype &&
+                       object.unit->cls==35 && object.updateList==0 && command.type==3 &&
+                       object.unit->id==command.a && convertedRamUpgrade) {
+                        auto replacement=std::make_shared<UnitPrototype>(*convertedRamUpgrade);
+                        replacement->unit.id=object.unit->id;
+                        int16_t maximum=replacement->unit.hitPoints;
+                        for(const auto &prior:replacement->commands)
+                            if(prior.c==0)maximum=applyShortEffect(maximum,prior);
+                        const float ratio=recipientRamMaximum!=0?float(double(object.hitPoints)/recipientRamMaximum):0;
+                        object.hitPoints=float(double(ratio)*maximum);object.maxHitPoints=maximum;
+                        refreshUpgradeGraphic(object,previousUpgrade,replacement->unit);
+                        object.privatePrototype=std::move(replacement);object.unit=&object.privatePrototype->unit;
+                        // shortcut: Native volley totals are derived from master plus occupants, not original mutable1b0.
+                        continue;
+                    }
+                    if(!object.active || object.player!=player || !object.unit || object.privatePrototype ||
                        std::find(changed.begin(),changed.end(),object.unit->id)==changed.end())continue;
                     if(command.type==3) {
                         const auto &prototype=prototypes.at(object.unit->id);
@@ -4972,7 +5114,7 @@ void Game::applyUnitUpgrades(int player,const std::vector<int> &previousEffects)
     }
     ensureUnitPrototypes(player);
     for(Object &object:objects_) {
-        if(!object.active || object.player!=player || !object.unit)continue;
+        if(!object.active || object.player!=player || !object.unit || object.privatePrototype)continue;
         object.unit=effectiveUnitForPlayer(player,object.unit);
         if(!appended) {
             const float maximum=modifiedUnitAttribute(object,0,object.unit->hitPoints);
@@ -5158,6 +5300,9 @@ std::vector<Game::UnitCommand> Game::unitCommands(
         if (unit.state != State::Idle || unit.healTargetId || unit.moveGoalActive)
             commands.push_back(UnitCommand::Stop);
     }
+    if (conversionTask(unit) && !aiConversionSourceVirtual30(unit.unit->id,unit.unit->copyId) &&
+        unit.unit->cls==50 && playerAttribute(unit.player,67)>0)
+        commands.push_back(UnitCommand::Convert);
     if (canAttackGround(unit))
         commands.push_back(
             UnitCommand::AttackGround);
@@ -5170,6 +5315,7 @@ int Game::unitCommandIcon(
     UnitCommand command) const {
     switch (command) {
     case UnitCommand::Heal: return 15;
+    case UnitCommand::Convert: return 14;
     case UnitCommand::Unload: return 17;
     case UnitCommand::Stop: return 3;
     case UnitCommand::Patrol: return 6;
@@ -5193,6 +5339,10 @@ std::string Game::unitCommandTitle(
     case UnitCommand::Heal:
         languageId = 4124;
         fallback = "Heal";
+        break;
+    case UnitCommand::Convert:
+        languageId = 4125;
+        fallback = "Convert";
         break;
     case UnitCommand::Stop: break;
     case UnitCommand::Patrol:
@@ -5232,6 +5382,10 @@ std::string Game::unitCommandHelp(
     case UnitCommand::Heal:
         languageId = 4924;
         fallback = "Heal a wounded friendly unit.";
+        break;
+    case UnitCommand::Convert:
+        languageId = 4925;
+        fallback = "Convert an enemy unit to your side.";
         break;
     case UnitCommand::Stop: break;
     case UnitCommand::Patrol:
@@ -5283,6 +5437,7 @@ void Game::clearUnitCommandOrder(
     }
     setAttackTarget(unit, 0);
     setTaskReference(unit.healTargetId, 0);
+    clearConversion(unit);
     setTaskReference(unit.garrisonTargetId, 0);
     clearConstructionAssignment(unit);
     if (unit.state == State::Heal) unit.state = State::Idle;
@@ -5397,6 +5552,7 @@ void Game::executeUnitCommand(
         attackGroundCursorActive_ = false;
         statusMessage_ =
             command == UnitCommand::Heal ? "SELECT A WOUNDED FRIENDLY UNIT TO HEAL" :
+            command == UnitCommand::Convert ? "SELECT AN ENEMY TARGET TO CONVERT" :
             command == UnitCommand::Unload
                 ? "SELECT AN UNLOADING LOCATION"
                 : command == UnitCommand::Patrol
@@ -5452,7 +5608,7 @@ void Game::updateHealing(Object &source, float dt) {
         !source.guardTargetId && !source.followTargetId && !source.patrolActive &&
         !source.garrisonTargetId && !source.unloadActive && !source.attackTargetId) {
         Object *nearest=nullptr;
-        const float radius=unitSearchRadius(source.player,*source.unit);
+        const float radius=unitSearchRadius(source);
         float best=radius*radius;
         for (auto &candidate:objects_) {
             const float dx=candidate.x-source.x, dy=candidate.y-source.y;
@@ -6766,6 +6922,10 @@ bool Game::issueGatherCommand(
     // Player-owned resources (farms) are worked by their owner only.
     if (resource.player > 0 && resource.player != worker.player)
         return false;
+    if(worker.privatePrototype) {
+        Object probe=worker;probe.gatherTargetId=resource.spawnId;
+        if(!prepareConvertedWorkerRole(worker,gathererUnit(probe)))return false;
+    }
     clearUnitCommandOrder(worker);
     clearConstructionAssignment(worker);
     setGatherTarget(worker, 0);
@@ -6951,6 +7111,7 @@ bool Game::issueRepairCommand(
     Object &worker, Object &target) {
     if (!isRepairableBy(worker, target))
         return false;
+    if(!prepareConvertedWorkerRole(worker,repairerUnit(worker)))return false;
     clearUnitCommandOrder(worker);
     clearConstructionAssignment(worker);
     setGatherTarget(worker, 0);
@@ -7847,6 +8008,7 @@ void Game::updateGarrisoning(int player) {
         unit.selected = false;
         unit.garrisonedInId =
             (int32_t)building->spawnId;
+        unit.garrisonAdmission=nextGarrisonAdmission_++;
         setTaskReference(unit.garrisonTargetId, 0);
         unit.moveGoalActive = false;
         unit.moveGroupId = 0;
@@ -8146,7 +8308,7 @@ void Game::enqueueGarrisonEjection(Object &building, Object &unit, bool feedback
 }
 
 bool Game::cancelProductionItem(Object &building,
-                                size_t index) {
+                                size_t index,bool feedback) {
     if (index >= building.productionQueue.size())
         return false;
     const ProductionItem item =
@@ -8176,10 +8338,11 @@ bool Game::cancelProductionItem(Object &building,
             building.productionQueue.empty()
                 ? 0.0f
                 : building.productionQueue.front().duration;
-    statusMessage_ = "QUEUE ITEM CANCELLED";
-    statusTime_ = 2.0f;
-    playInterfaceFeedback(
-        kInterfaceCancelSound);
+    if(feedback) {
+        statusMessage_ = "QUEUE ITEM CANCELLED";
+        statusTime_ = 2.0f;
+        playInterfaceFeedback(kInterfaceCancelSound);
+    }
     return true;
 }
 
@@ -8501,6 +8664,7 @@ bool Game::assignBuilder(Object &worker,
         !building.underConstruction ||
         building.player != worker.player)
         return false;
+    if(!prepareConvertedWorkerRole(worker,builderUnit(worker)))return false;
     clearUnitCommandOrder(worker);
     clearConstructionAssignment(worker);
     setGatherTarget(worker, 0);
@@ -9229,7 +9393,9 @@ Game::Object *Game::issueGroupAttack(const std::vector<Object *> &selected,Objec
     Object *acknowledgement = nullptr;
     std::vector<Object *> attackers;
     for (Object *source : selected)
-        if (!isEnemy(*source, *enemy) ||
+        if (!canAttackTarget(*source,*enemy) && issueConversionCommand(*source,*enemy)) {
+            if (!acknowledgement) acknowledgement=source;
+        } else if (!isEnemy(*source, *enemy) ||
             !canAttackTarget(*source, *enemy))
             continue;
         else
@@ -10097,6 +10263,8 @@ bool Game::issueAttackGround(
 
 void Game::issueAttack(Object &source, Object &target, float approachAngle,
                        bool automatic, float approachDistance) {
+    if (automatic && source.conversionTargetId) return;
+    if (!canAttackTarget(source,target) && issueConversionCommand(source,target)) return;
     if (!isEnemy(source, target) ||
         !canAttackTarget(source, target))
         return;
@@ -10226,7 +10394,7 @@ float Game::automaticAcquisitionRadius(const Object &source) const {
         source.attackMode == AttackMode::StandGround)
         return std::max(weaponRange + 0.5f, attackRange(source, source));
     if (source.attackMode == AttackMode::Aggressive)
-        return std::max(6.0f, std::max(sight, unitSearchRadius(source.player,*source.unit)));
+        return std::max(6.0f, std::max(sight, unitSearchRadius(source)));
     if (source.attackMode == AttackMode::Defensive)
         return std::max(4.0f, std::max(weaponRange + 2.0f, sight * 0.75f));
     return 0;
@@ -10405,7 +10573,7 @@ Game::Object *Game::chooseCombatTarget(Object &source,const Object *hitAttacker)
             size_t(owner)<player.diplomacy.size()?player.diplomacy[size_t(owner)]:3);
         const auto &origin=current?*current:source;
         const auto groups=visibleTargets_.query(size_t(source.player-1),int(mapSize_-origin.y),int(origin.x),
-            genieTargetQueryRadius(unitSearchRadius(source.player,*source.unit),
+            genieTargetQueryRadius(unitSearchRadius(source),
                 modifiedUnitAttribute(source,1,source.unit->lineOfSight)),classes,partitions);
         for(int category=4;category>=(player.human?2:0);--category)
             for(const auto &record:groups[size_t(category)])
@@ -11636,9 +11804,10 @@ const Game::Object *Game::unitBlockerAt(const Object &object, float x,
 // is blocked by other units. Rejoins the path at the first waypoint outside
 // the window (or the goal when it is inside).
 bool Game::detourAround(Object &object, float goalX, float goalY) {
-    constexpr float kStep = 0.25f;
-    constexpr int kHalf = 16; // 4 tiles each way
-    constexpr int kSize = kHalf * 2 + 1;
+    // Original4a9cc0 omits moving objects except explicit collision blockers.
+    // Pending native routes approximate its velocity predicate here.
+    const auto attempt = [&](float kStep,int kHalf) {
+    const int kSize = kHalf * 2 + 1;
     const float originX = object.x - kHalf * kStep;
     const float originY = object.y - kHalf * kStep;
     auto cellPos = [&](int cx, int cy, float &x, float &y) {
@@ -11662,6 +11831,7 @@ bool Game::detourAround(Object &object, float goalX, float goalY) {
             const Object &other = objects_[(size_t)index];
             if (&other == &object || !other.active || other.hidden ||
                 isAirUnit(other) != isAirUnit(object)) continue;
+            if (other.spawnId != object.blockerId && other.state == State::Walk && other.pathIndex < other.path.size()) continue;
             const float ox = ax - other.x, oy = ay - other.y;
             const float separation = radius + collisionRadius(other) + 0.05f;
             const float startSquared = ox * ox + oy * oy;
@@ -11686,6 +11856,7 @@ bool Game::detourAround(Object &object, float goalX, float goalY) {
                     if (&other == &object || !other.active || other.hidden ||
                         isAirUnit(other) != isAirUnit(object))
                         continue;
+                    if (other.spawnId != object.blockerId && other.state == State::Walk && other.pathIndex < other.path.size()) continue;
                     const float dx = x - other.x, dy = y - other.y;
                     const float sep = radius + collisionRadius(other) + 0.05f;
                     if (dx * dx + dy * dy < sep * sep) {
@@ -11786,6 +11957,9 @@ bool Game::detourAround(Object &object, float goalX, float goalY) {
     object.path.insert(object.path.end(), rest.begin(), rest.end());
     object.pathIndex = 0;
     return true;
+    };
+    // Escalate when coarse paths fail to produce movement, not on every search.
+    return ((object.moveStallTime>=1.5f || object.blockedTime>=1.5f) && attempt(.0625f,64)) || attempt(.25f,16) || attempt(.125f,32) || attempt(.0625f,64);
 }
 
 // A closed gate only stops units it would not open for: enemies, or
@@ -15597,7 +15771,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
             o.state == State::Build ||
             o.state == State::Gather ||
             o.state == State::Repair ||
-            o.state == State::Heal)
+            o.state == State::Heal || o.state == State::Convert)
             return false;
         if (o.state == State::Idle) {
             if (o.moveGoalActive) {
@@ -15792,6 +15966,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                     const float aside[2][2] = {
                         {other->x + px * push, other->y + py * push},
                         {other->x - px * push, other->y - py * push}};
+                    bool asideIssued = false;
                     for (const auto &point : aside)
                         if (staticPassableAt(*other, point[0], point[1]) &&
                             !unitBlockerAt(*other, point[0], point[1])) {
@@ -15799,8 +15974,26 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                             issueMove(*other, point[0], point[1]);
                             other->wander = wander;
                             other->approachRetry = 1.0f;
+                            asideIssued = true;
                             break;
                         }
+                    // Narrow corridors may have no perpendicular exit.
+                    if (!asideIssued) {
+                        for (int ring=1;ring<=12 && !asideIssued;++ring) {
+                            const float distance=ring*0.25f;
+                            for(int k=0;k<16 && !asideIssued;++k) {
+                                const float angle=std::atan2(other->y-o.y,other->x-o.x)+k*(2*kPi/16);
+                                const float x=other->x+std::cos(angle)*distance;
+                                const float y=other->y+std::sin(angle)*distance;
+                                if(!staticPassableAt(*other,x,y) || !segmentClear(*other,other->x,other->y,x,y)) continue;
+                                if(unitBlockerAt(*other,x,y)) continue;
+                                const bool wander=other->wander;
+                                asideIssued=issueMove(*other,x,y);
+                                other->wander=wander;
+                                if(asideIssued) other->approachRetry=1;
+                            }
+                        }
+                    }
                 }
                 if (dist > 0.0001f) {
                     const float directionX = dx / dist, directionY = dy / dist;
@@ -16099,6 +16292,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
             return true;
         }
         if (!o.active) return false;
+        if(!o.pendingConversionThreats.empty())drainConversionThreats(o);
         const bool tacticalAtStart=o.tacticalMovement.present;
         const int previousGraphic=tacticalAtStart?objectGraphic(o,*o.unit):-1;
         // Original4a1a00 runs motion and sprite advancement before409870 advances actions.
@@ -16189,6 +16383,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
         o.approachRetry = std::max(0.0f, o.approachRetry - dt);
         updateUnitCommandOrder(o, dt);
         updateHealing(o, dt);
+        updateConversion(o, dt);
         // Passengers and garrisoned units don't fight from inside (a
         // building's garrison fire is the building's own volley).
         if (o.garrisonedInId >= 0) {
@@ -16202,7 +16397,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
             o.attackAutomatic = false;
             o.attackGroundActive = false;
             o.attackShotPending = false;
-        } else if (!o.healTargetId) {
+        } else if (!o.healTargetId && !o.conversionTargetId) {
             updateAttack(o, dt);
         }
         if (!o.active) return false;
@@ -16287,7 +16482,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
         actionMenuOpen_ = false;
         actionMenuObjectId_ = 0;
     }
-    if (in.menuBack && healingCursorActive()) {
+    if (in.menuBack && (healingCursorActive() || conversionCursorActive())) {
         unitCommandCursorActive_=false; unitCommandJustBegun_=false; in.menuBack=false;
     }
     if (in.healPressed && !cheatMenuOpen_)
@@ -16691,6 +16886,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
                 return isTransport(*actor) && garrisonedCount(*actor,false)>0 &&
                     std::isfinite(targetX) && std::isfinite(targetY) && targetX>=0 && targetY>=0 &&
                     targetX<mapSize_ && targetY<mapSize_;
+            if (command==UnitCommand::Convert) return clicked && canConvert(*actor,*clicked);
             if (!clicked || !clicked->active || clicked->hidden || actor==clicked ||
                 !isFriendlyPlayer(actor->player,clicked->player)) return false;
             return command!=UnitCommand::Heal || canHeal(*actor,*clicked);
@@ -16741,11 +16937,18 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
             Object *target = targetId?findObject(targetId):nullptr;
             if (target && target->active &&
                 !target->hidden &&
-                isFriendlyPlayer(
+                (command==UnitCommand::Convert || isFriendlyPlayer(
                     localPlayer_,
-                    target->player)) {
+                    target->player))) {
                 for (Object *unit : selected) {
                     if (unit == target) continue;
+                    if (command==UnitCommand::Convert) {
+                        if (issueConversionCommand(*unit,*target)) {
+                            issued=true;
+                            if (!acknowledgement) acknowledgement=unit;
+                        }
+                        continue;
+                    }
                     if (command == UnitCommand::Heal) {
                         if (issueHealCommand(*unit,*target)) {
                             issued=true;
@@ -16781,6 +16984,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
                     false);
             statusMessage_ =
                 command == UnitCommand::Heal ? "HEALING" :
+                command == UnitCommand::Convert ? "CONVERTING" :
                 command == UnitCommand::Unload ? "UNLOADING" :
                 command ==
                         UnitCommand::Patrol
@@ -16794,6 +16998,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
             showCannotDo(
                 -1,
                 command == UnitCommand::Heal ? "SELECT A WOUNDED FRIENDLY UNIT TO HEAL" :
+                command == UnitCommand::Convert ? "SELECT AN ENEMY TARGET TO CONVERT" :
                 command == UnitCommand::Unload ? "CANNOT UNLOAD THERE" :
                 command ==
                         UnitCommand::Patrol
@@ -16803,6 +17008,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
         });
         } else {
             showCannotDo(-1,command==UnitCommand::Heal?"SELECT A WOUNDED FRIENDLY UNIT TO HEAL":
+                command==UnitCommand::Convert?"SELECT AN ENEMY TARGET TO CONVERT":
                 command==UnitCommand::Unload?"CANNOT UNLOAD THERE":
                 command==UnitCommand::Patrol?"CANNOT PATROL THERE":"SELECT A FRIENDLY TARGET");
         }
@@ -16999,6 +17205,11 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
              pendingUnitCommand_ ==
                  UnitCommand::Follow)
         cursorMode_ = CursorMode::Follow;
+    else if (!consumeWorldInput && cursorVisible_ && unitCommandCursorActive_ && pendingUnitCommand_==UnitCommand::Convert) {
+        const Object *target=objectAtScreen(cursorX_,cursorY_,in.screenW,in.screenH);
+        if(target) for(const Object *unit:selectedObjectsInOrder(true))
+            if(canConvert(*unit,*target)) {cursorMode_=CursorMode::Convert;break;}
+    }
     else if (!consumeWorldInput && cursorVisible_ && healingCursorActive()) {
         const Object *target=objectAtScreen(cursorX_,cursorY_,in.screenW,in.screenH);
         if(target) for(const Object *unit:selectedObjectsInOrder(true))
@@ -17047,10 +17258,14 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
                     garrisonable = true;
                     break;
                 }
+        bool convertible=false;
+        if (hovered) for (const Object *unit:selectedObjectsInOrder(true))
+            if (!canAttackTarget(*unit,*hovered) && canConvert(*unit,*hovered)) {convertible=true;break;}
         bool healable=false;
         if (hovered) for (const Object *unit:selectedObjectsInOrder(true))
             if (canHeal(*unit,*hovered)) { healable=true; break; }
         cursorMode_ =
+            convertible ? CursorMode::Convert :
             healable ? CursorMode::Heal :
             garrisonable ? CursorMode::Garrison
             : (selectedWorker && gatherable) || dropOff
@@ -20794,6 +21009,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
         const float x = cursorX_ * invZoom, y = cursorY_ * invZoom;
         size_t frameIndex = kCursorNormal;
         if (cursorMode_ == CursorMode::Heal) frameIndex = kCursorHeal;
+        if (cursorMode_ == CursorMode::Convert) frameIndex = kCursorHeal;
         if (cursorMode_ == CursorMode::Placement) frameIndex = kCursorPlacement;
         if (cursorMode_ == CursorMode::GatherPoint) frameIndex = kCursorGatherPoint;
         if (cursorMode_ == CursorMode::Attack) frameIndex = kCursorAttack;

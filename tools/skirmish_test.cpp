@@ -11,6 +11,9 @@ static void check(bool value, const char *message) {
 #include "memory_inspection_checks.h"
 #include "rubble_checks.h"
 #include "healing_checks.h"
+#include "conversion_gameplay_checks.h"
+#include "conversion_threat_checks.h"
+#include "conversion_ownership_gameplay_checks.h"
 #include "power_gameplay_checks.h"
 #include "combat_modifier_checks.h"
 #include "unit_cost_checks.h"
@@ -358,7 +361,7 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
     aiContextGameplayChecks(assets);
     playerMilitaryFactsGameplayChecks(assets);aiKnownCategoryChecks();playerBuildingFactGameplayChecks(assets);playerUnitFactGameplayChecks(assets);
     deliveryCorridorGameplayChecks(assets);
-    aiConstructorMetadataChecks();rmsConstructorMetadataGameplayChecks(assets);exploreRevisitChecks();exploreRevisitGameplayChecks(assets);movementProgressGameplayChecks(assets);dynamicDetourGameplayChecks(assets);crowdYieldGameplayChecks(assets);economyGameplayChecks(assets);unitLineGameplayChecks(assets);aiCounterIdentityChecks();aiCounterIdentityGameplayChecks(assets);aiPrefabPlacementGameplayChecks(assets);aiDropsitePlacementGameplayChecks(assets);aiBuildPositionsGameplayChecks(assets);aiResourceGridGameplayChecks(assets);
+    aiConstructorMetadataChecks();rmsConstructorMetadataGameplayChecks(assets);exploreRevisitChecks();exploreRevisitGameplayChecks(assets);movementProgressGameplayChecks(assets);dynamicDetourGameplayChecks(assets);crowdedDepotDeliveryChecks(assets);crowdYieldGameplayChecks(assets);economyGameplayChecks(assets);unitLineGameplayChecks(assets);aiCounterIdentityChecks();aiCounterIdentityGameplayChecks(assets);aiPrefabPlacementGameplayChecks(assets);aiDropsitePlacementGameplayChecks(assets);aiBuildPositionsGameplayChecks(assets);aiResourceGridGameplayChecks(assets);
     civilianExploreGameplayChecks(assets);
     scenarioAiChecks(assets);
     actorAiTimingChecks(assets);
@@ -432,6 +435,9 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
     memoryInspectionChecks(assets,renderer);
     powerGameplayChecks(assets);
     healingChecks(assets,renderer);
+    conversionGameplayChecks(assets,renderer);
+    conversionThreatChecks(assets);
+    conversionOwnershipGameplayChecks(assets);
     combatModifierChecks(assets);
     unitCostChecks(assets);
     researchCostChecks(assets);

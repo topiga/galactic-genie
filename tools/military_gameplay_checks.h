@@ -248,6 +248,31 @@ static void militaryGameplayChecks(swgb::Assets &assets) {
             check(game.objectHitPoints(troop)<hp,"The admitted Jedi group approaches and damages its ground target");
         }
     }
+    {
+        auto &data=const_cast<dat::DatFile&>(assets.dat());
+        auto &effects=data.effects[size_t(data.techs[501].effectId)].commands;
+        struct Restore {std::vector<dat::EffectCommand>& value;std::vector<dat::EffectCommand> saved;
+            ~Restore(){value=std::move(saved);}} restore{effects,effects};
+        effects={{1,87,0,0,1}};
+        check(game.initScenario(scenario,&error),error.c_str());
+        check(game.researchTechnologyForTesting(2,501),"Enable original advanced conversion gate");
+        int aircraft=-1;
+        for(const auto &unit:data.civs[1].units)
+            if(unit.type==dat::UT_Creatable && unit.flyMode && unit.cls==43 && !unit.heroMode) {
+                aircraft=unit.id;break;
+            }
+        check(aircraft>=0,"Find actual convertible aircraft prototype");
+        const auto jedi=game.spawnObjectForTesting(1,115,2,20,20);
+        const auto target=game.spawnObjectForTesting(1,aircraft,1,24,20);
+        check(jedi && target && game.formAiMilitaryGroupsForTesting(2),"Conversion-only military target fixture");
+        game.setAttackModeForTesting(jedi,3);game.setAttackModeForTesting(target,3);
+        game.setGameTimeForTesting(5.f);game.updateAiMilitaryForTesting(2,UINT32_MAX);game.update(0,{});
+        check(game.conversionTargetForTesting(jedi)==target && !game.attackTargetForTesting(jedi),
+              "Military group dispatches conversion instead of impossible melee against aircraft");
+        for(int i=0;i<1200 && game.objectPlayer(target)==1;++i)game.update(1.f/30,{});
+        check(game.objectPlayer(target)==2 && game.privateMasterForTesting(target),
+              "Military conversion-only group completes ordinary timed ownership transfer");
+    }
     check(game.initScenario(scenario,&error),error.c_str());
     const auto searcher=game.spawnObjectForTesting(1,329,2,20,20);
     check(searcher && game.formAiMilitaryGroupsForTesting(2),"No-target group search fixture");

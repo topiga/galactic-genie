@@ -1,5 +1,90 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+// Restored native Arid crowd: all cargo must be credited through ordinary drop-off.
+[[gnu::noinline]] static void crowdedDepotDeliveryChecks(swgb::Assets &assets) {
+    swgb::Scenario scenario;scenario.map.width=scenario.map.height=120;
+    scenario.map.tiles.resize(120*120);scenario.playerSlotCount=2;scenario.civilizations.fill(1);
+    for(int p=0;p<2;++p){scenario.players[p].active=true;scenario.players[p].human=true;scenario.players[p].civilization=1;}
+    const auto add=[&](uint32_t id,uint16_t prototype,float x,float y){
+        swgb::ScenarioUnit u;u.spawnId=id;u.unitId=prototype;u.player=2;u.x=120-y;u.y=x;scenario.units.push_back(u);
+    };
+    add(1925,109,81.0f,12.0f);
+    add(1929,293,79.974945068f,17.647932053f);
+    add(1931,293,79.580841064f,15.410697937f);
+    add(2034,70,81.0f,3.0f);
+    add(2035,68,82.0f,22.0f);
+    add(2040,83,79.805297852f,16.639230728f);
+    add(2041,70,79.0f,3.0f);
+    add(2051,70,84.0f,3.0f);
+    add(2052,83,79.502975464f,16.98756218f);
+    add(2055,83,79.562927246f,17.438938141f);
+    add(2057,83,79.808654785f,15.021357536f);
+    add(2061,70,77.0f,3.0f);
+    add(2069,562,82.0f,26.0f);
+    add(2071,12,84.5f,12.5f);
+    add(2072,87,84.5f,15.5f);
+    add(2078,70,82.0f,1.0f);
+    add(2087,70,75.0f,3.0f);
+    add(2090,101,77.0f,16.0f);
+    add(2091,83,79.493118286f,16.309179306f);
+    add(2094,83,79.446266174f,14.749534607f);
+    add(2095,323,95.0f,10.0f);
+    add(2096,83,79.198631287f,15.141284943f);
+    add(2097,70,73.0f,5.0f);
+    add(2101,83,79.191833496f,16.652046204f);
+    add(2102,104,81.5f,15.5f);
+    add(2105,70,71.0f,10.0f);
+    add(2106,83,79.518157959f,15.858880997f);
+    add(2107,83,79.964607239f,17.19383812f);
+    add(2111,70,75.0f,11.0f);
+    add(2117,70,80.0f,6.0f);
+    add(2119,84,77.0f,8.0f);
+    add(2120,103,84.5f,9.5f);
+    add(2130,82,87.0f,6.0f);
+    add(2131,49,88.0f,12.0f);
+    add(2132,209,73.0f,20.0f);
+    add(2133,101,71.0f,2.0f);
+    add(2134,317,89.0f,20.0f);
+    add(2136,12,78.5f,12.5f);
+    add(2138,70,67.0f,9.0f);
+    add(2146,335,81.5f,8.5f);
+    auto game=std::make_unique<swgb::Game>(assets);auto &g=*game;std::string error;
+    check(g.initScenario(scenario,&error),error.c_str());g.update(0,{});
+    check(g.setWorkerCargoForTesting(1929,2,10.0f) && g.issueDropOffForTesting(1929,1925),"Restore captured cargo and its normal drop-off order");
+    check(g.restoreMovementRouteForTesting(1929,83.349998f,13.54719f,{{79.5f,16.5f},{79.5f,14.35f}},1925),"Restore the retained work approach");
+    check(g.setWorkerCargoForTesting(1931,2,10.0f) && g.issueDropOffForTesting(1931,1925),"Restore captured cargo and its normal drop-off order");
+    check(g.restoreMovementRouteForTesting(1931,79.580841f,14.35f,{{79.580841f,14.35f}},1925),"Restore the retained work approach");
+    check(g.setWorkerCargoForTesting(2040,0,4.767059f) && g.issueDropOffForTesting(2040,1925),"Restore captured cargo and its normal drop-off order");
+    check(g.restoreMovementRouteForTesting(2040,79.805298f,14.35f,{{79.805298f,14.35f}},1925),"Restore the retained work approach");
+    check(g.setWorkerCargoForTesting(2052,2,10.0f) && g.issueDropOffForTesting(2052,1925),"Restore captured cargo and its normal drop-off order");
+    check(g.restoreMovementRouteForTesting(2052,83.349998f,11.223755f,{{79.5f,14.35f}},1925),"Restore the retained work approach");
+    check(g.setWorkerCargoForTesting(2055,2,10.0f) && g.issueDropOffForTesting(2055,1925),"Restore captured cargo and its normal drop-off order");
+    check(g.restoreMovementRouteForTesting(2055,83.349998f,12.0f,{{79.5f,14.35f}},1925),"Restore the retained work approach");
+    check(g.restoreMovementRouteForTesting(2057,95.720078f,24.7899f,{{79.5f,17.5f},{86.5f,22.5f},{95.720078f,24.7899f}}),"Restore the retained work approach");
+    check(g.setWorkerCargoForTesting(2091,0,3.957325f) && g.issueDropOffForTesting(2091,1925),"Restore captured cargo and its normal drop-off order");
+    check(g.restoreMovementRouteForTesting(2091,78.650002f,11.223753f,{{79.5f,18.5f},{75.5f,22.5f},{70.5f,22.5f},{70.5f,17.5f},{77.5f,11.5f},{78.650002f,11.223753f}},1925),"Restore the retained work approach");
+    check(g.restoreMovementRouteForTesting(2094,94.720078f,25.7899f,{{79.5f,17.5f},{86.5f,22.5f},{94.720078f,25.7899f}}),"Restore the retained work approach");
+    check(g.setWorkerCargoForTesting(2096,2,10.0f) && g.issueDropOffForTesting(2096,1925),"Restore captured cargo and its normal drop-off order");
+    check(g.restoreMovementRouteForTesting(2096,78.650002f,13.54719f,{{79.5f,18.5f},{75.5f,22.5f},{70.5f,22.5f},{70.5f,17.5f},{74.5f,13.5f},{78.650002f,13.54719f}},1925),"Restore the retained work approach");
+    check(g.setWorkerCargoForTesting(2101,2,10.0f) && g.issueDropOffForTesting(2101,1925),"Restore captured cargo and its normal drop-off order");
+    check(g.restoreMovementRouteForTesting(2101,78.650002f,10.452808f,{{79.5f,18.5f},{75.5f,22.5f},{70.5f,22.5f},{70.5f,17.5f},{78.650002f,10.452808f}},1925),"Restore the retained work approach");
+    check(g.setWorkerCargoForTesting(2106,2,10.0f) && g.issueDropOffForTesting(2106,1925),"Restore captured cargo and its normal drop-off order");
+    check(g.restoreMovementRouteForTesting(2106,79.452812f,9.65f,{{79.5f,14.35f}},1925),"Restore the retained work approach");
+    check(g.setWorkerCargoForTesting(2107,2,10.0f) && g.issueDropOffForTesting(2107,1925),"Restore captured cargo and its normal drop-off order");
+    check(g.restoreMovementRouteForTesting(2107,83.349998f,12.776246f,{{79.5f,17.5f},{79.5f,14.35f}},1925),"Restore the retained work approach");
+    const float foodBefore=g.resource(2,0),carbonBefore=g.resource(2,2);
+    const std::array<uint32_t,12> workers={1929,1931,2040,2052,2055,2057,2091,2094,2096,2101,2106,2107};
+    const std::array<uint32_t,10> loaded={1929,1931,2040,2052,2055,2091,2096,2101,2106,2107};
+    bool delivered=false;
+    for(int frame=0;frame<7200 && !delivered;++frame){
+        std::array<std::array<float,2>,12> previous{};for(size_t i=0;i<workers.size();++i)previous[i]=g.objectPosition(workers[i]);
+        g.update(1.f/30,{});
+        for(size_t i=0;i<workers.size();++i){auto p=g.objectPosition(workers[i]);check(g.segmentClearForTesting(workers[i],previous[i][0],previous[i][1],p[0],p[1]),"Crowd recovery preserves static movement clearance");}
+        delivered=std::all_of(loaded.begin(),loaded.end(),[&](uint32_t id){return g.workerCargoForTesting(id)<.001f;});
+    }
+    check(delivered,"Every captured carrier reaches the depot and deposits without task cancellation or cargo loss");
+    check(std::abs(g.resource(2,0)-foodBefore-8.724384f)<.001f && std::abs(g.resource(2,2)-carbonBefore-80.f)<.001f,"Crowd recovery credits the exact food and carbon cargo");
+}
 // Native movement-adapter regression, not an original pathfinder parity claim.
 [[gnu::noinline]] static void overlappingStartMovementChecks(swgb::Assets &assets) {
     swgb::Scenario scenario;scenario.map.width=scenario.map.height=64;

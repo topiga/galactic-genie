@@ -296,25 +296,12 @@ void Game::updateAiMilitaryTargets(int player,uint32_t budget) {
     };
     const auto range=[&](const Object &object) {return modifiedUnitAttribute(object,12,object.unit->maxRange);};
     const auto conversionCandidate=[&](const Object &source,const Object &target) {
-        AiConversionEligibility input;
-        input.sourceClass=source.unit->cls;
-        input.sourceVirtual30=aiConversionSourceVirtual30(source.unit->id,source.unit->copyId);
-        input.sourceVirtual34=aiConversionSourceVirtual34(source.unit->id,source.unit->copyId);
-        input.ignoreCharge=true;
-        input.targetOwner=target.player;input.targetClass=target.unit->cls;
-        input.targetPrototype=target.unit->id;input.targetType=target.unit->type;
-        input.targetImmunity=target.unit->heroMode;
-        input.enabledResource67=playerAttribute(source.player,67);
-        input.jediResource27=playerAttribute(source.player,27);
-        input.advancedResource87=playerAttribute(source.player,87);
-        return aiConversionEligible(input);
+        return conversionEligible(source,target,true);
     };
     const auto damage=[&](const Object &source,const Object &target) {
         return AiGroupDamageInput{float(canAttackTarget(source,target)?attackDamage(source,target):0),
             modifiedUnitAttribute(source,10,source.unit->reloadTime),
-            // shortcut: Conversion-only damage needs the live charge/action controller;
-            // ordinary melee and definitively ineligible converters are already resolved.
-            source.unit->cls==50 && conversionCandidate(source,target)?std::nullopt:std::optional<bool>(false)};
+            source.unit->cls==50 && canConvert(source,target)};
     };
     const auto clock=[] {return uint32_t(std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count());};
@@ -492,7 +479,7 @@ void Game::updateAiMilitary(int player,uint32_t budget) {
         if(!object || !object->active || object->player!=player || object->hidden || object->garrisonedInId>=0)return std::nullopt;
         // shortcut: Native head-state mapping replaces original controller task/command metadata.
         const int task=object->tacticalMovement.present || object->pointMovement.present?610:
-            object->exploration?605:object->attackTargetId?600:object->state==State::Idle?-1:0;
+            object->exploration?605:object->conversionTargetId?604:object->attackTargetId?600:object->state==State::Idle?-1:0;
         const double distance=geniePointFootprintDistance(float(mapSize_)-object->y,object->x,
             float(mapSize_)-destination[1],destination[0],object->unit->collisionSize[1],object->unit->collisionSize[0]);
         return AiMilitaryGatherMember{distance,task,task==-1?-1:0};
@@ -564,7 +551,7 @@ void Game::updateAiMilitary(int player,uint32_t budget) {
                 if(!object || !object->active || object->player!=player || object->hitPoints<=0)continue;
                 // shortcut: Native action slots supply task/state; no original movement-group registry yet.
                 const int task=object->tacticalMovement.present || object->pointMovement.present?610:
-                    object->exploration?605:object->attackTargetId?600:object->state==State::Idle?-1:0;
+                    object->exploration?605:object->conversionTargetId?604:object->attackTargetId?600:object->state==State::Idle?-1:0;
                 const int actionState=object->tacticalMovement.present?object->tacticalMovement.state:
                     object->pointMovement.present?(object->pointMovement.status==GenieMovementStatus::Active?4:1):2;
                 searchMembers.push_back({{float(mapSize_)-object->y,object->heightAboveGround,object->x},

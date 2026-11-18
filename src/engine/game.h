@@ -27,6 +27,8 @@
 #include "../core/genie_ai_timing.h"
 #include "../core/genie_visible_targets.h"
 #include "../core/genie_update_list.h"
+#include "../core/genie_conversion_action.h"
+#include "../core/genie_orientation.h"
 
 #include <array>
 #include <cmath>
@@ -34,6 +36,7 @@
 #include <deque>
 #include <functional>
 #include <map>
+#include <memory>
 #include <optional>
 #include <random>
 #include <set>
@@ -345,6 +348,15 @@ public:
         if (!object || player<0 || uint32_t(player)>worldPlayerCount_) return false;
         setObjectOwner(*object,player);return true;
     }
+    bool privateMasterForTesting(uint32_t id) const {
+        const auto *object=findObject(id);return object && bool(object->privatePrototype);
+    }
+    float workerCargoForTesting(uint32_t id) const {
+        const auto *object=findObject(id);return object?object->carriedAmount:0;
+    }
+    bool convertObjectForTesting(uint32_t id,int player) {
+        auto *object=findObject(id);return object && transferConvertedObject(*object,player);
+    }
     float resource(int player, int resourceId) const;
     bool researchTechnology(int player, int technologyId);
     const std::string &currentInstruction() const { return currentInstruction_; }
@@ -413,10 +425,12 @@ public:
         clearUnitCommandOrder(*o);issueGroupMove({o},x,y,selectedFormation_);return true;
     }
     bool restoreMovementRouteForTesting(uint32_t id,float x,float y,
-                                        const std::vector<std::array<float,2>> &route) {
-        auto *o=findObject(id);
-        if(!o || !o->active || route.empty() || !issueMove(*o,x,y))return false;
-        o->path=route;o->pathIndex=0;o->moveGoalActive=true;
+                                        const std::vector<std::array<float,2>> &route,
+                                        uint32_t goalId=0,float clearance=.25f) {
+        auto *o=findObject(id);const auto *goal=findObject(goalId);
+        if(!o || !o->active || (goalId && !goal) || route.empty() ||
+           !issueMove(*o,x,y,goal,clearance))return false;
+        o->path=route;o->pathIndex=0;o->moveGoalActive=goalId==0;
         return true;
     }
     int pointMovementStatusForTesting(uint32_t id) const {
@@ -499,6 +513,18 @@ public:
         auto *a=findObject(source), *b=findObject(target);
         return a && b && issueHealCommand(*a,*b);
     }
+    bool issueConversionForTesting(uint32_t source,uint32_t target) {
+        auto *a=findObject(source),*b=findObject(target);return a && b && issueConversionCommand(*a,*b);
+    }
+    float conversionChargeForTesting(uint32_t id) const {
+        const auto *o=findObject(id);return o?o->conversionCharge:0;
+    }
+    uint32_t conversionTargetForTesting(uint32_t id) const {
+        const auto *o=findObject(id);return o?o->conversionTargetId:0;
+    }
+    size_t pendingConversionThreatsForTesting(uint32_t id) const {
+        const auto *o=findObject(id);return o?o->pendingConversionThreats.size():0;
+    }
     bool issueRepairForTesting(
         uint32_t workerId, uint32_t targetId);
     bool issueGatherForTesting(
@@ -526,6 +552,7 @@ public:
     int classicHudIconForTesting(size_t slot) { const auto buttons=classicHudButtons(); return slot<buttons.size()?buttons[slot].icon:-1; }
     int formationForTesting() const { return int(selectedFormation_); }
     bool healingCursorActive() const { return unitCommandCursorActive_ && pendingUnitCommand_ == UnitCommand::Heal; }
+    bool conversionCursorActive() const { return unitCommandCursorActive_ && pendingUnitCommand_ == UnitCommand::Convert; }
     bool actionMenuOpenForTesting() const {
         return actionMenuOpen_;
     }
@@ -865,6 +892,7 @@ private:
         Gather,
         Repair,
         Heal,
+        Convert,
     };
     enum class CursorMode : uint8_t {
         Normal,
@@ -873,6 +901,7 @@ private:
         ContextWork,
         RepairCommand,
         Heal,
+        Convert,
         Guard,
         Follow,
         AttackGround,
@@ -898,6 +927,7 @@ private:
     enum class UnitCommand : uint8_t {
         Stop,
         Heal,
+        Convert,
         Patrol,
         Guard,
         Follow,
@@ -911,8 +941,11 @@ private:
         float duration = 0;
     };
 
+    struct UnitPrototype;
     struct Object {
         const dat::Unit *unit = nullptr;
+        std::shared_ptr<const UnitPrototype> privatePrototype; // Original converted actor-owned master.
+        std::shared_ptr<const UnitPrototype> privateJobPrototype; // Native split worker-role adapter.
         const dat::Unit *gateClosedUnit = nullptr;
         const dat::Unit *gateOpenUnit = nullptr;
         const dat::Unit *gateEndUnit = nullptr;
@@ -981,6 +1014,15 @@ private:
         float patrolEndX = 0;
         float patrolEndY = 0;
         uint32_t healTargetId = 0; // owned action target; change through setTaskReference
+        uint32_t conversionTargetId = 0;
+        std::vector<uint32_t> pendingConversionThreats;
+        float conversionCharge = 100;
+        float conversionRange = 0;
+        float conversionLastSeenX = 0, conversionLastSeenY = 0;
+        GenieConversionClock conversionClock;
+        GenieOrientation conversionOrientation;
+        enum class ConversionPhase : uint8_t { None, Approach, Orient, Pulse };
+        ConversionPhase conversionPhase = ConversionPhase::None;
         uint32_t guardTargetId = 0;
         uint32_t followTargetId = 0;
         bool moveGoalActive = false;
@@ -1079,6 +1121,7 @@ private:
         uint32_t garrisonTargetId = 0;
         uint32_t spawnId = 0;
         int32_t garrisonedInId = -1;
+        uint64_t garrisonAdmission = 0;
         uint16_t initialFrame = 0;
     };
 
@@ -1199,6 +1242,9 @@ private:
     void registerObjectUpdate(size_t index);
     void unregisterObjectUpdate(Object &object);
     void setObjectOwner(Object &object, int player);
+    bool canTransferConvertedObject(const Object &object,int player) const;
+    bool transferConvertedObject(Object &object,int player);
+    bool prepareConvertedWorkerRole(Object &worker,const dat::Unit *role);
     GenieUpdateList &objectUpdateList(int owner, uint8_t list);
     void wakeObject(Object &object);
     void setBuildingFrozen(Object &object, bool frozen);
@@ -1317,8 +1363,10 @@ private:
     int16_t researchTimeDelta(int player,const dat::Tech &technology) const;
     float researchDuration(int player,const dat::Tech &technology) const;
     std::array<dat::ResourceCost,3> unitCosts(int player,const dat::Unit &unit) const;
+    std::array<dat::ResourceCost,3> unitCosts(const Object &object) const;
     float unitTrainingTime(int player,const dat::Unit &unit) const;
     float unitSearchRadius(int player,const dat::Unit &unit) const;
+    float unitSearchRadius(const Object &object) const;
     float modifiedUnitAttribute(const Object &object,
                                 int attribute,
                                 float baseValue) const;
@@ -1358,6 +1406,14 @@ private:
     bool canHeal(const Object &source, const Object &target) const;
     bool issueHealCommand(Object &source, Object &target);
     void updateHealing(Object &source, float dt);
+    const dat::Task *conversionTask(const Object &source) const;
+    bool conversionEligible(const Object &source,const Object &target,bool ignoreCharge) const;
+    bool canConvert(const Object &source,const Object &target,bool ignoreCharge=false) const;
+    bool issueConversionCommand(Object &source,Object &target);
+    void updateConversion(Object &source,float dt);
+    void queueConversionThreat(Object &target,const Object &source);
+    void drainConversionThreats(Object &target);
+    void clearConversion(Object &source);
     int buildingCommandIcon(const Object &building, BuildingCommand command) const;
     std::string buildingCommandTitle(const Object &building, BuildingCommand command) const;
     std::string buildingCommandHelp(const Object &building, BuildingCommand command) const;
@@ -1414,7 +1470,7 @@ private:
                                    int screenW, int screenH);
     bool handleActionMenuClick(float screenX, float screenY,
                                int screenW, int screenH);
-    bool cancelProductionItem(Object &building, size_t index);
+    bool cancelProductionItem(Object &building, size_t index,bool feedback=true);
     void enqueueProductionCancellation(Object &building, size_t index);
     void enqueueGarrisonEjection(Object &building, Object &unit, bool feedback);
     bool openSelectedActionMenu();
@@ -1443,6 +1499,7 @@ private:
                                          std::map<int,UnitPrototype> &prototypes) const;
     void ensureUnitPrototypes(int player) const;
     const std::vector<dat::EffectCommand> &unitCommands(int player,int unitId) const;
+    const std::vector<dat::EffectCommand> &objectUnitCommands(const Object &object) const;
     const dat::Unit *effectiveUnitForPlayer(
         int player, const dat::Unit *unit) const;
     int objectGraphic(const Object &object,const dat::Unit &unit) const;
@@ -1781,6 +1838,7 @@ private:
     float instructionTime_ = 0;
     float attackAlertCooldown_ = 0;
     uint32_t nextSpawnId_ = 1;
+    uint64_t nextGarrisonAdmission_ = 1;
     uint32_t nextMoveGroupId_ = 1;
     int difficulty_ = 2;
     double gameTime_ = 0;

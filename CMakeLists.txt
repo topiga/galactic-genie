@@ -53,6 +53,7 @@ set(SWGB_CORE_SOURCES
     src/engine/game.cpp
     src/engine/game_tactical_movement.cpp
     src/engine/game_military.cpp
+    src/engine/game_conversion.cpp
     src/engine/game_explore_destination.cpp
     src/engine/game_ai_economy.cpp
     src/engine/game_ai_build_placement.cpp
