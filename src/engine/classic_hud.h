@@ -320,8 +320,8 @@ void Game::renderClassicHud(Renderer &r,int width,int height) {
         const float light=remembered?144.f/255:1.f;
         r.fillRect(p[0]*unit,p[1]*unit,3*layout.scale*unit,3*layout.scale*unit,uint8_t(c.r*light),uint8_t(c.g*light),uint8_t(c.b*light),255);
     };
-    for(const auto &o:objects_) if(objectVisible(o)) marker(o,false);
-    for(const auto &entry:rememberedObjects_) if(!objectVisible(entry.second) && tileVisibility(int(entry.second.x),int(std::ceil(entry.second.y))-1)>0) marker(entry.second,true);
+    for(const auto &o:objects_) if(renderObjectVisible(o)) marker(o,false);
+    for(const auto &entry:rememberedObjects_) if(!renderObjectVisible(entry.second) && tileVisibility(int(entry.second.x),int(std::ceil(entry.second.y))-1)>0) marker(entry.second,true);
     std::array<std::array<float,2>,4> corners;
     for(int i=0;i<4;++i) {
         float tx,ty; screenToWorld((i==1 || i==2)?float(width):0,(i>=2)?layout.top:0,width,height,tx,ty);

@@ -9636,6 +9636,22 @@ bool Game::objectVisible(const Object &object) const {
            (object.player==localPlayer_ || worldSoundVisible(object.x,object.y));
 }
 
+// Drawing follows refreshVisibility; gameplay/audio retain their live queries.
+bool Game::renderPointVisible(float x,float y) const {
+    if(!std::isfinite(x) || !std::isfinite(y) || x<0 || y<=0 || x>=mapSize_ || y>mapSize_)return false;
+    if(forceSightCheat_)return true;
+    const int tx=int(x),ty=mapSize_-1-int(float(mapSize_)-y);
+    // Tiny positive y can round to an out-of-map original tile. Preserve the
+    // live stencil result there rather than clamping to a different cell.
+    if(ty<0 || ty>=mapSize_)return worldSoundVisible(x,y);
+    return tileVisibility(tx,ty)==2;
+}
+
+bool Game::renderObjectVisible(const Object &object) const {
+    return object.active && !object.hidden && object.draw &&
+           (object.player==localPlayer_ || renderPointVisible(object.x,object.y));
+}
+
 int Game::tileVisibility(int x,int y) const {
     if(x<0 || y<0 || x>=mapSize_ || y>=mapSize_) return 0;
     if(forceSightCheat_) return 2;
@@ -17287,7 +17303,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
     const std::vector<Object *> panelSelection =
         selectedObjectsInOrder(false);
     for (const Object *object : panelSelection) {
-        if (!objectVisible(*object)) continue;
+        if (!renderObjectVisible(*object)) continue;
         if (!panelObject)
             panelObject = object;
         else if (panelObject->unit->id != object->unit->id)
@@ -17486,9 +17502,9 @@ void Game::render(Renderer &r, int screenW, int screenH) {
     g_draws.clear();
     std::vector<std::pair<const Object *, bool>> visibleObjects;
     for (const auto &o : objects_)
-        if (objectVisible(o)) visibleObjects.push_back({&o,false});
+        if (renderObjectVisible(o)) visibleObjects.push_back({&o,false});
     for (const auto &entry : rememberedObjects_)
-        if (!objectVisible(entry.second) && tileVisibility(int(entry.second.x),int(std::ceil(entry.second.y))-1)>0) visibleObjects.push_back({&entry.second,true});
+        if (!renderObjectVisible(entry.second) && tileVisibility(int(entry.second.x),int(std::ceil(entry.second.y))-1)>0) visibleObjects.push_back({&entry.second,true});
     for (const auto &entry : visibleObjects) {
         const Object &o=*entry.first;
         const bool remembered=entry.second;
@@ -17639,7 +17655,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
         }
     }
     for (const Remains &remains : remains_) {
-        if (!worldSoundVisible(remains.x,remains.y)) continue;
+        if (!renderPointVisible(remains.x,remains.y)) continue;
         int graphicId = remains.dyingGraphic;
         float animTime = remains.age;
         if (remains.age >= remains.dyingDuration) {
@@ -17661,7 +17677,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
     std::vector<std::array<float, 2>> blasterGlowPoints;
     std::vector<std::array<float, 7>> laserBolts; // x0 y0 x1 y1 r g b
     for (const Projectile &projectile : projectiles_) {
-        if (!projectile.unit || !worldSoundVisible(projectile.x,projectile.y)) continue;
+        if (!projectile.unit || !renderPointVisible(projectile.x,projectile.y)) continue;
         const dat::Graphic *graphic =
             assets_.dat().graphic(projectile.unit->standingGraphic[0]);
         const SpriteSheet *sheet =
@@ -17673,7 +17689,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
             const float trailDistance = trail * 0.10f;
             const float x = projectile.x - std::cos(projectile.facing) * trailDistance;
             const float y = projectile.y - std::sin(projectile.facing) * trailDistance;
-            if (!worldSoundVisible(x,y)) continue;
+            if (!renderPointVisible(x,y)) continue;
             float sx, sy;
             toScreen(x, y, sx, sy);
             sy -= elevationAt(x, y) * assets_.dat().terrainBlock.elevHeight +
@@ -17816,7 +17832,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
     std::vector<Object *> pendingFoundations;
     for (auto &object:objects_) {
         if (object.pendingFoundation==255 || !object.active || object.hidden || !object.draw) continue;
-        if (!objectVisible(object) && !(object.unit->fogVisibility==1 && tileVisibility(int(object.x),int(std::ceil(object.y))-1)>0)) continue;
+        if (!renderObjectVisible(object) && !(object.unit->fogVisibility==1 && tileVisibility(int(object.x),int(std::ceil(object.y))-1)>0)) continue;
         const float cameraX=(camX_/kTileHalfW+camY_/kTileHalfH)*.5f;
         const float cameraY=(camY_/kTileHalfH-camX_/kTileHalfW)*.5f;
         if (!terrainDrawScanContains(int(mapSize_-cameraY),int(cameraX),
@@ -18222,7 +18238,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
     }
 
     for (const Object &object : objects_) {
-        if (!object.active || object.hidden || !object.draw || object.flashTime <= 0 || !objectVisible(object)) continue;
+        if (!object.active || object.hidden || !object.draw || object.flashTime <= 0 || !renderObjectVisible(object)) continue;
         float sx, sy;
         toScreen(object.x, object.y, sx, sy);
         sy -= elevationAt(object.x, object.y) * assets_.dat().terrainBlock.elevHeight +
@@ -18237,7 +18253,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
     }
 
     for (const Object &object : objects_) {
-        if (!object.active || object.hidden || !object.draw || !object.selected || !objectVisible(object)) continue;
+        if (!object.active || object.hidden || !object.draw || !object.selected || !renderObjectVisible(object)) continue;
         // Resources (trees, mines, bushes, carcasses) show no health bar.
         if (object.player == 0 && object.unit->type < dat::UT_Combatant) continue;
         float screenX, screenY;

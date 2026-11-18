@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include <cmath>
+#include <cstdio>
+#include <limits>
+#include <memory>
+#include <vector>
+
+static void renderVisibilityPointChecks(swgb::Assets &assets);
 
 static void visibilityRefreshChecks(swgb::Assets &assets) {
     auto scenario=[] {
@@ -17,6 +23,8 @@ static void visibilityRefreshChecks(swgb::Assets &assets) {
         g.setInitiallyExploredForTesting(false);
         check(g.rememberedForTesting(target)==expected,
               "Fresh stationary enemy memory agrees with live sight-source scan");
+        check(g.renderObjectVisibleForTesting(target)==expected,
+              "Fresh render object visibility agrees with live scan");
         if(!expected)check(!g.objectSelected(target),"Refresh clears selection outside live sight");
         // Visible annexes and edge fixtures need not be inspectable. Memory
         // remains compared for every fixture; selection applies when admitted.
@@ -98,5 +106,83 @@ static void visibilityRefreshChecks(swgb::Assets &assets) {
     const auto distant=garrison.spawnObjectForTesting(1,70,3,25.f,25.f);
     check(distant && !garrison.objectVisibleForTesting(distant),"Garrisoned passenger grants no distant sight");
     freshMemory(garrison,distant);
+    renderVisibilityPointChecks(assets);
     std::puts("PASS: refresh memory/selection agrees with live sight across alliance, death, construction, annex, garrison and coordinates");
+}
+
+static void renderVisibilityPointChecks(swgb::Assets &assets) {
+    const auto scenario=[] {
+        swgb::Scenario s;s.map.width=s.map.height=32;s.map.tiles.resize(32*32);
+        s.nextUnitId=1;s.playerSlotCount=3;s.civilizations.fill(1);
+        for(int i=0;i<3;++i) {
+            s.players[i].active=true;s.players[i].human=true;s.players[i].civilization=1;
+            s.players[i].diplomacy.fill(3);s.players[i].diplomacy[size_t(i+1)]=0;
+        }
+        return s;
+    };
+    const float infinity=std::numeric_limits<float>::infinity();
+    const float tiny=std::nextafter(0.f,infinity);
+    std::vector<float> coordinates{-infinity,infinity,std::numeric_limits<float>::quiet_NaN(),
+                                   -1.f,-tiny,tiny};
+    for(int i=0;i<=32;++i) {
+        const float value=float(i);
+        coordinates.push_back(value);
+        coordinates.push_back(std::nextafter(value,-infinity));
+        coordinates.push_back(std::nextafter(value,infinity));
+        if(i<32)coordinates.push_back(value+.5f);
+    }
+    size_t comparisons=0;
+    const auto compare=[&](swgb::Game &game,const char *stage) {
+        // Same refresh boundary as render, without advancing simulation or
+        // making the reference query accidentally use the raster cache.
+        game.updatePaused(0,{});
+        for(float x:coordinates)for(float y:coordinates) {
+            const bool expected=game.worldSoundVisibleForTesting(x,y);
+            const bool actual=game.renderPointVisibleForTesting(x,y);
+            if(expected!=actual)std::fprintf(stderr,
+                "Render visibility mismatch [%s] (%a,%a): live=%d cache=%d\n",
+                stage,double(x),double(y),expected,actual);
+            check(expected==actual,"Fresh render sight agrees with independent live source scan");
+            ++comparisons;
+        }
+    };
+    std::string error;
+    auto game=std::make_unique<swgb::Game>(assets);
+    check(game->initScenario(scenario(),&error),error.c_str());
+    compare(*game,"no sources");
+    game->setInitiallyExploredForTesting(true);
+    compare(*game,"explored terrain is not live sight");
+    check(!game->renderPointVisibleForTesting(16,16),"Explored terrain does not reveal live objects");
+    game->setInitiallyExploredForTesting(false);
+    const auto observer=game->spawnObjectForTesting(1,83,1,16,16);
+    check(observer!=0,"Render visibility observer fixture");
+    compare(*game,"ordinary source");
+    check(game->renderPointVisibleForTesting(16,16),"Observer reveals its own location");
+    check(game->moveObjectForTesting(observer,8,.125f),"Move observer next to lower map edge");
+    compare(*game,"rounded original coordinate outside raster");
+    check(game->worldSoundVisibleForTesting(8,tiny) && game->renderPointVisibleForTesting(8,tiny),
+          "Positive subnormal Y retains live sight despite rounded original tile outside raster");
+    check(game->moveObjectForTesting(observer,2,2),"Move observer away from ally fixture");
+    compare(*game,"moved source");
+    const auto ally=game->spawnObjectForTesting(1,83,2,25,25);
+    check(ally!=0 && game->researchTechnology(1,61),"Research original allied sight");
+    game->setDiplomacyForTesting(1,2,0);game->setDiplomacyForTesting(2,1,3);
+    compare(*game,"one-way alliance");
+    check(!game->renderPointVisibleForTesting(25,25),"One-way alliance grants no cached sight");
+    game->setDiplomacyForTesting(2,1,0);
+    compare(*game,"mutual allied sight");
+    check(game->renderPointVisibleForTesting(25,25),"Mutual alliance shares cached sight");
+    check(game->damageObjectForTesting(ally,100000),"Remove allied observer");
+    compare(*game,"dead allied source");
+    check(!game->renderPointVisibleForTesting(25,25),"Dead ally leaves no live sight in new frame");
+    for(int prototype:{70,112}) {
+        auto construction=std::make_unique<swgb::Game>(assets);
+        check(construction->initScenario(scenario(),&error),error.c_str());
+        const auto foundation=construction->spawnFoundationForTesting(1,prototype,1,16,16,{});
+        check(foundation!=0,"Render construction sight fixture");
+        compare(*construction,prototype==112?"unit112 foundation exception":"foundation footprint sight");
+        check(construction->completeFoundationForTesting(foundation),"Complete sight-source foundation");
+        compare(*construction,"completed building sight");
+    }
+    std::printf("PASS: %zu render sight comparisons across coordinates and source lifecycle\n",comparisons);
 }

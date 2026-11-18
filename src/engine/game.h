@@ -692,6 +692,8 @@ public:
         const Object *o=findObject(id);return o && playerSeesTarget(viewer,*o);
     }
     bool objectVisibleForTesting(uint32_t id) const {const auto *o=findObject(id);return o && objectVisible(*o);}
+    bool renderObjectVisibleForTesting(uint32_t id) const {const auto *o=findObject(id);return o && renderObjectVisible(*o);}
+    bool renderPointVisibleForTesting(float x,float y) const {return renderPointVisible(x,y);}
     uint32_t rememberedAttackForTesting(uint32_t id) const {const auto *o=findObject(id);return o?o->rememberedAttackId:0;}
     bool rememberedForTesting(uint32_t id) {refreshVisibility();return rememberedObjects_.count(id)!=0;}
     float rememberedHitPointsForTesting(uint32_t id) {refreshVisibility();const auto it=rememberedObjects_.find(id);return it==rememberedObjects_.end()?-1:it->second.hitPoints;}
@@ -1579,6 +1581,8 @@ private:
     bool playerSeesTarget(int viewer, const Object &target) const;
     bool sourceSeesTile(const Object &source,int originalX,int originalY,int radius) const;
     bool objectVisible(const Object &object) const;
+    bool renderPointVisible(float x,float y) const;
+    bool renderObjectVisible(const Object &object) const;
     int tileVisibility(int x,int y) const;
     int rememberedTerrainAt(int x,int y) const;
     std::vector<uint8_t> rememberedTerrain_;
