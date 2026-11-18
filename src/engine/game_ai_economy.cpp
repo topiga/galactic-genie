@@ -4,6 +4,9 @@
 #include "ai_gather_allocation.h"
 #include "ai_gather_quota.h"
 #include "ai_group_search.h"
+#include "ai_gather_controller.h"
+#include "ai_resource_lifecycle.h"
+#include <chrono>
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -12,9 +15,10 @@ namespace {
 bool includesId(const std::vector<int32_t> &ids,int32_t id) {
     return std::find(ids.begin(),ids.end(),id)!=ids.end();
 }
+// Original588340 admission differs from selector586ec0: class3 is admitted, class5 is not.
 int originalResourceBucket(int cls) {
     switch(cls) {
-    case 1:case 4:case 5:case 7:case 23:case 24:case 25:case 27:case 60:return 0;
+    case 1:case 3:case 4:case 7:case 23:case 24:case 25:case 27:case 60:return 0;
     case 31:return 1;case 30:return 2;case 29:return 3;default:return -1;
     }
 }
@@ -35,19 +39,13 @@ void Game::removeAiEconomicWorker(int player,int32_t id) {
 }
 void Game::refreshAiEconomyKnowledge(int player) {
     auto &state=aiPlayers_[size_t(player)];auto &economy=state.economy;
-    // shortcut: Native object admission order replaces MainAI callbacks; retained IDs
-    // survive sight loss. Owned registry removal follows native active ownership.
     const auto aliveOwned=[&](int32_t id) {const auto *o=findObject(uint32_t(id));
         return o && o->active && o->player==player && o->hitPoints>0;};
     const auto removeDead=[&](auto &ids) {ids.erase(std::remove_if(ids.begin(),ids.end(),
         [&](int32_t id){return !aliveOwned(id);}),ids.end());};
-    removeDead(economy.civilianIds);removeDead(economy.depotIds);removeDead(economy.civilianExplorers);
+    removeDead(economy.civilianIds);removeDead(economy.civilianExplorers);
     removeDead(economy.pendingCivilianAssignments);
     for(auto &record:economy.economicWorkers)if(record.id>=0 && !aliveOwned(record.id))record=AiEconomicWorker{};
-    for(const auto &o:objects_)if(o.active && o.player==player && o.unit && o.hitPoints>0) {
-        if(o.unit->cls==58 && !includesId(economy.civilianIds,int32_t(o.spawnId)))economy.civilianIds.push_back(int32_t(o.spawnId));
-        if(o.unit->type==dat::UT_Building && !includesId(economy.depotIds,int32_t(o.spawnId)))economy.depotIds.push_back(int32_t(o.spawnId));
-    }
     std::map<int,std::vector<uint8_t>> regions;
     const auto zone=[&](int restriction,float x,float y)->std::optional<uint8_t> {
         auto i=regions.find(restriction);
@@ -57,28 +55,81 @@ void Game::refreshAiEconomyKnowledge(int player) {
         if(ox<0 || oy<0 || ox>=mapSize_ || oy>=mapSize_)return std::nullopt;
         return i->second[size_t(oy)*mapSize_+ox];
     };
+    const auto metric=[&](const Object &o)->std::optional<AiResourceDepotMetric> {
+        std::vector<AiResourceDepot> depots;
+        const auto ownZone=zone(o.unit->terrainRestriction,o.x,o.y);
+        if(o.unit->cls!=25 && !ownZone)return std::nullopt;
+        for(int32_t id:economy.depotIds) {
+            const auto *depot=findObject(uint32_t(id));if(!depot || !depot->unit)continue;
+            const auto at=zone(o.unit->terrainRestriction,depot->x,depot->y);
+            if(o.unit->cls!=25 && !at)return std::nullopt;
+            depots.push_back({id,depot->unit->id,float(mapSize_)-depot->y,depot->x,true,
+                ownZone && at && *ownZone==*at});
+        }
+        return aiResourceDepotMetric(o.unit->cls,float(mapSize_)-o.y,o.x,true,depots);
+    };
+    const auto refresh=[&](int bucket) {
+        // Preflight unsupported native region mappings, separately from original missing IDs.
+        std::unordered_map<int32_t,AiResourceDepotMetric> values;
+        for(const auto &record:economy.resources[size_t(bucket)].records)if(record.invalid!=1) {
+            const auto *object=findObject(uint32_t(record.id));
+            if(!object || !object->active || !object->unit)continue;
+            const auto value=metric(*object);if(!value)return false;
+            values.emplace(record.id,*value);
+        }
+        refreshAiResourceBucket(economy.resources[size_t(bucket)],[&](int32_t id)->std::optional<AiResourceDepotMetric> {
+            auto i=values.find(id);return i==values.end()?std::nullopt:std::optional<AiResourceDepotMetric>(i->second);
+        });
+        return true;
+    };
+    // shortcut: Poll native registry changes at admitted economy ticks instead of
+    // original MainAI5960d0/InfoAI58a660 notifications. Mutation precedes refresh.
+    for(size_t i=0;i<economy.depotIds.size();) {
+        const int32_t id=economy.depotIds[i];const auto *object=findObject(uint32_t(id));
+        const auto prior=economy.depotPrototypes.find(id);
+        if(aliveOwned(id) && object && object->unit && prior!=economy.depotPrototypes.end() &&
+           prior->second==std::make_pair(int(object->unit->id),int(object->unit->cls))) {++i;continue;}
+        const auto old=prior==economy.depotPrototypes.end()?std::make_pair(-1,-1):prior->second;
+        economy.depotIds.erase(economy.depotIds.begin()+i);economy.depotPrototypes.erase(id);
+        for(int bucket:aiDepotRefreshBuckets(old.first,old.second,true))
+            economy.pendingDepotRefresh[size_t(bucket)]=!refresh(bucket);
+    }
+    for(const auto &o:objects_)if(o.active && o.player==player && o.unit && o.hitPoints>0) {
+        if(o.unit->cls==58 && !includesId(economy.civilianIds,int32_t(o.spawnId)))economy.civilianIds.push_back(int32_t(o.spawnId));
+        const int cls=o.unit->cls;
+        if(((cls>=6 && cls<=10) || cls==18) && !includesId(economy.depotIds,int32_t(o.spawnId))) {
+            economy.depotIds.push_back(int32_t(o.spawnId));economy.depotPrototypes[int32_t(o.spawnId)]={o.unit->id,cls};
+            for(int bucket:aiDepotRefreshBuckets(o.unit->id,cls,false))
+                economy.pendingDepotRefresh[size_t(bucket)]=!refresh(bucket);
+        }
+    }
+    for(size_t bucket=0;bucket<4;++bucket)if(economy.pendingDepotRefresh[bucket])
+        economy.pendingDepotRefresh[bucket]=!refresh(int(bucket));
+    std::unordered_set<uint32_t> currentlyVisible;
     for(const auto &o:objects_) {
         if(!o.active || !o.unit || visibleTargets_.slot(size_t(player-1),o.spawnId)==size_t(-1))continue;
         const int bucket=originalResourceBucket(o.unit->cls);if(bucket<0)continue;
-        //590960 admission is event-driven; do not rewrite hidden positions or retry flags.
-        if(economy.resourceSlots.count(o.spawnId))continue;
-        std::vector<AiResourceDepot> depots;
-        const auto resourceZone=zone(o.unit->terrainRestriction,o.x,o.y);
-        if(o.unit->cls!=25 && !resourceZone)continue;
-        bool supportedZones=true;
-        for(int32_t id:economy.depotIds) {
-            const auto *depot=findObject(uint32_t(id));if(!depot || !depot->unit)continue;
-            const auto depotZone=zone(o.unit->terrainRestriction,depot->x,depot->y);
-            if(o.unit->cls!=25 && !depotZone) {supportedZones=false;break;}
-            depots.push_back({id,depot->unit->id,float(mapSize_)-depot->y,depot->x,true,
-                resourceZone && depotZone && *resourceZone==*depotZone});
+        currentlyVisible.insert(o.spawnId);
+        auto known=economy.resourceSlots.find(o.spawnId);
+        if(known!=economy.resourceSlots.end() && economy.visibleResources.count(o.spawnId))continue;
+        const auto value=metric(o);if(!value) {currentlyVisible.erase(o.spawnId);continue;}
+        auto &resources=economy.resources[size_t(bucket)];
+        if(known==economy.resourceSlots.end()) {
+            economy.resourceSlots.emplace(o.spawnId,std::make_pair(bucket,resources.records.size()));
+            resources.records.push_back(makeAiResourceRecord(int32_t(o.spawnId),float(mapSize_)-o.y,o.x,uint8_t(bucket),*value));
+            observeAiResourceMetric(resources,resources.records.back(),*value);
+        } else {
+            // shortcut: Re-entry into native sight supplies the original duplicate
+            // observation callback. It never rewrites original remembered byteXY.
+            auto &oldBucket=economy.resources[size_t(known->second.first)];
+            observeAiResourceMetric(oldBucket,oldBucket.records[known->second.second],*value);
         }
-        if(!supportedZones)continue;
-        const auto metric=aiResourceDepotMetric(o.unit->cls,float(mapSize_)-o.y,o.x,true,depots);
-        auto &records=economy.resources[size_t(bucket)].records;
-        economy.resourceSlots.emplace(o.spawnId,std::make_pair(bucket,records.size()));
-        records.push_back(makeAiResourceRecord(int32_t(o.spawnId),float(mapSize_)-o.y,o.x,uint8_t(bucket),metric));
     }
+    economy.visibleResources=std::move(currentlyVisible);
+    // shortcut: This original InfoAI timer is sampled at native economy cadence.
+    const uint32_t now=uint32_t(gameTime_*1000.0);
+    if(economy.foodRefreshTime && aiFoodMetricRefreshDue(now,*economy.foodRefreshTime) && refresh(0))
+        economy.foodRefreshTime=now;
 }
 void Game::updateAiGatherers(int player,AiPlayerState &state) {
     if(!state.scripted) {updateAiGatherersFallback(player,state);return;}
@@ -105,7 +156,8 @@ void Game::updateAiGatherers(int player,AiPlayerState &state) {
     // shortcut: Native admitted economy ticks replace original phase2/3 budget scheduling.
     // No native force-gatherer override is assumed for original tactical+1648.
     // shortcut: Pending native commands are consumed between these admitted ticks;
-    // original notification-driven pending-list removal is not yet represented.
+    // Original59ddf2 clears after the shared tactical pass; this controller still
+    // has an independent native cadence, so its previous-pass reservations end here.
     economy.pendingCivilianAssignments.clear();
     const auto registered=[&](int32_t id) {return std::any_of(economy.economicWorkers.begin(),economy.economicWorkers.end(),[&](const auto &w){return w.id==id;});};
     const auto available=[&]()->Object * {
@@ -127,6 +179,7 @@ void Game::updateAiGatherers(int player,AiPlayerState &state) {
         auto *worker=available();if(slot==economy.economicWorkers.end() || !worker)break;
         *slot=AiEconomicWorker{};slot->id=int32_t(worker->spawnId);++count;
     }
+    AiGatherAllocation allocation;
     const auto allocate=[&] {
         economy.assigned={};int valid=0;
         for(const auto &record:economy.economicWorkers) {
@@ -134,7 +187,8 @@ void Game::updateAiGatherers(int player,AiPlayerState &state) {
             const auto *worker=findObject(uint32_t(record.id));if(!worker)continue;++valid;
             if(worker->gatherTargetId || worker->dropOffTargetId || includesId(economy.pendingCivilianAssignments,record.id))++economy.assigned[size_t(record.resource)];
         }
-        economy.desired=allocateAiGatherers(valid,quota->gatherers,percentages,adjustments).desired;
+        allocation=allocateAiGatherers(valid,quota->gatherers,percentages,adjustments);
+        economy.desired=allocation.desired;
     };
     allocate();
     for(int32_t id:economy.civilianIds) {
@@ -142,22 +196,29 @@ void Game::updateAiGatherers(int player,AiPlayerState &state) {
         if(includesId(economy.civilianExplorers,id)) {if(aiEconomicWorkerIdle(*worker))queueAiCivilianExplore(*worker);continue;}
         auto record=std::find_if(economy.economicWorkers.begin(),economy.economicWorkers.end(),[&](const auto &w){return w.id==id;});
         if(record==economy.economicWorkers.end())continue;
-        if(worker->attackTargetId || worker->constructionTargetId || worker->repairTargetId || worker->exploration)continue;
-        if(worker->tacticalMovement.present || worker->pointMovement.present || hasCarry(*worker))continue;
-        const int current=record->resource;
-        if(current>=0 && current<4 && worker->gatherTargetId && economy.assigned[size_t(current)]<=economy.desired[size_t(current)])continue;
-        const auto order=aiGatherUnmetOrder(economy.assigned,economy.desired);
-        bool assigned=false;
-        for(int bucket:order) {
-            if(economy.assigned[size_t(bucket)]>=economy.desired[size_t(bucket)])continue;
+        // Native action slots map to original5a8670 inputs; batch and retry policy
+        // itself is shared with the original-derived controller, not duplicated here.
+        const int task=worker->constructionTargetId?602:worker->repairTargetId?618:
+            worker->attackTargetId?600:worker->exploration?605:
+            worker->gatherTargetId || worker->dropOffTargetId?609:
+            worker->tacticalMovement.present || worker->pointMovement.present?610:
+            worker->state==State::Idle?-1:0;
+        const int command=worker->tacticalMovement.present || worker->pointMovement.present?710:-1;
+        const int priority=worker->tacticalMovement.present?worker->tacticalMovement.priority:
+            worker->pointMovement.present?100:0;
+        const uint32_t hostTime=uint32_t(std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count());
+        const AiGatherControllerInput input{true,false,true,task,command,priority,
+            worker->carriedAmount,hostTime,economy.assigned,economy.desired};
+        const auto assignBucket=[&](int bucket,bool force,int retries,int failedCooldown)->bool {
             std::vector<int32_t> excluded;std::vector<uint8_t> zones;
-            if(!buildAiMilitaryRegions(worker->unit->terrainRestriction,zones))continue;
+            if(!buildAiMilitaryRegions(worker->unit->terrainRestriction,zones))return false;
             const auto zone=[&](int x,int y)->std::optional<uint8_t> {
                 if(x<0 || y<0 || x>=mapSize_ || y>=mapSize_)return std::nullopt;
                 return zones[size_t(y)*mapSize_+x];
             };
             const auto ownZone=zone(int(float(mapSize_)-worker->y),int(worker->x));
-            for(int retry=0;retry<5;++retry) {
+            for(int retry=0;retry<retries;++retry) {
                 const auto selected=selectAiLandResource(economy.resources[size_t(bucket)],bucket,player,
                     float(mapSize_)-worker->y,worker->x,uint32_t(gameTime_*1000.0),excluded,
                     [&](int32_t targetId)->std::optional<AiResourceTarget> {
@@ -186,21 +247,38 @@ void Game::updateAiGatherers(int player,AiPlayerState &state) {
                         if(n==233 || n==234 || n==235 || n==237 || n==238)return sn(n,-1);
                         return std::nullopt;
                     },[&](uint8_t x,uint8_t y)->std::optional<bool> {const auto at=zone(x,y);if(!ownZone || !at)return std::nullopt;return *ownZone==*at;});
-                if(selected.status!=AiResourceSelectionStatus::Selected)break;
+                if(selected.status!=AiResourceSelectionStatus::Selected)return false;
                 auto *target=findObject(uint32_t(selected.id));std::vector<std::array<float,2>> path;
                 // Native pathfinding/action construction remain explicit adapters to original5a94f0.
                 if(!target || !findPath(*worker,target->x,target->y,path,target) || !issueGatherCommand(*worker,*target)) {
                     excluded.push_back(selected.id);
                     auto slot=economy.resourceSlots.find(uint32_t(selected.id));
-                    if(slot!=economy.resourceSlots.end())economy.resources[size_t(slot->second.first)].records[slot->second.second].cooldown=uint8_t(bucket==0?2:15);
+                    if(slot!=economy.resourceSlots.end())economy.resources[size_t(slot->second.first)].records[slot->second.second].cooldown=uint8_t(bucket==0?2:failedCooldown);
                     continue;
                 }
-                record->resource=bucket;record->batch=std::min(sn(148,20),sn(149,40));record->completed=0;
+                record->resource=bucket;
+                record->batch=force?10:std::min(sn(148,20),sn(149,40));
+                if(!force && sn(203,0)==1)record->batch=target->unit->id==50?50:
+                    target->unit->cls==27 || bucket==0?int(target->resourceAmount):bucket==1?75:50;
+                record->completed=0;
                 if(!includesId(economy.pendingCivilianAssignments,id))economy.pendingCivilianAssignments.push_back(id);
-                assigned=true;allocate();break;
+                return true;
             }
-            if(assigned)break;
-        }
+            return false;
+        };
+        updateAiGatherController(*record,input,[&](int bucket,bool force,const std::array<int32_t,4> *tried) {
+            //5a954a forces the previous resource while its credited batch is incomplete.
+            if(record->batch>record->completed)bucket=record->resource;
+            if(bucket>=0 && bucket<4)return assignBucket(bucket,force,5,15);
+            //5a95a6's fallback visits allocation-order buckets, one candidate each;
+            // it does not use the explicit-bucket five-attempt policy.
+            for(int next:allocation.order) {
+                if(tried && (*tried)[size_t(next)]==1)continue;
+                if(assignBucket(next,force,1,5))return true;
+            }
+            return false;
+        });
+        allocate();
     }
 }
 } // namespace swgb

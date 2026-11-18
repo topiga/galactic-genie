@@ -37,6 +37,13 @@ cases = {
     'ai_gather_allocation': [],
     'ai_gather_quota': [],
     'ai_resource_selection': [],
+    'ai_resource_lifecycle': [],
+    'ai_economic_delivery': [],
+    'ai_gather_controller': [],
+    'ai_build_placement': [],
+    'ai_builder_selection': [],
+    'ai_prefab_grid': [],
+
     'ai_group_targets': ['src/engine/ai_group_targets.cpp', 'src/engine/ai_targets.cpp'],
 }
 for name, sources in cases.items():

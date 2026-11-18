@@ -35,6 +35,32 @@ static void economyGameplayChecks(swgb::Assets &assets) {
     check(economy.resourceSlots.count(food)==1 && economy.resourceSlots.count(unseen)==0,
           "Production resource admission uses actual sight, not unknown world objects");
     check(game.aiGathererCountForTesting(2,0)>0,"Production PER assigns workers through the recovered resource selector");
+    uint32_t loadedWorker=0;
+    for(int tick=0;tick<300 && !loadedWorker;++tick) {
+        advance(1);
+        for(int32_t id:workers)if(game.objectCarriedAmount(uint32_t(id))>0) {loadedWorker=uint32_t(id);break;}
+    }
+    check(loadedWorker!=0,"Economic worker gathers a real fractional cargo");
+    const float cargo=game.objectCarriedAmount(loadedWorker);
+    // Other active gather actions also retain movement-child references. Free the
+    // deposit before testing retry; original class27 admission rejects more than3 references.
+    for(int32_t id:workers)check(game.stopUnitForTesting(uint32_t(id)),"Interrupt the economic gathering group");
+    game.updateAiGatherersForTesting(2);
+    check(game.aiGatherTargetForTesting(loadedWorker)==food && game.objectCarriedAmount(loadedWorker)==cargo,
+          "Original gather controller resumes the registered resource without discarding cargo");
+    const auto metricSlot=game.economyForTesting(2).resourceSlots.at(food);
+    const auto depotMetric=[&] {return game.economyForTesting(2).resources[size_t(metricSlot.first)].records[metricSlot.second].depotId;};
+    const auto center=game.spawnObjectForTesting(1,109,2,10,10);
+    check(center!=0,"Economic command center fixture spawns");
+    game.updateAiGatherersForTesting(2);
+    check(depotMetric()==int32_t(center),"Command center admission refreshes already known resource metrics");
+    const auto processor=game.spawnObjectForTesting(1,68,2,25,25);
+    check(processor!=0,"Economic food processing center fixture spawns");
+    game.updateAiGatherersForTesting(2);
+    check(depotMetric()==int32_t(processor),"Closer processing center refreshes retained food metric");
+    check(game.damageObjectForTesting(processor,100000),"Remove the cached processing center");
+    game.updateAiGatherersForTesting(2);
+    check(depotMetric()==int32_t(center),"Depot removal recomputes the retained resource metric");
     for(size_t i=0;i<workers.size();++i) {
         check(game.stopUnitForTesting(uint32_t(workers[i])) && game.moveObjectForTesting(uint32_t(workers[i]),3.f+float(i),3.f),
               "Remove resource sight and stop old assignments");
@@ -72,5 +98,19 @@ static void economyGameplayChecks(swgb::Assets &assets) {
     check(std::none_of(mixed.economicWorkers.begin(),mixed.economicWorkers.end(),
         [&](const auto &record){return record.id==explorer;}),"Exploration and gathering registries do not own the same worker");
     check(game.aiGathererCountForTesting(2,0)>0,"Civilian exploration coexists with actual food gathering");
+    initialize(false);
+    check(game.spawnObjectForTesting(1,109,2,16,16)!=0,"Delivery fixture command center");
+    for(int n=0;n<3;++n)check(game.spawnObjectForTesting(1,83,2,20.f+n,20.f)!=0,"Delivery fixture workers");
+    check(game.spawnObjectForTesting(0,berry,0,22,22)!=0,"Delivery fixture forage");
+    const float foodBeforeDelivery=game.resource(2,0);
+    bool delivered=false;
+    for(int n=0;n<1200 && !delivered;++n) {
+        game.update(.1f,{});
+        int credited=0;for(const auto &record:game.economyForTesting(2).economicWorkers)
+            credited+=std::max(0,record.completed);
+        delivered=game.resource(2,0)>foodBeforeDelivery;
+        check(delivered?credited>0:credited==0,"AI batch credit follows actual delivery, not gathering progress");
+    }
+    check(delivered,"Native workers finish a real gather-and-deposit cycle");
     std::puts("PASS: production original economic quotas, resource memory, pause and civilian exploration");
 }

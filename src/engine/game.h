@@ -414,6 +414,13 @@ public:
     bool reissueExploreForTesting(uint32_t id) {
         auto *o=findObject(id);return o && reissueAiExploreDestination(*o);
     }
+    std::array<float,3> movementProgressForTesting(uint32_t id) const {
+        const auto *o=findObject(id);
+        return o?std::array<float,3>{o->moveBestDistance,o->moveStallTime,o->detourTime}:std::array<float,3>{};
+    }
+    int chooseAiPrefabPositionForTesting(int player,const dat::Unit &unit,float &x,float &y,std::string *reason=nullptr) {
+        return chooseAiPrefabPosition(player,unit,x,y,reason);
+    }
     std::optional<uint32_t> explorationRevisitTimeForTesting(int player) const { return aiPlayers_[size_t(player)].explorationRevisitTime; }
     const AiEconomyState &economyForTesting(int player) const {return aiPlayers_.at(size_t(player)).economy;}
     void updateAiGatherersForTesting(int player) {refreshVisibility();updateAiGatherers(player,aiPlayers_.at(size_t(player)));}
@@ -1566,6 +1573,7 @@ private:
     void updatePlayerObjects(float dt,int player, bool auxiliary = false);
     AiSessionContext aiScriptContext(int player, const std::unordered_set<std::string> &defines) const;
     AiSessionContext aiScriptContext(AiSessionContextSettings settings, const std::unordered_set<std::string> &defines) const;
+    int chooseAiPrefabPosition(int player,const dat::Unit &unit,float &x,float &y,std::string *reason=nullptr);
     void refreshAiEconomyKnowledge(int player);
     void removeAiEconomicWorker(int player,int32_t id);
     bool aiEconomicWorkerIdle(const Object &object) const;

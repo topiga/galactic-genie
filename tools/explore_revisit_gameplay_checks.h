@@ -10,15 +10,17 @@ static void exploreRevisitGameplayChecks(swgb::Assets &assets) {
     swgb::Game game(assets);std::string error;
     check(game.initScenario(scenario,&error),error.c_str());
     const auto timestamp=game.explorationRevisitTimeForTesting(2);
+    const auto foodTimestamp=game.economyForTesting(2).foodRefreshTime;
+    check(foodTimestamp && *foodTimestamp<=7500,"Scenario retains original third-draw food refresh metadata");
     check(timestamp && *timestamp<=60000,"Scenario retains real nested constructor revisit timestamp");
     check(game.loadAiSourceForTesting(2,"revisit-clock","(defrule (true) => (disable-self))",{},&error),error.c_str());
-    check(game.explorationRevisitTimeForTesting(2)==timestamp,"Loading PER preserves player constructor context");
+    check(game.explorationRevisitTimeForTesting(2)==timestamp && game.economyForTesting(2).foodRefreshTime==foodTimestamp,"Loading PER preserves player constructor context");
     for(int n=0;n<20;++n)game.updatePaused(.1f,{});
     check(game.explorationRevisitTimeForTesting(2)==timestamp,"Paused UI does not advance original InfoAI timer");
     for(int n=0;n<20;++n)game.update(.1f,{});
     check(game.explorationRevisitTimeForTesting(2) && *game.explorationRevisitTimeForTesting(2)<2000,
           "Admitted InfoAI callback normalizes future constructor timer through unsigned elapsed check");
     check(game.initAridSkirmish(1,&error),error.c_str());
-    check(!game.explorationRevisitTimeForTesting(2),"RMS entry does not invent missing constructor context");
+    check(!game.explorationRevisitTimeForTesting(2) && !game.economyForTesting(2).foodRefreshTime,"RMS entry does not invent missing constructor context");
     std::puts("PASS: original constructor revisit metadata, AI callback timing and pause");
 }

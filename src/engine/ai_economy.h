@@ -4,6 +4,8 @@
 #include <array>
 #include <cstdint>
 #include <unordered_map>
+#include <unordered_set>
+#include <optional>
 #include <vector>
 namespace swgb {
 struct AiEconomicWorker {
@@ -16,6 +18,10 @@ struct AiEconomyState {
     std::array<AiEconomicWorker,125> economicWorkers{};
     std::array<AiResourceBucket,4> resources;
     std::unordered_map<uint32_t,std::pair<int,size_t>> resourceSlots;
+    std::unordered_map<int32_t,std::pair<int,int>> depotPrototypes;
+    std::unordered_set<uint32_t> visibleResources;
+    std::array<bool,4> pendingDepotRefresh{}; // Retry unsupported native region callbacks without losing events.
+    std::optional<uint32_t> foodRefreshTime; // Captured constructor RNG metadata; absent for unsupported startup paths.
     int explorerQuota=0,gathererQuota=0;
     std::array<int32_t,4> desired{},assigned{};
 };

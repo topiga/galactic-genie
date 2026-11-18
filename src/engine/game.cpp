@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ai_player_facts.h"
 #include "ai_power_field.h"
+#include "ai_economic_delivery.h"
 #include "../core/genie_graphic_random.h"
 #include "../core/genie_random.h"
 #include "../core/genie_ai_constructor_metadata.h"
@@ -1050,6 +1051,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, int difficul
         for (size_t player = 1; player < computers.size(); ++player) {
             computers[player].age = aiTechLevel(int(player));
             computers[player].explorationRevisitTime = aiPlayers_[player].explorationRevisitTime;
+            computers[player].economy.foodRefreshTime = aiPlayers_[player].economy.foodRefreshTime;
         }
         aiPlayers_ = std::move(computers);
         return true;
@@ -1290,8 +1292,11 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
         genieRandomDraw(legacyRandomState_); // 5d5be9 Gaia scheduling interval
         genieRandomDraw(legacyRandomState_); // 61e0e5 after Gaia
         for(size_t player=0;player<worldPlayerCount_;++player)
-            if(players_[player].active)aiPlayers_[player+1].explorationRevisitTime =
-                geniePlayerConstructorWithMetadata(legacyRandomState_).infoRevisitTime;
+            if(players_[player].active) {
+                const auto metadata=geniePlayerConstructorWithMetadata(legacyRandomState_);
+                aiPlayers_[player+1].explorationRevisitTime=metadata.infoRevisitTime;
+                aiPlayers_[player+1].economy.foodRefreshTime=metadata.infoFoodRefreshTime;
+            }
         genieRandomDraw(legacyRandomState_); // 61e10e after normal players
     }
     // Player startup research precedes building-completion technologies.
@@ -1769,6 +1774,7 @@ bool Game::loadAiScript(
     if (!loadGameAiProgram(state.program,assets_,path,aiScriptContext(player,defines),err))
         return false;
     state.explorationRevisitTime = aiPlayers_[size_t(player)].explorationRevisitTime;
+    state.economy.foodRefreshTime = aiPlayers_[size_t(player)].economy.foodRefreshTime;
     state.loaded = true;
     state.scripted = true;
     state.age =
@@ -1803,6 +1809,7 @@ bool Game::loadAiSourceForTesting(
             name, source, context.defines, err,{},context.constants))
         return false;
     state.explorationRevisitTime = aiPlayers_[size_t(player)].explorationRevisitTime;
+    state.economy.foodRefreshTime = aiPlayers_[size_t(player)].economy.foodRefreshTime;
     state.loaded = true;
     state.scripted = true;
     state.age =
@@ -6784,6 +6791,11 @@ bool Game::depositAt(Object &worker, const Object &building) {
     if (worker.carriedAmount > 0.001f &&
         siteAcceptsType(worker, building, worker.carriedResourceType)) {
         addResource(worker.player,worker.carriedResourceType,worker.carriedAmount);
+        // Original40585d credits raw cargo;405869 truncates only the AI delivery notification.
+        if(worker.player>0 && size_t(worker.player)<aiPlayers_.size() &&
+           std::isfinite(worker.carriedAmount) && double(worker.carriedAmount)<=INT32_MAX)
+            creditAiEconomicDelivery(aiPlayers_[size_t(worker.player)].economy.economicWorkers,
+                int32_t(worker.spawnId),worker.carriedResourceType,int32_t(worker.carriedAmount));
         worker.carriedAmount = 0.0f;
         worker.carriedResourceType = -1;
         deposited = true;
@@ -12263,6 +12275,10 @@ bool Game::issueMove(Object &object, float targetX, float targetY,
     object.pathGoalId = goalObject ? goalObject->spawnId : 0;
     object.pathGoalClearance = clearance;
     const float dx = targetX - object.x, dy = targetY - object.y;
+    // Every route needs its own progress baseline, including work/drop-off
+    // approaches that do not pass through the formation-order setup.
+    object.moveBestDistance = std::sqrt(dx * dx + dy * dy);
+    object.moveStallTime = 0;
     if (dx * dx + dy * dy < 0.01f ||
         (goalObject && withinInteractionRange(object, *goalObject, clearance))) {
         object.path.clear();
@@ -14096,7 +14112,11 @@ bool Game::aiBuild(
     };
     float buildX = 0.0f;
     float buildY = 0.0f;
-    bool found = false;
+    // shortcut: Other placement categories and unsupported late grid providers
+    // still use the native search until their original controllers are integrated.
+    const int originalPlacement=unit.id==70?chooseAiPrefabPosition(player,unit,buildX,buildY):-1;
+    if(originalPlacement==0)return false;
+    bool found = originalPlacement==1;
     for (int radius = 3;
          radius <= 14 && !found;
          ++radius)
@@ -15460,6 +15480,9 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                 return false;
             }
         } else {
+            // Local avoidance cooldown follows simulation time even while
+            // sliding or walking; otherwise a successful detour can freeze it.
+            o.detourTime = std::max(0.0f, o.detourTime - dt);
             // Original arrival rule (0x4a45a0): a unit walking to an object
             // stops the moment its edge distance is within its work range,
             // wherever it is around the target. Builders, gatherers and
@@ -15738,7 +15761,6 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                 }
             } else {
                 o.blockedTime += dt;
-                o.detourTime -= dt;
                 if (o.moveGoalActive && !o.attackTargetId)
                     o.moveStallTime += dt;
                 const float targetDx = o.targetX - o.x, targetDy = o.targetY - o.y;
