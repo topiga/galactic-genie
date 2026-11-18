@@ -7799,3 +7799,24 @@ fixture sets soldier participation to zero, acquires an enemy Command Center,
 drains the attack order, checks damage and removes a dead wing member.
 The native scheduler admits air readiness after land planning. Its exact
 host-time budget, ordinary air patrols and sea groups remain open.
+
+### Seed-one two-AI Conquest outcome
+
+On tiny Arid, seed 1, Moderate difficulty and 75 population, player 2 won at
+6,653.333 simulated seconds with 10,809 landed attacks. Both sides ran the
+packaged RandomGame.per. The game processed normal 30 Hz updates and detected
+the result itself. The instrumentation sampled the existing match without
+issuing orders. The repository’s `--ai-duel` test independently reproduced the
+same winner, time and attack count. Before air-wing participation, the same seed still had both
+Command Centers at 15,600 seconds.
+
+| Simulated seconds | Player 1 population | Player 2 population | Player 1 Command Center HP |
+| ---: | ---: | ---: | ---: |
+| 4,200 | 59 | 67 | 2,500 |
+| 4,800 | 8 | 64 | 2,357 |
+| 5,400 | 4 | 59 | 0 |
+| 6,600 | 0 | 63 | 0 |
+
+The ordinary Conquest test, where the human slot stays idle, also passed its
+four seeds. This comparison measures native outcomes. No complete Windows
+replay with identical inputs has been verified.

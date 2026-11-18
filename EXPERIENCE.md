@@ -10,14 +10,20 @@ Updated 2026-11-18. The product target is the original disk-launcher and Clone C
 - Jedi conversion: original HUD controls, Force charge, animation/sound, real
   ownership changes, worker/ram upgrade rules, building refunds/passengers,
   cancellation and generic threat retaliation are connected to gameplay.
-- All-anti-air groups approach a ground target when no member has an attack
-  task. Mixed groups can still fire, and anti-air vehicles still attack aircraft.
-- Siege units can pass the two animals beside the forest in the seed-1 Arid
-  replay. Eight detour checks pass, including a convoy and a solid building
-  corner. The ten-carrier depot test also passes.
-- The full sanitizer suite records a scripted player victory at 782.5 seconds.
-  The desktop smoke test passes. The two-AI replay is still open. At 15,600
-  simulated seconds both Command Centers had full health.
+- Ground-only targets draw an approach from a group of anti-air vehicles.
+  In mixed groups, distant anti-air advances while nearby troops attack.
+  Aircraft remain valid anti-air targets.
+- Siege units can pass the two animals beside the forest and a crowded factory
+  exit in the seed-1 Arid replay. The ten-carrier depot regression also passes.
+- AI workers replace builders killed at unfinished foundations. The original
+  personality can trade at its Spaceport, account for housing and send bomber
+  and fighter groups when its script orders an attack.
+- **Two-AI Conquest completed.** On tiny Arid, seed 1, Moderate, 75 population,
+  both sides ran the packaged `RandomGame.per`. Player 2 won after 6,653.333
+  simulated seconds and 10,809 landed attacks. Player 1's Command Center was
+  gone by 5,400 seconds. This headless native test gives the normally human
+  slot an AI script. The repository replay is `swgb-skirmish-test <Data> --ai-duel`.
+- The desktop smoke test verifies rendering, effects, streamed music and looping.
 
 This remains a native reconstruction. The original full path lifecycle, separate
 invisible attack-marker registry, specialized conversion-controller responses and
