@@ -6887,3 +6887,27 @@ The pure scheduler checks also pass with warnings treated as errors. The unchang
 complete conquest driver wins at2092.2 simulated seconds (34:52), without cheats;
 this is a native regression, not a Windows full-match equivalence claim. Logs:
 `military-deficit-local.log` and `military-deficit-match.log` in the external build.
+
+### Tactical path request acceptance (18 November 2026)
+
+Five actual4a30f0 controls accept free, occupied and coincident point requests,
+retain exact spacing bits, install target-1/path flags4, and consume no RNG.
+Three bounded4084b0 first-update controls additionally execute the real request,
+registered restriction cache and first4a47b0 step with zero elapsed time: free
+and Command-Center-occupied destinations return0/state4. Entering state4 invokes
+virtual28 synchronously through408430; entry into state3 does not recurse.
+
+The shared movement action now invokes its first path-status callback on state4
+entry. The native adapter separates acceptance from synchronous route solving:
+an unavailable native route remains accepted on that first update. The subsequent
+failure remains the native provider policy, **not** recovered original retry
+latency. Full original path-service scheduling is still unclosed; stationary
+fixture failures without that complete context are excluded from golden evidence.
+Local artifacts: `tactical724-realpath-request-oracle-2026-11-18.json` and
+`tactical724-first-action-update-oracle-2026-11-18.json`.
+
+The ASan/UBSan local regression passes (`military-path-request-local.log`), including
+an unreachable-route assertion on the first admitted action update, immediate
+path callback results, deferred notifications, forced reissue, pause and Stop.
+The previous casualty-handling desktop build separately passed its menu/render/
+audio dummy-driver smoke (`military-deficit-desktop.log`).

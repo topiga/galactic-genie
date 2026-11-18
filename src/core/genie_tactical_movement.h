@@ -38,7 +38,9 @@ struct GenieTacticalMovementAction {
         if(state==3) {
             if(footprintDistance<=range)state=1;
             else state=prepare()?4:13;
-        } else if(state==4) {
+        }
+        // Entering4 calls virtual28 synchronously through the original state setter.
+        if(state==4) {
             const int result=pathStep();
             if(result==1)state=13;
             else if(result==2)state=1;

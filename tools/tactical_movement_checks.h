@@ -21,9 +21,9 @@ static void tacticalMovementChecks() {
           "40882d reports610 completion only on the following owner update");
     a={};a.present=true;a.range=1;notifications.clear();
     a.update(std::nextafter(1.,2.),prepare,path,notify);
-    check(a.state==4 && preparations==1 && pathCalls==0,"Initial outside-spacing prepares once");
+    check(a.state==4 && preparations==1 && pathCalls==1,"Entering state4 immediately admits the first path update");
     a.update(0,prepare,path,notify);
-    check(a.state==4 && pathCalls==1 && preparations==1,
+    check(a.state==4 && pathCalls==2 && preparations==1,
           "State4 delegates path status even when inside initial spacing");
     check(a.update(0,prepare,[]{return 2;},notify)==0 && a.state==1 && notifications.empty(),
           "Original path return2 defers completion notification");
@@ -36,6 +36,11 @@ static void tacticalMovementChecks() {
     a={};a.present=true;a.state=4;notifications.clear();
     a.update(0,prepare,[]{return 1;},notify);
     check(a.state==13 && notifications.empty(),"Original ongoing path return1 fails, not completes");
+    for(int result:{1,2}) {
+        a={};a.present=true;notifications.clear();
+        check(a.update(5,prepare,[&]{return result;},notify)==0 && a.state==(result==1?13:1) && notifications.empty(),
+              "Synchronous first path result changes state but defers its notification");
+    }
     using swgb::geniePointPathSpacingArrival;
     check(!geniePointPathSpacingArrival(false,true,0,4,.1f,0),"4a5db8 excludes spacing exactly0.1");
     check(geniePointPathSpacingArrival(false,true,0,4,std::nextafter(.1f,1.f),.1),"Positive spacing branch above0.1");
@@ -114,6 +119,14 @@ static void tacticalMovementGameplayChecks(swgb::Assets &assets) {
     for(int y=0;y<64;++y)for(int x=0;x<64;++x)check(failed.setTerrainForTesting(x,y,blocked),"Prepare unreachable movement fixture");
     check(failed.setTerrainForTesting(20,20,passable),"Keep the actor standing on legal terrain");
     const auto stuck=failed.spawnObjectForTesting(1,83,1,20.5f,20.5f);
+    check(failed.queueTacticalMoveForTesting(stuck,30.5f,20.5f,0),"Stage unreachable route request");
+    int firstPrepared=-1;
+    for(int i=0;i<16;++i) {
+        failed.update(0,{});
+        const int state=failed.tacticalMovementStateForTesting(stuck);
+        if(state!=-1 && state!=3) {firstPrepared=state;break;}
+    }
+    check(firstPrepared==4,"First admitted path request remains accepted even when native route solving fails");
     dispatchReplacement(failed,stuck,0,13);
     dispatchReplacement(failed,stuck,20,1); // Failed head is replaced, not resurrected or deduplicated.
     std::puts("PASS: queued724 movement, pause, range arrival, deferred retirement and Stop");

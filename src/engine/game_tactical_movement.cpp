@@ -33,10 +33,16 @@ bool Game::updateTacticalMovement(Object &object) {
     if(!action.present)return false;
     const double distance=geniePointFootprintDistance(float(mapSize_)-object.y,object.x,float(mapSize_)-action.destinationY,action.destinationX,
                                                        object.unit->collisionSize[1],object.unit->collisionSize[0]);
+    bool prepared=false;
     const int outcome=action.update(distance,[&] {
         object.moveGoalActive=true;
-        return issueMove(object,action.destinationX,action.destinationY,nullptr,action.range);
+        issueMove(object,action.destinationX,action.destinationY,nullptr,action.range);
+        object.pointMovement.status=GenieMovementStatus::Active;
+        prepared=true;
+        return true; // Original388 accepts the request before route solving, even for occupied endpoints.
     },[&] {
+        // shortcut: Native solving is synchronous; expose its result after request acceptance until original path-service retries are ported.
+        if(prepared)return 0;
         if(object.pointMovement.status==GenieMovementStatus::Failed)return 1;
         // shortcut: Native terminal point paths stand in for original pathdata/flags.
         // Replace this qualification when4bbf30/4bc1c0 path state is represented.
