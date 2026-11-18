@@ -45,6 +45,8 @@ set(SWGB_CORE_SOURCES
     src/engine/ai_military.cpp
     src/engine/ai_targets.cpp
     src/engine/game.cpp
+    src/engine/game_tactical_movement.cpp
+    src/engine/game_military.cpp
     src/engine/pathfinding.cpp
 )
 

@@ -2,6 +2,10 @@
 #include "../core/genie_graphic_random.h"
 #include "../core/genie_random.h"
 #include "../core/genie_rms_startup.h"
+#include "../core/genie_empty_owner_start.h"
+#include "../core/genie_start_placement.h"
+#include "../core/genie_start_placement_policy.h"
+#include <stdexcept>
 #include "../core/genie_gather.h"
 #include "../core/genie_target_selection.h"
 #include "game.h"
@@ -784,15 +788,28 @@ void Game::resignSkirmish() {
 }
 
 void Game::updateSkirmishArmy(int player) {
-    const Object *home=findObject(skirmishCenters_[size_t(player)]);
-    if((!home || !home->active) && !skirmishConquest_) return;
+    const Object *home=size_t(player)<skirmishCenters_.size()?findObject(skirmishCenters_[size_t(player)]):nullptr;
+    if((!home || !home->active) && !skirmishConquest_ && aiPlayers_[size_t(player)].militaryGroups.empty()) return;
     int ready=0;
     for(const auto &unit:objects_)
         if(unit.active && !unit.hidden && unit.player==player && !isWorker(unit) &&
            unit.unit->speed>0 && canAttack(unit) && !unit.attackTargetId) ++ready;
     auto &scouting=aiPlayers_[size_t(player)];
     if(ready>=6) scouting.assaultStarted=true;
-    const bool launchWave=ready>=6 || (skirmishConquest_ && scouting.assaultStarted);
+    // shortcut: Native six-unit policy triggers admission until the complete PER scheduler drives fallback skirmishes.
+    int ungrouped=0;
+    if(!scouting.scripted)for(const auto &unit:objects_) {
+        if(!unit.active || unit.hidden || unit.player!=player || unit.garrisonedInId>=0 ||
+           unit.unit->speed<=0 || !canAttack(unit) || unit.attackTargetId ||
+           !aiMilitarySoldierClass(unit.unit->cls) || unit.unit->cls==51)continue;
+        const bool member=std::any_of(scouting.militaryGroups.begin(),scouting.militaryGroups.end(),[&](const auto &group){
+            return std::find(group.members.begin(),group.members.end(),int32_t(unit.spawnId))!=group.members.end();});
+        if(!member)++ungrouped;
+    }
+    if(ungrouped>=6)formAiMilitaryGroups(player);
+    const bool gathered=std::any_of(scouting.militaryGroups.begin(),scouting.militaryGroups.end(),[](const auto &group){
+        return group.state==2 || group.desiredCount>int(group.members.size());});
+    const bool launchWave=gathered || ready>=6 || (skirmishConquest_ && scouting.assaultStarted);
     const uint16_t knowledge=sharedSightMask(player);
     const auto goalPoint=[&](int goal) {return std::array<float,2>{float(goal%mapSize_)+.5f,float(goal/mapSize_)+.5f};};
     bool choseGoal=false;
@@ -832,7 +849,8 @@ void Game::updateSkirmishArmy(int player) {
     std::map<int,int> attempted,failed;
     for(auto &soldier:objects_) {
         if(!soldier.active || soldier.hidden || soldier.player!=player || soldier.garrisonedInId>=0 ||
-           isWorker(soldier) || soldier.unit->speed<=0 || !canAttack(soldier)) continue;
+           isWorker(soldier) || soldier.unit->speed<=0 || !canAttack(soldier) ||
+           !aiMilitaryCanUseNativePolicy(player,soldier.spawnId)) continue;
         Object *current=findObject(soldier.attackTargetId);
         Object *target=current && current->active && combatTargetVisible(soldier,*current)?current:nullptr;
         float nearest=launchWave?std::numeric_limits<float>::max():64.f;
@@ -1379,20 +1397,6 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
             cornerElevation_[size_t(y)*(mapSize_+1)+x]=static_cast<uint8_t>(elevationAt(float(x),float(y)));
         lookAt(mapSize_*.5f,mapSize_*.5f);
     }
-    auto recordStartupResources=[&](const auto &unit,uint16_t owner) {
-        float cost=0;
-        for (const auto &entry:unit.costs)
-            if ((entry.flag&0xff)==1 && entry.type>=0) cost+=entry.amount;
-        // Original starting objects record their cost without charging the owner.
-        resources_[owner][98]+=cost;
-        resources_[owner][unit.type==dat::UT_Building?165:164]+=cost;
-        // Original54c395 grants flags1/2; completed buildings grant flags>=4 at5544c8.
-        for(const auto &storage:unit.resourceStorages)
-            if(storage.type>=0 && (storage.flag==1 || storage.flag==2 || (unit.type==dat::UT_Building && storage.flag>=4)))
-                resources_[owner][storage.type]+=storage.amount;
-        if(unit.cls==58 || unit.cls==47 || unit.cls==59 || unit.cls==54)
-            resources_[owner][unit.cls==58?37:40]+=1;
-    };
     for (size_t index=0;index<generated.ownedObjects.size();++index) {
         const auto &placement=generated.ownedObjects[index];
         const auto &unit=assets_.dat().civs[placement.civilization].units[placement.unitId];
@@ -1420,6 +1424,142 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         }
     }
     randomState=rng;
+    return true;
+}
+
+void Game::recordStartupResources(const dat::Unit &unit,uint16_t owner) {
+        float cost=0;
+        for (const auto &entry:unit.costs)
+            if ((entry.flag&0xff)==1 && entry.type>=0) cost+=entry.amount;
+        // Original starting objects record their cost without charging the owner.
+        resources_[owner][98]+=cost;
+        resources_[owner][unit.type==dat::UT_Building?165:164]+=cost;
+        // Original54c395 grants flags1/2; completed buildings grant flags>=4 at5544c8.
+        for(const auto &storage:unit.resourceStorages)
+            if(storage.type>=0 && (storage.flag==1 || storage.flag==2 || (unit.type==dat::UT_Building && storage.flag>=4)))
+                resources_[owner][storage.type]+=storage.amount;
+        if(unit.cls==58 || unit.cls==47 || unit.cls==59 || unit.cls==54)
+            resources_[owner][unit.cls==58?37:40]+=1;
+}
+
+bool Game::rmsStartPlacementValid(int owner,int id,float x,float y) const {
+    const auto *unit=effectiveUnitForPlayer(owner,findUnit(civilizationForPlayer(owner),id));
+    if(!unit || (id!=109 && id!=83 && id!=293))return false;
+    const int ax=assets_.dat().footprintAxesSwapped?1:0,ay=1-ax;
+    GenieStartFootprint bounds;
+    if(!genieStartFootprint(x,y,unit->clearanceSize[ax],unit->clearanceSize[ay],mapSize_,mapSize_,bounds))return false;
+    const auto &restrictions=assets_.dat().terrainRestrictions;
+    if(unit->terrainRestriction<0 || size_t(unit->terrainRestriction)>=restrictions.size())return false;
+    const auto &pass=restrictions[size_t(unit->terrainRestriction)].passableBuildableDmgMultiplier;
+    for(int ty=bounds.minY;ty<=bounds.maxY;++ty)for(int tx=bounds.minX;tx<=bounds.maxX;++tx) {
+        const int nx=ty,ny=mapSize_-1-tx,terrain=terrainAt(nx,ny);
+        if(terrain<0 || size_t(terrain)>=pass.size() || !genieStartTerrainPassable(pass[size_t(terrain)]))return false;
+        if(id==109 && tileSlope_[size_t(ny)*mapSize_+nx]!=0)return false;
+    }
+    const auto allied=[&](int a,int b) {
+        return a==b || (a>0 && b>0 && size_t(a)<=players_.size() &&
+            size_t(b)<players_[size_t(a-1)].diplomacy.size() && players_[size_t(a-1)].diplomacy[size_t(b)]==0);
+    };
+    for(const auto &other:objects_) {
+        if(!other.active || other.hidden || other.garrisonedInId>=0)continue;
+        const float ox=float(mapSize_)-other.y,oy=other.x;
+        if(int(ox)<std::max(0,int(x-8)) || int(ox)>std::min(mapSize_-1,int(x+8)) ||
+           int(oy)<std::max(0,int(y-8)) || int(oy)>std::min(mapSize_-1,int(y+8)))continue;
+        const auto &u=*other.unit;
+        GenieStartObstacle obstacle;
+        obstacle.id=u.id;obstacle.type=u.type;obstacle.unitClass=u.cls;obstacle.owner=other.player;
+        obstacle.state=other.resourceDeathState?other.resourceDeathState:(other.underConstruction?0:2);
+        obstacle.halfX=u.collisionSize[ax];obstacle.halfY=u.collisionSize[ay];obstacle.height=u.collisionSize[2];
+        obstacle.speed=u.speed;obstacle.canBeBuiltOn=u.canBeBuiltOn!=0;
+        obstacle.pendingBuilding=other.underConstruction && other.constructionRemaining==other.constructionTotal;
+        obstacle.hasTile=other.x>=0 && other.y>=0 && other.x<mapSize_ && other.y<mapSize_;
+        if(obstacle.hasTile)obstacle.terrainId=terrainAt(int(oy),mapSize_-1-int(ox));
+        const bool blocks=id==109?genieStartCenterObstacle(obstacle,owner,allied(owner,other.player)&&allied(other.player,owner),0):
+                                    genieStartWorkerObstacle(obstacle);
+        if(blocks && genieStartRectanglesOverlap(x,y,unit->clearanceSize[ax],unit->clearanceSize[ay],
+                    ox,oy,obstacle.halfX,obstacle.halfY))return false;
+    }
+    return true;
+}
+
+void Game::applyPendingFoundation(Object &object) {
+    if(object.pendingFoundation==255)return;
+        const int civ=civilizationForPlayer(object.player);
+        const uint8_t foundation=object.pendingFoundation==27?(civ==2?4:civ==6?6:27):object.pendingFoundation;
+        const int x0=int(std::floor(object.x-object.unit->collisionSize[0])),x1=int(std::ceil(object.x+object.unit->collisionSize[0]));
+        const int y0=int(std::floor(object.y-object.unit->collisionSize[1])),y1=int(std::ceil(object.y+object.unit->collisionSize[1]));
+        for (int y=y0;y<y1;++y) for (int x=x0;x<x1;++x)
+            if (x>=0 && y>=0 && x<mapSize_ && y<mapSize_) {
+                auto &tile=terrain_[size_t(y)*mapSize_+x];
+                if (tile!=object.pendingFoundation && tile!=1 && tile!=22 && tile!=23) tile=foundation;
+            }
+        object.pendingFoundation=255;
+    pathGridCache_.clear();
+}
+
+bool Game::startEmptyRmsOwner(int owner,std::string *err) {
+    const auto fail=[&](const char *message){if(err)*err=message;return false;};
+    if(owner<=0 || uint32_t(owner)>worldPlayerCount_)return fail("Invalid RMS starting owner");
+    if(!objectUpdateList(owner,0).empty())return true;
+    if(mapSize_<30)return fail("Empty-owner startup requires a map at least30 tiles wide");
+    const auto *center=effectiveUnitForPlayer(owner,findUnit(civilizationForPlayer(owner),109));
+    for(int id:{109,83,293}) {
+        const auto *unit=effectiveUnitForPlayer(owner,findUnit(civilizationForPlayer(owner),id));
+        if(!unit || unit->flyMode || unit->placementTerrain[0]!=-1 || unit->placementTerrain[1]!=-1 ||
+           unit->placementSideTerrain[0]!=-1 || unit->placementSideTerrain[1]!=-1 ||
+           unit->hillMode!=(id==109?2:0))return fail("Unsupported RMS starting master placement metadata");
+    }
+    const int ax=assets_.dat().footprintAxesSwapped?1:0,ay=1-ax;
+    size_t attempts=0;
+    try {
+        const bool placed=genieEmptyOwnerStart(legacyRandomState_,mapSize_,mapSize_,center->collisionSize[ax],center->collisionSize[ay],
+            [&](int id,GenieStartPosition point) {
+                // shortcut: Original worker retries are unbounded; abort pathological placement instead of hanging the host.
+                if(++attempts>100000)throw std::runtime_error("RMS starting worker placement exhausted its safety budget");
+                return rmsStartPlacementValid(owner,id,point.x,point.y);
+            },
+            [&](int id,GenieStartPosition point) {
+                const auto *unit=effectiveUnitForPlayer(owner,findUnit(civilizationForPlayer(owner),id));
+                uint8_t frame=0,facet=0;float delay=0;
+                // Actual109/83/293 factories, including their actor-controller draws.
+                for(int draw=0;draw<(id==109?4:7);++draw) {
+                    const auto value=genieRandomDraw(legacyRandomState_);
+                    if(id!=109 && draw==2) {
+                        const float elapsed=float(value*11u)*(1.f/32767.f);
+                        frame=uint8_t(std::min(7,int(elapsed)));delay=std::max(0.f,elapsed-8.f);
+                    }
+                    if(id!=109 && draw==3)facet=uint8_t((value*8u/32767u+7)%8);
+                }
+                auto *object=addObject(unit,owner,point.y,mapSize_-point.x,id==109?0:rmsTimberFacing(facet,8),nextSpawnId_++);
+                if(!object)throw std::runtime_error("RMS starting object creation failed");
+                const auto *graphic=assets_.dat().graphic(unit->standingGraphic[0]);
+                object->animTime=frame*(graphic?graphic->frameDuration:0.f);object->initialIdleDelay=delay;
+                object->wander=false;
+                if(id==109 && unit->foundationTerrainId>=0)object->pendingFoundation=uint8_t(unit->foundationTerrainId);
+                recordStartupResources(*unit,uint16_t(owner));
+                return object->spawnId;
+            },
+            [&](uint32_t id,GenieStartPosition point) {
+                auto *building=findObject(id);
+                for(auto &other:objects_) {
+                    if(!other.active || other.hidden || !other.unit->canBeBuiltOn ||
+                       !genieStartRectanglesOverlap(building->x,building->y,building->unit->clearanceSize[0],building->unit->clearanceSize[1],
+                            other.x,other.y,other.unit->collisionSize[0],other.unit->collisionSize[1]))continue;
+                    other.hitPoints=0;other.resourceDeathState=7;wakeObject(other);
+                }
+                if(owner==localPlayer_) {applyPendingFoundation(*building);lookAt(point.y,mapSize_-point.x);}
+                const auto saved=genieRandomDraw(legacyRandomState_);
+                refreshAutomaticTechnologies(owner);
+                legacyRandomState_=saved;
+            },
+            [&] {
+                const float count=playerAttribute(owner,84);
+                if(!std::isfinite(count) || count>10000)throw std::runtime_error("Invalid RMS starting worker count");
+                return count<=0?0:int(count);
+            });
+        if(!placed)return fail("No valid Command Center position for empty RMS owner");
+    } catch(const std::runtime_error &error) {return fail(error.what());}
+    rebuildAdjacency();
     return true;
 }
 
@@ -1463,16 +1603,12 @@ bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std:
         updatePlayerObjects(0,int(owner));
         if(owner)updateAi(int(owner),0);
     });
-    bool hasStartingObjects=true;
     for(uint32_t owner=1;owner<=worldPlayerCount_;++owner)
-        hasStartingObjects&=!objectUpdateList(int(owner),0).empty();
-    if(hasStartingObjects) {
-        focusRmsStart();
-        worldRandomCheckpoint_=genieRandomDraw(legacyRandomState_); // Common61e41b precedes derived starting-age research.
-        for(uint32_t owner=1;owner<=worldPlayerCount_;++owner)
-            legacyRandomState_=genieRandomDraw(legacyRandomState_); // RMS61e495 owner activation save/reseed.
-    }
-    // shortcut: Empty-owner5d1110 building placement must be recovered before claiming its final checkpoint.
+        if(!startEmptyRmsOwner(int(owner),err))return false;
+    focusRmsStart();
+    worldRandomCheckpoint_=genieRandomDraw(legacyRandomState_); // Common61e41b precedes derived starting-age research.
+    for(uint32_t owner=1;owner<=worldPlayerCount_;++owner)
+        legacyRandomState_=genieRandomDraw(legacyRandomState_); // RMS61e495 owner activation save/reseed.
     static constexpr float grants[][4]={{200,200,250,100},{200,200,250,100},
                                         {500,500,450,300},{1000,1000,850,700}};
     for(size_t player=1;player<=civilizations.size();++player) {
@@ -4974,6 +5110,7 @@ std::string Game::unitCommandHelp(
 void Game::clearUnitCommandOrder(
     Object &unit, bool preserveGather) {
     unit.pointMovement.cancel();
+    unit.tacticalMovement.cancel();
     unit.exploration.reset();
     unit.explorationChild.cancel();
     setTaskReference(unit.gatherChildReference,0);
@@ -11990,7 +12127,8 @@ void Game::applyTacticalCommands(const std::vector<TacticalCommandQueue::Order> 
                 actor->attackMode=AttackMode::Aggressive;
                 issueAttack(*actor,*target,std::atan2(actor->y-target->y,actor->x-target->x));
             }
-        } else if(order.command==705)issueExplore(*actor,order.x,order.y,true);
+        } else if(order.command==724)issueTacticalMove(*actor,order);
+        else if(order.command==705)issueExplore(*actor,order.x,order.y,true);
     }
     if(orders.empty() || orders.front().command!=705)return;
     const auto &goal=orders.front();
@@ -14407,6 +14545,7 @@ bool Game::executeAiAction(
     if (!action.isList()) return false;
     const std::string name =
         normalizeAiSymbol(action.name());
+    if(name=="attack-now" && action.children.size()==1)return formAiMilitaryGroups(player);
     if (name == "disable-self") {
         rule.enabled = false;
         return true;
@@ -14666,6 +14805,8 @@ void Game::updateAi(int player,float dt) {
     // Original normal-player callback wraps even humans and inactive records; Gaia does not.
     const uint32_t saved=genieRandomDraw(legacyRandomState_);
     AiPlayerState &state=aiPlayers_[player];
+    bool militaryTick=false;
+    if(!state.militaryGroups.empty())refreshAiMilitaryMembers(player);
     if(state.loaded) {
         const int age=aiTechLevel(int(player));
         if(age!=state.age) {state.age=age;state.ageTime=0.f;}
@@ -14673,10 +14814,12 @@ void Game::updateAi(int player,float dt) {
         if(state.firstEvaluation) {
             state.firstEvaluation=false;
             updateAiPlayer(int(player),state);
+            militaryTick=true;
         }
         if(++state.updateCount>=20) {
             state.updateCount=0;
             updateAiPlayer(int(player),state);
+            militaryTick=true;
         }
         state.economyTime-=dt;
         if(state.economyTime<=0.f) {
@@ -14684,6 +14827,11 @@ void Game::updateAi(int player,float dt) {
             updateAiGatherers(int(player),state);
         }
     }
+    // shortcut: Military phases share native PER evaluation cadence until the original24-phase clock is wired.
+    if(!state.loaded && !state.militaryGroups.empty() && ++state.updateCount>=20) {
+        state.updateCount=0;militaryTick=true;
+    }
+    if(militaryTick)updateAiMilitary(player);
     legacyRandomState_=saved;
 }
 
@@ -15167,6 +15315,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
             return true;
         }
         if (!o.active) return false;
+        if(updateTacticalMovement(o))return false;
         o.pointMovement.retire();
         if (o.exploration && o.explorationChild.present &&
             o.explorationChild.status==GenieMovementStatus::Completed) {
@@ -15320,7 +15469,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                     return false;
                 }
             }
-            if (o.moveGoalActive && !o.attackTargetId) {
+            if (o.moveGoalActive && !o.attackTargetId && !o.tacticalMovement.present) {
                 const float goalDx = o.targetX - o.x;
                 const float goalDy = o.targetY - o.y;
                 float arrival =
@@ -17377,16 +17526,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
     });
     for (Object *pending:pendingFoundations) {
         Object &object=*pending;
-        const int civ=civilizationForPlayer(object.player);
-        const uint8_t foundation=object.pendingFoundation==27?(civ==2?4:civ==6?6:27):object.pendingFoundation;
-        const int x0=int(std::floor(object.x-object.unit->collisionSize[0])),x1=int(std::ceil(object.x+object.unit->collisionSize[0]));
-        const int y0=int(std::floor(object.y-object.unit->collisionSize[1])),y1=int(std::ceil(object.y+object.unit->collisionSize[1]));
-        for (int y=y0;y<y1;++y) for (int x=x0;x<x1;++x)
-            if (x>=0 && y>=0 && x<mapSize_ && y<mapSize_) {
-                auto &tile=terrain_[size_t(y)*mapSize_+x];
-                if (tile!=object.pendingFoundation && tile!=1 && tile!=22 && tile!=23) tile=foundation;
-            }
-        object.pendingFoundation=255;
+        applyPendingFoundation(object);
     }
     if (!pendingFoundations.empty()) pathGridCache_.clear();
 

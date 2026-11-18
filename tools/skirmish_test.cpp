@@ -28,6 +28,8 @@ static void check(bool value, const char *message) {
 #include "explore_action_checks.h"
 #include "explore_search_checks.h"
 #include "tactical_explore_queue_checks.h"
+#include "tactical_movement_checks.h"
+#include "military_gameplay_checks.h"
 #include "explore_spiral_checks.h"
 #include "exploration_gameplay_checks.h"
 #include "ai_source_checks.h"
@@ -305,6 +307,8 @@ int main(int argc, char **argv) {
         scenarioAiChecks(assets);
         actorAiTimingChecks(assets);
         exploreActionChecks();exploreSearchChecks();tacticalExploreQueueChecks();exploreSpiralChecks();
+        militaryGameplayChecks(assets);
+        tacticalMovementChecks();tacticalMovementGameplayChecks(assets);
         explorationGameplayChecks(assets);
         fogEdgeChecks(argv[1]);
         rmsSpawnChecks(assets);

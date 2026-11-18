@@ -97,16 +97,18 @@ static void explorationGameplayChecks(swgb::Assets &assets) {
     std::vector<uint32_t> wave;
     for(int i=0;i<6;++i)wave.push_back(game.spawnObjectForTesting(1,troop,2,home[0]+i*.3f,home[1]+6));
     game.updateSkirmishArmyForTesting(2);
-    check(game.stagedTacticalCountForTesting()>0,"Native tactical planner stages its exploration orders");
-    for(auto id:wave)check(game.explorationStateForTesting(id)==-1,"Staging does not apply an exploration action immediately");
+    check(!game.militaryGroupsForTesting(2).empty() && game.stagedTacticalCountForTesting()==0,
+          "Native wave first enters military readiness instead of immediately scattering scouts");
+    for(auto id:wave)check(game.explorationStateForTesting(id)==-1,"Admission does not apply exploration immediately");
     game.updatePaused(.1f,{});
-    check(game.stagedTacticalCountForTesting()>0,"Pause does not flush tactical staging");
-    game.update(.05f,{});
-    check(game.stagedTacticalCountForTesting()==0,"Owner update flushes tactical orders into local command storage");
-    for(auto id:wave)check(game.explorationStateForTesting(id)==-1,"Owner flush does not execute the fresh local commands");
+    check(game.militaryGroupsForTesting(2)[0].state==1,"Pause retains military readiness");
+    for(int i=0;i<400 && game.militaryGroupsForTesting(2)[0].state!=2;++i)game.update(.05f,{});
+    check(game.militaryGroupsForTesting(2)[0].state==2,"Native wave completes its bounded gather/readiness phase");
+    check(game.stagedTacticalCountForTesting()==0,"Owner update flushes newly ready exploration orders into local command storage");
+    for(auto id:wave)check(game.explorationStateForTesting(id)==-1,"Owner flush does not execute fresh local commands");
     game.update(.05f,{});
     bool exploring=false;for(auto id:wave)exploring|=game.explorationStateForTesting(id)>=0;
-    check(exploring,"Existing native scouting planner now installs exploration parents and movement children");
+    check(exploring,"Ready military wave installs exploration parents through delayed command drain");
     const auto converted=game.spawnObjectForTesting(1,troop,2,home[0]+3,home[1]+8);
     check(game.queueExploreForTesting(converted,home[0]+10,home[1]+10),"Stage exploration before ownership changes");
     game.update(.05f,{});

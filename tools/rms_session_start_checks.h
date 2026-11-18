@@ -2,6 +2,7 @@
 #pragma once
 #include "../src/engine/rms_map.h"
 #include "rms_finalization_checks.h"
+#include "empty_owner_gameplay_checks.h"
 #include <filesystem>
 #include <fstream>
 
@@ -25,6 +26,7 @@ static void rmsStartCameraChecks(swgb::Assets &assets) {
 
 static void rmsSessionStartChecks(swgb::Assets &assets) {
     rmsFinalizationChecks();
+    emptyOwnerGameplayChecks(assets);
     rmsStartCameraChecks(assets);
     const auto fixtures=std::filesystem::path(__FILE__).parent_path()/"fixtures";
     swgb::RmsScript script;std::string error;

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Genie-style simulation using the original SWGB data and presentation.
 #pragma once
+#include "../core/genie_tactical_movement.h"
+#include "ai_military_scheduler.h"
 
 #include "local_simulation_clock.h"
 #include "local_command_queue.h"
@@ -138,6 +140,8 @@ public:
     uint32_t legacyRandomForTesting() const {return legacyRandomState_;}
     std::optional<uint32_t> worldCheckpointForTesting() const {return worldRandomCheckpoint_;}
     void focusRmsStartForTesting() {focusRmsStart();}
+    bool startEmptyRmsOwnerForTesting(int owner,std::string *err) {return startEmptyRmsOwner(owner,err);}
+    bool rmsStartPlacementValidForTesting(int owner,int id,float x,float y) const {return rmsStartPlacementValid(owner,id,x,y);}
     std::array<uint32_t,3> idleRandomFieldsForTesting(uint32_t id) const {
         const auto *o=findObject(id);
         return o?std::array<uint32_t,3>{o->idleAcquisition.initialOffset,o->idleAcquisition.secondaryThreshold,
@@ -381,6 +385,13 @@ public:
     }
     std::array<float,2> pointMovementDestinationForTesting(uint32_t id) const {
         const auto *o=findObject(id);return o?std::array<float,2>{o->pointMovement.destinationX,o->pointMovement.destinationY}:std::array<float,2>{-1,-1};
+    }
+    const std::vector<AiMilitaryGatherGroup>& militaryGroupsForTesting(int player) const {return aiPlayers_.at(size_t(player)).militaryGroups;}
+    bool queueTacticalMoveForTesting(uint32_t id,float x,float y,float range) {
+        auto *object=findObject(id);return object && queueTacticalMove(*object,x,y,range);
+    }
+    int tacticalMovementStateForTesting(uint32_t id) const {
+        const auto *object=findObject(id);return object && object->tacticalMovement.present?object->tacticalMovement.state:-1;
     }
     bool queueExploreForTesting(uint32_t id,float x,float y) {
         auto *o=findObject(id);return o && queueExplore(*o,x,y);
@@ -946,6 +957,7 @@ private:
         uint8_t farmMoveStep = 0;
         bool farmMoveActive = false;
         GenieMovementAction pointMovement;
+        GenieTacticalMovementAction tacticalMovement;
         std::optional<GenieExploreAction> exploration;
         GenieMovementAction explorationChild;
         uint32_t pathGoalId = 0;      // object approached (region goal), 0 = point
@@ -994,11 +1006,15 @@ private:
 
     struct AiPlayerState {
         AiProgram program;
+        std::vector<int32_t> militarySoldiers;
+        std::vector<AiMilitaryGatherGroup> militaryGroups;
+        AiMilitaryReadinessPass militaryReadiness;
+        int32_t nextMilitaryGroup=1;
         std::unordered_map<int, int> goals;
         std::map<int, double> timers;
         // Verified fresh profile events run before the original's first PER evaluation.
         std::unordered_map<int, int> strategicNumbers = {
-            {0,34}, {2,66}, {4,2}, {42,0}, {74,20}, {118,0}, {120,0}, {143,1}, {226,0}
+            {0,34}, {2,66}, {4,2}, {34,50}, {41,4}, {227,75}, {230,20}, {42,0}, {74,20}, {118,0}, {120,0}, {143,1}, {226,0}
         };
         std::unordered_set<std::string>
             warnedFacts;
@@ -1138,7 +1154,14 @@ private:
     bool issueExplore(Object &object,float x,float y,bool force);
     bool queueExplore(Object &object,float x,float y);
     void focusRmsStart();
+    void applyPendingFoundation(Object &object);
+    bool startEmptyRmsOwner(int owner,std::string *err);
+    bool rmsStartPlacementValid(int owner,int id,float x,float y) const;
+    void recordStartupResources(const dat::Unit &unit,uint16_t owner);
     bool queueTacticalAttack(Object &actor,const Object &target);
+    bool queueTacticalMove(Object &object,float x,float y,float range);
+    bool issueTacticalMove(Object &object,const TacticalCommandQueue::Order &order);
+    bool updateTacticalMovement(Object &object);
     void applyTacticalCommands(const std::vector<TacticalCommandQueue::Order> &orders);
     void issueGroupMove(std::vector<Object *> targets, float targetX, float targetY,
                         FormationType formation = FormationType::Line);
@@ -1478,6 +1501,11 @@ private:
     void updateFrame(float dt,float uiDt,const InputState &in,bool advanceWorld,double worldTime);
     void updateProductionAndDecay(float dt,int player);
     void updateAi(int player,float dt);
+    void refreshAiMilitaryMembers(int player);
+    void queueAiMilitaryStop(int player,int32_t id);
+    bool formAiMilitaryGroups(int player);
+    bool aiMilitaryCanUseNativePolicy(int player,uint32_t id) const;
+    void updateAiMilitary(int player);
     void updatePlayerObjects(float dt,int player, bool auxiliary = false);
     void updateAiPlayer(
         int player, AiPlayerState &state);

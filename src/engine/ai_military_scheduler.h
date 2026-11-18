@@ -20,6 +20,32 @@ struct AiMilitaryGatherGroup {
     uint8_t retries=0;
 };
 
+// 59fa80 admits these classes before testing the master air/boat trait.
+inline bool aiMilitarySoldierClass(int cls) {
+    switch(cls) {
+    case 32:case 33:case 34:case 35:case 36:case 44:case 47:case 49:
+    case 50:case 51:case 52:case 53:case 54:case 55:case 56:case 57:return true;
+    default:return false;
+    }
+}
+// 5ae520 multiplies by the float32 constant .01 before upward rounding.
+inline int aiMilitaryAttackCount(size_t count,int percentage) {
+    if(percentage<=0 || !count)return 0;
+    const double rounded=std::ceil(double(count)*percentage*double(.01f));
+    return int(std::min(rounded,double(std::numeric_limits<int>::max())));
+}
+// 5ad360/59ad00 removes from the first containing group, retaining desiredCount.
+inline bool removeAiMilitaryMember(std::vector<AiMilitaryGatherGroup> &groups,int32_t id) {
+    for(auto group=groups.begin();group!=groups.end();++group) {
+        const auto member=std::find(group->members.begin(),group->members.end(),id);
+        if(member==group->members.end())continue;
+        group->members.erase(member);
+        if(group->members.empty())groups.erase(group);
+        return true;
+    }
+    return false;
+}
+
 // 5ab090's destination refresh only; this does not replace the rest of phase7.
 // Lookup returns optional<array<float,3>> for the original first nonnegative ID.
 template<class Lookup>
