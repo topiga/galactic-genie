@@ -51,5 +51,25 @@ static void aiTimeChecks(swgb::Assets &assets) {
     advanceAndEvaluate(2);
     check(game.aiGoalForTesting(2,701)==1 && game.matchTime()==0,
           "Scenario AI clock advances independently of the custom skirmish clock");
+    check(game.initSkirmish(0x5A17,&error),error.c_str());
+    check(game.loadAiSourceForTesting(2,"match-clock", "(defrule (true) => (disable-self))",{},&error),error.c_str());
+    constexpr float step=1.f/30;
+    for(int frame=0;frame<3000;++frame)game.update(step,{});
+    check(game.matchResult()==-1 && game.matchTime()==float(3000*double(step)),
+          "Skirmish clock follows session time without cumulative float drift");
+    const float matchTime=game.matchTime();
+    game.updatePaused(10,{});
+    check(game.matchTime()==matchTime,"Pause preserves the session-based skirmish clock");
+    game.update(step,{});
+    check(game.matchTime()==float(3001*double(step)),"Skirmish clock resumes from session time");
+    check(game.initSkirmish(0x5A17,&error),error.c_str());
+    check(game.loadAiSourceForTesting(2,"local-match-clock","(defrule (true) => (disable-self))",{},&error),error.c_str());
+    game.updateLocal(1000,0,{});
+    for(uint32_t frame=1;frame<=1500;++frame)game.updateLocal(1000+frame*50,.05f,{});
+    check(game.matchTime()==112.5f,"Local skirmish clock follows admitted integer milliseconds at original speed");
+    game.updatePaused(10,{});game.updateLocal(1000000,0,{});
+    check(game.matchTime()==112.5f,"Local clock rebases after pause without advancing match time");
+    game.updateLocal(1000050,.05f,{});
+    check(game.matchTime()==112.575f,"Local match clock resumes after host-time rebasing");
     std::puts("PASS: AI game-time, whole seconds, pause, late loading and game/scenario resets");
 }

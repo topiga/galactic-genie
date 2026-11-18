@@ -978,7 +978,7 @@ void Game::updateSkirmish(float dt) {
         finishSkirmish(alive[1] ? 1 : alive[2] ? 0 : 2);
         return;
     }
-    matchTime_ += dt;
+    matchTime_ = float(gameTime_ + dt);
     if (aiPlayers_[2].scripted) return;
     skirmishAiTime_ -= dt;
     if (skirmishAiTime_ > 0) return;
