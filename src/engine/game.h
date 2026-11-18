@@ -1175,7 +1175,7 @@ private:
     bool queueTacticalAttack(Object &actor,const Object &target);
     bool queueTacticalMove(Object &object,float x,float y,float range);
     bool issueTacticalMove(Object &object,const TacticalCommandQueue::Order &order);
-    bool updateTacticalMovement(Object &object);
+    bool updateTacticalMovement(Object &object,int previousGraphic);
     void applyTacticalCommands(const std::vector<TacticalCommandQueue::Order> &orders);
     void issueGroupMove(std::vector<Object *> targets, float targetX, float targetY,
                         FormationType formation = FormationType::Line);
@@ -1352,6 +1352,7 @@ private:
     const dat::Unit *effectiveUnitForPlayer(
         int player, const dat::Unit *unit) const;
     int objectGraphic(const Object &object,const dat::Unit &unit) const;
+    void resetObjectGraphicAnimation(Object &object,int graphicId);
     void refreshUpgradeGraphic(Object &object,const dat::Unit &before,const dat::Unit &after);
     void applyUnitUpgrades(int player,const std::vector<int> &previousEffects);
     bool technologyRequirementsMet(int player,

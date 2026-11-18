@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "../src/core/genie_tactical_movement.h"
+#include "../src/core/genie_random.h"
 #include <vector>
 #include <limits>
 
@@ -63,12 +64,39 @@ static void tacticalMovementGameplayChecks(swgb::Assets &assets) {
     check(game.queueTacticalMoveForTesting(worker,30.5f,20.5f,4),"Stage original724 point move");
     game.updatePaused(1,{});
     check(game.tacticalMovementStateForTesting(worker)==-1,"Pause does not dispatch military movement");
-    bool walking=false,completed=false;
+    // Command staging may take several passes; the first prepared path must not move.
+    bool prepared=false;
+    for(int i=0;i<16 && !prepared;++i) {
+        game.update(.05f,{});
+        prepared=game.tacticalMovementStateForTesting(worker)==4;
+        check(game.objectPosition(worker)==std::array<float,2>{20.5f,20.5f},
+              "724 installation and first path preparation leave position unchanged");
+    }
+    check(prepared,"724 reaches the prepared path state");
+    game.update(.05f,{});
+    check(game.objectPosition(worker)[0]>20.5f,"724 integrates the prepared motion on the next owner pass");
+    const auto afterWorld=[](uint32_t seed,int objectDraws) {
+        for(int i=0;i<objectDraws;++i)swgb::genieRandomDraw(seed);
+        seed=swgb::genieRandomDraw(seed); // Owner PER save/reseed.
+        seed=swgb::genieRandomDraw(seed); // Auxiliary pass save/reseed.
+        swgb::genieRandomDraw(seed); // World tail checkpoint draw.
+        return seed;
+    };
+    bool walking=true,completed=false;
     for(int i=0;i<300;++i) {
+        game.seedLegacyRandomForTesting(1);
         game.update(.05f,{});
         const int state=game.tacticalMovementStateForTesting(worker);
         walking|=state==4;completed|=state==1;
-        if(walking && completed && state==-1)break;
+        if(state==1) {
+            check(game.legacyRandomForTesting()==afterWorld(1,2),
+                  "Worker walking-to-standing transition consumes its two original sprite draws");
+            const auto animation=game.objectAnimationForTesting(worker);
+            game.seedLegacyRandomForTesting(1);game.update(0,{});
+            check(game.legacyRandomForTesting()==afterWorld(1,0) && game.objectAnimationForTesting(worker)==animation,
+                  "Deferred completion retains identical standing sprite without new draws or frame reset");
+            break;
+        }
     }
     const auto position=game.objectPosition(worker);
     check(walking && completed && game.tacticalMovementStateForTesting(worker)==-1,
@@ -128,6 +156,9 @@ static void tacticalMovementGameplayChecks(swgb::Assets &assets) {
     }
     check(firstPrepared==4,"First admitted path request remains accepted even when native route solving fails");
     dispatchReplacement(failed,stuck,0,13);
+    failed.update(0,{});
+    check(failed.tacticalMovementStateForTesting(stuck)==-1,
+          "Outer409870 removes a failed movement after its deferred505 notification");
     dispatchReplacement(failed,stuck,20,1); // Failed head is replaced, not resurrected or deduplicated.
     std::puts("PASS: queued724 movement, pause, range arrival, deferred retirement and Stop");
 }

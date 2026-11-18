@@ -4787,32 +4787,38 @@ int Game::objectGraphic(const Object &o,const dat::Unit &base) const {
     return gid;
 }
 
+void Game::resetObjectGraphicAnimation(Object &object,int graphicId) {
+    const auto *graphic=assets_.dat().graphic(graphicId);
+    if(!graphic)return;
+    object.animTime=0;object.initialIdleDelay=0;object.initialFrame=0;
+    int frame=0;
+    if(graphic->sequenceType&4) {
+        const auto first=genieRandomDraw(legacyRandomState_);
+        frame=std::max(0,std::min(int(graphic->frameCount)-1,int(first*uint32_t(std::max(0,int(graphic->frameCount)))/32767u)));
+        if(graphic->sequenceType&1) {
+            const auto second=genieRandomDraw(legacyRandomState_);
+            if(graphic->frameDuration>0) {
+                const float cycle=graphic->frameCount*graphic->frameDuration+graphic->replayDelay;
+                const double elapsed=double(second)*cycle*(1.f/32767.f);
+                frame=int(elapsed/graphic->frameDuration);
+                if(frame>=graphic->frameCount) {
+                    frame=std::max(0,int(graphic->frameCount)-1);
+                    object.initialIdleDelay=std::max(0.f,float(elapsed-double(frame)*graphic->frameDuration)-graphic->frameDuration);
+                }
+            } else frame=int(second*uint32_t(std::max(0,int(graphic->frameCount)))/32767u);
+        }
+    }
+    if((graphic->sequenceType&1) && graphic->frameDuration>0)object.animTime=frame*graphic->frameDuration;
+    else object.initialFrame=uint16_t(frame);
+}
+
 void Game::refreshUpgradeGraphic(Object &object,const dat::Unit &before,const dat::Unit &after) {
     int current=objectGraphic(object,before);
     const auto replace=[&](int oldGraphic,int newGraphic) {
         const auto *graphic=assets_.dat().graphic(newGraphic);
         if(current!=oldGraphic || current==newGraphic || !graphic)return;
         current=newGraphic;
-        object.animTime=0;object.initialIdleDelay=0;object.initialFrame=0;
-        int frame=0;
-        if(graphic->sequenceType&4) {
-            const auto first=genieRandomDraw(legacyRandomState_);
-            frame=std::max(0,std::min(int(graphic->frameCount)-1,int(first*uint32_t(std::max(0,int(graphic->frameCount)))/32767u)));
-            if(graphic->sequenceType&1) {
-                const auto second=genieRandomDraw(legacyRandomState_);
-                if(graphic->frameDuration>0) {
-                    const float cycle=graphic->frameCount*graphic->frameDuration+graphic->replayDelay;
-                    const double elapsed=double(second)*cycle*(1.f/32767.f);
-                    frame=int(elapsed/graphic->frameDuration);
-                    if(frame>=graphic->frameCount) {
-                        frame=std::max(0,int(graphic->frameCount)-1);
-                        object.initialIdleDelay=std::max(0.f,float(elapsed-double(frame)*graphic->frameDuration)-graphic->frameDuration);
-                    }
-                } else frame=int(second*uint32_t(std::max(0,int(graphic->frameCount)))/32767u);
-            }
-        }
-        if((graphic->sequenceType&1) && graphic->frameDuration>0)object.animTime=frame*graphic->frameDuration;
-        else object.initialFrame=uint16_t(frame);
+        resetObjectGraphicAnimation(object,newGraphic);
     };
     if(before.type==dat::UT_Building) {
         // Original556730 refreshes construction before saving rand(), then srand(saved).
@@ -9602,10 +9608,12 @@ void Game::refreshVisibility() {
     if(observedTiles_.size()!=count) observedTiles_.assign(count,0);
     if(exploredTiles_.size()!=count) exploredTiles_.assign(count,initiallyExplored_?0xffff:0);
     if(first) {rememberedObjects_.clear();rememberedTerrain_=terrain_;rememberedPlayer_=localPlayer_;}
+    std::vector<std::pair<const Object *,int>> localSightSources;
     for(const auto &source:objects_) {
         if(!source.active || source.hidden || source.garrisonedInId>=0 || !source.unit || source.hitPoints<=0 ||
            source.player<=0 || source.player>16) continue;
         const int radius=std::clamp(int(modifiedUnitAttribute(source,1,source.unit->lineOfSight)),0,20);
+        if(viewSightMask_&(1u<<(source.player-1)))localSightSources.emplace_back(&source,radius);
         const int reach=std::max(radius,int(std::ceil(std::max(source.unit->collisionSize[0],source.unit->collisionSize[1]))))+1;
         const int cx=int(source.x),cy=int(std::ceil(source.y))-1;
         const uint16_t bit=uint16_t(1u<<(source.player-1));
@@ -9641,8 +9649,17 @@ void Game::refreshVisibility() {
     for(auto it=rememberedObjects_.begin();it!=rememberedObjects_.end();)
         if(tileVisibility(int(it->second.x),int(std::ceil(it->second.y))-1)==2) it=rememberedObjects_.erase(it);
         else ++it;
+    // Sources cannot change during this refresh; reuse their computed radii and ordering.
+    const auto sees=[&](float x,float y) {
+        if(!std::isfinite(x) || !std::isfinite(y) || x<0 || y<=0 || x>=mapSize_ || y>mapSize_)return false;
+        if(forceSightCheat_)return true;
+        for(const auto &[source,radius]:localSightSources)
+            if(sourceSeesTile(*source,int(mapSize_-y),int(x),radius))return true;
+        return false;
+    };
     for(auto &object:objects_) {
-        const bool visible=objectVisible(object);
+        const bool visible=object.active && !object.hidden && object.draw &&
+            (object.player==localPlayer_ || sees(object.x,object.y));
         if(object.selected && !visible) object.selected=false;
         if(!object.active || object.hidden || !object.draw || !object.unit || object.unit->speed>0 ||
            object.unit->type==dat::UT_Projectile || object.player==localPlayer_) continue;
@@ -15364,133 +15381,7 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
             std::min(cohesion.nearestRemaining, remaining);
         cohesion.movingMembers++;
     }
-    struct DeadCreation { const dat::Unit *unit; int owner; float x, y, amount; };
-    std::optional<DeadCreation> pendingDead;
-    const auto updateObject = [&](size_t index) {
-        Object &o = objects_[index];
-        if (o.player!=player) return false;
-        if (o.pendingSleep) {
-            o.pendingSleep = false;
-            unregisterObjectUpdate(o);
-            registerObjectUpdate(index);
-            return false; // original false-return migration skips the swapped tail
-        }
-        if (o.buildingFrozen) return false;
-        if (o.resourceDeathState == 7) { o.resourceDeathState = 8; return false; }
-        if (o.resourceDeathState == 8) {
-            return true;
-        }
-        if (!o.active) return false;
-        if(updateTacticalMovement(o))return false;
-        o.pointMovement.retire();
-        if (o.exploration && o.explorationChild.present &&
-            o.explorationChild.status==GenieMovementStatus::Completed) {
-            o.exploration->update(1);
-            o.explorationChild.cancel();
-        }
-        // shortcut: Native failed paths retain the child until retarget; original failure statuses need callback parity.
-        if (o.resourceDeathState == 2) {
-            // Base constructor's zero-HP child enters3 on its first same-owner pass.
-            o.resourceDeathState = 3;
-            genieRandomDraw(legacyRandomState_); // flags4 still draws a facet with one angle
-            o.facing = 0.f;
-            return false;
-        }
-        if (o.resourceDeathState == 3) {
-            if (o.resourceAmount > 0.f) {
-                if (o.unit->resourceDecay > 0.f)
-                    o.resourceAmount = std::max(0.f, float(double(o.resourceAmount) - double(dt)*o.unit->resourceDecay));
-                return false; // reaching zero does not advance death until the next update
-            }
-            const dat::Unit *dead = o.player == 0 ? findUnit(0, o.unit->deadUnitId) : nullptr;
-            const dat::Graphic *graphic = dead ? assets_.dat().graphic(dead->standingGraphic[0]) : nullptr;
-            const dat::ResourceStorage *lifetime = nullptr;
-            bool storageEffects = false;
-            if (dead) for (const auto &storage : dead->resourceStorages) {
-                if (storage.type < 0) continue;
-                if (storage.flag == 0) lifetime = &storage; // original constructor keeps the last mode0 storage
-                else storageEffects = true;
-            }
-            // Verified base-factory family: single-facet static lifetime objects, not an ID-specific replacement.
-            const bool originalChild = dead && dead->type == dat::UT_EyeCandy && dead->hitPoints == 0 &&
-                !dead->undeadMode && dead->deadUnitId < 0 && dead->dyingGraphic < 0 &&
-                !storageEffects && lifetime && lifetime->type == 12 && lifetime->amount > 0.f &&
-                dead->resourceDecay > 0.f &&
-                graphic && graphic->sequenceType == 6 && graphic->frameCount == 1 && graphic->angleCount == 1;
-            if (originalChild) pendingDead = DeadCreation{dead,o.player,o.x,o.y,lifetime->amount};
-            // shortcut: Other dead-master families retain the native remains adapter until their factories are ported.
-            killObject(o, false, !originalChild);
-            return false;
-        }
-        if (o.fellingPending && o.hitPoints < 1.f) {
-            o.fellingPending = false;
-            if ((o.unit->type == dat::UT_EyeCandy || o.unit->type == dat::UT_Trees) &&
-                !o.unit->undeadMode && o.unit->resourceDecay == 0.f && o.garrisonedInId < 0)
-                o.resourceDeathState = 3;
-            o.felled = true;
-            const dat::Graphic *dying = assets_.dat().graphic(o.unit->dyingGraphic);
-            if ((o.unit->type == dat::UT_EyeCandy || o.unit->type == dat::UT_Trees) &&
-                dying && (dying->sequenceType & 4) && dying->angleCount == 1) {
-                genieRandomDraw(legacyRandomState_);
-                o.facing = 0.f;
-            }
-            o.animTime = 0.f;
-            int sound = o.unit->dyingSound;
-            if (sound < 0) sound = graphicSound(o.unit->dyingGraphic);
-            playWorldUnitSound(o, sound);
-            o.dyingSoundPlayed = true;
-            rebuildAdjacency();
-        }
-        const auto recover = [&](float period) {
-            if (period <= 0 || o.hitPoints < 1.f || o.hitPoints >= o.maxHitPoints) return;
-            o.recoveryTime += dt;
-            while (o.recoveryTime >= period && o.hitPoints < o.maxHitPoints) {
-                o.recoveryTime -= period;
-                o.hitPoints = std::min(o.maxHitPoints,o.hitPoints+1.f);
-            }
-        };
-        // Original 0x55a760 runs both branches in order, sharing the retained timer.
-        if (o.unit->heroMode) recover(2.f);
-        constexpr std::array<int,8> masterCopies = {115,125,136,134,89,140,643,645};
-        constexpr std::array<int,16> masterHeroes = {
-            1077,1085,1082,1084,1080,725,728,731,747,753,761,770,778,784,806,792};
-        const bool master =
-            std::find(masterCopies.begin(),masterCopies.end(),o.unit->copyId) != masterCopies.end() ||
-            std::find(masterHeroes.begin(),masterHeroes.end(),o.unit->id) != masterHeroes.end();
-        if (master) recover(playerAttribute(o.player,49));
-        else if (o.unit->trait & 0x20) recover(playerAttribute(o.player,96));
-        // Base/static constructors (54c2a0, tree564db0) do not run animated422cd0.
-        float animationDt=(o.unit->type==dat::UT_EyeCandy || o.unit->type==dat::UT_Trees)?0.f:dt;
-        if (o.initialIdleDelay>0) {
-            const auto *idleGraphic=assets_.dat().graphic(o.unit->standingGraphic[0]);
-            const float lastFrameTime=idleGraphic?(idleGraphic->frameCount-1)*idleGraphic->frameDuration:0.f;
-            if (o.state==State::Idle && o.animTime==lastFrameTime) {
-                const float held=std::min(animationDt,o.initialIdleDelay);
-                o.initialIdleDelay-=held;animationDt-=held;
-            } else o.initialIdleDelay=0;
-        }
-        o.animTime += animationDt;
-        updateGathering(o, dt);
-        o.approachRetry = std::max(0.0f, o.approachRetry - dt);
-        updateUnitCommandOrder(o, dt);
-        updateHealing(o, dt);
-        // Passengers and garrisoned units don't fight from inside (a
-        // building's garrison fire is the building's own volley).
-        if (o.garrisonedInId >= 0) {
-            const auto *host=findObject(uint32_t(o.garrisonedInId));
-            if (host && host->active && !host->underConstruction &&
-                host->unit->type == dat::UT_Building) {
-                const float rate=modifiedUnitAttribute(*host,108,host->unit->garrisonHealRate);
-                o.hitPoints=std::min(o.maxHitPoints,o.hitPoints+dt*std::max(0.f,rate));
-            }
-            setAttackTarget(o, 0);
-            o.attackAutomatic = false;
-            o.attackGroundActive = false;
-            o.attackShotPending = false;
-        } else if (!o.healTargetId) {
-            updateAttack(o, dt);
-        }
-        if (!o.active) return false;
+    const auto updateMovement = [&](Object &o) {
         if (o.hidden || o.unit->type < dat::UT_DeadFish || o.unit->speed <= 0 ||
             o.unit->type == dat::UT_Building)
             return false;
@@ -15922,6 +15813,142 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
             }
         }
         return false;
+    };
+    const auto updateAnimation = [&](Object &o) {
+        // Base/static constructors (54c2a0, tree564db0) do not run animated422cd0.
+        float animationDt=(o.unit->type==dat::UT_EyeCandy || o.unit->type==dat::UT_Trees)?0.f:dt;
+        if (o.initialIdleDelay>0) {
+            const auto *idleGraphic=assets_.dat().graphic(o.unit->standingGraphic[0]);
+            const float lastFrameTime=idleGraphic?(idleGraphic->frameCount-1)*idleGraphic->frameDuration:0.f;
+            if (o.state==State::Idle && o.animTime==lastFrameTime) {
+                const float held=std::min(animationDt,o.initialIdleDelay);
+                o.initialIdleDelay-=held;animationDt-=held;
+            } else o.initialIdleDelay=0;
+        }
+        o.animTime += animationDt;
+    };
+    struct DeadCreation { const dat::Unit *unit; int owner; float x, y, amount; };
+    std::optional<DeadCreation> pendingDead;
+    const auto updateObject = [&](size_t index) {
+        Object &o = objects_[index];
+        if (o.player!=player) return false;
+        if (o.pendingSleep) {
+            o.pendingSleep = false;
+            unregisterObjectUpdate(o);
+            registerObjectUpdate(index);
+            return false; // original false-return migration skips the swapped tail
+        }
+        if (o.buildingFrozen) return false;
+        if (o.resourceDeathState == 7) { o.resourceDeathState = 8; return false; }
+        if (o.resourceDeathState == 8) {
+            return true;
+        }
+        if (!o.active) return false;
+        const bool tacticalAtStart=o.tacticalMovement.present;
+        const int previousGraphic=tacticalAtStart?objectGraphic(o,*o.unit):-1;
+        // Original4a1a00 runs motion and sprite advancement before409870 advances actions.
+        if(tacticalAtStart) {updateMovement(o);updateAnimation(o);}
+        if(updateTacticalMovement(o,previousGraphic))return false;
+        o.pointMovement.retire();
+        if (o.exploration && o.explorationChild.present &&
+            o.explorationChild.status==GenieMovementStatus::Completed) {
+            o.exploration->update(1);
+            o.explorationChild.cancel();
+        }
+        // shortcut: Native failed paths retain the child until retarget; original failure statuses need callback parity.
+        if (o.resourceDeathState == 2) {
+            // Base constructor's zero-HP child enters3 on its first same-owner pass.
+            o.resourceDeathState = 3;
+            genieRandomDraw(legacyRandomState_); // flags4 still draws a facet with one angle
+            o.facing = 0.f;
+            return false;
+        }
+        if (o.resourceDeathState == 3) {
+            if (o.resourceAmount > 0.f) {
+                if (o.unit->resourceDecay > 0.f)
+                    o.resourceAmount = std::max(0.f, float(double(o.resourceAmount) - double(dt)*o.unit->resourceDecay));
+                return false; // reaching zero does not advance death until the next update
+            }
+            const dat::Unit *dead = o.player == 0 ? findUnit(0, o.unit->deadUnitId) : nullptr;
+            const dat::Graphic *graphic = dead ? assets_.dat().graphic(dead->standingGraphic[0]) : nullptr;
+            const dat::ResourceStorage *lifetime = nullptr;
+            bool storageEffects = false;
+            if (dead) for (const auto &storage : dead->resourceStorages) {
+                if (storage.type < 0) continue;
+                if (storage.flag == 0) lifetime = &storage; // original constructor keeps the last mode0 storage
+                else storageEffects = true;
+            }
+            // Verified base-factory family: single-facet static lifetime objects, not an ID-specific replacement.
+            const bool originalChild = dead && dead->type == dat::UT_EyeCandy && dead->hitPoints == 0 &&
+                !dead->undeadMode && dead->deadUnitId < 0 && dead->dyingGraphic < 0 &&
+                !storageEffects && lifetime && lifetime->type == 12 && lifetime->amount > 0.f &&
+                dead->resourceDecay > 0.f &&
+                graphic && graphic->sequenceType == 6 && graphic->frameCount == 1 && graphic->angleCount == 1;
+            if (originalChild) pendingDead = DeadCreation{dead,o.player,o.x,o.y,lifetime->amount};
+            // shortcut: Other dead-master families retain the native remains adapter until their factories are ported.
+            killObject(o, false, !originalChild);
+            return false;
+        }
+        if (o.fellingPending && o.hitPoints < 1.f) {
+            o.fellingPending = false;
+            if ((o.unit->type == dat::UT_EyeCandy || o.unit->type == dat::UT_Trees) &&
+                !o.unit->undeadMode && o.unit->resourceDecay == 0.f && o.garrisonedInId < 0)
+                o.resourceDeathState = 3;
+            o.felled = true;
+            const dat::Graphic *dying = assets_.dat().graphic(o.unit->dyingGraphic);
+            if ((o.unit->type == dat::UT_EyeCandy || o.unit->type == dat::UT_Trees) &&
+                dying && (dying->sequenceType & 4) && dying->angleCount == 1) {
+                genieRandomDraw(legacyRandomState_);
+                o.facing = 0.f;
+            }
+            o.animTime = 0.f;
+            int sound = o.unit->dyingSound;
+            if (sound < 0) sound = graphicSound(o.unit->dyingGraphic);
+            playWorldUnitSound(o, sound);
+            o.dyingSoundPlayed = true;
+            rebuildAdjacency();
+        }
+        const auto recover = [&](float period) {
+            if (period <= 0 || o.hitPoints < 1.f || o.hitPoints >= o.maxHitPoints) return;
+            o.recoveryTime += dt;
+            while (o.recoveryTime >= period && o.hitPoints < o.maxHitPoints) {
+                o.recoveryTime -= period;
+                o.hitPoints = std::min(o.maxHitPoints,o.hitPoints+1.f);
+            }
+        };
+        // Original 0x55a760 runs both branches in order, sharing the retained timer.
+        if (o.unit->heroMode) recover(2.f);
+        constexpr std::array<int,8> masterCopies = {115,125,136,134,89,140,643,645};
+        constexpr std::array<int,16> masterHeroes = {
+            1077,1085,1082,1084,1080,725,728,731,747,753,761,770,778,784,806,792};
+        const bool master =
+            std::find(masterCopies.begin(),masterCopies.end(),o.unit->copyId) != masterCopies.end() ||
+            std::find(masterHeroes.begin(),masterHeroes.end(),o.unit->id) != masterHeroes.end();
+        if (master) recover(playerAttribute(o.player,49));
+        else if (o.unit->trait & 0x20) recover(playerAttribute(o.player,96));
+        if(!tacticalAtStart)updateAnimation(o);
+        updateGathering(o, dt);
+        o.approachRetry = std::max(0.0f, o.approachRetry - dt);
+        updateUnitCommandOrder(o, dt);
+        updateHealing(o, dt);
+        // Passengers and garrisoned units don't fight from inside (a
+        // building's garrison fire is the building's own volley).
+        if (o.garrisonedInId >= 0) {
+            const auto *host=findObject(uint32_t(o.garrisonedInId));
+            if (host && host->active && !host->underConstruction &&
+                host->unit->type == dat::UT_Building) {
+                const float rate=modifiedUnitAttribute(*host,108,host->unit->garrisonHealRate);
+                o.hitPoints=std::min(o.maxHitPoints,o.hitPoints+dt*std::max(0.f,rate));
+            }
+            setAttackTarget(o, 0);
+            o.attackAutomatic = false;
+            o.attackGroundActive = false;
+            o.attackShotPending = false;
+        } else if (!o.healTargetId) {
+            updateAttack(o, dt);
+        }
+        if (!o.active) return false;
+        return tacticalAtStart ? false : updateMovement(o);
     };
     objectUpdateList(player,auxiliary ? 2 : 0).traverse([&](size_t index) {
         const bool finalize = updateObject(index);

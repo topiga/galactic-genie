@@ -28,7 +28,7 @@ bool Game::issueTacticalMove(Object &object,const TacticalCommandQueue::Order &o
 }
 
 // Returns true when this admitted owner pass must not run the native Walk provider.
-bool Game::updateTacticalMovement(Object &object) {
+bool Game::updateTacticalMovement(Object &object,int previousGraphic) {
     auto &action=object.tacticalMovement;
     if(!action.present)return false;
     const double distance=geniePointFootprintDistance(float(mapSize_)-object.y,object.x,float(mapSize_)-action.destinationY,action.destinationX,
@@ -60,12 +60,13 @@ bool Game::updateTacticalMovement(Object &object) {
     });
     if(action.state!=4) {
         object.path.clear();object.pathIndex=0;object.moveGoalActive=false;
-        object.state=State::Idle;object.moveSpeedLimit=0;object.animTime=0;
+        object.state=State::Idle;object.moveSpeedLimit=0;
     }
-    if(outcome==1) {
+    const int graphic=objectGraphic(object,*object.unit);
+    if(graphic!=previousGraphic)resetObjectGraphicAnimation(object,graphic);
+    if(outcome==1 || outcome==3) {
         action.cancel();object.pointMovement.cancel();return true;
     }
-    if(outcome==3)object.pointMovement.fail();
     return action.state!=4;
 }
 } // namespace swgb
