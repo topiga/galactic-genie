@@ -14255,6 +14255,13 @@ bool Game::evaluateAiFactValue(
         value=aiIdleFarmCount(int16_t(farms),int16_t(farmersA),int16_t(farmersB));
         return true;
     }
+    if(fact=="defend-soldier-count") {
+        if(argumentEnd!=1)return false;
+        // Original57c280 subtracts current type100 group membership, not
+        // attack tasks or desired strength, from the soldier admission registry.
+        value=aiDefendSoldierCount(int(state.militarySoldiers.size()),state.militaryGroups);
+        return true;
+    }
     if (fact=="random-number") {
         if (argumentEnd!=1) return false;
         value=aiRandomNumbers_[size_t(player)];
@@ -14393,6 +14400,31 @@ Game::AiTruth Game::evaluateAiCondition(
         const auto kind=fact=="player-human"?AiPlayerFact::Human:fact=="player-in-game"?AiPlayerFact::InGame:
                         fact=="players-stance"?AiPlayerFact::PlayersStance:AiPlayerFact::StanceToward;
         const auto result=evaluateAiPlayerFact(kind,selector,stance,player,slots);
+        if(result.matchedPlayer)state.matchedPlayers[selector]=*result.matchedPlayer;
+        return result.value?AiTruth::True:AiTruth::False;
+    }
+    if(fact=="players-military-population") {
+        if(condition.children.size()!=4)return AiTruth::Unknown;
+        bool known=false;
+        const int selector=resolveAiValue(player,state,condition.children[1].value,known);
+        if(!known)return AiTruth::Unknown;
+        const int expected=resolveAiValue(player,state,condition.children[3].value,known);
+        const auto &op=condition.children[2].value;
+        if(!known || (op!="<" && op!="<=" && op!=">" && op!=">=" && op!="==" && op!="!="))return AiTruth::Unknown;
+        std::vector<AiPlayerFactPlayer> slots(size_t(worldPlayerCount_)+1);
+        for(size_t id=1;id<slots.size();++id) {
+            const auto &source=players_[id-1];auto &slot=slots[id];
+            slot.computer=!source.human;slot.gameState=source.active?0:1;
+            slot.diplomacy.assign(source.diplomacy.begin(),source.diplomacy.end());
+        }
+        const auto result=evaluateAiPlayerSelection(selector,player,slots,[&](int id) {
+            // Original57d2e0 truncates resource40 without a fog gate. Native
+            // resource40 has startup credits only; reuse the live population
+            // adapter until original admission/death resource callbacks exist.
+            const int actual=aiPopulationCount(id,true);
+            return op=="<"?actual<expected:op=="<="?actual<=expected:op==">"?actual>expected:
+                   op==">="?actual>=expected:op=="=="?actual==expected:actual!=expected;
+        });
         if(result.matchedPlayer)state.matchedPlayers[selector]=*result.matchedPlayer;
         return result.value?AiTruth::True:AiTruth::False;
     }

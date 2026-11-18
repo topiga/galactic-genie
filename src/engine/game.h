@@ -407,6 +407,11 @@ public:
         const auto *o=findObject(id);return o?std::array<float,2>{o->pointMovement.destinationX,o->pointMovement.destinationY}:std::array<float,2>{-1,-1};
     }
     bool formAiMilitaryGroupsForTesting(int player) {return formAiMilitaryGroups(player);}
+    std::optional<int> aiMatchedPlayerForTesting(int player,int selector) const {
+        const auto &cache=aiPlayers_.at(size_t(player)).matchedPlayers;
+        const auto found=cache.find(selector);
+        return found==cache.end()?std::nullopt:std::optional<int>(found->second);
+    }
     AiMilitaryPhase militaryPhaseForTesting(int player) const {return aiPlayers_.at(size_t(player)).militaryCycle.phase;}
     AiAttackMemoryQuarter attackMemoryQuarterForTesting(int player,size_t quarter) const {return aiPlayers_.at(player).explorationQuarters.at(quarter);}
     size_t attackMemoryVictimCountForTesting(int player) const {return aiPlayers_.at(player).processedAttackMemoryVictims.size();}

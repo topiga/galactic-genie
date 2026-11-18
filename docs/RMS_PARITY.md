@@ -7154,3 +7154,20 @@ combined sanitizer regression. Removing a group does not issue a Stop command.
 Fresh original defaults keep the normal attack-group quota at zero; this change
 does not force RandomGame to attack earlier than its script allows. The native
 admission cadence and separate type112 pool remain explicit gaps.
+
+### 2026-11-18: military population and defenders
+
+Player predicates now share the original ordered any/every selector callback.
+`players-military-population` preserves that selector/cache behavior and has no
+fog gate, as in the original. The original value is truncated resource40;
+native resource40 currently has startup-only credits, so the running gameplay
+adapter deliberately uses the existing military-population classification.
+Full original resource admission/removal remains separate. Direct Gaia is valid;
+invalid numeric slots compare false and remain false under any comparison.
+
+`defend-soldier-count` subtracts current type100 group membership from the soldier
+registry, without clamping and without subtracting exploration groups. The186
+existing player controls,144 population controls and42 defender controls pass.
+Production tests cover hidden enemy population, any/every caches, garrison,
+death, actual group membership, Gaia and invalid-slot negation. The combined
+sanitizer suite passes.

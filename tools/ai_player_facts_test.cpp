@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "engine/ai_player_facts.h"
+#include "engine/ai_military_scheduler.h"
 #include <cstdlib>
 #include <iostream>
 using namespace swgb;
@@ -200,11 +201,299 @@ int main() {
     };
     for(const auto &g:golden)check(evaluateAiPlayerFact(g.fact,g.selector,g.stance,1,players).value==g.expected,
         "Original player fact golden mismatch");
+    const float population[]{0.f,2.9f,5.8f,-1.9f,12.f};
+    struct PopulationGolden {int selector,op;bool result;};
+    const PopulationGolden populationGoldens[]{
+        {-111,0,false},
+        {-111,1,false},
+        {-111,2,false},
+        {-111,3,false},
+        {-111,4,false},
+        {-111,5,false},
+        {-110,0,false},
+        {-110,1,false},
+        {-110,2,false},
+        {-110,3,false},
+        {-110,4,false},
+        {-110,5,false},
+        {-109,0,false},
+        {-109,1,false},
+        {-109,2,true},
+        {-109,3,true},
+        {-109,4,false},
+        {-109,5,true},
+        {-108,0,false},
+        {-108,1,false},
+        {-108,2,true},
+        {-108,3,true},
+        {-108,4,false},
+        {-108,5,true},
+        {-107,0,false},
+        {-107,1,false},
+        {-107,2,true},
+        {-107,3,true},
+        {-107,4,false},
+        {-107,5,true},
+        {-106,0,false},
+        {-106,1,false},
+        {-106,2,true},
+        {-106,3,true},
+        {-106,4,false},
+        {-106,5,true},
+        {-105,0,false},
+        {-105,1,false},
+        {-105,2,false},
+        {-105,3,false},
+        {-105,4,false},
+        {-105,5,false},
+        {-104,0,false},
+        {-104,1,false},
+        {-104,2,false},
+        {-104,3,false},
+        {-104,4,false},
+        {-104,5,false},
+        {-103,0,true},
+        {-103,1,true},
+        {-103,2,false},
+        {-103,3,false},
+        {-103,4,false},
+        {-103,5,true},
+        {-102,0,true},
+        {-102,1,true},
+        {-102,2,false},
+        {-102,3,false},
+        {-102,4,false},
+        {-102,5,true},
+        {-101,0,true},
+        {-101,1,true},
+        {-101,2,true},
+        {-101,3,true},
+        {-101,4,false},
+        {-101,5,true},
+        {-205,0,true},
+        {-205,1,true},
+        {-205,2,true},
+        {-205,3,true},
+        {-205,4,true},
+        {-205,5,true},
+        {-204,0,false},
+        {-204,1,false},
+        {-204,2,true},
+        {-204,3,true},
+        {-204,4,false},
+        {-204,5,true},
+        {-203,0,false},
+        {-203,1,false},
+        {-203,2,true},
+        {-203,3,true},
+        {-203,4,false},
+        {-203,5,true},
+        {-202,0,true},
+        {-202,1,true},
+        {-202,2,false},
+        {-202,3,false},
+        {-202,4,false},
+        {-202,5,true},
+        {-201,0,false},
+        {-201,1,false},
+        {-201,2,false},
+        {-201,3,false},
+        {-201,4,false},
+        {-201,5,true},
+        {0,0,true},
+        {0,1,true},
+        {0,2,false},
+        {0,3,false},
+        {0,4,false},
+        {0,5,true},
+        {1,0,true},
+        {1,1,true},
+        {1,2,false},
+        {1,3,false},
+        {1,4,false},
+        {1,5,true},
+        {2,0,false},
+        {2,1,false},
+        {2,2,true},
+        {2,3,true},
+        {2,4,false},
+        {2,5,true},
+        {3,0,true},
+        {3,1,true},
+        {3,2,false},
+        {3,3,false},
+        {3,4,false},
+        {3,5,true},
+        {4,0,false},
+        {4,1,false},
+        {4,2,true},
+        {4,3,true},
+        {4,4,false},
+        {4,5,true},
+        {5,0,false},
+        {5,1,false},
+        {5,2,false},
+        {5,3,false},
+        {5,4,false},
+        {5,5,false},
+        {-99,0,false},
+        {-99,1,false},
+        {-99,2,false},
+        {-99,3,false},
+        {-99,4,false},
+        {-99,5,false},
+        {-112,0,false},
+        {-112,1,false},
+        {-112,2,false},
+        {-112,3,false},
+        {-112,4,false},
+        {-112,5,false},
+    };
+    for(const auto &g:populationGoldens) {
+        const auto result=evaluateAiPlayerSelection(g.selector,1,players,[&](int id) {
+            const int value=int(population[id]);
+            return g.op==0?value<3:g.op==1?value<=3:g.op==2?value>3:g.op==3?value>=3:g.op==4?value==3:value!=3;
+        });
+        check(result.value==g.result,"Original military-population selector golden");
+    }
+    // Full57c280 oracle: no live object lookup, state filter, or clamp.
+    { std::vector<AiMilitaryGatherGroup> groups;
+      const int v=aiDefendSoldierCount(0,groups);check(v==0 && ((v<3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      const int v=aiDefendSoldierCount(0,groups);check(v==0 && ((v<=3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      const int v=aiDefendSoldierCount(0,groups);check(v==0 && ((v>3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      const int v=aiDefendSoldierCount(0,groups);check(v==0 && ((v>=3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      const int v=aiDefendSoldierCount(0,groups);check(v==0 && ((v==3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      const int v=aiDefendSoldierCount(0,groups);check(v==0 && ((v!=3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      const int v=aiDefendSoldierCount(8,groups);check(v==8 && ((v<3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      const int v=aiDefendSoldierCount(8,groups);check(v==8 && ((v<=3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      const int v=aiDefendSoldierCount(8,groups);check(v==8 && ((v>3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      const int v=aiDefendSoldierCount(8,groups);check(v==8 && ((v>=3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      const int v=aiDefendSoldierCount(8,groups);check(v==8 && ((v==3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      const int v=aiDefendSoldierCount(8,groups);check(v==8 && ((v!=3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==5 && ((v<3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==5 && ((v<=3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==5 && ((v>3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==5 && ((v>=3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==5 && ((v==3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==5 && ((v!=3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=101;g.members.resize(2);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==5 && ((v<3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=101;g.members.resize(2);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==5 && ((v<=3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=101;g.members.resize(2);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==5 && ((v>3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=101;g.members.resize(2);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==5 && ((v>=3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=101;g.members.resize(2);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==5 && ((v==3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=101;g.members.resize(2);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==5 && ((v!=3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(4);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==1 && ((v<3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(4);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==1 && ((v<=3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(4);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==1 && ((v>3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(4);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==1 && ((v>=3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(4);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==1 && ((v==3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(3);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(4);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==1 && ((v!=3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(4);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(2,groups);check(v==-2 && ((v<3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(4);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(2,groups);check(v==-2 && ((v<=3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(4);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(2,groups);check(v==-2 && ((v>3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(4);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(2,groups);check(v==-2 && ((v>=3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(4);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(2,groups);check(v==-2 && ((v==3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=100;g.members.resize(4);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(2,groups);check(v==-2 && ((v!=3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=108;g.members.resize(5);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=102;g.members.resize(3);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==8 && ((v<3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=108;g.members.resize(5);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=102;g.members.resize(3);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==8 && ((v<=3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=108;g.members.resize(5);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=102;g.members.resize(3);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==8 && ((v>3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=108;g.members.resize(5);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=102;g.members.resize(3);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==8 && ((v>=3)==true),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=108;g.members.resize(5);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=102;g.members.resize(3);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==8 && ((v==3)==false),"Original defend-count golden"); }
+    { std::vector<AiMilitaryGatherGroup> groups;
+      { AiMilitaryGatherGroup g{};g.type=108;g.members.resize(5);groups.push_back(g); }
+      { AiMilitaryGatherGroup g{};g.type=102;g.members.resize(3);groups.push_back(g); }
+      const int v=aiDefendSoldierCount(8,groups);check(v==8 && ((v!=3)==true),"Original defend-count golden"); }
     const auto match=evaluateAiPlayerFact(AiPlayerFact::Human,-107,0,1,players);
     check(match.value && match.matchedPlayer==2,"Any selectors retain first successful player in original order");
     check(!evaluateAiPlayerFact(AiPlayerFact::Human,-204,0,1,players).matchedPlayer,
           "Every selectors do not replace the any-selector cache");
     check(aiPlayerSelector("any-human-ally")==-108 && aiPlayerSelector("every-neutral")==-205 &&
           !aiPlayerSelector("any-player"),"Original registered selector constants");
-    std::cout<<"AI player facts: 186 original goldens PASS\n";
+    std::cout<<"AI player facts: 186 player +144 population +42 defender original goldens PASS\n";
 }

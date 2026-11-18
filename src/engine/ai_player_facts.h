@@ -29,27 +29,18 @@ inline std::optional<int> aiPlayerSelector(std::string_view name) {
 // Original57cbb0/57cbf0/57d580/57e0b0, with shared578e20/5794d0 selectors.
 // Slots are in world order, including Gaia at0; selectors start at1 and do not
 // implicitly exclude defeated players. Native callers supply their state adapter.
-inline AiPlayerFactResult evaluateAiPlayerFact(AiPlayerFact fact,int selector,int stance,
-                                               int self,const std::vector<AiPlayerFactPlayer> &players) {
+template<class Predicate>
+AiPlayerFactResult evaluateAiPlayerSelection(int selector,int self,
+    const std::vector<AiPlayerFactPlayer> &players,Predicate test) {
     const auto valid=[&](int id){return id>=0 && size_t(id)<players.size() && players[size_t(id)].exists;};
     if(!valid(self))return {};
     const auto relation=[&](int from,int to)->int {
         const auto &values=players[size_t(from)].diplomacy;
         return to>=0 && size_t(to)<values.size()?int(values[size_t(to)]):-1;
     };
-    const auto test=[&](int id) {
-        if(!valid(id))return false;
-        switch(fact) {
-        case AiPlayerFact::Human:return !players[size_t(id)].computer;
-        case AiPlayerFact::InGame:return players[size_t(id)].gameState==0;
-        case AiPlayerFact::PlayersStance:return id!=self && relation(id,self)==stance;
-        case AiPlayerFact::StanceToward:return relation(self,id)==stance;
-        }
-        return false;
-    };
     const bool any=selector<=-101 && selector>=-111;
     const bool every=selector<=-201 && selector>=-205;
-    if(!any && !every)return {test(selector),std::nullopt};
+    if(!any && !every)return {valid(selector) && test(selector),std::nullopt};
     for(size_t index=1;index<players.size();++index) {
         const int id=int(index);if(!valid(id))continue;
         const auto &player=players[index];const int directed=relation(self,id);
@@ -73,5 +64,22 @@ inline AiPlayerFactResult evaluateAiPlayerFact(AiPlayerFact fact,int selector,in
         if(every && !result)return {};
     }
     return {every,std::nullopt};
+}
+inline AiPlayerFactResult evaluateAiPlayerFact(AiPlayerFact fact,int selector,int stance,
+    int self,const std::vector<AiPlayerFactPlayer> &players) {
+    const auto relation=[&](int from,int to)->int {
+        const auto &values=players[size_t(from)].diplomacy;
+        return to>=0 && size_t(to)<values.size()?int(values[size_t(to)]):-1;
+    };
+    const auto test=[&](int id) {
+        switch(fact) {
+        case AiPlayerFact::Human:return !players[size_t(id)].computer;
+        case AiPlayerFact::InGame:return players[size_t(id)].gameState==0;
+        case AiPlayerFact::PlayersStance:return id!=self && relation(id,self)==stance;
+        case AiPlayerFact::StanceToward:return relation(self,id)==stance;
+        }
+        return false;
+    };
+    return evaluateAiPlayerSelection(selector,self,players,test);
 }
 } // namespace swgb
