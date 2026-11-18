@@ -2,6 +2,7 @@
 #include "game.h"
 #include "ai_military.h"
 #include "ai_military_admission.h"
+#include "ai_conversion_eligibility.h"
 #include "rms_zones.h"
 #include "../core/genie_tactical_movement.h"
 #include "../core/genie_random.h"
@@ -294,9 +295,26 @@ void Game::updateAiMilitaryTargets(int player,uint32_t budget) {
                                                 object.unit->collisionSize[1],object.unit->collisionSize[0]));
     };
     const auto range=[&](const Object &object) {return modifiedUnitAttribute(object,12,object.unit->maxRange);};
+    const auto conversionCandidate=[&](const Object &source,const Object &target) {
+        AiConversionEligibility input;
+        input.sourceClass=source.unit->cls;
+        input.sourceVirtual30=aiConversionSourceVirtual30(source.unit->id,source.unit->copyId);
+        input.sourceVirtual34=aiConversionSourceVirtual34(source.unit->id,source.unit->copyId);
+        input.ignoreCharge=true;
+        input.targetOwner=target.player;input.targetClass=target.unit->cls;
+        input.targetPrototype=target.unit->id;input.targetType=target.unit->type;
+        input.targetImmunity=target.unit->heroMode;
+        input.enabledResource67=playerAttribute(source.player,67);
+        input.jediResource27=playerAttribute(source.player,27);
+        input.advancedResource87=playerAttribute(source.player,87);
+        return aiConversionEligible(input);
+    };
     const auto damage=[&](const Object &source,const Object &target) {
         return AiGroupDamageInput{float(canAttackTarget(source,target)?attackDamage(source,target):0),
-            modifiedUnitAttribute(source,10,source.unit->reloadTime),source.unit->cls==50};
+            modifiedUnitAttribute(source,10,source.unit->reloadTime),
+            // shortcut: Conversion-only damage needs the live charge/action controller;
+            // ordinary melee and definitively ineligible converters are already resolved.
+            source.unit->cls==50 && conversionCandidate(source,target)?std::nullopt:std::optional<bool>(false)};
     };
     const auto clock=[] {return uint32_t(std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count());};
@@ -369,7 +387,7 @@ void Game::updateAiMilitaryTargets(int player,uint32_t budget) {
                     {float(mapSize_)-object->y,object->heightAboveGround,object->x},object->hitPoints,range(*object)});
             }
             const auto aggregate=supported?aggregateAiTargetGroup(members):std::nullopt;
-            if(!aggregate || !aggregate->landMode || aggregate->allClass50)continue;
+            if(!aggregate || !aggregate->landMode)continue;
             group.targetCandidates.clear();group.targetRanking={};group.targetRange=aggregate->minRange;
             group.targetSearchUnsupported=false;
             std::vector<AiTargetCandidate> metrics;
@@ -391,6 +409,7 @@ void Game::updateAiMilitaryTargets(int player,uint32_t budget) {
                 filter.region=*targetRegion;
                 // shortcut: Native active-owner/target admission substitutes for original virtual300 and owner-state callbacks.
                 filter.excludedByVirtual300=target->hidden || target->garrisonedInId>=0;
+                if(aggregate->allClass50)filter.conversionEligible=conversionCandidate(*first,*target);
                 const auto admission=filterAiGroupTarget(*aggregate,filter);
                 if(admission==AiGroupTargetAdmission::Unsupported)group.targetSearchUnsupported=true;
                 if(admission!=AiGroupTargetAdmission::Accepted)continue;

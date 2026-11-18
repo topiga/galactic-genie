@@ -7,7 +7,9 @@ using namespace swgb;
 static void check(bool value, const char *message) {
     if (!value) { std::cerr << "FAIL: " << message << '\n'; std::exit(1); }
 }
+#include "ai_conversion_eligibility_checks.h"
 int main() {
+    aiConversionEligibilityChecks();
     // Original tactical-target-group-input-controls-2026-11-18: all members
     // resolve, share region and trait bit2; float stores after each axis sum.
     std::vector<AiGroupMemberInput> members{{1,true,7,0,0,{2,4,6},60,20},
@@ -72,6 +74,19 @@ int main() {
     target.transportOption=true;target.region=7;check(!accepted(), "Transport request excludes own region");
     target.region=8;check(accepted(), "Transport request includes other region");target.transportOption=false;
     target.unitClass=58;target.worldMode=3;check(!accepted(), "Original world mode excludes class58");
+    auto jediGroup=*group;jediGroup.allClass50=true;
+    target.unitClass=56;target.worldMode=2;
+    check(filterAiGroupTarget(jediGroup,target)==AiGroupTargetAdmission::Unsupported,
+          "Jedi group admission requires the first member's conversion predicate");
+    target.conversionEligible=false;
+    check(filterAiGroupTarget(jediGroup,target)==AiGroupTargetAdmission::Rejected,
+          "Original first-converter rejection excludes the candidate");
+    target.conversionEligible=true;
+    check(filterAiGroupTarget(jediGroup,target)==AiGroupTargetAdmission::Accepted,
+          "Resolved Jedi admission reaches the normal target branch");
+    target.unitClass=58;target.worldMode=3;
+    check(filterAiGroupTarget(jediGroup,target)==AiGroupTargetAdmission::Rejected,
+          "Jedi eligibility does not bypass the world-mode worker exclusion");
     check(aiGroupThreatInRange(true,true,2,1,4,4) && !aiGroupThreatInRange(true,true,2,.5f,4,4) &&
           !aiGroupThreatInRange(false,true,2,100,1,4), "Threat membership preserves enemy and inclusive distance/HP gates");
 
@@ -88,6 +103,23 @@ int main() {
     check(fractionalMetric && fractionalMetric->killTime==51.42857360839844f &&
           fractionalMetric->vulnerability==53.468353271484375f,
           "Original fractional DPS keeps division unrounded until accumulation store");
+    // Executed592430 conversion fallbacks use subject HP, without reload division.
+    for(int test=0;test<6;++test) {
+        auto converters=combat;
+        if(test==2) {
+            for(auto &member:converters)for(auto &threat:member.threats)threat={0,2,true};
+        } else {
+            for(auto &member:converters)member.attack={test==5?-1.f:0.f,test==1?0.f:2.f,true};
+            if(test==4)converters[1].attack={20,4,false};
+        }
+        const auto converted=buildAiGroupTargetMetric(converters,false,test==3?7.123456f:100.f,1,true,109,3);
+        check(converted && converted->killTime==(test==2?10.f:test==4?6.666666507720947f:5.f) &&
+              converted->vulnerability==(test==2?10.f:32.f),
+              "Original conversion metrics preserve attack, threat, fractional HP and mixed damage branches");
+    }
+    auto unresolved=combat;unresolved[0].attack={0,2,std::nullopt};
+    check(!buildAiGroupTargetMetric(unresolved,false,100,1,true,109,3),
+          "An unresolved conversion predicate remains unsupported instead of assumed eligible");
     check(!buildAiGroupTargetMetric(combat,false,100,1,true,109,8),
           "Legacy callers still defer unresolved special target priorities");
     const auto wallMetric=buildAiGroupTargetMetric(combat,false,100,1,true,109,8,normal);
@@ -120,7 +152,8 @@ int main() {
     check(metric && metric->vulnerability==0 && metric->killTime==std::numeric_limits<float>::max(),
           "Nonempty threat list and all unresolved members preserve zero vulnerability");
     combat[0].resolved=true;combat[0].attack={0,1,true};
-    check(!buildAiGroupTargetMetric(combat,false,100,1,true,109,3), "Conversion fallback is explicitly unsupported");
+    metric=buildAiGroupTargetMetric(combat,false,100,1,true,109,3);
+    check(metric && metric->killTime==10, "A resolved eligible converter contributes target HP times0.1");
 
     // Original state2 controls: invalid-target reset issues Stop; unseen mobile reset does not.
     AiGroupRetainedTarget retained;retained.hp=100;retained.visibility=15;

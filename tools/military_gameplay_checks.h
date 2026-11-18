@@ -222,6 +222,32 @@ static void militaryGameplayChecks(swgb::Assets &assets) {
         check(game.attackTargetForTesting(attacker)==(disconnected?0:building),
               "Successful retained route redispatches attack to the idle member");
     }
+    for(int jediType:{180,115}) {
+        check(game.initScenario(scenario,&error),error.c_str());
+        const auto jedi=game.spawnObjectForTesting(1,jediType,2,20,20);
+        const auto troop=game.spawnObjectForTesting(1,329,1,24,20);
+        check(jedi && troop && game.formAiMilitaryGroupsForTesting(2),"Jedi-only military group fixture");
+        game.setAttackModeForTesting(jedi,3);game.setAttackModeForTesting(troop,3);
+        game.setGameTimeForTesting(5.f);
+        game.updateAiMilitaryForTesting(2,UINT32_MAX);
+        const auto &jediGroup=game.militaryGroupsForTesting(2).front();
+        check(jediGroup.targetId==(jediType==180?-1:int32_t(troop)) &&
+              jediGroup.state==(jediType==180?18:2),
+              "Padawan eligibility rejects targets into search while a Master acquires a ground troop");
+        game.updatePaused(1,{});
+        check(!game.attackTargetForTesting(jedi),"Pause retains Jedi group orders without dispatch");
+        game.update(0,{});
+        if(jediType==180) {
+            check(game.pointMovementStatusForTesting(jedi)>=0 && !game.attackTargetForTesting(jedi),
+                  "Rejected Padawan targets reach targetless group movement instead of freezing");
+        } else {
+            check(game.attackTargetForTesting(jedi)==troop,
+                  "Generic Jedi group command uses the original ordinary-ground melee branch");
+            const float hp=game.objectHitPoints(troop);
+            for(int i=0;i<300 && game.objectHitPoints(troop)>=hp;++i)game.update(.05f,{});
+            check(game.objectHitPoints(troop)<hp,"The admitted Jedi group approaches and damages its ground target");
+        }
+    }
     check(game.initScenario(scenario,&error),error.c_str());
     const auto searcher=game.spawnObjectForTesting(1,329,2,20,20);
     check(searcher && game.formAiMilitaryGroupsForTesting(2),"No-target group search fixture");

@@ -36,7 +36,10 @@ AiGroupTargetAdmission filterAiGroupTarget(const AiTargetGroup &group, const AiG
     if (!group.landMode) return A::Unsupported; // Naval wall-neighborhood branch remains unclosed.
     if ((t.trait & 2) || t.unitType == 45) return A::Rejected;
     if (t.transportOption && t.region == group.region) return A::Rejected;
-    if (group.allClass50) return A::Unsupported; // Requires first converter's virtual c0.
+    if (group.allClass50) {
+        if (!t.conversionEligible) return A::Unsupported;
+        if (!*t.conversionEligible) return A::Rejected;
+    }
     if (t.worldMode >= 3 && t.unitClass == 58) return A::Rejected;
     return A::Accepted;
 }
@@ -87,9 +90,14 @@ std::optional<AiTargetCandidate> buildAiGroupTargetMetric(
     if (!resolvedPriority && !aiGroupNormalPrioritySupported(prototype, unitClass)) return std::nullopt;
     constexpr float epsilon = 1.0e-7f;
     const float maximum = std::numeric_limits<float>::max();
-    auto dps = [](const AiGroupDamageInput &input) -> std::optional<double> {
-        if (!std::isfinite(input.damage) || !std::isfinite(input.reload) || input.reload < 0 ||
-            (input.damage <= epsilon && input.conversionEligible)) return std::nullopt;
+    auto dps = [](const AiGroupDamageInput &input,float subjectHp) -> std::optional<double> {
+        if (!std::isfinite(input.damage)) return std::nullopt;
+        if (input.damage <= epsilon && !input.conversionEligible) return std::nullopt;
+        if (input.damage <= epsilon && *input.conversionEligible) {
+            if (!std::isfinite(subjectHp)) return std::nullopt;
+            return double(subjectHp)*double(0.1f);
+        }
+        if (!std::isfinite(input.reload) || input.reload < 0) return std::nullopt;
         if (input.reload == 0) {
             if (input.damage == 0) return std::numeric_limits<double>::quiet_NaN();
             return std::copysign(std::numeric_limits<double>::infinity(), input.damage);
@@ -100,7 +108,7 @@ std::optional<AiTargetCandidate> buildAiGroupTargetMetric(
     float damage = 0;
     for (const auto &member : members) {
         if (!member.resolved) continue;
-        auto contribution = dps(member.attack);
+        auto contribution = dps(member.attack,targetHp);
         if (!contribution) return std::nullopt;
         damage = static_cast<float>(damage + *contribution);
     }
@@ -110,7 +118,7 @@ std::optional<AiTargetCandidate> buildAiGroupTargetMetric(
         if (!member.resolved) continue;
         float threatDamage = 0;
         for (const auto &threat : member.threats) {
-            auto contribution = dps(threat);
+            auto contribution = dps(threat,member.hp);
             if (!contribution) return std::nullopt;
             threatDamage = static_cast<float>(threatDamage + *contribution);
         }

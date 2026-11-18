@@ -7553,3 +7553,28 @@ military/movement/crowd/delivery tests pass. This is a shared native movement
 adapter repair, not exact original pathfinder parity or a completed replay of the
 whole duel. Exact captures: `siege-dynamic-coupled-movement-findings-2026-11-18.md`;
 validation: `siege-retention-check.log`.
+
+### Jedi group admission and ground combat (2026-11-18)
+
+The original all-class50 branch calls the first actor's conversion predicate with
+ignoreCharge1, then still applies the world-mode worker exclusion. Executed
+predicate controls cover311 eligibility combinations and6,408 source-form
+comparisons; seven complete group-filter controls confirm the call ordering.
+Padawan180 fails sourcevirtual30, whereas a Master can admit ordinary ground
+troops. Native groups now run those gates instead of skipping every Jedi group: a
+rejected Padawan target enters existing targetless search, and Master115 reaches
+the queued attack and damages a troop in the production gameplay regression.
+Pause still retains both orders. Actual task-selector controls establish generic
+opcode2 uses melee7 for ordinary ground targets, with104 fallback for excluded
+air targets; this is not permission to substitute melee for all conversions.
+
+The shared metric helper also implements the executed592430 HP-times0.1 fallback,
+including threat-side HP and mixed damage. The runtime explicitly defers cases
+that need live charge/conversion-action state rather than assuming eligibility.
+Focused ASan/UBSan gameplay and strict-warning pure tests pass in
+`siege-jedi-check.log` and `jedi-group-controls-test`. Full conversion pulse/roll
+and private-master ownership research is retained locally as prepared code and
+controls, not enabled or added as unused state to every live object. Boundaries
+and addresses: `jedi-dispatch-action-findings-2026-11-18.md`,
+`mobile-conversion-owner-findings-2026-11-18.md`, and
+`jedi-target-metric-expanded-controls-2026-11-18.json`.

@@ -35,8 +35,9 @@ struct AiGroupTargetFilter {
     uint8_t trait = 0, visibility = 0, fogMode = 0, region = 0;
     bool excludedByVirtual300 = false, transportOption = false;
     int worldMode = 0;
+    std::optional<bool> conversionEligible; // First converter+c0, ignoring charge for candidate admission.
 };
-// Standard land/non-conversion subset of 5934a9. Priority overrides must be
+// Standard land subset of 5934a9. Priority overrides must be
 // supplied separately to rankAiTargets; this filter does not infer victory mode.
 AiGroupTargetAdmission filterAiGroupTarget(const AiTargetGroup &, const AiGroupTargetFilter &);
 // Normal-priority scope: these classes/prototypes require victory-mode, owner
@@ -58,7 +59,7 @@ bool aiGroupThreatInRange(bool enemy, bool resolved, int status, float hp,
                           float footprintDistance, float range);
 struct AiGroupDamageInput {
     float damage = 0, reload = 1;
-    bool conversionEligible = false;
+    std::optional<bool> conversionEligible = false; // Unresolved controller+c0 defers zero-damage metrics.
 };
 struct AiGroupCombatMember {
     bool resolved = true;
