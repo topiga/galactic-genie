@@ -7096,3 +7096,28 @@ A second mobile obstacle beyond that window no longer rejects an otherwise valid
 local bypass. Regression coverage requires actual arrival past both obstacles.
 The combined action, economy, military, visibility and simulation checks pass.
 These are bounded checks, not a claim of complete original-AI match parity.
+
+### 2026-11-18: queued construction and food availability
+
+Ordinary AI build requests now remain pending through construction, preventing a
+second request for the same prototype. The recovered request selector rotates
+candidates and retains its original attempt/cooldown rules. Native scheduler
+admission queues a world command; only execution validates, charges stock and
+creates the foundation. Completion acknowledges the request. Explicit UI
+cancellation refunds the unfinished fraction and makes the request retryable.
+Script reloads preserve request identity; tactical-pass reservations now expire
+so workers can build again. Production tests cover these paths with sanitizers.
+Generic enemy destruction does not receive an invented cancellation/refund:
+its complete original pending-request recovery remains unresolved. Non-prefab
+placement and path-service callbacks still use documented native adapters.
+
+Garrisoning no longer removes units from AI family/type counts. Five bounded
+original garrison controls preserve the current and total counters; the native
+production test checks both family and individual-unit counts through entry
+and exit. Other hidden-object counter admission is still separate.
+
+The original `sheep-and-forage-too-far` predicate now examines remembered food
+records, retained depot distance, cooldown/invalid flags and containment. It
+never discovers unseen food. Nineteen original controls and a production
+processor-add/remove test pass. This alone does not certify the complete farming
+policy or a full original-script victory.

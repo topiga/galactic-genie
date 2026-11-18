@@ -32,5 +32,23 @@
     check(game.aiObjectCountForTesting(2,"laser-alias",true)==
           game.aiObjectCountForTesting(2,"laser-alias",false)+int(game.aiQueuedUnitCountForTesting(2,-laser->id)),
           "Original total count includes pending training while current count excludes it");
+    // A passive startup isolates garrison count changes from pending production.
+    check(game.initSkirmish(0x5A17,&error,false,1,1),error.c_str());
+    check(game.loadAiSourceForTesting(2,"unit-line-garrison","",{},&error),error.c_str());
+    const auto container=game.spawnObjectForTesting(1,109,2,10,10);
+    const auto passenger=game.spawnObjectForTesting(1,307,2,12,10);
+    check(container && passenger,"Owned line member and container spawn");
+    const int lineBefore=game.aiObjectCountForTesting(2,"UNIT-LASER-LINE",false);
+    const int unitBefore=game.aiObjectCountForTesting(2,"307",false);
+    check(game.garrisonForTesting(passenger,container),"Order original line member into a Command Center");
+    for(int tick=0;tick<80 && game.garrisonContainerForTesting(passenger)<0;++tick)game.update(.1f,{});
+    check(game.garrisonContainerForTesting(passenger)==int(container),"Line member actually enters the container");
+    check(game.aiObjectCountForTesting(2,"UNIT-LASER-LINE",false)==lineBefore &&
+          game.aiObjectCountForTesting(2,"307",false)==unitBefore,
+          "Garrison preserves both line and individual prototype current counts");
+    check(game.ejectGarrisonedUnitForTesting(container,passenger),"Unload counted line member");
+    check(game.aiObjectCountForTesting(2,"UNIT-LASER-LINE",false)==lineBefore &&
+          game.aiObjectCountForTesting(2,"307",false)==unitBefore,
+          "Unloading does not double-register prototype counts");
     std::puts("PASS production DAT unit-line constants, aliases, counts and training");
 }

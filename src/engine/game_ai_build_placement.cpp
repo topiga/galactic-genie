@@ -119,7 +119,11 @@ int Game::chooseAiPrefabPosition(int player,const dat::Unit &unit,float &x,float
         std::min(mapSize_-1,originX+extent),std::min(mapSize_-1,originY+extent),
         originX,originY,width,[&](int gx,int gy){return grid.at(gx,gy);},
         [&]{return genieRandomDraw(legacyRandomState_);},
-        [](int,int){return false;}, // No native failed-placement reservation yet.
+        [&](int ox,int oy) {
+            const float offset=width%2?.5f:0.f;
+            return aiBuildPositionRejected(player,unit.id,float(oy)+offset,
+                float(mapSize_)-(float(ox)+offset));
+        },
         [&](float ox,float oy) {
             // shortcut: Native placement validation uses the final snapped
             // center; the original master callback receives(x+.5,y+.5).

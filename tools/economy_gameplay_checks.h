@@ -18,7 +18,9 @@ static void economyGameplayChecks(swgb::Assets &assets) {
             "(set-strategic-number sn-carbon-gatherer-percentage 0) (set-strategic-number sn-metal-gatherer-percentage 0) "
             "(set-strategic-number sn-nova-gatherer-percentage 0) (set-strategic-number sn-percent-civilian-explorers "+
             (explorers?"34":"0")+") (set-strategic-number sn-cap-civilian-explorers "+(explorers?"1":"0")+
-            ") (disable-self))",{},&error),error.c_str());
+            ") (disable-self)) "
+            "(defrule (sheep-and-forage-too-far) => (set-goal 90 1)) "
+            "(defrule (not (sheep-and-forage-too-far)) => (set-goal 90 0))",{},&error),error.c_str());
     };
     auto advance=[&](int ticks) {for(int n=0;n<ticks;++n)game.update(.1f,{});};
     initialize(false);
@@ -50,17 +52,21 @@ static void economyGameplayChecks(swgb::Assets &assets) {
           "Original gather controller resumes the registered resource without discarding cargo");
     const auto metricSlot=game.economyForTesting(2).resourceSlots.at(food);
     const auto depotMetric=[&] {return game.economyForTesting(2).resources[size_t(metricSlot.first)].records[metricSlot.second].depotId;};
+    const auto evaluateFoodFact=[&] {for(int tick=0;tick<25;++tick)game.update(0,{});return game.aiGoalForTesting(2,90);};
     const auto center=game.spawnObjectForTesting(1,109,2,10,10);
     check(center!=0,"Economic command center fixture spawns");
     game.updateAiGatherersForTesting(2);
     check(depotMetric()==int32_t(center),"Command center admission refreshes already known resource metrics");
+    check(evaluateFoodFact()==1,"Original food fact reports only a distant remembered forage depot");
     const auto processor=game.spawnObjectForTesting(1,68,2,25,25);
     check(processor!=0,"Economic food processing center fixture spawns");
     game.updateAiGatherersForTesting(2);
     check(depotMetric()==int32_t(processor),"Closer processing center refreshes retained food metric");
+    check(evaluateFoodFact()==0,"Original food fact recognizes a close cached forage depot");
     check(game.damageObjectForTesting(processor,100000),"Remove the cached processing center");
     game.updateAiGatherersForTesting(2);
     check(depotMetric()==int32_t(center),"Depot removal recomputes the retained resource metric");
+    check(evaluateFoodFact()==1,"Original food fact reflects the removed processing center without reloading AI");
     for(size_t i=0;i<workers.size();++i) {
         check(game.stopUnitForTesting(uint32_t(workers[i])) && game.moveObjectForTesting(uint32_t(workers[i]),3.f+float(i),3.f),
               "Remove resource sight and stop old assignments");

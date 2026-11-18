@@ -43,6 +43,7 @@ static void aiPrefabPlacementGameplayChecks(swgb::Assets &assets) {
     check(game.loadAiSourceForTesting(2,"prefab-passive-opponent",
           "(defrule (true) => (disable-self))",{},&error),error.c_str());
     game.update(0,{});
+    game.update(0,{}); // Deferred world command drains after the PER admission.
     bool found=false;
     for(uint32_t id:game.underConstructionObjectIds())if(game.objectUnitId(id)==70) {
         const auto position=game.objectPosition(id);found=true;

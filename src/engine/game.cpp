@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ai_player_facts.h"
 #include "ai_unit_line.h"
+#include "ai_food_facts.h"
 #include "ai_power_field.h"
 #include "ai_economic_delivery.h"
 #include "../core/genie_graphic_random.h"
@@ -1774,6 +1775,9 @@ bool Game::loadAiScript(
     AiPlayerState state;
     if (!loadGameAiProgram(state.program,assets_,path,aiScriptContext(player,defines),err))
         return false;
+    state.buildRequests=std::move(aiPlayers_[size_t(player)].buildRequests);
+    state.nextBuildRequestSequence=aiPlayers_[size_t(player)].nextBuildRequestSequence;
+    state.rejectedBuildPositions=std::move(aiPlayers_[size_t(player)].rejectedBuildPositions);
     state.explorationRevisitTime = aiPlayers_[size_t(player)].explorationRevisitTime;
     state.economy.foodRefreshTime = aiPlayers_[size_t(player)].economy.foodRefreshTime;
     state.loaded = true;
@@ -1809,6 +1813,9 @@ bool Game::loadAiSourceForTesting(
     if (!state.program.loadSource(
             name, source, context.defines, err,{},context.constants))
         return false;
+    state.buildRequests=std::move(aiPlayers_[size_t(player)].buildRequests);
+    state.nextBuildRequestSequence=aiPlayers_[size_t(player)].nextBuildRequestSequence;
+    state.rejectedBuildPositions=std::move(aiPlayers_[size_t(player)].rejectedBuildPositions);
     state.explorationRevisitTime = aiPlayers_[size_t(player)].explorationRevisitTime;
     state.economy.foodRefreshTime = aiPlayers_[size_t(player)].economy.foodRefreshTime;
     state.loaded = true;
@@ -7986,6 +7993,14 @@ bool Game::destroyLastSelected() {
             continue;
         const std::string name =
             unitDisplayName(*object->unit);
+        if(object->underConstruction && object->hitPoints>0) {
+            const float remaining=object->constructionTotal>0?
+                std::clamp(object->constructionRemaining/object->constructionTotal,0.f,1.f):0.f;
+            for(const auto &cost:unitCosts(object->player,*object->unit))
+                if(cost.flag && cost.type>=0 && cost.amount>0)
+                    addResource(object->player,cost.type,cost.amount*remaining);
+            cancelAiBuildRequest(*object);
+        }
         killObject(*object);
         statusMessage_ = "DESTROYED " + name;
         statusTime_ = 2.0f;
@@ -9067,6 +9082,7 @@ void Game::updateConstruction(float dt,int player) {
         if (building.constructionRemaining > 0)
             continue;
         building.underConstruction = false;
+        completeAiBuildRequest(building);
         // Buildings placed as a construction stand-in (BLDG-FORT-BUILD 1211)
         // become their stack unit when finished (the Fortress, 82): the
         // stand-in has no garrison, units or research of its own.
@@ -13888,7 +13904,7 @@ int Game::aiOperandCount(int player,const std::string &symbol,bool total) const 
         // within one line, so summing its members retains their shared identity.
         return aiUnitLineCount(line->unitIds,[&](int id) {
             int count=0;for(const auto &object:objects_)
-                if(object.active && !object.hidden && object.player==player && object.unit &&
+                if(object.active && (!object.hidden || object.garrisonedInId>=0) && object.player==player && object.unit &&
                    object.unit->id==id && (total || !object.underConstruction))++count;
             // Original4c4240/56e1c6 includes training actions in the total counter.
             if(total)for(const auto &building:objects_)if(building.active && building.player==player)
@@ -13970,10 +13986,11 @@ int Game::aiTechLevel(int player) const {
 int Game::aiObjectCount(
     int player, const dat::Unit &unit,
     bool includeFoundations) const {
+    // Original garrison wrappers55c920/55c980 preserve owner prototype counters.
     int count = 0;
     for (const Object &object : objects_) {
         if (!object.active ||
-            object.hidden ||
+            (object.hidden && object.garrisonedInId<0) ||
             object.player != player ||
             !object.unit ||
             (!includeFoundations &&
@@ -14087,149 +14104,8 @@ bool Game::aiCanAfford(
     return true;
 }
 
-bool Game::aiBuild(
-    int player, const dat::Unit &unit) {
-    if (unit.type != dat::UT_Building ||
-        !unitAvailable(player, unit.id) ||
-        !aiCanAfford(player, unit))
-        return false;
-    Object *worker = nullptr;
-    for (Object &candidate : objects_)
-        if (candidate.active &&
-            !candidate.hidden &&
-            candidate.player == player &&
-            isWorker(candidate) &&
-            !candidate.constructionTargetId &&
-            !candidate.repairTargetId &&
-            candidate.garrisonedInId < 0) {
-            worker = &candidate;
-            if (!candidate.gatherTargetId)
-                break;
-        }
-    if (!worker) return false;
-
-    float centerX = worker->x;
-    float centerY = worker->y;
-    int resourceType = -1;
-    const std::string symbol =
-        normalizeAiSymbol(
-            unit.name2.empty()
-                ? unit.name
-                : unit.name2);
-    if (symbol.find("dropcarbon") !=
-        std::string::npos)
-        resourceType = 1;
-    else if (
-        symbol.find("dropchow") !=
-        std::string::npos)
-        resourceType = 0;
-    else if (
-        symbol.find("dropnova") !=
-        std::string::npos)
-        resourceType = 3;
-    else if (
-        symbol.find("dropmetal") !=
-        std::string::npos)
-        resourceType = 2;
-    const Object *resource = nullptr;
-    float resourceDistance =
-        std::numeric_limits<float>::max();
-    if (resourceType >= 0)
-        for (const Object &candidate :
-             objects_) {
-            if (!isGatherable(candidate) || !playerSees(player,candidate.x,candidate.y) ||
-                candidate.resourceType !=
-                    resourceType)
-                continue;
-            const float dx =
-                candidate.x - worker->x;
-            const float dy =
-                candidate.y - worker->y;
-            const float distance =
-                dx * dx + dy * dy;
-            if (distance <
-                resourceDistance) {
-                resource = &candidate;
-                resourceDistance = distance;
-            }
-        }
-    if (resource) {
-        centerX = resource->x;
-        centerY = resource->y;
-    } else {
-        for (const Object &building :
-             objects_)
-            if (building.active &&
-                !building.hidden &&
-                !building.underConstruction &&
-                building.player == player &&
-                building.unit &&
-                building.unit->type ==
-                    dat::UT_Building) {
-                centerX = building.x;
-                centerY = building.y;
-                break;
-            }
-    }
-
-    static constexpr int directions[8][2] = {
-        {1, 0},  {1, 1},  {0, 1},
-        {-1, 1}, {-1, 0}, {-1, -1},
-        {0, -1}, {1, -1},
-    };
-    float buildX = 0.0f;
-    float buildY = 0.0f;
-    // shortcut: Other placement categories and unsupported late grid providers
-    // still use the native search until their original controllers are integrated.
-    const int originalPlacement=unit.id==70?chooseAiPrefabPosition(player,unit,buildX,buildY):-1;
-    if(originalPlacement==0)return false;
-    bool found = originalPlacement==1;
-    for (int radius = 3;
-         radius <= 14 && !found;
-         ++radius)
-        for (const auto &direction :
-             directions) {
-            float x =
-                centerX +
-                direction[0] * radius;
-            float y =
-                centerY +
-                direction[1] * radius;
-            snapBuildingPosition(unit, x, y);
-            if (!placementValid(
-                    unit, x, y))
-                continue;
-            buildX = x;
-            buildY = y;
-            found = true;
-            break;
-        }
-    if (!found) return false;
-    for (const dat::ResourceCost &cost :
-         unitCosts(player,unit))
-        if (cost.flag && cost.type >= 0 &&
-            cost.amount > 0)
-            resources_[(size_t)player]
-                      [cost.type] -=
-                cost.amount;
-    const uint32_t workerId = worker->spawnId;
-    Object *foundation =
-        createFoundation(
-            unit, player, buildX, buildY);
-    if (!foundation) {
-        for (const dat::ResourceCost &cost :
-             unitCosts(player,unit))
-            if (cost.flag &&
-                cost.type >= 0 &&
-                cost.amount > 0)
-                resources_[(size_t)player]
-                          [cost.type] +=
-                    cost.amount;
-        return false;
-    }
-    rebuildAdjacency();
-    worker = findObject(workerId); // Creating the foundation can grow objects_.
-    return worker && assignBuilder(*worker, *foundation);
+void Game::snapBuildPositionForAi(const dat::Unit &unit,float &x,float &y) const {
+    snapBuildingPosition(unit,x,y);
 }
 
 bool Game::aiTrain(
@@ -14494,6 +14370,18 @@ Game::AiTruth Game::evaluateAiCondition(
         if(result.matchedPlayer)state.matchedPlayers[selector]=*result.matchedPlayer;
         return result.value?AiTruth::True:AiTruth::False;
     }
+    if(fact=="sheep-and-forage-too-far") {
+        if(condition.children.size()!=1)return AiTruth::Unknown;
+        // shortcut: Native economy admission/metric refresh cadence supplies the
+        // original InfoAI food registry; the predicate never scans unknown resources.
+        const bool tooFar=aiSheepAndForageTooFar(state.economy.resources[0],uint32_t(gameTime_*1000.0),
+            [&](int32_t id)->std::optional<AiForageTarget> {
+                const auto *object=findObject(uint32_t(id));
+                if(!object || !object->active || !object->unit)return std::nullopt;
+                return AiForageTarget{object->unit->cls,object->garrisonedInId>=0};
+            });
+        return tooFar?AiTruth::True:AiTruth::False;
+    }
     if(fact=="too-many-unpowered-buildings") {
         if(condition.children.size()!=1)return AiTruth::Unknown;
         int count=0;
@@ -14635,7 +14523,7 @@ Game::AiTruth Game::evaluateAiCondition(
                     .value);
         const auto *line=aiUnitLine(player,condition.children[1].value);
         if (!unit) return line?AiTruth::False:AiTruth::Unknown;
-        if((fact=="can-build" || fact=="can-build-with-escrow") && !state.buildAttempt.canCheck(unit->id,false))
+        if((fact=="can-build" || fact=="can-build-with-escrow") && (!state.buildAttempt.canCheck(unit->id,false) || state.buildRequests.pending(unit->id)>0))
             return AiTruth::False;
         if (!(line?aiLineUnitAvailable(player,unit->id):unitAvailable(
                 player, unit->id)) ||
@@ -14834,7 +14722,7 @@ bool Game::executeAiAction(
             aiUnit(
                 player,
                 action.children[1].value);
-        // shortcut: Native matches have no original owner296c construction restriction or deferred BuildAI queue.
+        // shortcut: The original owner296c construction restriction is not represented.
         return unit && state.buildAttempt.begin(unit->id,false) && aiBuild(player,*unit);
     }
     if (name == "train" && action.children.size()==2) {
@@ -15050,13 +14938,16 @@ void Game::updateAi(int player,float dt) {
         }
     }
     // shortcut: Military phases share native PER evaluation cadence until the original24-phase clock is wired.
-    if(!state.loaded && !state.militaryGroups.empty() && ++state.updateCount>=20) {
+    if(!state.loaded && (!state.militaryGroups.empty() || state.buildRequests.total()>0) && ++state.updateCount>=20) {
         state.updateCount=0;militaryTick=true;
     }
     if(militaryTick) {
         // Original59dcd0 resets notification dedup before each admitted tactical update.
         state.processedAttackMemoryVictims.clear();
+        updateAiBuildRequests(player);
         updateAiMilitary(player);
+        // Original59ddf2 ends same-pass worker reservations after tactical dispatch.
+        state.economy.pendingCivilianAssignments.clear();
     }
     legacyRandomState_=saved;
 }

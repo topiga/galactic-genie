@@ -9,6 +9,7 @@
 #include "ai_session_context.h"
 #include "ai_economy.h"
 #include "ai_build_admission.h"
+#include "ai_build_request_queue.h"
 #include "../core/genie_explore_search.h"
 
 #include "local_simulation_clock.h"
@@ -383,6 +384,13 @@ public:
         return object?object->constructionTotal:0;
     }
     bool completeFoundationForTesting(uint32_t spawnId);
+    bool admitAiBuildForTesting(int p,const dat::Unit &u) {return aiBuild(p,u);}
+    int aiPendingBuildsForTesting(int p,int id) const {return aiPlayers_.at(p).buildRequests.pending(id);}
+    void updateAiBuildRequestsForTesting(int p) {updateAiBuildRequests(p);}
+    bool aiBuildRequestInProgressForTesting(int p) const {
+        for(const auto &r:aiPlayers_.at(p).buildRequests.requests())if(r.inProgress)return true;
+        return false;
+    }
     bool setConstructionProgressForTesting(
         uint32_t spawnId, float progress);
     bool damageObjectForTesting(
@@ -947,6 +955,7 @@ private:
         bool locked = false;
         bool gate = false;
         bool underConstruction = false;
+        int aiBuildRequestSequence=-1;
         bool manualDropOff = false;
         bool selected = false;
         bool triggerAddressable = true;
@@ -1052,6 +1061,9 @@ private:
         AiResourceKnowledge resourceKnowledge;
         AiEconomyState economy;
         AiBuildAttemptLatch buildAttempt;
+        AiBuildRequestQueue buildRequests;
+        int nextBuildRequestSequence=0;
+        std::vector<std::array<int,3>> rejectedBuildPositions;
         std::unordered_map<int,int> matchedPlayers;
         std::vector<KnownMilitaryObject> militaryKnownObjects;
         std::vector<uint8_t> explorationInformation, explorationObserved;
@@ -1627,6 +1639,15 @@ private:
         const dat::Tech &technology,bool withEscrow=false) const;
     bool aiBuild(
         int player, const dat::Unit &unit);
+    bool aiBuildPositionRejected(int player,int prototype,float x,float y) const;
+    bool chooseAiBuildPosition(int player,const dat::Unit&,float &x,float &y);
+    uint32_t chooseAiBuildWorker(int player,const dat::Unit&,float x,float y);
+    void updateAiBuildRequests(int player);
+    void failAiBuildRequest(int player,int sequence,int code,float x,float y);
+    void executeAiBuildCommand(int player,int prototype,int sequence,uint32_t worker,float x,float y);
+    void completeAiBuildRequest(Object &building);
+    void cancelAiBuildRequest(Object &building);
+    void snapBuildPositionForAi(const dat::Unit&,float &x,float &y) const;
     bool aiTrain(
         int player, const dat::Unit &unit,const dat::Unit *queuedUnit=nullptr);
     bool aiResearch(

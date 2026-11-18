@@ -51,6 +51,7 @@ set(SWGB_CORE_SOURCES
     src/engine/game_explore_destination.cpp
     src/engine/game_ai_economy.cpp
     src/engine/game_ai_build_placement.cpp
+    src/engine/game_ai_build_queue.cpp
     src/engine/game_ai_civilian_explore.cpp
     src/engine/game_ai_context.cpp
     src/engine/game_power.cpp
@@ -160,6 +161,9 @@ if(NOT VITA)
         add_executable(swgb-ai-resource-knowledge-test tools/ai_resource_knowledge_test.cpp)
         add_executable(swgb-ai-session-context-test tools/ai_session_context_test.cpp)
         add_executable(swgb-ai-build-admission-test tools/ai_build_admission_test.cpp)
+        add_executable(swgb-ai-unit-line-test tools/ai_unit_line_test.cpp)
+        add_executable(swgb-ai-build-request-queue-test tools/ai_build_request_queue_test.cpp)
+        add_executable(swgb-ai-food-facts-test tools/ai_food_facts_test.cpp)
         add_executable(swgb-ai-gather-allocation-test tools/ai_gather_allocation_test.cpp)
         add_executable(swgb-ai-gather-quota-test tools/ai_gather_quota_test.cpp)
         add_executable(swgb-ai-resource-selection-test tools/ai_resource_selection_test.cpp)
@@ -185,7 +189,7 @@ if(NOT VITA)
         add_executable(swgb-rms-early-forest-test tools/rms_early_forest_test.cpp src/engine/rms_early_forest.cpp src/engine/rms_scenery.cpp src/engine/rms_scenery_appearance.cpp)
         add_executable(swgb-rms-group-test tools/rms_group_test.cpp src/engine/rms_zones.cpp src/engine/rms_objects.cpp src/engine/rms_scenery_appearance.cpp)
         add_executable(swgb-rms-zones-test tools/rms_zones_test.cpp src/engine/rms_zones.cpp)
-        foreach(test rms rms-object-rows rms-cliffs rms-land-placement rms-connections rms-elevation rms-slopes rms-zones rms-group rms-object rms-map rms-player-starts rms-terrain rms-scenery rms-scenery-appearance rms-early-forest rms-terrain-cleanup ai-military ai-targets ai-group-targets ai-group-search ai-attack-memory ai-player-facts ai-resource-knowledge ai-session-context ai-build-admission ai-gather-allocation ai-gather-quota ai-resource-selection ai-resource-lifecycle ai-economic-delivery ai-gather-controller ai-build-placement ai-builder-selection ai-prefab-grid)
+        foreach(test rms rms-object-rows rms-cliffs rms-land-placement rms-connections rms-elevation rms-slopes rms-zones rms-group rms-object rms-map rms-player-starts rms-terrain rms-scenery rms-scenery-appearance rms-early-forest rms-terrain-cleanup ai-military ai-targets ai-group-targets ai-group-search ai-attack-memory ai-player-facts ai-resource-knowledge ai-session-context ai-build-admission ai-unit-line ai-build-request-queue ai-food-facts ai-gather-allocation ai-gather-quota ai-resource-selection ai-resource-lifecycle ai-economic-delivery ai-gather-controller ai-build-placement ai-builder-selection ai-prefab-grid)
             target_include_directories(swgb-${test}-test PRIVATE src)
             add_test(NAME ${test} COMMAND swgb-${test}-test)
         endforeach()
