@@ -8,8 +8,12 @@ static void check(bool value, const char *message) {
     if (!value) { std::cerr << "FAIL: " << message << '\n'; std::exit(1); }
 }
 #include "ai_conversion_eligibility_checks.h"
+#include "conversion_action_checks.h"
+#include "conversion_orientation_checks.h"
 int main() {
     aiConversionEligibilityChecks();
+    conversionActionChecks();
+    conversionOrientationChecks();
     // Original tactical-target-group-input-controls-2026-11-18: all members
     // resolve, share region and trait bit2; float stores after each axis sum.
     std::vector<AiGroupMemberInput> members{{1,true,7,0,0,{2,4,6},60,20},
