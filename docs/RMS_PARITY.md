@@ -7079,3 +7079,20 @@ All36 algorithm suites passed in economy-lifecycle-algorithms.log; expanded pref
 ### Preserve mobile obstacles through native detours (18 November 2026)
 
 A minimal native reproduction showed local avoidance constructing a route around a worker, then its static-only smoothing replacing that route with a segment directly through the blocker. The same swept mobile-clearance predicate now protects search edges, smoothing and route rejoining. Three directional production fixtures verify clearance and actual arrival; the full local sanitizer regression passed in dynamic-detour-local.log. This fixes the native path adapter, not original pathfinder parity. A matched600-second pre-fix diagnostic separately confirmed the earlier progress/cooldown fixes (2257 route samples, no zero baselines, four observed cooldown expirations while moving); actual crowd dwell remains a different measurement.
+
+### 2026-11-18: PER unit families and local detours
+
+Original DAT line names now enter PER as signed line indices. Executed original
+registration, first/last-enabled selection and count controls establish the
+line identity: affordability uses the last enabled member, training queues the
+first, and family counts include all members. Total counts also include pending
+training, matching the original training-action counter lifecycle. Fourteen
+algorithm controls and real PER training/count assertions pass with ASan/UBSan.
+Native physical-ID counters still approximate original copy-ID normalization;
+this does not establish every cross-line alias or production timing as exact.
+
+The local detour smoother preserves mobile clearance within its search window.
+A second mobile obstacle beyond that window no longer rejects an otherwise valid
+local bypass. Regression coverage requires actual arrival past both obstacles.
+The combined action, economy, military, visibility and simulation checks pass.
+These are bounded checks, not a claim of complete original-AI match parity.

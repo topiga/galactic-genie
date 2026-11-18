@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ai_player_facts.h"
+#include "ai_unit_line.h"
 #include "ai_power_field.h"
 #include "ai_economic_delivery.h"
 #include "../core/genie_graphic_random.h"
@@ -1865,13 +1866,7 @@ int Game::aiObjectCountForTesting(
     int player,
     const std::string &symbol,
     bool includeFoundations) const {
-    const dat::Unit *unit =
-        aiUnit(player, symbol);
-    return unit
-               ? aiObjectCount(
-                     player, *unit,
-                     includeFoundations)
-               : 0;
+    return aiOperandCount(player,symbol,includeFoundations);
 }
 
 size_t Game::aiQueuedUnitCountForTesting(
@@ -1883,7 +1878,8 @@ size_t Game::aiQueuedUnitCountForTesting(
             for (const ProductionItem &item :
                  building.productionQueue)
                 if (item.unit &&
-                    item.unit->id == unitId)
+                    (item.unit->id == unitId || (aiUnitLineOperand(unitId) && size_t(-unitId)<assets_.dat().unitLines.size() &&
+                     aiUnitLineContains(assets_.dat().unitLines[size_t(-unitId)].unitIds,item.unit->id))))
                     count++;
     return count;
 }
@@ -11707,16 +11703,16 @@ bool Game::detourAround(Object &object, float goalX, float goalY) {
     std::vector<std::array<float, 2>> rest(
         object.path.begin() + std::min(object.path.size(), object.pathIndex),
         object.path.end());
-    // Skip remaining waypoints the detour end can see past, and refuse a
-    // detour that would leave the unit without a clear line back to the
-    // route (it would try to walk through whatever the route went around).
+    // The long-range tail accounts for static obstacles. A different unit
+    // beyond this local search window must not invalidate the completed
+    // bypass; movement will request another local detour when it reaches it.
     const std::array<float, 2> detourEnd =
         thinned.empty() ? std::array<float, 2>{object.x, object.y} : thinned.back();
     while (rest.size() > 1 &&
-           clearDetourSegment(detourEnd[0], detourEnd[1], rest[1][0], rest[1][1]))
+           segmentClear(object, detourEnd[0], detourEnd[1], rest[1][0], rest[1][1]))
         rest.erase(rest.begin());
     if (!rest.empty() &&
-        !clearDetourSegment(detourEnd[0], detourEnd[1], rest.front()[0],
+        !segmentClear(object, detourEnd[0], detourEnd[1], rest.front()[0],
                       rest.front()[1]))
         return false;
     object.path = thinned;
@@ -13865,6 +13861,49 @@ bool Game::selectObjectsForTesting(
     return !selectionOrder_.empty();
 }
 
+const dat::UnitLine *Game::aiUnitLine(int player,const std::string &symbol) const {
+    if(player<0 || size_t(player)>=aiPlayers_.size())return nullptr;
+    const auto &program=aiPlayers_[size_t(player)].program;
+    if(!program.hasConstant(symbol))return nullptr;
+    const int operand=program.constant(symbol);
+    if(!aiUnitLineOperand(operand) || size_t(-operand)>=assets_.dat().unitLines.size())return nullptr;
+    return &assets_.dat().unitLines[size_t(-operand)];
+}
+bool Game::aiLineUnitAvailable(int player,int unitId) const {
+    //4c06f0 follows master+1c (baseId), then reads its enabled byte.
+    const auto *unit=effectiveUnitForPlayer(player,findUnit(civilizationForPlayer(player),unitId));
+    if(!unit || unit->baseId<0)return false;
+    const auto *base=effectiveUnitForPlayer(player,findUnit(civilizationForPlayer(player),unit->baseId));
+    if(!base || disabledUnits_[size_t(player)].count(base->id))return false;
+    bool enabled=base->enabled!=0;
+    for(int effect:playerEffects_[size_t(player)])for(const auto &command:assets_.dat().effects[size_t(effect)].commands)
+        if(command.type==2 && command.a==base->id)enabled=command.b!=0;
+    return enabled;
+}
+int Game::aiOperandCount(int player,const std::string &symbol,bool total) const {
+    if(const auto *line=aiUnitLine(player,symbol)) {
+        // shortcut: Native physical IDs supply original per-prototype counters.
+        // Original4c4240 normalizes copyId except interaction modes2/10/11;
+        // full counter admission/removal is not ported. Ordinary upgrades stay
+        // within one line, so summing its members retains their shared identity.
+        return aiUnitLineCount(line->unitIds,[&](int id) {
+            int count=0;for(const auto &object:objects_)
+                if(object.active && !object.hidden && object.player==player && object.unit &&
+                   object.unit->id==id && (total || !object.underConstruction))++count;
+            // Original4c4240/56e1c6 includes training actions in the total counter.
+            if(total)for(const auto &building:objects_)if(building.active && building.player==player)
+                for(const auto &item:building.productionQueue)if(item.unit && item.unit->id==id)++count;
+            return count;
+        });
+    }
+    const auto *unit=aiUnit(player,symbol);
+    if(!unit)return 0;
+    int count=aiObjectCount(player,*unit,total);
+    if(total)for(const auto &building:objects_)if(building.active && building.player==player)
+        for(const auto &item:building.productionQueue)
+            if(item.unit && (unit->cls==58?item.unit->cls==58:item.unit->id==unit->id))++count;
+    return count;
+}
 const dat::Unit *Game::aiUnit(
     int player,
     const std::string &symbol) const {
@@ -13873,7 +13912,9 @@ const dat::Unit *Game::aiUnit(
         civilizationForPlayer(player);
     const AiProgram &program=aiPlayers_[size_t(player)].program;
     const bool numeric=program.hasConstant(symbol);
-    const int id=numeric?program.constant(symbol):-1;
+    int id=numeric?program.constant(symbol):-1;
+    if(const auto *line=aiUnitLine(player,symbol))
+        id=aiUnitLineSelection(line->unitIds,true,[&](int member){return aiLineUnitAvailable(player,member);});
     const dat::Unit *unit=numeric?findUnit(civilization,id):findUnit(civilization,symbol);
     if(!unit && civilization!=0)unit=numeric?findUnit(0,id):findUnit(0,symbol);
     return unit
@@ -14192,8 +14233,8 @@ bool Game::aiBuild(
 }
 
 bool Game::aiTrain(
-    int player, const dat::Unit &unit) {
-    if (!unitAvailable(player, unit.id) ||
+    int player, const dat::Unit &unit,const dat::Unit *queuedUnit) {
+    if (!(queuedUnit?aiLineUnitAvailable(player,unit.id):unitAvailable(player, unit.id)) ||
         !aiCanAfford(player, unit))
         return false;
     const float population =
@@ -14220,8 +14261,7 @@ bool Game::aiTrain(
                 options.end(),
                 [&](const dat::Unit *option) {
                     return option &&
-                           option->id ==
-                               unit.id;
+                           (option->id == unit.id || (queuedUnit && option->id==unit.baseId));
                 }) != options.end()) {
             producer = &building;
             break;
@@ -14236,7 +14276,7 @@ bool Game::aiTrain(
                       [cost.type] -=
                 cost.amount;
     ProductionItem item;
-    item.unit = &unit;
+    item.unit = queuedUnit?queuedUnit:&unit;
     item.duration =
         unitTrainingTime(player,unit);
     producer->productionQueue.push_back(
@@ -14404,16 +14444,9 @@ bool Game::evaluateAiFactValue(
         fact == "unit-type-count-total";
     if ((buildingCount || unitCount) &&
         argumentEnd >= 2) {
-        const dat::Unit *unit =
-            aiUnit(
-                player,
-                condition.children[1]
-                    .value);
-        if (!unit) return false;
-        value = aiObjectCount(
-            player, *unit,
-            fact.find("-total") !=
-                std::string::npos);
+        const auto &symbol=condition.children[1].value;
+        if(!aiUnitLine(player,symbol) && !aiUnit(player,symbol))return false;
+        value=aiOperandCount(player,symbol,fact.find("-total")!=std::string::npos);
         return true;
     }
     return false;
@@ -14600,11 +14633,12 @@ Game::AiTruth Game::evaluateAiCondition(
                 player,
                 condition.children[1]
                     .value);
-        if (!unit) return AiTruth::Unknown;
+        const auto *line=aiUnitLine(player,condition.children[1].value);
+        if (!unit) return line?AiTruth::False:AiTruth::Unknown;
         if((fact=="can-build" || fact=="can-build-with-escrow") && !state.buildAttempt.canCheck(unit->id,false))
             return AiTruth::False;
-        if (!unitAvailable(
-                player, unit->id) ||
+        if (!(line?aiLineUnitAvailable(player,unit->id):unitAvailable(
+                player, unit->id)) ||
             !aiCanAfford(player, *unit,fact=="can-train-with-escrow" || fact=="can-build-with-escrow"))
             return AiTruth::False;
         if (fact == "can-build" || fact=="can-build-with-escrow") {
@@ -14647,8 +14681,7 @@ Game::AiTruth Game::evaluateAiCondition(
                     options.end(),
                     [&](const dat::Unit *option) {
                         return option &&
-                               option->id ==
-                                   unit->id;
+                               (option->id == unit->id || (line && option->id==unit->baseId));
                     }) != options.end())
                 return AiTruth::True;
         }
@@ -14804,14 +14837,22 @@ bool Game::executeAiAction(
         // shortcut: Native matches have no original owner296c construction restriction or deferred BuildAI queue.
         return unit && state.buildAttempt.begin(unit->id,false) && aiBuild(player,*unit);
     }
-    if (name == "train" &&
-        action.children.size() == 2) {
-        const dat::Unit *unit =
-            aiUnit(
-                player,
-                action.children[1].value);
-        return unit &&
-               aiTrain(player, *unit);
+    if (name == "train" && action.children.size()==2) {
+        const auto &symbol=action.children[1].value;
+        const auto *unit=aiUnit(player,symbol);
+        if(!unit)return false;
+        //577380 checks the last enabled member, then queues the first enabled
+        // member of its Gaia line. Native prototype copying supplies upgraded stats.
+        const auto *line=aiUnitLine(player,symbol);
+        if(!line) {
+            const auto *gaia=findUnit(0,unit->id);
+            if(gaia && gaia->unitLine>1 && size_t(gaia->unitLine)<assets_.dat().unitLines.size())
+                line=&assets_.dat().unitLines[size_t(gaia->unitLine)];
+        }
+        if(!line)return aiTrain(player,*unit);
+        const int first=aiUnitLineSelection(line->unitIds,false,[&](int member){return aiLineUnitAvailable(player,member);});
+        const auto *queued=effectiveUnitForPlayer(player,findUnit(civilizationForPlayer(player),first));
+        return queued && aiTrain(player,*unit,queued);
     }
     if (name == "research" &&
         action.children.size() == 2)

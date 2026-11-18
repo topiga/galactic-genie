@@ -1605,6 +1605,9 @@ private:
     const dat::Unit *aiUnit(
         int player,
         const std::string &symbol) const;
+    const dat::UnitLine *aiUnitLine(int player,const std::string &symbol) const;
+    bool aiLineUnitAvailable(int player,int unitId) const;
+    int aiOperandCount(int player,const std::string &symbol,bool total) const;
     int aiTechnology(int player,
         const std::string &symbol) const;
     int aiTechLevel(int player) const;
@@ -1625,7 +1628,7 @@ private:
     bool aiBuild(
         int player, const dat::Unit &unit);
     bool aiTrain(
-        int player, const dat::Unit &unit);
+        int player, const dat::Unit &unit,const dat::Unit *queuedUnit=nullptr);
     bool aiResearch(
         int player, int technologyId);
     void activateCheat(size_t index, int screenW, int screenH);

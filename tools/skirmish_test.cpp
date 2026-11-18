@@ -39,6 +39,7 @@ static void check(bool value, const char *message) {
 #include "ai_source_checks.h"
 #include "ai_context_gameplay_checks.h"
 #include "economy_gameplay_checks.h"
+#include "unit_line_gameplay_checks.h"
 #include "ai_prefab_placement_gameplay_checks.h"
 #include "movement_progress_gameplay_checks.h"
 #include "dynamic_detour_gameplay_checks.h"
@@ -319,7 +320,7 @@ int main(int argc, char **argv) {
         scenarioImportChecks(assets);
         aiSourceChecks(assets);
     aiContextGameplayChecks(assets);
-    aiConstructorMetadataChecks();exploreRevisitChecks();exploreRevisitGameplayChecks(assets);movementProgressGameplayChecks(assets);dynamicDetourGameplayChecks(assets);economyGameplayChecks(assets);aiPrefabPlacementGameplayChecks(assets);
+    aiConstructorMetadataChecks();exploreRevisitChecks();exploreRevisitGameplayChecks(assets);movementProgressGameplayChecks(assets);dynamicDetourGameplayChecks(assets);economyGameplayChecks(assets);unitLineGameplayChecks(assets);aiPrefabPlacementGameplayChecks(assets);
     civilianExploreGameplayChecks(assets);
         scenarioAiChecks(assets);
         actorAiTimingChecks(assets);

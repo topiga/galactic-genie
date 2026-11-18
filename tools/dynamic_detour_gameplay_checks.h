@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
-static void dynamicDetourGameplayChecks(swgb::Assets &assets) {
+// Keep large Game fixtures out of the combined sanitizer driver's stack frame.
+[[gnu::noinline]] static void dynamicDetourGameplayChecks(swgb::Assets &assets) {
     swgb::Scenario scenario;scenario.map.width=scenario.map.height=64;
     scenario.map.tiles.resize(64*64);scenario.nextUnitId=1;
     scenario.playerSlotCount=1;scenario.civilizations.fill(1);
@@ -31,5 +32,32 @@ static void dynamicDetourGameplayChecks(swgb::Assets &assets) {
         for(int i=0;i<300;++i)game.update(.05f,{});
         const auto arrived=game.objectPosition(mover);
         check(std::hypot(arrived[0]-gx,arrived[1]-gy)<.5f,"The preserved avoidance route reaches the movement goal");
+    }
+    {
+        swgb::Game game(assets);std::string error;
+        check(game.initScenario(scenario,&error),error.c_str());
+        const auto mover=game.spawnObjectForTesting(1,83,1,20,20);
+        const auto nearBlocker=game.spawnObjectForTesting(1,83,1,20.6f,20);
+        const auto distantBlocker=game.spawnObjectForTesting(1,83,1,27,20);
+        check(mover && nearBlocker && distantBlocker,"Two separate local obstructions created");
+        game.update(0,{});
+        check(game.issuePointMoveForTesting(mover,30,20),"Create long-range route past two mobile obstacles");
+        const auto route=game.localDetourForTesting(mover,30,20);
+        check(route.size()>1,"A unit beyond the four-tile search window does not discard a valid local bypass");
+        float ax=20,ay=20;
+        for(const auto &point:route) {
+            const float dx=point[0]-ax,dy=point[1]-ay,lengthSquared=dx*dx+dy*dy;
+            const float t=lengthSquared?std::max(0.f,std::min(1.f,((20.6f-ax)*dx+(20-ay)*dy)/lengthSquared)):0.f;
+            check(std::hypot(ax+t*dx-20.6f,ay+t*dy-20)+.0001f>=separation,
+                  "The accepted local bypass still avoids the nearby blocker");
+            ax=point[0];ay=point[1];
+        }
+        bool arrived=false;
+        for(int i=0;i<600 && !arrived;++i) {
+            game.update(.05f,{});
+            const auto position=game.objectPosition(mover);
+            arrived=std::hypot(position[0]-30,position[1]-20)<.5f;
+        }
+        check(arrived,"Movement handles the later obstruction and reaches the goal beyond both units");
     }
 }

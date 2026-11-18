@@ -31,6 +31,7 @@ cases = {
     'ai_group_search': [],
     'ai_attack_memory': [],
     'ai_player_facts': [],
+    'ai_unit_line': [],
     'ai_resource_knowledge': [],
     'ai_session_context': [],
     'ai_build_admission': [],

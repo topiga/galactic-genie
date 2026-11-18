@@ -22,6 +22,9 @@ AiSessionContext Game::aiScriptContext(AiSessionContextSettings settings,
     std::vector<std::string> civilizations;
     for(const auto &civilization:assets_.dat().civs)civilizations.push_back(civilization.name2);
     auto context=makeAiSessionContext(settings,civilizations);
+    //57f886 registers the signed line identity before parsing any personality/includes.
+    for(const auto &line:assets_.dat().unitLines)if(!line.name.empty())
+        context.constants[normalizeAiSymbol(line.name)]=-int(line.id);
     // Explicit compiler defines override the corresponding setup category;
     // otherwise a custom personality could see two difficulty/population modes.
     for(const auto &symbol:defines) {
