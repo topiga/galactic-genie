@@ -29,6 +29,11 @@ Updated 2026-11-18. The product target is the original disk-launcher and Clone C
   Imported scenarios now freeze and show their result as soon as victory is
   declared. The seed table and Windows clock comparisons are in
   [the parity report](docs/RMS_PARITY.md#six-seed-native-conquest-sweep).
+- **Full Windows comparison.** In the shared seed-2 Desert Command Center
+  scenario, Windows player 3 won at 1:06:25. Native player 2 won at 3:13:45.
+  With all 53,086 Windows clock advances replayed, both native centers still
+  stood at the Windows finish. See the
+  [economic match and age-up timings](docs/RMS_PARITY.md#full-seed-two-economic-match-on-windows-and-macos).
 - The desktop smoke test verifies rendering, effects, streamed music and looping.
 
 This remains a native reconstruction. The original full path lifecycle, separate

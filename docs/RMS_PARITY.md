@@ -7947,3 +7947,44 @@ two-player headless skirmish entry point.
 Seeds 3 and 6 both returned a failing test status. Four wins in this fixed
 set establish seed-dependent outcomes. No population-wide win or completion
 rate follows from six consecutive seeds.
+
+### Full seed-two economic match on Windows and macOS
+
+Windows generated the Tiny Desert terrain with two starting locations and
+map seed 2. The comparison used identical SC1 bytes on both hosts, session
+seed 24592, Moderate difficulty, 75 population and one Command Center,
+three workers and one scout per competing Empire. The objective was to
+destroy the opposing Command Center. Slot 1 had an idle observer allied to
+both computers and placed away from their bases. Slots 2 and 3 were enemies.
+Windows recorded 1,027 tribute from P2 to the observer. The earlier neutral
+observer fixture ended at 1,421.628 s when the observer was eliminated with
+both computer centers intact and is excluded from the victory comparison.
+
+| Execution | Winner | Scenario finish | State at the Windows finish |
+| --- | --- | ---: | --- |
+| Windows Clone Campaigns | P3, Captain Bradei | 3,985.095 s | P2 center destroyed, P3 center standing |
+| Native, 30 Hz | P2 | 11,625.433 s | Both centers standing |
+| Native desktop scheduler, captured Windows steps | Still in play at end of capture | — | Both centers standing, 99 / 92 live objects, 1,650 landed attacks |
+
+Windows reached Achievements automatically at 1:06:25. P3 had 101 kills,
+19 conversions, 12 buildings razed and no buildings lost. The instrumented
+30 Hz native match and the repository replay both finished on the same frame
+with 9,986 landed attacks. The 30 Hz replay took 2.92 times the Windows
+duration and produced the opposite winner. The desktop-clock comparison
+consumed all 53,086 observed advances through the Windows finish.
+
+| Tech level completed | Windows P2 | Native P2, Windows clock | Windows P3 | Native P3, Windows clock |
+| --- | ---: | ---: | ---: | ---: |
+| 2 | 13:07 | 24:39 | 11:46 | 25:22 |
+| 3 | 30:19 | 40:20 | 28:30 | 40:43 |
+| 4 | — | — | 50:18 | — |
+
+Times are minutes and seconds. Dashes mean the player had not completed the
+level when Windows ended. P3's first age-up was already over 13 minutes late
+on the native desktop clock. This gives economy and research scheduling a
+measurable target before the decisive attack.
+
+Local fixture `ggseedtwoallies.sc1` has SHA-256
+`4f5e630aaf8d3c3695dc1fcc5decf2ce043672a7db24a28c01c344dbf4e8cffb`.
+Clock trace `seed2-allied-clock.csv` has SHA-256
+`d3c4110fc57be3ca0ae794624d2b9b11c6a431d422c579d78fc40538cc11d162`.
