@@ -2,7 +2,9 @@
 #include "../src/engine/game.h"
 #include "../src/render/soft_renderer.h"
 #include <algorithm>
+#include <charconv>
 #include <cstdio>
+#include <string_view>
 #include <stdexcept>
 
 static void check(bool value, const char *message) {
@@ -329,9 +331,10 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
     std::printf("PASS: scripted player victory at %.1fs, no resource/unit/damage cheats\n",game.matchTime());
 }
 
-[[gnu::noinline]] static void originalAiMatches(swgb::Assets &assets,bool duel) {
+[[gnu::noinline]] static void originalAiMatches(swgb::Assets &assets,bool duel,uint32_t duelSeed) {
     bool allPassed=true;
-    for(uint32_t seed=1;seed<=(duel?1u:4u);++seed) {
+    for(uint32_t run=1;run<=(duel?1u:4u);++run) {
+        const uint32_t seed=duel?duelSeed:run;
         swgb::Game game(assets);std::string error;
         game.setLogger([seed](const std::string &message) {
             if(message.find("AI fact not implemented:")==0 || message.find("AI action not implemented:")==0)
@@ -464,7 +467,17 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
 
 int main(int argc, char **argv) {
     const bool originalAi=argc==3 && std::string(argv[2])=="--original-ai";
-    const bool duel=argc==3 && std::string(argv[2])=="--ai-duel";
+    const bool duel=(argc==3 || argc==4) && std::string(argv[2])=="--ai-duel";
+    uint32_t duelSeed=1;
+    if(duel && argc==4) {
+        const std::string_view value(argv[3]);
+        const auto end=value.data()+value.size();
+        const auto parsed=std::from_chars(value.data(),end,duelSeed);
+        if(parsed.ec!=std::errc{} || parsed.ptr!=end) {
+            std::fprintf(stderr,"Expected an unsigned 32-bit map seed.\n");
+            return 2;
+        }
+    }
     const bool allCivilizations=argc==3 && std::string(argv[2])=="--civilizations";
     const bool conquestMatch=argc==3 && std::string(argv[2])=="--conquest";
     const bool playerConquest=argc==3 && std::string(argv[2])=="--player-conquest";
@@ -473,7 +486,7 @@ int main(int argc, char **argv) {
         swgb::SoftRenderer renderer;
         swgb::Assets assets(&renderer); std::string error;
         check(assets.init(argv[1], &error), error.c_str());
-        if(originalAi || duel) {originalAiMatches(assets,duel);return 0;}
+        if(originalAi || duel) {originalAiMatches(assets,duel,duelSeed);return 0;}
         if(allCivilizations || conquestMatch) {civilizationMatches(assets,conquestMatch);return 0;}
         if(playerConquest) {swgb::Game game(assets);playerMatch(game,assets,renderer,true);return 0;}
         aiAndMovementChecks(assets);
