@@ -7850,3 +7850,35 @@ Independent native Tiny Arid Conquest runs use the original two slots with
 `swgb-skirmish-test <Data> --ai-duel <seed>`. Seed 2 ended in a player 2 win
 at 6,883.434 s (11,070 landed attacks). Seed 4 ended in a player 1 win at
 4,215.134 s (8,833 landed attacks).
+
+### Seed-four Desert economic scenario
+
+Windows generated the Tiny Desert layout with editor map seed 4. The exported
+terrain, Gaia objects and two starting armies are shared by both engines.
+The custom scenario puts the armies in computer slots 2 and 3, preserves
+the idle observer, and declares a winner when the opponent owns zero objects.
+Both armies start with one Command Center, three workers and a scout.
+The SC1 SHA-256 on both hosts is
+`befb0eb6b04176f5efcf0bb2681c263d5b4cbce5dcacf2a21bcb5de62aa765f1`.
+
+| Simulated seconds | Native owned objects, P2 / P3 | Windows sample, P2 / P3 |
+| ---: | ---: | ---: |
+| 0 | 5 / 5 | 5 / 5 at 0.000 s |
+| 5 | 6 / 14 | 6 / 14 at 5.317 s |
+| 15 | 6 / 15 | 13 / 14 at 14.490 s |
+| 300 | 32 / 30 | 28 / 25 at 299.884 s |
+| 1,500 | 36 / 41 | 136 / 117 at 1,512.507 s |
+
+The counts include buildings. In the last Windows sample, 55 and 44 objects
+were wall segments (prototype 117). Native had zero for either player at
+1,500 seconds. The independent native Arid duel also logged the unimplemented
+AI fact `can-afford-complete-wall`. These measurements establish a wall-building
+difference. They do not establish that walls determine the winner.
+
+The native baseline advances at 30 explicit updates per simulated second.
+On the reference PC, 1,821 consecutive Windows clock advances ranged from
+75 to 90 simulated milliseconds, with a median of 76. Feeding the start of
+this sample to the native island battle moved its finish to 13.073 s and left
+three winners alive. The same experiment on open ground ended at 17.693 s.
+This measures sensitivity to update frequency. It uses a clock sample from
+the economic game, so each combat's original startup cadence is still unknown.
