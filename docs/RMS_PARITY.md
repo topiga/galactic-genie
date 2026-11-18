@@ -7917,3 +7917,13 @@ Windows clock capture path after the session seed. Each line holds the
 cumulative world time in milliseconds and the step length, separated by a
 comma, starting with the first advance from zero. The runner checks each
 consumed row and fails if the trace runs out before a native result.
+
+The 30 Hz seed-four economic replay also reached its ten-hour bound. It still
+had 90 and 123 live owned objects, with 12,907 landed attacks. The final
+attack count was already present at 32,750.002 s. In the original data,
+RandomGame (resource 60037) loads resign.per (60054). On Moderate, a rule
+checks elapsed time, soldiers, workers, monuments and special victory objects
+before setting a resignation goal. Subsequent rules can delete owned workers
+and buildings, announce resignation and resign with other objects still on
+the map. The original P2 state transition is consistent with this mechanism.
+The exact rule that fired in that match was not captured.
