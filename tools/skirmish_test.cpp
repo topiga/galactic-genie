@@ -48,11 +48,14 @@ static void check(bool value, const char *message) {
 #include "player_unit_fact_gameplay_checks.h"
 #include "economy_gameplay_checks.h"
 #include "unit_line_gameplay_checks.h"
+#include "ai_counter_identity_checks.h"
 #include "ai_prefab_placement_gameplay_checks.h"
 #include "movement_progress_gameplay_checks.h"
 #include "dynamic_detour_gameplay_checks.h"
 #include "crowd_yield_gameplay_checks.h"
+#include "delivery_corridor_gameplay_checks.h"
 #include "ai_constructor_metadata_checks.h"
+#include "rms_constructor_metadata_gameplay_checks.h"
 #include "explore_revisit_checks.h"
 #include "explore_revisit_gameplay_checks.h"
 
@@ -317,81 +320,107 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
     std::printf("PASS: scripted player victory at %.1fs, no resource/unit/damage cheats\n",game.matchTime());
 }
 
-int main(int argc, char **argv) {
-    const bool allCivilizations=argc==3 && std::string(argv[2])=="--civilizations";
-    const bool conquestMatch=argc==3 && std::string(argv[2])=="--conquest";
-    const bool playerConquest=argc==3 && std::string(argv[2])=="--player-conquest";
-    if (argc != 2 && !allCivilizations && !conquestMatch && !playerConquest) return 2;
-    try {
-        swgb::SoftRenderer renderer;
-        swgb::Assets assets(&renderer); std::string error;
-        check(assets.init(argv[1], &error), error.c_str());
-        if(allCivilizations || conquestMatch) {civilizationMatches(assets,conquestMatch);return 0;}
-        if(playerConquest) {swgb::Game game(assets);playerMatch(game,assets,renderer,true);return 0;}
-        scenarioImportChecks(assets);
-        aiSourceChecks(assets);
+[[gnu::noinline]] static void originalAiMatches(swgb::Assets &assets) {
+    bool allPassed=true;
+    for(uint32_t seed:{1u,2u,3u,4u}) {
+        swgb::Game game(assets);std::string error;
+        check(game.initAridSkirmish(seed,&error,false,75,true),error.c_str());
+        check(game.loadAiScript(2,"RandomGame.per",{},&error),error.c_str());
+        check(game.aiRuleCountForTesting(2)>0,"Packaged original personality is loaded");
+        for(int frame=0;frame<30*12000 && game.matchResult()<0;++frame) {
+            game.update(1.f/30,{});
+            if(frame%(30*600)==0) {
+                std::printf("original AI seed=%u time=%.1f population=%.0f food=%.0f carbon=%.0f ore=%.0f nova=%.0f\n",
+                    seed,game.matchTime(),game.populationUsedForTesting(2),game.resource(2,0),
+                    game.resource(2,1),game.resource(2,2),game.resource(2,3));
+                std::fflush(stdout);
+            }
+        }
+        const bool passed=game.combatStats().attacksLanded>0 && game.matchResult()==0;
+        allPassed=allPassed && passed;
+        std::printf("%s: original RandomGame Arid Conquest seed%u at %.3fs result%d attacks%u\n",
+            passed?"PASS":"FAIL",seed,game.matchTime(),game.matchResult(),unsigned(game.combatStats().attacksLanded));
+        std::fflush(stdout);
+    }
+    check(allPassed,"Every original-personality seed must win through normal combat");
+}
+
+// Keep independent fixture batches out of one oversized sanitizer stack frame.
+[[gnu::noinline]] static void aiAndMovementChecks(swgb::Assets &assets) {
+    scenarioImportChecks(assets);
+    aiSourceChecks(assets);
     aiContextGameplayChecks(assets);
     playerMilitaryFactsGameplayChecks(assets);aiKnownCategoryChecks();playerBuildingFactGameplayChecks(assets);playerUnitFactGameplayChecks(assets);
-    aiConstructorMetadataChecks();exploreRevisitChecks();exploreRevisitGameplayChecks(assets);movementProgressGameplayChecks(assets);dynamicDetourGameplayChecks(assets);crowdYieldGameplayChecks(assets);economyGameplayChecks(assets);unitLineGameplayChecks(assets);aiPrefabPlacementGameplayChecks(assets);
+    deliveryCorridorGameplayChecks(assets);
+    aiConstructorMetadataChecks();rmsConstructorMetadataGameplayChecks(assets);exploreRevisitChecks();exploreRevisitGameplayChecks(assets);movementProgressGameplayChecks(assets);dynamicDetourGameplayChecks(assets);crowdYieldGameplayChecks(assets);economyGameplayChecks(assets);unitLineGameplayChecks(assets);aiCounterIdentityChecks();aiCounterIdentityGameplayChecks(assets);aiPrefabPlacementGameplayChecks(assets);
     civilianExploreGameplayChecks(assets);
-        scenarioAiChecks(assets);
-        actorAiTimingChecks(assets);
-        exploreActionChecks();exploreSearchChecks();tacticalExploreQueueChecks();exploreSpiralChecks();
-        militaryGameplayChecks(assets);militaryAdmissionGameplayChecks(assets);militaryDifficultyGameplayChecks(assets);
-        tacticalMovementChecks();tacticalMovementGameplayChecks(assets);
-        explorationGameplayChecks(assets);
-        fogEdgeChecks(argv[1]);
-        rmsSpawnChecks(assets);
-        rmsElevationImportChecks(assets);
-        rmsCoordinateChecks(assets);
-        ownedRmsSpawnChecks(assets,renderer);
-        rmsWorkerSpawnChecks(assets);
-        rmsScoutChecks(assets);
-        rmsNearNovaChecks(assets);
-        rmsHolocronChecks(assets.dat());
-        rmsHolocronMapChecks(assets.dat());
-        rmsForageChecks(assets.dat());
-        rmsResourcePrefixChecks(assets);
-        rmsHerdChecks(assets);
-        rmsHuntChecks(assets);
-        rmsPredatorChecks(assets);
-        rmsExplicitTreeChecks(assets.dat());
-        rmsGlobalPrefixChecks(assets);
-        rmsBirdChecks(assets.dat());
-        rmsGlobalPredatorChecks(assets.dat());
-        rmsForestHuntChecks(assets.dat());
-        checkRmsCliffMap(assets.dat());
-        checkRmsCliffImport(assets);
-        rmsPackagedForestChecks(assets,argv[1]);
-        rmsPackagedStartupChecks(assets,argv[1]);
-        rmsGaiaFoundationChecks(assets,renderer,argv[1]);
-        rmsGeneralObjectChecks(assets);
-        rmsTransportRenderChecks(argv[1]);
-        rmsHuntProfileChecks(assets,argv[1]);
-        rmsWaveChecks(assets.dat());
-        checkRmsForest21Owned(assets);
-        checkRmsForest21Holocrons(assets.dat());
-        checkRmsForest21WaterResources(assets.dat());
-        checkRmsForest21Forage12(assets.dat());
-        checkRmsForest21Forage12(assets.dat(),true);
-        manyOwnedRmsMapChecks(assets.dat());
-        ownedForestSpawnChecks(assets);
-        overlappingRmsFoundationChecks(assets,renderer);
-        forestWorkerSpawnChecks(assets);
-        rmsWorkerTreeCollisionChecks(assets);
-        stalagmiteWorkerSpawnChecks(assets);
-        nearForestCommandCenterChecks(assets);
-        rmsNearWorkerChecks(assets);
-        nearStalagmiteCleanupChecks(assets);
-        rmsClippedWorkerChecks(assets);
-        manyOwnerWorkerChecks(assets);
-        manyForestCleanupChecks(assets);
-        manyForestWorkerChecks(assets);
-        manyClippedWorkerChecks(assets);
-        packagedWorkerChecks(assets);
-        packagedWorkerBoundaryChecks(assets);
-        rmsGroupedChecks(assets);
-        pointMoveChecks(assets);
+    scenarioAiChecks(assets);
+    actorAiTimingChecks(assets);
+    exploreActionChecks();exploreSearchChecks();tacticalExploreQueueChecks();exploreSpiralChecks();
+    militaryGameplayChecks(assets);militaryAdmissionGameplayChecks(assets);militaryDifficultyGameplayChecks(assets);
+    tacticalMovementChecks();tacticalMovementGameplayChecks(assets);
+    explorationGameplayChecks(assets);
+}
+
+[[gnu::noinline]] static void rmsPipelineChecks(swgb::Assets &assets,swgb::SoftRenderer &renderer,const char *dataPath) {
+    fogEdgeChecks(dataPath);
+    rmsSpawnChecks(assets);
+    rmsElevationImportChecks(assets);
+    rmsCoordinateChecks(assets);
+    ownedRmsSpawnChecks(assets,renderer);
+    rmsWorkerSpawnChecks(assets);
+    rmsScoutChecks(assets);
+    rmsNearNovaChecks(assets);
+    rmsHolocronChecks(assets.dat());
+    rmsHolocronMapChecks(assets.dat());
+    rmsForageChecks(assets.dat());
+    rmsResourcePrefixChecks(assets);
+    rmsHerdChecks(assets);
+    rmsHuntChecks(assets);
+    rmsPredatorChecks(assets);
+    rmsExplicitTreeChecks(assets.dat());
+    rmsGlobalPrefixChecks(assets);
+    rmsBirdChecks(assets.dat());
+    rmsGlobalPredatorChecks(assets.dat());
+    rmsForestHuntChecks(assets.dat());
+    checkRmsCliffMap(assets.dat());
+    checkRmsCliffImport(assets);
+    rmsPackagedForestChecks(assets,dataPath);
+    rmsPackagedStartupChecks(assets,dataPath);
+    rmsGaiaFoundationChecks(assets,renderer,dataPath);
+    rmsGeneralObjectChecks(assets);
+    rmsTransportRenderChecks(dataPath);
+    rmsHuntProfileChecks(assets,dataPath);
+    rmsWaveChecks(assets.dat());
+}
+
+[[gnu::noinline]] static void rmsWorkerChecks(swgb::Assets &assets,swgb::SoftRenderer &renderer) {
+    checkRmsForest21Owned(assets);
+    checkRmsForest21Holocrons(assets.dat());
+    checkRmsForest21WaterResources(assets.dat());
+    checkRmsForest21Forage12(assets.dat());
+    checkRmsForest21Forage12(assets.dat(),true);
+    manyOwnedRmsMapChecks(assets.dat());
+    ownedForestSpawnChecks(assets);
+    overlappingRmsFoundationChecks(assets,renderer);
+    forestWorkerSpawnChecks(assets);
+    rmsWorkerTreeCollisionChecks(assets);
+    stalagmiteWorkerSpawnChecks(assets);
+    nearForestCommandCenterChecks(assets);
+    rmsNearWorkerChecks(assets);
+    nearStalagmiteCleanupChecks(assets);
+    rmsClippedWorkerChecks(assets);
+    manyOwnerWorkerChecks(assets);
+    manyForestCleanupChecks(assets);
+    manyForestWorkerChecks(assets);
+    manyClippedWorkerChecks(assets);
+    packagedWorkerChecks(assets);
+    packagedWorkerBoundaryChecks(assets);
+    rmsGroupedChecks(assets);
+}
+
+[[gnu::noinline]] static void gameplayIntegrationChecks(swgb::Assets &assets,swgb::SoftRenderer &renderer) {
+    pointMoveChecks(assets);
     fogRendering(assets,renderer);
     memoryInspectionChecks(assets,renderer);
     powerGameplayChecks(assets);
@@ -410,6 +439,25 @@ int main(int argc, char **argv) {
     additiveSelectionChecks(assets,renderer);
     civilizationChecks(assets,renderer);
     conquestChecks(assets);
+}
+
+int main(int argc, char **argv) {
+    const bool originalAi=argc==3 && std::string(argv[2])=="--original-ai";
+    const bool allCivilizations=argc==3 && std::string(argv[2])=="--civilizations";
+    const bool conquestMatch=argc==3 && std::string(argv[2])=="--conquest";
+    const bool playerConquest=argc==3 && std::string(argv[2])=="--player-conquest";
+    if (argc != 2 && !allCivilizations && !conquestMatch && !playerConquest && !originalAi) return 2;
+    try {
+        swgb::SoftRenderer renderer;
+        swgb::Assets assets(&renderer); std::string error;
+        check(assets.init(argv[1], &error), error.c_str());
+        if(originalAi) {originalAiMatches(assets);return 0;}
+        if(allCivilizations || conquestMatch) {civilizationMatches(assets,conquestMatch);return 0;}
+        if(playerConquest) {swgb::Game game(assets);playerMatch(game,assets,renderer,true);return 0;}
+        aiAndMovementChecks(assets);
+        rmsPipelineChecks(assets,renderer,argv[1]);
+        rmsWorkerChecks(assets,renderer);
+        gameplayIntegrationChecks(assets,renderer);
         swgb::Game game(assets);
         check(game.initSkirmish(0x5A17, &error), error.c_str());
         check(game.commandCenterId(1) && game.commandCenterId(2), "Both objectives must exist");

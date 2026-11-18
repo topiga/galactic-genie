@@ -7060,13 +7060,13 @@ The full local ASan/UBSan regression passed in original-economy-admission-local.
 
 The scenario startup path retains the nested InfoAI constructor timestamp while preserving the existing ambient CRT stream. Player/script replacement carries that metadata forward. Nine executed585ba8 controls establish unsigned elapsed time, strict greater-than120000ms, the float0.05 threshold (exact5% qualifies), and timestamp updates even when coverage rejects the sweep. A future constructor timestamp can therefore normalize on the first time-zero callback.
 
-Loaded player callbacks now admit first-observation information and the periodic hidden-cell revisit before tactical scheduling, after PER evaluation. Native shared visibility remains the documented provider adapter. RMS enters after player construction, so its missing constructor/prepass timer context stays explicitly unknown rather than deriving a false timestamp from the map seed. Constructor RNG, pause and real scenario callback checks accompany the pure goldens.
+Loaded player callbacks now admit first-observation information and the periodic hidden-cell revisit before tactical scheduling, after PER evaluation. Native shared visibility remains the documented provider adapter. RMS enters after player construction, so absent constructor context stays explicitly unknown rather than deriving a false timestamp from the map seed; the bounded explicit session-seed replay below now supplies this context for2–8 original-civilization players. Constructor RNG, pause and real scenario callback checks accompany the pure goldens.
 
 ### Economic lifecycle, delivery and prefab access (18 November 2026)
 
 Twenty-one executed5a8670 controls now drive gatherer preservation, incomplete-batch retries, loaded idle workers, ranked reassignment and the final any-resource attempt. The explicit resource branch retries five candidates; the any-resource branch visits allocation order once per bucket with its different cooldown. Native task/priority and path providers remain adapters. Resource admission follows588340 (class3 included, class5 excluded); selector eligibility is a separate broader table.
 
-Thirty-one original controls establish depot-event bucket order, refresh semantics and duplicate observations. Owned registry mutation precedes refresh; removal deliberately differs from admission for some depot IDs. Unsupported native region mappings retain dirty buckets for retry. Re-observation keeps stored coordinates, use counters and invalid flags. Food-only periodic refresh uses the retained third nested constructor draw (three full-prefix and eight scalar controls); RMS constructor metadata remains unknown. Native polling cadence still substitutes for original event timing.
+Thirty-one original controls establish depot-event bucket order, refresh semantics and duplicate observations. Owned registry mutation precedes refresh; removal deliberately differs from admission for some depot IDs. Unsupported native region mappings retain dirty buckets for retry. Re-observation keeps stored coordinates, use counters and invalid flags. Food-only periodic refresh uses the retained third nested constructor draw (three full-prefix and eight scalar controls); RMS constructor metadata remains unknown unless the bounded explicit session-seed context described below is supplied. Native polling cadence still substitutes for original event timing.
 
 Ordinary gather delivery40585d credits raw fractional cargo to the player, then405869 truncates the separate AI batch notification before clearing cargo. Seven executed delivery controls distinguish this from action149, which rounds before credit. Native depositAt now sends that ordinary-gather notification; it does not universally round deliveries. Seven original worker-record controls cover IDs, resource matching, final slots and integer wrapping. Legacy native stashed cargo remains outside this original batch callback.
 
@@ -7194,8 +7194,9 @@ Production sanitizer tests pass for discovery without a military group, hidden
 destruction, ordinary/CC differences, Gaia and script reload. Native observation
 order/cadence and physical per-prototype counts remain adapters. The verified
 owned-removal bookkeeping helper is not a general death callback. RMS startup
-still lacks a verified constructor epoch: its periodic cache timer stays absent,
-although observed admissions work. Scenario startup retains the known epoch;
+without explicit constructor context leaves its periodic cache timer absent,
+although observed admissions work. The bounded two-Empire session-seed replay
+described below now supplies that context. Scenario startup retains the known epoch;
 script reload preserves both memory and timer. These tests do not establish full
 RandomGame or whole-match parity.
 
@@ -7239,3 +7240,104 @@ anchorless scout test verifies a concrete destination, actual movement and no
 civilian bookkeeping. Original class50 attack-pool admission also now respects
 Easy/Easiest exclusion, with Moderate/Easy/Easiest production checks. The combined
 ASan/UBSan gameplay regression and asset-independent algorithm suite pass.
+
+### 2026-11-18: normalized prototype counters after upgrades
+
+Four bounded original binary controls execute `4c2a70`, `4c4240` and `4c4350`: upgrading physical prototype10 from copy10 to copy11 transfers total3/current2 to counter11, and subsequent removal of physical10 decrements counter11. Interface kinds2,10 and11 retain counter10 instead. The fixture supplies empty actor lists and models only the master-copy callback's copyId transfer, independently established by the original `48d390` implementation; it is not an end-to-end object lifecycle test. Controls and limitations are retained locally in `prototype-counter-migration-controls-2026-11-18.{py,json}` and the accompanying findings file.
+
+The native shared counter projection now resolves the effective master, applies the original interface-kind/copyId and building stack identity rules, and retains signed16 counter interpretation. Current/total PER counts, unit-line sums, live CC count facts and idle-farm counts use this common identity without changing physical actor IDs. Garrisoned actors remain counted; queued training contributes only to total counters. Direct CC operand83 retains the worker-class aggregate, while83 occurring within a unit line remains an individual prototype counter.
+
+This closes the ordinary upgraded-tier mismatch where an actor remained counted under its old physical ID. It does not establish complete incremental counter parity: native actor/job-role and queued-production state still supplies admission/removal history, and original migration moves only positive stored counters. Overflow history, unusual aliasing and unported lifecycle callbacks can therefore differ from a reconstructed count. Added tests cover the four mode identities, missing masters, signedword boundaries and a native research/production-PER upgrade fixture; test execution results are recorded separately from this original-binary evidence.
+
+### 2026-11-18: separate session seed and original constructor epochs
+
+A bounded original execution now runs `61e007` through `61e119`: fresh map
+allocation, Gaia's 1590 master clones and research initialization, human owner 1,
+shared PER registration and every computer constructor through its return and
+outer RNG restore. All game functions execute; the harness supplies CRT
+allocation and debug-clock boundaries. Each civilization uses all 1446 actual
+masters, its resources and research effects; graphic frame-count reads use
+original DAT values with access guards. Fresh-process controls cover 3–8 Empire
+players, all eight civilizations in ascending and reversed owner order, and
+session seeds 1, 2 and 12345. The nested InfoAI constructor consumes four draws,
+then `5cde79` restores the saved outer draw before the owner timer advances it.
+Each computer therefore repeats the same shared constructor transition.
+
+Local evidence: `rms-session-two-empire-prefix-2026-11-18`,
+`rms-session-multi-empire-constructor-2026-11-18.json` and
+`rms-session-mixed-constructor-controls-2026-11-18.json`.
+
+`RmsSessionOptions::sessionSeed` is an explicit **separate game/session seed**.
+The map seed alone cannot recover these earlier constructor values: original
+startup creates players before independently reseeding RMS generation. Supported
+context is a fresh 2–8-player session with original CC civilizations 1–8, human
+slot 1, computer slots 2..N and the normal controller/shared-PER path. Unsupported
+contexts and the original random-selection sentinel `UINT32_MAX` are rejected
+before mutation; omitted seeds leave epochs unknown for every computer.
+Native Arid deliberately chooses the same numeric value for its two independent
+seed inputs. This choice does not infer a Windows session seed from its map seed.
+
+| Session seed (owner2) | Known-category timer | Revisit timer | Food timer |
+| --- | ---: | ---: | ---: |
+|1|4294943043|5612|4995|
+|2|9398|18739|5752|
+|12345|3199|35981|4685|
+
+The large first value is original signed multiplication overflow followed by
+signed division, retained as an unsigned timestamp. Replay uses a local RNG
+stream, installs metadata before native RMS prepasses, and preserves it through
+AI-state installation, match activation and script reload. Production checks
+cover all seven computer-owner goldens for three seeds, mixed-civilization
+3–8-player installation, unchanged map RNG/checkpoint, absence without context,
+no invented human InfoAI epoch and atomic rejection of unsupported contexts.
+Native AI/prepass callback cadence remains an adapter; this closes the stated
+constructor prefix, not arbitrary startup configurations or whole-engine parity.
+
+The normalized-counter pure checks and asset-backed native research/CC fact fixture passed the combined AddressSanitizer run. Six additional original building-counter controls then verified stack substitution, missing stack masters and head/annex suppression. They exposed an ordering distinction: suppression uses the pre-stack master's head/annex fields, while the counted prototype and class use the stack target. The added regression captures this distinction explicitly; its helper correction requires the subsequent test run.
+
+### 2026-11-18: completed original-personality matches and delivery traffic
+
+At33f4fc7, packaged RandomGame.per completes native Arid/Tiny Conquest against an
+idle player for seeds1 and2 in3135.793s and5382.718s respectively. Both use ordinary
+RMS starting resources, normal training/combat and no grants, teleports or direct
+damage. The earlier pre-scout-fix seed2 run took10245.482s; seed1 did not finish
+within12000s. These are native original-personality results, not seed-matched
+Windows whole games or proof of balanced pacing. The new `--original-ai` test
+mode retains four selected Arid seeds as a repeatable acceptance check.
+
+The slow seed2 exposed full nova cargo trapped between two processing centers.
+A deterministic five-carrier fixture initially delivered10/50 units in90s.
+After local avoidance fails, the shared interaction adapter can now route to a
+specific free perimeter point instead of reselecting the same crowded entrance.
+Point paths also complete a partial tile route only when a swept, statically clear
+segment reaches the exact fractional destination. No work range is enlarged.
+
+The combined ASan/UBSan suite now passes the90-second50/50 delivery fixture,
+its paused-credit and surviving-worker assertions, a separate ordinary fractional
+point destination, farm-corner gathering, crowd yielding, normalized prototype
+counts and explicit RMS constructor metadata. Loaded cargo is an explicit local
+fixture; the full original-personality matches above use normal gameplay only.
+
+Sixteen additional original `57e520`/`57e690` predicate controls distinguish own current/total worker counters: only direct operand83 reads the worker aggregate (`+1d2c`/`+fe4`); female293 and farmer259/214 read their individual prototype counters. The native PER operand adapter now uses this exact83 exception, while internal fallback policy counting remains unchanged. Production PER fixtures check both current and total role counts, including a pending male worker that changes only the aggregate total. Evidence: local `own-worker-count-fact-controls-2026-11-18.{py,json}`; authored counters test fact dispatch, not new lifecycle behavior.
+
+
+### 2026-11-18: correct counter interface-field mapping after real age-up
+
+The full original-personality match exposed a native field-mapping error: real
+Tech Level2 research copies upgraded building copyIds while retaining physical
+IDs. The counter exception reads original master byte`+9f`, which the executed
+master loader maps from serialized record offset85 (call`48c46e`). The preceding
+reads map offsets81–84 to`+9b`–`+9e`. Native DAT fields in that order are blast
+defense, combat level, interaction mode, minimap mode and interface kind; therefore
+`+9f` is `interfaceKind`, not `interactionMode`. The original counter controls
+remain valid; the earlier native mapping and terminology were incorrect.
+
+For real upgraded Empire buildings109/68/562, interface kind2 preserves their
+counter identity despite copyIds71/129/563; trooper center87 uses interface
+kind10 and copyId10. Interaction mode3 had incorrectly
+redirected those counters, hiding existing buildings from PER and provoking
+repeated food-processor construction and blocked age advancement. The shared
+helper now uses interface kind. Pure tests deliberately distinguish the two
+fields; a regression applies the installed Tech Level2 effect and checks current,
+total and production PER building facts. This is a counter correction, not an AI
+policy change; validation of the changed helper is pending the next build.

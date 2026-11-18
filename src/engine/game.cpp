@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ai_player_facts.h"
 #include "ai_unit_line.h"
+#include "ai_counter_identity.h"
 #include "ai_food_facts.h"
 #include "ai_power_field.h"
 #include "ai_economic_delivery.h"
@@ -794,6 +795,9 @@ bool Game::activateTwoPlayerMatch(bool initiallyExplored,int populationLimit,boo
     matchTime_=0;skirmishAiTime_=0;victoryState_=-1;
     if(fallbackAi) {
         AiPlayerState state;
+        state.explorationRevisitTime=aiPlayers_[2].explorationRevisitTime;
+        state.economy.foodRefreshTime=aiPlayers_[2].economy.foodRefreshTime;
+        state.knownCategoryMemory.lastRefreshTime=aiPlayers_[2].knownCategoryMemory.lastRefreshTime;
         state.loaded=true;state.age=aiTechLevel(2);
         state.strategicNumbers[117]=50;
         state.strategicNumbers[120]=35;
@@ -825,6 +829,9 @@ bool Game::initAridSkirmish(uint32_t seed,std::string *err,bool initiallyExplore
     const std::unordered_set<std::string> defines{
         "TINY_MAP","FIXED_POSITIONS","DEFAULT_RESOURCES","RANDOM_MAP","2_PLAYERS"};
     RmsSessionOptions options;
+    // Native new matches explicitly choose equal values for two independent
+    // original overrides. A Windows session seed cannot be inferred from its map seed.
+    options.sessionSeed=seed;
     options.mapId=9; // Original5c9f25 maps desert9 to packaged resource54201.
     options.mapSizeIndex=0;options.populationLimit=uint32_t(populationLimit);
     if(conquest)options.victory=1;
@@ -1693,6 +1700,11 @@ bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std:
         return fail("RMS session requires valid player, resource, age, population, difficulty and map settings");
     if(!options.aiScripts.empty() && (options.aiScripts.size()!=civilizations.size() || !options.aiScripts[0].empty()))
         return fail("RMS AI scripts must match player slots and leave human player one empty");
+    if(options.sessionSeed==UINT32_MAX)
+        return fail("Original session seed -1 requests random selection; supply an explicit seed");
+    if(options.sessionSeed && (civilizations.size()<2 ||
+       std::any_of(civilizations.begin(),civilizations.end(),[](uint16_t civ){return civ<1 || civ>8;})))
+        return fail("Original session-seed metadata requires 2–8 Clone Campaigns players, human one and computers thereafter");
     AiSessionContextSettings settings;
     settings.startingAge=int(options.startingAge);settings.resources=int(options.resourceTier);
     settings.mapId=int(options.mapId);settings.mapSizeIndex=options.mapSizeIndex;
@@ -1707,6 +1719,15 @@ bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std:
     }
     if(!initRms(script,defines,mapSize,randomState,err,uint32_t(civilizations.size()),civilizations,diplomacy))
         return false;
+    if(options.sessionSeed) {
+        uint32_t constructorState=genieNormalSessionComputerConstructorState(*options.sessionSeed);
+        for(size_t owner=2;owner<=civilizations.size();++owner) {
+            const auto metadata=geniePlayerConstructorWithMetadata(constructorState);
+            aiPlayers_[owner].explorationRevisitTime=metadata.infoRevisitTime;
+            aiPlayers_[owner].economy.foodRefreshTime=metadata.infoFoodRefreshTime;
+            aiPlayers_[owner].knownCategoryMemory.lastRefreshTime=metadata.infoKnownRefreshTime;
+        }
+    }
     // shortcut: Primary-object/manager callbacks use native implementations until populated startup traces match.
     genieRmsPrepasses(legacyRandomState_,worldPlayerCount_,[&](uint32_t owner,uint32_t) {
         updatePlayerObjects(0,int(owner));
@@ -1731,8 +1752,12 @@ bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std:
     for(size_t player=1;player<=civilizations.size();++player)
         if(!initializeStartingAge(int(player),int(options.startingAge)))
             return fail("RMS starting-age research could not be initialized");
-    for(size_t player=1;player<=civilizations.size();++player)
+    for(size_t player=1;player<=civilizations.size();++player) {
         computers[player].age=aiTechLevel(int(player));
+        computers[player].explorationRevisitTime=aiPlayers_[player].explorationRevisitTime;
+        computers[player].economy.foodRefreshTime=aiPlayers_[player].economy.foodRefreshTime;
+        computers[player].knownCategoryMemory.lastRefreshTime=aiPlayers_[player].knownCategoryMemory.lastRefreshTime;
+    }
     aiPlayers_=std::move(computers);
     aiMapId_=options.mapId;
     aiSessionContext_=settings;difficulty_=options.difficulty;
@@ -12142,6 +12167,15 @@ bool Game::findPath(const Object &object, float targetX, float targetY,
                            });
     pathSearches_++;
     if (result == PathResult::Failed && !goalObject) return false;
+    // A reachable fractional point can have no tile centre inside the search
+    // radius. Finish its partial tile route only through a validated swept
+    // segment; this does not enlarge the destination or bypass obstacles.
+    if (!goalObject && result == PathResult::Partial && !tiles.empty() &&
+        staticPassableAt(object, targetX, targetY) &&
+        segmentClear(object, tiles.back()[0], tiles.back()[1], targetX, targetY)) {
+        tiles.push_back({targetX, targetY});
+        result = PathResult::Complete;
+    }
     if (goalObject && result != PathResult::Complete) {
         // The goal region can be empty for footprints that are not tile
         // aligned. Close in on the footprint edge directly when the last
@@ -13912,27 +13946,36 @@ bool Game::aiLineUnitAvailable(int player,int unitId) const {
 }
 int Game::aiOperandCount(int player,const std::string &symbol,bool total) const {
     if(const auto *line=aiUnitLine(player,symbol)) {
-        // shortcut: Native physical IDs supply original per-prototype counters.
-        // Original4c4240 normalizes copyId except interaction modes2/10/11;
-        // full counter admission/removal is not ported. Ordinary upgrades stay
-        // within one line, so summing its members retains their shared identity.
         return aiUnitLineCount(line->unitIds,[&](int id) {
-            int count=0;for(const auto &object:objects_)
-                if(object.active && (!object.hidden || object.garrisonedInId>=0) && object.player==player && object.unit &&
-                   object.unit->id==id && (total || !object.underConstruction))++count;
-            // Original4c4240/56e1c6 includes training actions in the total counter.
-            if(total)for(const auto &building:objects_)if(building.active && building.player==player)
-                for(const auto &item:building.productionQueue)if(item.unit && item.unit->id==id)++count;
-            return count;
+            return aiPrototypeCount(player,id,total);
         });
     }
     const auto *unit=aiUnit(player,symbol);
     if(!unit)return 0;
-    int count=aiObjectCount(player,*unit,total);
-    if(total)for(const auto &building:objects_)if(building.active && building.player==player)
-        for(const auto &item:building.productionQueue)
-            if(item.unit && (unit->cls==58?item.unit->cls==58:item.unit->id==unit->id))++count;
-    return count;
+    return aiPrototypeCount(player,unit->id,total,unit->id==83);
+}
+int Game::aiPrototypeCount(int player,int prototype,bool total,bool workerAggregate,bool includeQueued) const {
+    const auto lookup=[&](int id) {
+        return effectiveUnitForPlayer(player,findUnit(civilizationForPlayer(player),id));
+    };
+    uint32_t count=0;
+    const auto admit=[&](const dat::Unit *role) {
+        if(!role)return;
+        const auto identity=aiCounterIdentity(role->id,lookup);
+        if(identity && (workerAggregate ? identity->classCount && identity->unitClass==58
+                                       : identity->prototype==prototype))++count;
+    };
+    // shortcut: Reconstruct normal-state counters from native actor/task roles.
+    // Original incremental callbacks and nonpositive upgrade-counter migration
+    // are not represented by this projection; preserve physical actor IDs.
+    for(const auto &object:objects_)
+        if(object.active && object.player==player && object.unit &&
+           (!object.hidden || object.garrisonedInId>=0) && (total || !object.underConstruction))
+            admit(object.jobUnit?object.jobUnit:object.unit);
+    if(total && includeQueued)
+        for(const auto &building:objects_)if(building.active && building.player==player)
+            for(const auto &item:building.productionQueue)admit(item.unit);
+    return aiSignedPrototypeCount(count);
 }
 const dat::Unit *Game::aiUnit(
     int player,
@@ -14000,30 +14043,8 @@ int Game::aiTechLevel(int player) const {
 int Game::aiObjectCount(
     int player, const dat::Unit &unit,
     bool includeFoundations) const {
-    // Original garrison wrappers55c920/55c980 preserve owner prototype counters.
-    int count = 0;
-    for (const Object &object : objects_) {
-        if (!object.active ||
-            (object.hidden && object.garrisonedInId<0) ||
-            object.player != player ||
-            !object.unit ||
-            (!includeFoundations &&
-             object.underConstruction))
-            continue;
-        if (unit.cls == 58) {
-            if (isWorker(object)) count++;
-            continue;
-        }
-        const dat::Unit *effective =
-            effectiveUnitForPlayer(
-                player, &unit);
-        if (object.unit->id == unit.id ||
-            (effective &&
-             object.unit->id ==
-                 effective->id))
-            count++;
-    }
-    return count;
+    // Internal policy callers count physical actors/foundations, not queued work.
+    return aiPrototypeCount(player,unit.id,includeFoundations,unit.cls==58,false);
 }
 
 float Game::aiSpendableResource(int player,int type,bool withEscrow) const {
@@ -14255,18 +14276,9 @@ bool Game::evaluateAiFactValue(
             condition.name());
     if (fact=="idle-farm-count") {
         if(argumentEnd!=1)return false;
-        int farms=0,farmersA=0,farmersB=0;
-        for(const auto &object:objects_) {
-            if(!object.active || !object.unit || object.player!=player ||
-               (object.hidden && object.garrisonedInId<0))continue;
-            if(object.unit->id==50 && !object.underConstruction)++farms;
-            // Native persistent job roles adapt the original prototype-change
-            // counters. Stopping a farmer does not change that prototype.
-            const auto *role=object.jobUnit?object.jobUnit:object.unit;
-            if(role->id==259)++farmersA;
-            if(role->id==214)++farmersB;
-        }
-        value=aiIdleFarmCount(int16_t(farms),int16_t(farmersA),int16_t(farmersB));
+        value=aiIdleFarmCount(int16_t(aiPrototypeCount(player,50,false)),
+                             int16_t(aiPrototypeCount(player,259,true)),
+                             int16_t(aiPrototypeCount(player,214,true)));
         return true;
     }
     if(fact=="defend-soldier-count") {
@@ -14464,18 +14476,8 @@ Game::AiTruth Game::evaluateAiCondition(
             int actual=0;
             for(int prototype:prototypes) {
                 if(!live) {actual+=state.knownCategoryMemory.count(id,prototype);continue;}
-                // shortcut: Physical native actors/job roles supply the original
-                // signed per-prototype completed counter, including garrisoned units.
-                int count=0;
-                for(const auto &object:objects_) {
-                    if(!object.active || !object.unit || object.player!=id || object.underConstruction ||
-                       (object.hidden && object.garrisonedInId<0))continue;
-                    const auto *role=object.jobUnit?object.jobUnit:object.unit;
-                    //57bcb0 special-cases83 to the worker aggregate+1d2c,
-                    // whereas other operands read their exact prototype counter.
-                    if((unitFact && operand==83)?isWorker(object):role->id==prototype)++count;
-                }
-                actual+=int16_t(count);
+                //57bcb0 special-cases direct83, not a line member83.
+                actual+=aiPrototypeCount(id,prototype,false,unitFact && operand==83);
             }
             return op=="<"?actual<expected:op=="<="?actual<=expected:op==">"?actual>expected:
                    op==">="?actual>=expected:op=="=="?actual==expected:actual!=expected;
@@ -15946,6 +15948,29 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                     o.detourTime = 0.75f;
                     if (detourAround(o, o.path[rejoin][0], o.path[rejoin][1]))
                         return false;
+                    if(o.pathGoalId) {
+                        const Object *goal=findObject(o.pathGoalId);
+                        float fx=0,fy=0;
+                        std::vector<std::array<float,2>> alternate;
+                        // The normal object-region search may return the same
+                        // crowded entrance even after choosing a different free
+                        // work point. Once local avoidance fails, route to that
+                        // concrete perimeter point, retaining the object/range
+                        // for arrival and the eventual work/deposit operation.
+                        if(goal && goal->active &&
+                           freeInteractionPoint(o,*goal,o.pathGoalClearance*0.6f,fx,fy) &&
+                           findPath(o,fx,fy,alternate,nullptr,0) && !alternate.empty()) {
+                            if(std::abs(alternate.back()[0]-fx)<0.05f &&
+                               std::abs(alternate.back()[1]-fy)<0.05f) {
+                                o.path=std::move(alternate);o.pathIndex=0;
+                                o.targetX=fx;o.targetY=fy;
+                                o.moveBestDistance=std::hypot(fx-o.x,fy-o.y);
+                                o.moveStallTime=0;o.blockedTime=0;o.repathCount=0;
+                                o.state=State::Walk;
+                                return false;
+                            }
+                        }
+                    }
                 }
                 if (!staticOk && o.blockedTime >= 0.25f && o.detourTime <= 0.0f) {
                     // The static world changed under the path: re-plan.

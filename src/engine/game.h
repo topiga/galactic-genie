@@ -28,6 +28,7 @@
 #include "../core/genie_update_list.h"
 
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <deque>
 #include <functional>
@@ -123,6 +124,8 @@ struct MovingObjectInfo {
 };
 
 struct RmsSessionOptions {
+    // Separate original session override: fresh 2–8 CC players, human1/computers2..N.
+    std::optional<uint32_t> sessionSeed;
     uint32_t resourceTier = 0;
     uint32_t startingAge = 2; // Original setup value: 2 is the base age.
     uint32_t mapId = 0;
@@ -440,6 +443,7 @@ public:
         return chooseAiOriginalBuildPosition(player,unit,x,y,reason);
     }
     std::optional<uint32_t> explorationRevisitTimeForTesting(int player) const { return aiPlayers_[size_t(player)].explorationRevisitTime; }
+    std::optional<uint32_t> aiKnownRefreshTimeForTesting(int player) const { return aiPlayers_.at(size_t(player)).knownCategoryMemory.lastRefreshTime; }
     const AiEconomyState &economyForTesting(int player) const {return aiPlayers_.at(size_t(player)).economy;}
     void updateAiGatherersForTesting(int player) {refreshVisibility();updateAiGatherers(player,aiPlayers_.at(size_t(player)));}
     uint32_t aiGatherTargetForTesting(uint32_t id) const {const auto *o=findObject(id);return o?o->gatherTargetId:0;}
@@ -482,6 +486,12 @@ public:
         uint32_t workerId, uint32_t targetId);
     bool issueDropOffForTesting(
         uint32_t workerId, uint32_t buildingId);
+    bool setWorkerCargoForTesting(uint32_t id,int type,float amount) {
+        auto *worker=findObject(id);
+        if(!worker || !isWorker(*worker) || type<0 || type>3 || !std::isfinite(amount) || amount<0)return false;
+        worker->carriedAmount=amount;worker->carriedResourceType=type;worker->lastGatherType=type;
+        return true;
+    }
     bool objectPoweredForTesting(uint32_t spawnId) const;
     bool destroyLastSelectedForTesting();
     bool ejectGarrisonedUnitForTesting(
@@ -1629,6 +1639,8 @@ private:
     const dat::UnitLine *aiUnitLine(int player,const std::string &symbol) const;
     bool aiLineUnitAvailable(int player,int unitId) const;
     int aiOperandCount(int player,const std::string &symbol,bool total) const;
+    int aiPrototypeCount(int player,int prototype,bool total,bool workerAggregate=false,
+                         bool includeQueued=true) const;
     int aiTechnology(int player,
         const std::string &symbol) const;
     int aiTechLevel(int player) const;

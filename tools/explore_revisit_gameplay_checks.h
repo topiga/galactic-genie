@@ -21,6 +21,8 @@ static void exploreRevisitGameplayChecks(swgb::Assets &assets) {
     check(game.explorationRevisitTimeForTesting(2) && *game.explorationRevisitTimeForTesting(2)<2000,
           "Admitted InfoAI callback normalizes future constructor timer through unsigned elapsed check");
     check(game.initAridSkirmish(1,&error),error.c_str());
-    check(!game.explorationRevisitTimeForTesting(2) && !game.economyForTesting(2).foodRefreshTime,"RMS entry does not invent missing constructor context");
+    check(game.explorationRevisitTimeForTesting(2)==5612 && game.economyForTesting(2).foodRefreshTime==4995 &&
+          game.aiKnownRefreshTimeForTesting(2)==4294943043u,
+          "Arid explicitly supplies independent session seed1 and retains its original constructor timers");
     std::puts("PASS: original constructor revisit metadata, AI callback timing and pause");
 }
