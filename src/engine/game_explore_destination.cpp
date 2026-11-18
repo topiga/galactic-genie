@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "game.h"
 #include "../core/genie_explore_spiral.h"
+#include "../core/genie_explore_revisit.h"
 
 namespace swgb {
 void Game::updateAiExplorationInformation(int player) {
@@ -24,8 +25,25 @@ void Game::updateAiExplorationInformation(int player) {
         state.explorationInformation[index]=0;
         ++state.explorationQuarters[size_t((4*x/mapSize_)*4+4*y/mapSize_)].explored;
     }
-    // shortcut: The original586960 revisit sweep sets previously known hidden
-    // cells2; its585c5b threshold/cadence remains unresolved, so do not invent it.
+
+}
+
+void Game::updateAiExplorationRevisit(int player) {
+    auto &state=aiPlayers_[size_t(player)];
+    // shortcut: RMS starts after player construction; retain unknown until its
+    // full-session constructor/prepass context is available.
+    if(!state.explorationRevisitTime ||
+       uint32_t(uint32_t(gameTime_*1000.0)-*state.explorationRevisitTime)<=120000u)return;
+    const auto candidates=std::count_if(state.explorationInformation.begin(),state.explorationInformation.end(),
+        [](uint8_t cell){return cell==255 || cell==2;});
+    if(!genieExploreRevisitDue(uint32_t(gameTime_*1000.0),*state.explorationRevisitTime,
+            uint32_t(candidates),uint32_t(state.explorationInformation.size())))return;
+    const auto mask=sharedSightMask(player);
+    for(int y=0;y<mapSize_;++y)for(int x=0;x<mapSize_;++x) {
+        auto &cell=state.explorationInformation[size_t(y)*mapSize_+x];
+        const size_t native=size_t(mapSize_-1-x)*mapSize_+y;
+        if(cell!=255 && native<visibleTiles_.size() && !(visibleTiles_[native]&mask))cell=2;
+    }
 }
 
 bool Game::reissueAiExploreDestination(Object &object) {

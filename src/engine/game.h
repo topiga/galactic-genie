@@ -414,6 +414,7 @@ public:
     bool reissueExploreForTesting(uint32_t id) {
         auto *o=findObject(id);return o && reissueAiExploreDestination(*o);
     }
+    std::optional<uint32_t> explorationRevisitTimeForTesting(int player) const { return aiPlayers_[size_t(player)].explorationRevisitTime; }
     const AiEconomyState &economyForTesting(int player) const {return aiPlayers_.at(size_t(player)).economy;}
     void updateAiGatherersForTesting(int player) {refreshVisibility();updateAiGatherers(player,aiPlayers_.at(size_t(player)));}
     uint32_t aiGatherTargetForTesting(uint32_t id) const {const auto *o=findObject(id);return o?o->gatherTargetId:0;}
@@ -1043,6 +1044,7 @@ private:
         std::unordered_map<int,int> matchedPlayers;
         std::vector<KnownMilitaryObject> militaryKnownObjects;
         std::vector<uint8_t> explorationInformation, explorationObserved;
+        std::optional<uint32_t> explorationRevisitTime;
         std::array<AiAttackMemoryQuarter,16> explorationQuarters{};
         std::vector<uint32_t> processedAttackMemoryVictims;
         std::unordered_map<int32_t,size_t> militaryKnownSlots;
@@ -1553,6 +1555,7 @@ private:
     void formAiExploreGroups(int player);
     bool queueAiExploreDestination(Object &object);
     void updateAiExplorationInformation(int player);
+    void updateAiExplorationRevisit(int player);
     void notifyAiAttackMemory(Object &victim,const Object *attacker);
     bool reissueAiExploreDestination(Object &object);
     std::optional<AiMilitaryGroups> availableAiMilitaryGroups(int player,std::optional<int> requested,bool exploring=false);

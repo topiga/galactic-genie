@@ -3,6 +3,7 @@
 #include "ai_power_field.h"
 #include "../core/genie_graphic_random.h"
 #include "../core/genie_random.h"
+#include "../core/genie_ai_constructor_metadata.h"
 #include "../core/genie_rms_startup.h"
 #include "../core/genie_empty_owner_start.h"
 #include "../core/genie_start_placement.h"
@@ -1046,8 +1047,10 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, int difficul
     const auto initialize = [&](const Scenario &imported) {
         if (!initScenario(imported,err,false,nullptr,initialRandomState)) return false;
         difficulty_ = difficulty;
-        for (size_t player = 1; player < computers.size(); ++player)
+        for (size_t player = 1; player < computers.size(); ++player) {
             computers[player].age = aiTechLevel(int(player));
+            computers[player].explorationRevisitTime = aiPlayers_[player].explorationRevisitTime;
+        }
         aiPlayers_ = std::move(computers);
         return true;
     };
@@ -1287,7 +1290,8 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
         genieRandomDraw(legacyRandomState_); // 5d5be9 Gaia scheduling interval
         genieRandomDraw(legacyRandomState_); // 61e0e5 after Gaia
         for(size_t player=0;player<worldPlayerCount_;++player)
-            if(players_[player].active)geniePlayerConstructorRandom(legacyRandomState_);
+            if(players_[player].active)aiPlayers_[player+1].explorationRevisitTime =
+                geniePlayerConstructorWithMetadata(legacyRandomState_).infoRevisitTime;
         genieRandomDraw(legacyRandomState_); // 61e10e after normal players
     }
     // Player startup research precedes building-completion technologies.
@@ -1764,6 +1768,7 @@ bool Game::loadAiScript(
     AiPlayerState state;
     if (!loadGameAiProgram(state.program,assets_,path,aiScriptContext(player,defines),err))
         return false;
+    state.explorationRevisitTime = aiPlayers_[size_t(player)].explorationRevisitTime;
     state.loaded = true;
     state.scripted = true;
     state.age =
@@ -1797,6 +1802,7 @@ bool Game::loadAiSourceForTesting(
     if (!state.program.loadSource(
             name, source, context.defines, err,{},context.constants))
         return false;
+    state.explorationRevisitTime = aiPlayers_[size_t(player)].explorationRevisitTime;
     state.loaded = true;
     state.scripted = true;
     state.age =
@@ -14948,6 +14954,8 @@ void Game::updateAi(int player,float dt) {
             updateAiPlayer(int(player),state);
             militaryTick=true;
         }
+        updateAiExplorationInformation(player);
+        updateAiExplorationRevisit(player);
         state.economyTime-=dt;
         if(state.economyTime<=0.f) {
             state.economyTime=2.f;
