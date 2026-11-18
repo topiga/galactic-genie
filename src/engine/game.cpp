@@ -1,5 +1,6 @@
-#include "ai_player_facts.h"
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "ai_player_facts.h"
+#include "ai_power_field.h"
 #include "../core/genie_graphic_random.h"
 #include "../core/genie_random.h"
 #include "../core/genie_rms_startup.h"
@@ -422,6 +423,7 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     playerEffects_ = {};
     aiPlayers_ = {};
     aiMapId_.reset();
+    powerTiles_.clear();
     aiEscrow_ = {};
     aiEscrowPercent_ = {};
     techGeneration_++;
@@ -528,6 +530,7 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     initializeCivilizationBonuses();
     refreshAllAutomaticTechnologies();
     lookAt(mapSize * 0.30f + 2, mapSize * 0.35f + 2);
+    refreshPowerFields();
     return true;
 }
 
@@ -717,6 +720,7 @@ bool Game::initCompactTestMap(
     rebuildAdjacency();
     refreshAllAutomaticTechnologies();
     lookAt(testX + 2.0f, testY + 5.0f);
+    refreshPowerFields();
     return true;
 }
 
@@ -799,6 +803,7 @@ bool Game::activateTwoPlayerMatch(bool initiallyExplored,int populationLimit,boo
     skirmish_ = true;
     queueInstruction(conquest?"Conquest: defeat the enemy's units and buildings. Select units and buildings to issue orders.":
         "Destroy the enemy Command Center. Protect your own. Select units and buildings to issue orders.",12);
+    refreshPowerFields();
     return true;
 }
 
@@ -1124,6 +1129,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     playerEffects_ = {};
     aiPlayers_ = {};
     aiMapId_.reset();
+    powerTiles_.clear();
     aiEscrow_ = {};
     aiEscrowPercent_ = {};
     techGeneration_++;
@@ -1362,6 +1368,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     } else {
         lookAt(mapSize_ * 0.5f, mapSize_ * 0.5f);
     }
+    refreshPowerFields();
     return true;
 }
 
@@ -1480,6 +1487,7 @@ bool Game::initRms(const RmsScript &script, const std::unordered_set<std::string
         }
     }
     randomState=rng;
+    refreshPowerFields();
     return true;
 }
 
@@ -1696,6 +1704,7 @@ bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std:
     aiPlayers_=std::move(computers);
     aiMapId_=options.mapId;
     randomState=legacyRandomState_;
+    refreshPowerFields();
     return true;
 }
 
@@ -6278,58 +6287,6 @@ bool Game::isShieldGenerator(
            (object.unit->name2 == "BLDG-SHLDGEN" ||
             object.unit->name.rfind(
                 "BLDG-SHLD", 0) == 0);
-}
-
-bool Game::graphicHasPowerIndicator(
-    int graphicId, int depth) const {
-    if (depth >= 4) return false;
-    const dat::Graphic *graphic =
-        assets_.dat().graphic(graphicId);
-    if (!graphic) return false;
-    if (graphic->frameCount == 2 &&
-        graphic->slp >= kPowerIndicatorSlpFirst &&
-        graphic->slp <= kPowerIndicatorSlpLast)
-        return true;
-    for (const dat::GraphicDelta &delta :
-         graphic->deltas)
-        if (delta.graphicId >= 0 &&
-            graphicHasPowerIndicator(
-                delta.graphicId, depth + 1))
-            return true;
-    return false;
-}
-
-bool Game::requiresPower(
-    const Object &building) const {
-    return isShieldGenerator(building) ||
-           (building.unit &&
-            graphicHasPowerIndicator(
-                building.unit->standingGraphic[0]));
-}
-
-bool Game::isPowered(const Object &building) const {
-    if (!building.active || !building.unit ||
-        building.unit->type != dat::UT_Building)
-        return false;
-    if (isPowerSource(building))
-        return !building.underConstruction;
-    if (!requiresPower(building))
-        return !building.underConstruction;
-    for (const Object &source : objects_) {
-        if (!source.active || source.hidden ||
-            source.underConstruction ||
-            source.player != building.player ||
-            !isPowerSource(source))
-            continue;
-        const float dx = source.x - building.x;
-        const float dy = source.y - building.y;
-        const float range =
-            9.0f + collisionRadius(source) +
-            collisionRadius(building);
-        if (dx * dx + dy * dy <= range * range)
-            return true;
-    }
-    return false;
 }
 
 const Game::Object *Game::shieldGeneratorFor(
@@ -14425,6 +14382,16 @@ Game::AiTruth Game::evaluateAiCondition(
         if(result.matchedPlayer)state.matchedPlayers[selector]=*result.matchedPlayer;
         return result.value?AiTruth::True:AiTruth::False;
     }
+    if(fact=="too-many-unpowered-buildings") {
+        if(condition.children.size()!=1)return AiTruth::Unknown;
+        int count=0;
+        // shortcut: Native owned buildings supply the original information-AI registry until its admission/retirement order is ported.
+        for(const auto &object:objects_)
+            if(object.active && object.player==player && object.unit &&
+               originalUnpoweredBuildingCandidate(object.unit->id) && !isPowered(object))++count;
+        const auto limit=state.strategicNumbers.find(162);
+        return count>(limit==state.strategicNumbers.end()?2:limit->second)?AiTruth::True:AiTruth::False;
+    }
     if(fact=="resource-found" || fact=="map-type") {
         if(condition.children.size()!=2)return AiTruth::Unknown;
         bool known=false;
@@ -16868,6 +16835,7 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
     if(worldRandomCheckpoint_)legacyRandomState_=*worldRandomCheckpoint_; // 61ee03 simulation reseed
     // shortcut: Other HUD/AI emitters remain direct until their opcode payloads are ported.
     localCommands_.drain();
+    refreshPowerFields();
 
     for (Object &object : objects_)
         if (object.active) object.flashTime = std::max(0.f,object.flashTime-dt);

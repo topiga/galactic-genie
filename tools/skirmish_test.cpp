@@ -11,6 +11,7 @@ static void check(bool value, const char *message) {
 #include "memory_inspection_checks.h"
 #include "rubble_checks.h"
 #include "healing_checks.h"
+#include "power_gameplay_checks.h"
 #include "combat_modifier_checks.h"
 #include "unit_cost_checks.h"
 #include "research_cost_checks.h"
@@ -365,6 +366,7 @@ int main(int argc, char **argv) {
         pointMoveChecks(assets);
     fogRendering(assets,renderer);
     memoryInspectionChecks(assets,renderer);
+    powerGameplayChecks(assets);
     healingChecks(assets,renderer);
     combatModifierChecks(assets);
     unitCostChecks(assets);

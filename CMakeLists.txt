@@ -49,6 +49,7 @@ set(SWGB_CORE_SOURCES
     src/engine/game_tactical_movement.cpp
     src/engine/game_military.cpp
     src/engine/game_explore_destination.cpp
+    src/engine/game_power.cpp
     src/engine/game_ai_resources.cpp
     src/engine/game_ai_memory.cpp
     src/engine/pathfinding.cpp

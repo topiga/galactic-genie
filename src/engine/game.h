@@ -1042,7 +1042,7 @@ private:
         std::map<int, double> timers;
         // Verified fresh profile events run before the original's first PER evaluation.
         std::unordered_map<int, int> strategicNumbers = {
-            {0,34}, {2,66}, {4,2}, {34,50}, {41,4}, {227,75}, {230,20}, {42,0}, {74,20}, {76,15}, {86,25}, {87,100}, {106,-1}, {107,-1}, {108,-1}, {118,0}, {120,0}, {143,1}, {168,50}, {226,0}
+            {0,34}, {2,66}, {4,2}, {34,50}, {41,4}, {227,75}, {230,20}, {42,0}, {74,20}, {76,15}, {86,25}, {87,100}, {106,-1}, {107,-1}, {108,-1}, {118,0}, {120,0}, {143,1}, {162,2}, {168,50}, {226,0}
         };
         std::unordered_set<std::string>
             warnedFacts;
@@ -1386,8 +1386,7 @@ private:
     bool isPowerCore(const Object &object) const;
     bool isPowerSource(const Object &object) const;
     bool isShieldGenerator(const Object &object) const;
-    bool graphicHasPowerIndicator(
-        int graphicId, int depth = 0) const;
+    void refreshPowerFields();
     bool requiresPower(const Object &building) const;
     bool isPowered(const Object &building) const;
     const Object *shieldGeneratorFor(
@@ -1662,6 +1661,7 @@ private:
     std::array<std::vector<int>, 17> civilizationEffects_{}, playerEffects_{};
     std::array<AiPlayerState, 17> aiPlayers_{};
     std::optional<uint32_t> aiMapId_;
+    std::vector<uint16_t> powerTiles_;
     std::array<std::array<float,4>,17> aiEscrow_{},aiEscrowPercent_{};
     std::array<std::set<int>, 17> disabledTechs_{};
     std::array<std::set<int>, 17> disabledUnits_{};
