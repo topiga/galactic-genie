@@ -116,8 +116,81 @@ static void aiMilitarySchedulerChecks() {
     AiMilitaryReadinessPass pass;int calls=0;
     const auto unsupported=pass.advance(groups,0,5,[&]{++calls;return 0u;},
         [&](const auto &){++calls;return true;},[&](auto &){++calls;},[&](int32_t){++calls;},[&]{++calls;});
-    check(unsupported==AiMilitaryReadinessResult::Unsupported && calls==0 && pass.nextGroupId==10 && groups[0].state==1,
+    check(unsupported==AiMilitaryReadinessResult::Unsupported && calls==1 && pass.nextGroupId==10 && groups[0].state==1,
           "Unrecovered count-deficit branches are explicit and do not issue approximate commands");
+    // Saved original tactical-readiness-deficit-controls-2026-11-18.json:14 executed branches.
+    struct DeficitCase {bool ready,missingFirst,missingHome;int retry,own,home,memberMode;};
+    const DeficitCase deficits[]={
+        {true,false,false,0,1,1,0},{false,false,false,0,1,1,0},
+        {true,false,false,0,1,2,0},{false,false,false,0,1,2,0},
+        {true,true,false,0,1,1,0},{false,true,false,0,1,1,0},
+        {true,false,true,0,1,1,0},{false,false,true,0,1,1,0},
+        {false,false,false,11,1,1,0},{false,false,false,11,1,2,0},
+        {true,false,false,0,1,2,1},{true,false,false,0,1,1,2},
+        {true,false,false,0,257,1,0},{true,false,false,0,1,2,0}};
+    const std::vector<std::vector<int>> deficitEvents={
+        {1,2,3,4,5,8},{1,2,3,4,5,9,8},{1,2,3,4,5,6,7,8},{1,2,3,4,5,6,7,8},
+        {1,2,3,8},{1,2,3,9,8},{1,2,3,8},{1,2,3,9,8},
+        {2,3,4,5,8},{2,3,4,5,6,7,8},{1,2,3,4,5,6,7,8},{1,2,3,8},
+        {1,2,3,4,5,8},{1,2,3,4,5,6,7,8}};
+    for(size_t i=0;i<std::size(deficits);++i) {
+        const auto &c=deficits[i];
+        groups={{10,1,c.memberMode==1?3:c.memberMode==2?1:2,
+                 c.memberMode==1?std::vector<int32_t>{-1,1}:c.memberMode==2?std::vector<int32_t>{}:std::vector<int32_t>{1},
+                 {},uint8_t(c.retry)}};
+        pass.nextGroupId=-1;std::vector<int> events;
+        const auto result=pass.advance(groups,0,5,[&]{events.push_back(8);return 1u;},
+            [&](const auto &){events.push_back(1);return c.ready;},
+            [&](auto &){events.push_back(9);},
+            [&](int32_t id){check(id==1,"Deficit release stops only resolved IDs");events.push_back(6);},
+            [&]{events.push_back(7);},
+            [&](const auto &group)->std::optional<bool> {
+                events.push_back(2); // first413850 lookup
+                const auto first=std::find_if(group.members.begin(),group.members.end(),[](int32_t id){return id!=-1;});
+                const bool member=first!=group.members.end() && !c.missingFirst;
+                events.push_back(3); // home413870 executes even when first lookup failed
+                if(!member || c.missingHome)return false;
+                events.push_back(4);events.push_back(5);
+                return uint8_t(c.own)!=uint8_t(c.home);
+            });
+        const bool release=i==2 || i==3 || i==9 || i==10 || i==13;
+        check(result==AiMilitaryReadinessResult::Complete && pass.nextGroupId==-1 && events==deficitEvents[i],
+              "Original deficit readiness/lookup/region/stop/gather/clock order matches saved execution");
+        check(groups[0].state==(release?2:1) && groups[0].desiredCount==int(groups[0].members.size())+(release?0:1),
+              "Only different regions shrink original desired count; ready same-region deficits continue waiting");
+    }
+    // Actual5ab090/59acb0 controls, with4506f0 and first-result accessors modeled.
+    struct RefillCase {int desired,initialized,state,initialCount;uint32_t flags;std::vector<int32_t> selected;bool nullGroup;};
+    const RefillCase refills[]={
+        {2,0,1,1,0,{2,3},false},{3,0,1,1,0,{2,3,4,5},false},
+        {2,0,1,1,0,{2,3,4},false},{3,0,1,1,0,{2,2,1},false},
+        {40,0,1,39,0,{40,41,42},false},{1,0,1,1,0,{2,3},false},
+        {3,0,1,1,8,{2,3},false},{3,0,1,1,1,{2,3},false},
+        {3,1,1,1,0,{2,3},false},{3,2,1,1,0,{2,3},false},
+        {3,0,2,1,0,{2,3},false},{3,0,1,1,0,{},false},
+        {3,0,1,1,0,{2,3},true},{3,0,0,1,0,{2,3},false}};
+    for(size_t i=0;i<std::size(refills);++i) {
+        const auto &c=refills[i];AiMilitaryGatherGroup group{10,1,0,{}};
+        group.state=c.state;group.desiredCount=c.desired;
+        for(int id=1;id<=c.initialCount;++id)group.members.push_back(id);
+        int selections=0;
+        check(refillAiMilitaryGroup(group,c.initialized,c.flags,1234,[&](int requested)->std::optional<std::vector<int32_t>> {
+            ++selections;check(requested==c.desired,"Original refill asks for desired total, not missing count");
+            return c.nullGroup?std::vector<int32_t>{}:c.selected;
+        }),"Recovered type100 refill supports recorded selector results");
+        const std::vector<std::vector<int32_t>> expected={{1,2,3},{1,2,3,4},{1,2,3},{1,2,2,1},
+            {},{1},{1},{1,2,3},{1},{1,2,3},{1,2,3},{1},{1},{1,2,3}};
+        if(i==4)check(group.members.size()==40 && group.members.front()==1 && group.members.back()==40,
+                      "Original member append stops at capacity40");
+        else check(group.members==expected[i],"Original first-result refill caps and lack of append dedup match controls");
+        check(group.desiredCount==(i==6?1:c.desired) && group.state==c.state &&
+              group.lastMemberAdded==(group.members.size()>size_t(c.initialCount)?1234u:0u),
+              "Refill changes desired count only forflag8 and stamps only successful appends");
+        check(selections==((i==5 || i==6 || i==8)?0:1),"Full, flag8 and initialized-one gates skip pool selection");
+    }
+    AiMilitaryGatherGroup unsupportedRefill{10,1,2,{1}};
+    check(!refillAiMilitaryGroup(unsupportedRefill,0,0,1234,[](int)->std::optional<std::vector<int32_t>> {return std::nullopt;}) &&
+          unsupportedRefill.members==std::vector<int32_t>{1},"Unsupported refill selection cannot invent members");
     groups=fresh();pass.nextGroupId=-1;
     const auto wrapped=pass.advance(groups,0xfffffffeu,3,[]{return 1u;},
         [](const auto &){return true;},[](auto &){},[](int32_t){},[]{});

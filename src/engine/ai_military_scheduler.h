@@ -18,6 +18,8 @@ struct AiMilitaryGatherGroup {
     std::vector<int32_t> members;
     std::array<float,3> destination{};
     uint8_t retries=0;
+    uint32_t lastMemberAdded=0;
+    uint32_t flags=0;
 };
 
 // 59fa80 admits these classes before testing the master air/boat trait.
@@ -44,6 +46,28 @@ inline bool removeAiMilitaryMember(std::vector<AiMilitaryGatherGroup> &groups,in
         return true;
     }
     return false;
+}
+
+// Type100 branch of5ab090. Caller supplies the rebuilt ungrouped pool and only
+// the first4506f0 result; nullopt denotes an unsupported selection callback.
+// This routine does not restrict group state: original initialized+44==1 does.
+// Native preplanning-only callers must keep that restriction explicit.
+template<class SelectFirst>
+bool refillAiMilitaryGroup(AiMilitaryGatherGroup &group,int initialized,uint32_t flags,
+                          uint32_t worldTime,SelectFirst selectFirst) {
+    if(int64_t(group.members.size())>=int64_t(group.desiredCount))return true;
+    if(flags&8u) {group.desiredCount=int(group.members.size());return true;}
+    if(initialized==1)return true;
+    const auto selected=selectFirst(group.desiredCount);
+    if(!selected)return false;
+    const size_t count=std::min(selected->size(),size_t(group.desiredCount));
+    // Original59acb0 does not deduplicate and caps total membership at40.
+    // The desired count caps APPENDS, not final membership: an existing group can overshoot its request.
+    for(size_t i=0;i<count && group.members.size()<40;++i) {
+        group.members.push_back((*selected)[i]);
+        group.lastMemberAdded=worldTime;
+    }
+    return true;
 }
 
 // 5ab090's destination refresh only; this does not replace the rest of phase7.
@@ -115,16 +139,20 @@ bool dispatchAiMilitaryGather(AiMilitaryGatherGroup &group,int player,int state,
 
 enum class AiMilitaryReadinessResult {Complete,BudgetExhausted,Unsupported};
 
-// Original 5a1840 full-count type100 phase8 pass, not the complete24-phase tactical scheduler.
+struct AiMilitaryNoDeficitRegions {
+    std::optional<bool> operator()(const AiMilitaryGatherGroup &) const {return std::nullopt;}
+};
+
+// Original 5a1840 type100 phase8 pass, not the complete24-phase tactical scheduler.
 struct AiMilitaryReadinessPass {
     int32_t nextGroupId=-1;
 
     // Ready/gather implement59bb60/59b160; stop resolves the ID before emitting opcode1.
     // Remembered performs5ad4a0 even though type100 ignores its result. Callbacks must not resize/reorder groups.
-    template<class Clock,class Ready,class Gather,class Stop,class Remembered>
+    template<class Clock,class Ready,class Gather,class Stop,class Remembered,class DeficitRegions=AiMilitaryNoDeficitRegions>
     AiMilitaryReadinessResult advance(std::vector<AiMilitaryGatherGroup> &groups,
             uint32_t started,uint32_t budget,Clock clock,Ready ready,Gather gather,
-            Stop stop,Remembered remembered) {
+            Stop stop,Remembered remembered,DeficitRegions deficitRegions={}) {
         size_t index=0;
         if(nextGroupId!=-1) {
             const auto found=std::find_if(groups.begin(),groups.end(),[&](const auto &group){return group.id==nextGroupId;});
@@ -134,16 +162,25 @@ struct AiMilitaryReadinessPass {
         for(;index<groups.size();++index) {
             auto &group=groups[index];
             if(group.state!=0 && group.state!=1)continue;
-            // shortcut: Count-deficit groups require original home-object/region callbacks before admission.
+            const bool isReady=group.retries>10 || ready(group);
+            bool release=isReady;
             if(int64_t(group.desiredCount)>int64_t(group.members.size())) {
-                nextGroupId=group.id;
-                return AiMilitaryReadinessResult::Unsupported;
+                // 5a1945: first member and then home109 lookup even when readiness fails.
+                // true: different member-map regions; false: same regions or a missing object.
+                // nullopt exposes a caller that cannot yet provide the original region query.
+                const std::optional<bool> different=deficitRegions(group);
+                if(!different) {
+                    nextGroupId=group.id;
+                    return AiMilitaryReadinessResult::Unsupported;
+                }
+                release=*different;
+                if(release)group.desiredCount=int(group.members.size());
             }
-            if(group.retries>10 || ready(group)) {
+            if(release) {
                 for(const auto id:group.members)if(id>=0)stop(id);
                 remembered();
                 group.state=2;
-            } else gather(group);
+            } else if(!isReady)gather(group);
             nextGroupId=index+1<groups.size()?groups[index+1].id:-1;
             if(uint32_t(clock()-started)>=budget)
                 return nextGroupId==-1?AiMilitaryReadinessResult::Complete:AiMilitaryReadinessResult::BudgetExhausted;

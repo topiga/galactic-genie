@@ -3,6 +3,7 @@
 #pragma once
 #include "../core/genie_tactical_movement.h"
 #include "ai_military_scheduler.h"
+#include "ai_military.h"
 
 #include "local_simulation_clock.h"
 #include "local_command_queue.h"
@@ -1010,6 +1011,7 @@ private:
     struct AiPlayerState {
         AiProgram program;
         std::vector<int32_t> militarySoldiers;
+        std::vector<int32_t> militaryHomes;
         std::vector<AiMilitaryGatherGroup> militaryGroups;
         AiMilitaryReadinessPass militaryReadiness;
         AiMilitaryPhaseCycle militaryCycle;
@@ -1506,8 +1508,10 @@ private:
     void updateProductionAndDecay(float dt,int player);
     void updateAi(int player,float dt);
     void refreshAiMilitaryMembers(int player);
+    bool buildAiMilitaryRegions(int restriction,std::vector<uint8_t> &tiles) const;
     void queueAiMilitaryStop(int player,int32_t id);
     bool formAiMilitaryGroups(int player);
+    std::optional<AiMilitaryGroups> availableAiMilitaryGroups(int player,std::optional<int> requested);
     bool aiMilitaryCanUseNativePolicy(int player,uint32_t id) const;
     void updateAiMilitary(int player,uint32_t budget=2);
     void updatePlayerObjects(float dt,int player, bool auxiliary = false);

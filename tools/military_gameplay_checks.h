@@ -32,7 +32,7 @@ static void militaryGameplayChecks(swgb::Assets &assets) {
     game.update(0,{});
     auto admitted=game.militaryGroupsForTesting(2);
     check(admitted.size()==1 && admitted[0].members==std::vector<int32_t>{int32_t(first),int32_t(second)} &&
-          admitted[0].desiredCount==2 && admitted[0].state==1,
+          admitted[0].desiredCount==2 && admitted[0].state==1 && (admitted[0].flags&8u),
           "Actual PER attack-now admits one ordered group and retains gather state");
     game.updatePaused(1,{});
     check(game.militaryGroupsForTesting(2)[0].state==1,"Pause retains military readiness state");
@@ -78,5 +78,35 @@ static void militaryGameplayChecks(swgb::Assets &assets) {
           "Pending native planning emits commands without another refresh");
     game.updateAiMilitaryForTesting(2,0);
     check(game.militaryGroupsForTesting(2)[1].destination!=destination,"Only the following cycle refreshes the moving leader");
+    // Home lookup follows admission order, not proximity; both region samples use the member's restriction.
+    for(int homeCase=0;homeCase<3;++homeCase) {
+        check(game.initScenario(scenario,&error),error.c_str());
+        for(int y=0;y<64;++y)check(game.setTerrainForTesting(32,y,1),"Separate home and army land regions");
+        if(homeCase!=2) {
+            const float firstHome=homeCase==0?15.f:48.f,secondHome=homeCase==0?48.f:15.f;
+            check(game.spawnObjectForTesting(1,109,2,firstHome,15)!=0 &&
+                  game.spawnObjectForTesting(1,109,2,secondHome,15)!=0,"Ordered Command Center admission fixture");
+        }
+        const auto one=game.spawnObjectForTesting(1,329,2,45,45);
+        const auto two=game.spawnObjectForTesting(1,329,2,46,45);
+        const auto lost=game.spawnObjectForTesting(1,329,2,47,45);
+        check(one && two && lost && game.formAiMilitaryGroupsForTesting(2),"Admit complete group before casualty");
+        check(game.militaryGroupsForTesting(2).size()==1 && game.militaryGroupsForTesting(2)[0].desiredCount==3,
+              "Original requested size retained before casualty");
+        game.updateAiMilitaryForTesting(2,0); // Lose the member after phase7, while readiness is retained.
+        check(game.transferObjectForTesting(lost,1),"Remove one member through ownership change");
+        game.updateAiMilitaryForTesting(2,UINT32_MAX);
+        const auto &deficit=game.militaryGroupsForTesting(2)[0];
+        check(deficit.members.size()==2 && deficit.desiredCount==(homeCase==0?2:3) && deficit.state==(homeCase==0?2:1),
+              "Disconnected first home releases a smaller group; same-region or absent home waits");
+        if(homeCase!=0) {
+            const auto queued=game.stagedTacticalCountForTesting();
+            game.updateSkirmishArmyForTesting(2);
+            check(game.stagedTacticalCountForTesting()==queued,"Native fallback does not launch a waiting deficit group");
+            game.updateAiMilitaryForTesting(2,UINT32_MAX);
+            check(game.militaryGroupsForTesting(2)[0].desiredCount==2 && game.militaryGroupsForTesting(2)[0].state==2,
+                  "Next phase7 honors original attack-now flag8 and releases the reduced group");
+        }
+    }
     std::puts("PASS: production PER military admission, gather movement, pause, ownership and reset");
 }

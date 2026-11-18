@@ -808,7 +808,7 @@ void Game::updateSkirmishArmy(int player) {
     }
     if(ungrouped>=6)formAiMilitaryGroups(player);
     const bool gathered=std::any_of(scouting.militaryGroups.begin(),scouting.militaryGroups.end(),[](const auto &group){
-        return group.state==2 || group.desiredCount>int(group.members.size());});
+        return group.state==2;});
     const bool launchWave=gathered || ready>=6 || (skirmishConquest_ && scouting.assaultStarted);
     const uint16_t knowledge=sharedSightMask(player);
     const auto goalPoint=[&](int goal) {return std::array<float,2>{float(goal%mapSize_)+.5f,float(goal/mapSize_)+.5f};};

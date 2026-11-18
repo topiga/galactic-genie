@@ -6852,3 +6852,38 @@ occur during staging in the native test; retained-head semantics are independent
 established by the original controls. Evidence:
 `tactical724-reissue-findings-2026-11-18.json` and the existing
 `ai-controller-facts/attack-scheduler-findings.txt`.
+
+### Depleted military groups and home regions (18 November 2026)
+
+Original attack-now assembly at5ae70a sets group flag8. Phase7 therefore shrinks
+requested strength to surviving membership before checking initialization. The
+native issuer now preserves this flag instead of leaving depleted armies waiting
+for replacements. Phase8 also implements the separate deficit branch: after
+readiness, the first member and first admitted Command Center109 are compared
+using the member's terrain restriction. Different regions release the smaller
+group even when not ready; same-region or missing-home groups wait when ready
+and gather when not ready. A casualty between retained phases exercises this
+branch before the next phase7 shrink.
+
+The original unflagged refill helper requests desired count, not deficit, from
+the first selected group. It can overshoot requested final membership, caps total
+membership at40, and timestamps appends without issuing commands. Its recovered
+behavior is tested, but native group creation currently only emits attack-now
+flag8 groups. Other original group origins and initialization remain unported.
+
+Evidence:14 readiness-deficit controls, home lookup controls,14 refill controls,
+and9 actual attack-now flag controls, retained locally in the
+`tactical-readiness-deficit-controls`, `tactical-deficit-home-controls`,
+`tactical-phase7-refill-controls`, and `tactical-attack-group-flag-controls`
+2026-11-18 artifacts. Command Center identity is master+18 (DAT unit ID), not
+copy/base ID. Original lookup uses controller admission order rather than nearest
+home; native active-object admission/removal and region-cache lifetime remain
+adapters. Invalid native region queries do not release a group.
+
+This supersedes the earlier unsupported-deficit/native-policy fallback notes.
+ASan/UBSan local simulation checks pass, including home admission order, same and
+different regions, absent homes, ownership loss between phases, and flag8 shrink.
+The pure scheduler checks also pass with warnings treated as errors. The unchanged
+complete conquest driver wins at2092.2 simulated seconds (34:52), without cheats;
+this is a native regression, not a Windows full-match equivalence claim. Logs:
+`military-deficit-local.log` and `military-deficit-match.log` in the external build.
