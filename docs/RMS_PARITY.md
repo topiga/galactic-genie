@@ -7820,3 +7820,30 @@ Command Centers at 15,600 seconds.
 The ordinary Conquest test, where the human slot stays idle, also passed its
 four seeds. This comparison measures native outcomes. No complete Windows
 replay with identical inputs has been verified.
+
+### Two-computer timing controls on Windows and macOS
+
+The standalone Windows scenario lobby retains a human in slot 1. For the
+paired comparison that slot has an idle Command Center and worker, neutral
+to both Empire computers in slots 2 and 3. Each engine loads the same SC1.
+Difficulty is Moderate. The measured Windows scenario session seed is 30795.
+Times below use the simulation clock. The Windows Achievements screen rounds
+to whole seconds.
+
+| Scenario | Galactic Genie | Windows Clone Campaigns |
+| --- | --- | --- |
+| Five mounted troopers on a 6 × 6 land island, three against two | Player 2 won at 11.867 s with three surviving | Player 2 won at 14.161 s with two surviving |
+| Same starting forces on open ground | Player 2 won at 17.467 s | Both computers still had survivors at 257 s when the run was saved and ended manually |
+
+In the island match, Windows first showed the losing army empty at 13.368 s.
+Achievements showed a 14-second victory for the red computer. On open ground
+one of the blue-green army's survivors traveled across the map. A constant
+adjustment to the native attack rate cannot explain both observations. Combat
+acquisition, exploration orders and victory dispatch can be compared separately
+using these fixtures. The island scenario SHA-256 is
+`e0740b50ca5f7c8f72972b19f2cfb40c4d391fb8971dc91f06f8d561e97045f6`.
+
+Independent native Tiny Arid Conquest runs use the original two slots with
+`swgb-skirmish-test <Data> --ai-duel <seed>`. Seed 2 ended in a player 2 win
+at 6,883.434 s (11,070 landed attacks). Seed 4 ended in a player 1 win at
+4,215.134 s (8,833 landed attacks).
