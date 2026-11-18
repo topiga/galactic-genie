@@ -329,9 +329,9 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
     std::printf("PASS: scripted player victory at %.1fs, no resource/unit/damage cheats\n",game.matchTime());
 }
 
-[[gnu::noinline]] static void originalAiMatches(swgb::Assets &assets) {
+[[gnu::noinline]] static void originalAiMatches(swgb::Assets &assets,bool duel) {
     bool allPassed=true;
-    for(uint32_t seed:{1u,2u,3u,4u}) {
+    for(uint32_t seed=1;seed<=(duel?1u:4u);++seed) {
         swgb::Game game(assets);std::string error;
         game.setLogger([seed](const std::string &message) {
             if(message.find("AI fact not implemented:")==0 || message.find("AI action not implemented:")==0)
@@ -339,7 +339,9 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
         });
         check(game.initAridSkirmish(seed,&error,false,75,true),error.c_str());
         check(game.aiRuleCountForTesting(2)>0,"Normal Arid Conquest entry loads the packaged original personality");
-        for(int frame=0;frame<30*12000 && game.matchResult()<0;++frame) {
+        if(duel)check(game.loadAiScript(1,"RandomGame.per",{},&error),error.c_str());
+        const int seconds=duel?36000:12000;
+        for(int frame=0;frame<30*seconds && game.matchResult()<0;++frame) {
             game.update(1.f/30,{});
             if(frame%(30*600)==0) {
                 std::printf("original AI seed=%u time=%.1f population=%.0f food=%.0f carbon=%.0f ore=%.0f nova=%.0f\n",
@@ -348,7 +350,8 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
                 std::fflush(stdout);
             }
         }
-        const bool passed=game.combatStats().attacksLanded>0 && game.matchResult()==0;
+        const int result=game.matchResult();
+        const bool passed=game.combatStats().attacksLanded>0 && (result==0 || (duel && result==1));
         allPassed=allPassed && passed;
         std::printf("%s: original RandomGame Arid Conquest seed%u at %.3fs result%d attacks%u\n",
             passed?"PASS":"FAIL",seed,game.matchTime(),game.matchResult(),unsigned(game.combatStats().attacksLanded));
@@ -461,15 +464,16 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
 
 int main(int argc, char **argv) {
     const bool originalAi=argc==3 && std::string(argv[2])=="--original-ai";
+    const bool duel=argc==3 && std::string(argv[2])=="--ai-duel";
     const bool allCivilizations=argc==3 && std::string(argv[2])=="--civilizations";
     const bool conquestMatch=argc==3 && std::string(argv[2])=="--conquest";
     const bool playerConquest=argc==3 && std::string(argv[2])=="--player-conquest";
-    if (argc != 2 && !allCivilizations && !conquestMatch && !playerConquest && !originalAi) return 2;
+    if (argc != 2 && !allCivilizations && !conquestMatch && !playerConquest && !originalAi && !duel) return 2;
     try {
         swgb::SoftRenderer renderer;
         swgb::Assets assets(&renderer); std::string error;
         check(assets.init(argv[1], &error), error.c_str());
-        if(originalAi) {originalAiMatches(assets);return 0;}
+        if(originalAi || duel) {originalAiMatches(assets,duel);return 0;}
         if(allCivilizations || conquestMatch) {civilizationMatches(assets,conquestMatch);return 0;}
         if(playerConquest) {swgb::Game game(assets);playerMatch(game,assets,renderer,true);return 0;}
         aiAndMovementChecks(assets);
