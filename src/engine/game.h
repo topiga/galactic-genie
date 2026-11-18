@@ -129,6 +129,8 @@ public:
 
     bool init(uint32_t seed, int mapSize, std::string *err, int humanCiv = 1, int aiCiv = 3);
     bool initSkirmish(uint32_t seed, std::string *err, bool initiallyExplored = true, int humanCiv = 1, int aiCiv = 3, int populationLimit = 200, bool conquest = false);
+    // Packaged Arid, Tiny120, two Empire players; native computer policy, original opening.
+    bool initAridSkirmish(uint32_t seed, std::string *err, bool initiallyExplored = false, int populationLimit = 75, bool conquest = true);
     void setKeyboardMouseControls(bool enabled) { keyboardMouseControls_ = enabled; }
     void setClassicHud(bool enabled) { classicHud_=enabled; }
     bool classicHudSubmenuOpen() const { return classicHud_ && !classicHudRoot_; }
@@ -1684,6 +1686,7 @@ private:
     float matchTime_ = 0, skirmishAiTime_ = 0;
     std::array<uint32_t, 3> skirmishCenters_{};
     void updateSkirmish(float dt);
+    bool activateTwoPlayerMatch(bool initiallyExplored,int populationLimit,bool conquest,bool fallbackAi,std::string *err);
     void updateSkirmishArmy(int player);
     void finishSkirmish(int result);
     std::set<int> warnedEffects_;

@@ -724,6 +724,7 @@ bool Game::initSkirmish(uint32_t seed, std::string *err, bool initiallyExplored,
         return false;
     }
     if (!init(seed, 64, err, humanCiv, aiCiv)) return false;
+    // Preserve the custom opening's settings before its automatic technology refresh.
     players_[0].populationLimit=populationLimit;players_[1].populationLimit=populationLimit;
     initiallyExplored_=initiallyExplored;skirmishConquest_=conquest;
     // This short-match layout guarantees a land route between both bases.
@@ -758,17 +759,60 @@ bool Game::initSkirmish(uint32_t seed, std::string *err, bool initiallyExplored,
     }
     rebuildAdjacency();
     refreshAllAutomaticTechnologies();
-    AiPlayerState state;
-    state.loaded = true;
-    state.strategicNumbers[117]=50;
-    state.strategicNumbers[120]=35;
-    state.strategicNumbers[119]=0;
-    state.strategicNumbers[118]=15;
-    aiPlayers_[2] = std::move(state);
+    return activateTwoPlayerMatch(initiallyExplored,populationLimit,conquest,true,err);
+}
+
+bool Game::activateTwoPlayerMatch(bool initiallyExplored,int populationLimit,bool conquest,bool fallbackAi,std::string *err) {
+    if(worldPlayerCount_!=2 || !players_[0].active || !players_[1].active ||
+       populationLimit<25 || populationLimit>200 || populationLimit%25) {
+        if(err)*err="Match requires two active players and population25..200 in steps of25";
+        return false;
+    }
+    std::array<uint32_t,3> centers{};
+    for(const auto &object:objects_)
+        if(object.active && object.player>=1 && object.player<=2 && object.unit &&
+           object.unit->name.find("BLDG-MAIN")==0)centers[size_t(object.player)]=object.spawnId;
+    if(!centers[1] || !centers[2]) {
+        if(err)*err="Match command center missing";
+        return false;
+    }
+    skirmishCenters_=centers;
+    players_[0].populationLimit=populationLimit;players_[1].populationLimit=populationLimit;
+    initiallyExplored_=initiallyExplored;skirmishConquest_=conquest;
+    visibleTiles_.clear();exploredTiles_.clear();observedTiles_.clear();rememberedObjects_.clear();rememberedPlayer_=0;
+    matchTime_=0;skirmishAiTime_=0;victoryState_=-1;
+    if(fallbackAi) {
+        AiPlayerState state;
+        state.loaded=true;state.age=aiTechLevel(2);
+        state.strategicNumbers[117]=50;
+        state.strategicNumbers[120]=35;
+        state.strategicNumbers[119]=0;
+        state.strategicNumbers[118]=15;
+        aiPlayers_[2]=std::move(state);
+    }
     skirmish_ = true;
     queueInstruction(conquest?"Conquest: defeat the enemy's units and buildings. Select units and buildings to issue orders.":
         "Destroy the enemy Command Center. Protect your own. Select units and buildings to issue orders.",12);
     return true;
+}
+
+bool Game::initAridSkirmish(uint32_t seed,std::string *err,bool initiallyExplored,int populationLimit,bool conquest) {
+    if(populationLimit<25 || populationLimit>200 || populationLimit%25) {
+        if(err)*err="Population limit must be25 to200 in steps of25";
+        return false;
+    }
+    RmsScript script;
+    const RmsScript::Resolver resolver=[&](int32_t id,std::vector<uint8_t> &bytes) {
+        return assets_.readRmsResource(id,bytes,err);
+    };
+    if(!script.load(54201,resolver,{},err))return false;
+    const std::unordered_set<std::string> defines{
+        "TINY_MAP","FIXED_POSITIONS","DEFAULT_RESOURCES","RANDOM_MAP","2_PLAYERS"};
+    RmsSessionOptions options; // Normal base-age/resource tier; no original map-id claim.
+    uint32_t randomState=seed;
+    if(!initRmsSession(script,defines,120,randomState,{1,1},options,err))return false;
+    difficulty_=2;
+    return activateTwoPlayerMatch(initiallyExplored,populationLimit,conquest,true,err);
 }
 
 void Game::finishSkirmish(int result) {

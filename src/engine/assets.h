@@ -54,6 +54,7 @@ public:
     // dataDir is the game's "Data" folder (contains genie_x1.dat, *.drs).
     bool init(const std::string &dataDir, std::string *err);
     bool readAiSource(const std::string &name, std::string &source, std::string *err = nullptr);
+    bool readRmsResource(int32_t id, std::vector<uint8_t> &data, std::string *err = nullptr);
     void setLogger(LogFn fn) { log_ = std::move(fn); }
 
     const dat::DatFile &dat() const { return dat_; }

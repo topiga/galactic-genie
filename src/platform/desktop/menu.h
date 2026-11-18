@@ -12,7 +12,7 @@
 #include "../../core/language_strings.h"
 
 namespace desktop {
-enum class Screen { Launcher, Main, SinglePlayer, Setup, Options, Help, Playing, Pause, Resign, Restart };
+enum class Screen { Launcher, Main, SinglePlayer, Setup, SetupError, Options, Help, Playing, Pause, Resign, Restart };
 enum class Action { None, Start, Quit, Mute, Resign, Volume, SaveSettings };
 struct Button { SDL_Rect rect; std::string label; int command; bool enabled = true; };
 
@@ -39,10 +39,11 @@ class Menu {
     Screen screen_ = Screen::Launcher, return_ = Screen::Launcher;
     int focus_ = 0, pressed_ = -1, hovered_ = -1, music_ = 100, effects_ = 100;
     int savedMusic_ = 100, savedEffects_ = 100;
-    bool initiallyExplored_ = false, conquest_=true;
+    bool initiallyExplored_ = false, conquest_=true, aridMap_=false;
+    std::string startError_;
     int setupOpen_=0, humanCiv_=1, aiCiv_=3, populationLimit_=75;
     static constexpr int Back = 0, Play = 1, Setup = 2, Options = 3, Help = 4,
-                         Quit = 5, Mute = 6, Resume = 7, Resign = 8, Confirm = 9, MusicDown = 10, MusicUp = 11, EffectsDown = 12, EffectsUp = 13, SinglePlayer = 14, Restart = 15, ConfirmRestart = 16, ApplyOptions = 17, RevealMap = 18, RevealStandard = 19, RevealExplored = 20, HumanCiv = 21, AiCiv = 22, Population = 23, Victory = 24, Conquest = 25, CommandCenter = 26, CivChoice = 1000, PopulationChoice = 2000;
+                         Quit = 5, Mute = 6, Resume = 7, Resign = 8, Confirm = 9, MusicDown = 10, MusicUp = 11, EffectsDown = 12, EffectsUp = 13, SinglePlayer = 14, Restart = 15, ConfirmRestart = 16, ApplyOptions = 17, RevealMap = 18, RevealStandard = 19, RevealExplored = 20, HumanCiv = 21, AiCiv = 22, Population = 23, Victory = 24, Conquest = 25, CommandCenter = 26, Location = 27, CustomMap = 28, AridMap = 29, CivChoice = 1000, PopulationChoice = 2000;
     swgb::Texture *sprite(swgb::Slp &slp, const swgb::Palette &palette, int frame) {
         swgb::SlpImage img; std::string error;
         if (!slp.decode(frame, img, &error)) throw std::runtime_error(error);
@@ -71,7 +72,7 @@ class Menu {
     }
     void set(Screen s) { setupOpen_=0; screen_ = s; focus_ = 0; pressed_ = -1; hovered_ = -1; }
     void closeSetupChoices() {
-        focus_=setupOpen_==HumanCiv?3:setupOpen_==AiCiv?4:setupOpen_==Population?5:setupOpen_==Victory?6:2;setupOpen_=0;
+        focus_=setupOpen_==HumanCiv?3:setupOpen_==AiCiv?4:setupOpen_==Population?5:setupOpen_==Victory?6:setupOpen_==Location?7:2;setupOpen_=0;
     }
 public:
     Menu(swgb::Renderer &renderer, const std::string &root, const Preferences &settings = {}) : renderer_(renderer)
@@ -185,8 +186,10 @@ public:
     Preferences preferences() const {return {music_,effects_,humanCiv_,aiCiv_,populationLimit_,initiallyExplored_,conquest_};}
     bool conquest() const {return conquest_;}
     int populationLimit() const {return populationLimit_;}
-    int humanCiv() const {return humanCiv_;}
-    int aiCiv() const {return aiCiv_;}
+    int humanCiv() const {return aridMap_?1:humanCiv_;}
+    int aiCiv() const {return aridMap_?1:aiCiv_;}
+    bool aridMap() const {return aridMap_;}
+    void startFailed(const std::string &error) {startError_=error;set(Screen::SetupError);}
     bool initiallyExplored() const { return initiallyExplored_; }
     int musicVolume() const { return music_; }
     int effectsVolume() const { return effects_; }
@@ -211,13 +214,17 @@ public:
         case Screen::Setup: {
             std::vector<Button> controls={{{35,554,165,35},original(9710),Play},{{205,554,165,35},original(9275),Back},
                 {{650,289,135,28},original(initiallyExplored_?9756:9755),RevealMap},
-                {{260,80,160,28},original(10230+humanCiv_),HumanCiv},
-                {{260,152,160,28},original(10230+aiCiv_),AiCiv},
+                {{260,80,160,28},original(10230+humanCiv()),HumanCiv,!aridMap_},
+                {{260,152,160,28},original(10230+aiCiv()),AiCiv,!aridMap_},
                 {{650,260,135,28},std::to_string(populationLimit_),Population},
-                {{640,347,150,28},original(conquest_?4321:13016),Victory}};
+                {{640,347,150,28},original(conquest_?4321:13016),Victory},
+                {{650,115,135,28},aridMap_?original(10875):"Test map",Location}};
             if(setupOpen_==RevealMap) {
                 controls.push_back({{650,317,135,28},original(9755),RevealStandard});
                 controls.push_back({{650,345,135,28},original(9756),RevealExplored});
+            } else if(setupOpen_==Location) {
+                controls.push_back({{650,143,135,28},"Test map",CustomMap});
+                controls.push_back({{650,171,135,28},original(10875),AridMap});
             } else if(setupOpen_==Victory) {
                 controls.push_back({{640,375,150,28},original(4321),Conquest});
                 controls.push_back({{640,403,150,28},original(13016),CommandCenter});
@@ -230,6 +237,7 @@ public:
             }
             return controls;
         }
+        case Screen::SetupError: return {{{315,430,170,35},original(4001),Back}};
         case Screen::Options: {
             const int x=overlay()?330:455;
             return {{{x,210,65,38},"-",MusicDown},{{x+235,210,65,38},"+",MusicUp},
@@ -270,7 +278,7 @@ public:
             (command==Back || command==SinglePlayer || command==Quit);
         if(cancelOptions) {music_=savedMusic_;effects_=savedEffects_;}
         switch(command) {
-        case Back: if(screen_==Screen::SinglePlayer) set(Screen::Main); else if(screen_==Screen::Setup) {set(Screen::SinglePlayer); return_=Screen::Main;} else set(return_); break;
+        case Back: if(screen_==Screen::SetupError) set(Screen::Setup); else if(screen_==Screen::SinglePlayer) set(Screen::Main); else if(screen_==Screen::Setup) {set(Screen::SinglePlayer); return_=Screen::Main;} else set(return_); break;
         case Play: if (screen_ == Screen::Launcher) set(Screen::Main); else {play(); return Action::Start;} break;
         case SinglePlayer: return_ = Screen::Main; set(Screen::SinglePlayer); break;
         case Setup: return_ = Screen::SinglePlayer; set(Screen::Setup); break;
@@ -281,17 +289,19 @@ public:
             }
             set(Screen::Options); break;
         case ApplyOptions: set(return_); return Action::SaveSettings;
-        case RevealMap: case HumanCiv: case AiCiv: case Population: case Victory:
+        case RevealMap: case HumanCiv: case AiCiv: case Population: case Victory: case Location:
             if(setupOpen_==command) closeSetupChoices();
             else {
                 setupOpen_=command;
-                focus_=7+(command==RevealMap?int(initiallyExplored_):command==HumanCiv?humanCiv_-1:command==AiCiv?aiCiv_-1:command==Victory?int(!conquest_):populationLimit_/25-1);
+                focus_=8+(command==RevealMap?int(initiallyExplored_):command==HumanCiv?humanCiv_-1:command==AiCiv?aiCiv_-1:command==Victory?int(!conquest_):command==Location?int(aridMap_):populationLimit_/25-1);
             }
             break;
         case Conquest: case CommandCenter:
             conquest_=command==Conquest;closeSetupChoices();break;
         case RevealStandard: case RevealExplored:
             initiallyExplored_=command==RevealExplored;closeSetupChoices();break;
+        case CustomMap: case AridMap:
+            aridMap_=command==AridMap;closeSetupChoices();break;
         case Help: return_ = screen_; set(Screen::Help); break;
         case Quit: return Action::Quit;
         case Mute: return Action::Mute;
@@ -325,6 +335,7 @@ public:
             const SDL_Rect popupBounds=setupOpen_==RevealMap?SDL_Rect{650,289,135,84}:
                 setupOpen_==Population?SDL_Rect{650,260,135,252}:
                 setupOpen_==Victory?SDL_Rect{640,347,150,84}:
+                setupOpen_==Location?SDL_Rect{650,115,135,84}:
                 SDL_Rect{260,setupOpen_==HumanCiv?80:152,160,252};
             if(setupOpen_ && !SDL_PointInRect(&p,&popupBounds)) closeSetupChoices();
             for(size_t i=controls.size();i-->0;) if(controls[i].enabled && SDL_PointInRect(&p,&controls[i].rect)) {
@@ -348,7 +359,7 @@ public:
             } else if(key==SDLK_TAB || key==SDLK_DOWN || key==SDLK_UP) {
                 int step=key==SDLK_UP || (key==SDLK_TAB && (event.key.keysym.mod & KMOD_SHIFT))?-1:1;
                 do { focus_=(focus_+step+int(controls.size()))%int(controls.size()); } while(!controls[focus_].enabled);
-            } else if(key==SDLK_RETURN || key==SDLK_SPACE) return activate(controls[focus_].command);
+            } else if((key==SDLK_RETURN || key==SDLK_SPACE) && controls[focus_].enabled) return activate(controls[focus_].command);
         }
         return Action::None;
     }
@@ -364,21 +375,36 @@ public:
         } else if(screen_==Screen::Launcher) {
             image(launcher_,0,0);
             if(!launcher_) text("STAR WARS GALACTIC BATTLEGROUNDS",70,75);
+        } else if(screen_==Screen::SetupError) {
+            image(setup_,0,0);
+            renderer_.draw(pauseArt_,{90,170,620,310,0,0,float(pauseArt_->width),float(pauseArt_->height)});
+            text("Unable to start game",115,195);
+            std::istringstream words(startError_);std::string word,line;int y=235;
+            while(words>>word) {
+                const auto candidate=line.empty()?word:line+" "+word;
+#ifdef __APPLE__
+                const bool wrap=nativeText_.width(candidate,captionPixels_,captionBold_)>570;
+#else
+                const bool wrap=candidate.size()>76;
+#endif
+                if(wrap && !line.empty()) {text(line,115,float(y));y+=20;line=word;} else line=candidate;
+            }
+            if(!line.empty())text(line,115,float(y));
         } else if(screen_==Screen::Setup) {
             image(setup_,0,0);
             text(original(9226),230,25);
-            text(original(9680),40,60); text(original(9681),275,60); text("Player",405,60);
-            text("Player",40,88); text("1",440,88);
+            text(original(9680),40,60); text(original(9681),275,60); text(original(9213),405,60);
+            text(original(9213),40,88); text("1",440,88);
             text(original(9688),40,130);
             text(original(9683),40,160); text("2",440,160);
-            const char *labels[]={"Game Type","Map Type","Location","Map Size","Difficulty","Other Players","Resources","Population","Reveal Map","Initial Tech Level","Victory"};
-            const char *values[]={"Test Skirmish","Fixed land","Test map","64 x 64","Custom AI","1","1200 each","By housing","Explored","Tech Level 1","Command Center"};
+            const int labels[]={13510,13560,13511,13512,13513,9688,13514,9747,9724,9734,10019};
+            const std::string values[]={aridMap_?original(9653):"Test Skirmish",aridMap_?original(13561):"Fixed land","",aridMap_?original(10611):"64 x 64",original(13562),"1",aridMap_?original(9742):"1200 each","","",original(4201),""};
             for(int i=0;i<11;++i) {
-                text(i==8?original(9724):i==7?original(9747):i==10?original(10019):labels[i],512,65+i*29,false);
-                if(i!=8 && i!=7 && i!=10) text(values[i],650,65+i*29);
+                text(original(labels[i]),512,65+i*29,false);
+                if(i!=8 && i!=7 && i!=10 && i!=2) text(values[i],650,65+i*29);
             }
-            text("Choose factions, population, visibility and victory.",395,510);
-            text("Other settings describe this test skirmish.",395,532);
+            text(aridMap_?"Arid: original opening, two Galactic Empires.":"Choose factions, population, visibility and victory.",395,510);
+            text(aridMap_?"Same map on restart. Custom computer opponent.":"Other settings describe this test skirmish.",395,532);
         } else {
             image(background_,0,0); image(logo_,3,5); image(zone_,75,91);
             const auto navigation=buttons(muted);
@@ -436,7 +462,7 @@ public:
             }
             const bool navigation = r.x<420 && (screen_==Screen::Main || screen_==Screen::SinglePlayer || (screen_==Screen::Options && return_==Screen::Main));
             if(!mainModeButton && int(i)==focus_ && b.enabled && (!navigation || (b.command!=SinglePlayer && b.command!=Options))) renderer_.fillRect(r.x,r.y+r.h-3,r.w,2,102,152,203,255);
-            if(b.command==RevealMap || b.command==HumanCiv || b.command==AiCiv || b.command==Population || b.command==Victory) for(int row=0;row<4;++row)
+            if(b.command==RevealMap || b.command==HumanCiv || b.command==AiCiv || b.command==Population || b.command==Victory || b.command==Location) for(int row=0;row<4;++row)
                 renderer_.fillRect(r.x+r.w-14+row,r.y+12+row,7-2*row,1,102,152,203,255);
             float textX=r.x+8;
             const bool setupChoice=screen_==Screen::Setup && b.command!=Play && b.command!=Back;

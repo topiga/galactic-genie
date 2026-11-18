@@ -210,6 +210,26 @@ void checkMaskRendering() {
                 throw std::runtime_error("Mask texture sampling self-check failed");
         }
     }
+    const uint8_t rgba[]={80,160,240,255},full=255,half=128;
+    auto *color=renderer.createTexture(1,1,rgba);
+    auto *opaque=renderer.createMaskTexture(1,1,&full);
+    auto *partial=renderer.createMaskTexture(1,1,&half);
+    const swgb::Quad pixel{0,0,1,1,0,0,1,1};
+    renderer.beginFrame(1,1,1,0,0,0);
+    renderer.drawMaskedTinted(color,pixel,opaque,pixel,255,255,255,255);
+    if(!std::equal(rgba,rgba+3,renderer.pixels().begin()))
+        throw std::runtime_error("White terrain tint must preserve the source texture colors");
+    renderer.beginFrame(1,1,1,0,0,0);
+    renderer.drawMaskedTinted(color,pixel,partial,pixel,128,64,255,128);
+    const auto mixed=renderer.pixels();
+    if(mixed[0]!=10 || mixed[1]!=10 || mixed[2]!=60)
+        throw std::runtime_error("Terrain texture, lighting and mask alpha must combine");
+    renderer.beginFrame(1,1,1,0,0,0);
+    renderer.drawMaskedTinted(opaque,pixel,partial,pixel,128,64,255,128);
+    const auto silhouette=renderer.pixels();
+    if(silhouette[0]!=32 || silhouette[1]!=16 || silhouette[2]!=64)
+        throw std::runtime_error("Alpha-only occlusion silhouettes must retain their tint");
+    renderer.destroyTexture(color);renderer.destroyTexture(opaque);renderer.destroyTexture(partial);
 }
 
 void checkPreferences() {
@@ -333,6 +353,16 @@ int run(const std::string &root, bool smoke) {
         if (!assets.readSoundResource(50331, wave)) throw std::runtime_error("Smoke click WAV missing");
         audio.effect(wave);
     }
+    const auto startMatch=[&]() {
+        const bool started=menu.aridMap()
+            ?game.initAridSkirmish(1,&error,menu.initiallyExplored(),menu.populationLimit(),menu.conquest())
+            :game.initSkirmish(0x5A17,&error,menu.initiallyExplored(),menu.humanCiv(),menu.aiCiv(),menu.populationLimit(),menu.conquest());
+        if(!started) {
+            std::fprintf(stderr,"Could not start game: %s\n",error.c_str());
+            menu.startFailed(error);
+        }
+        return started;
+    };
     if (smoke) {
         auto key = [&](SDL_Keycode code) {
             SDL_Event event{}; event.type = SDL_KEYDOWN; event.key.keysym.sym = code;
@@ -375,12 +405,12 @@ int run(const std::string &root, bool smoke) {
         require(!menu.initiallyExplored());
         menu.render(false); require(renderer.savePng("setup-smoke.png"));
         key(SDLK_TAB); key(SDLK_TAB); key(SDLK_RETURN);
-        require(menu.buttons(false).size()==9);
-        menu.event(lostFocus,false); require(menu.buttons(false).size()==7 && !menu.initiallyExplored());
+        require(menu.buttons(false).size()==10);
+        menu.event(lostFocus,false); require(menu.buttons(false).size()==8 && !menu.initiallyExplored());
         key(SDLK_RETURN);
         click.button.x=500; click.button.y=450; click.type=SDL_MOUSEBUTTONDOWN; menu.event(click,false);
         click.type=SDL_MOUSEBUTTONUP; menu.event(click,false);
-        require(menu.buttons(false).size()==7 && !menu.initiallyExplored());
+        require(menu.buttons(false).size()==8 && !menu.initiallyExplored());
         key(SDLK_RETURN);
         menu.render(false); require(renderer.savePng("setup-reveal-smoke.png"));
         key(SDLK_DOWN); key(SDLK_RETURN);
@@ -395,11 +425,11 @@ int run(const std::string &root, bool smoke) {
         click.type=SDL_MOUSEBUTTONUP; menu.event(click,false);
         require(!menu.initiallyExplored());
         key(SDLK_TAB); key(SDLK_RETURN); // Human civilization dropdown.
-        require(menu.buttons(false).size()==15);
+        require(menu.buttons(false).size()==16);
         menu.render(false); require(renderer.savePng("setup-civilizations-smoke.png"));
         click.button.x=330;click.button.y=175;click.type=SDL_MOUSEBUTTONDOWN;menu.event(click,false);
         click.type=SDL_MOUSEBUTTONUP;menu.event(click,false);
-        require(menu.humanCiv()==3 && menu.aiCiv()==3 && menu.buttons(false).size()==7);
+        require(menu.humanCiv()==3 && menu.aiCiv()==3 && menu.buttons(false).size()==8);
         key(SDLK_RETURN);for(int i=0;i<4;++i) key(SDLK_DOWN);key(SDLK_RETURN);
         require(menu.humanCiv()==7);
         key(SDLK_TAB);key(SDLK_RETURN);for(int i=0;i<5;++i) key(SDLK_DOWN);key(SDLK_RETURN);
@@ -417,6 +447,27 @@ int run(const std::string &root, bool smoke) {
         require(menu.populationLimit()==75 && menu.conquest());
         key(SDLK_TAB);key(SDLK_RETURN);key(SDLK_DOWN);key(SDLK_RETURN);
         require(!menu.conquest());
+        // Real RMS launch, retained settings, error recovery and same-seed restart.
+        click.button.x=700;click.button.y=130;click.type=SDL_MOUSEBUTTONDOWN;menu.event(click,false);
+        click.type=SDL_MOUSEBUTTONUP;menu.event(click,false);
+        key(SDLK_DOWN);key(SDLK_RETURN);
+        require(menu.aridMap() && menu.humanCiv()==1 && menu.aiCiv()==1 && !menu.buttons(false)[3].enabled && !menu.buttons(false)[4].enabled);
+        menu.render(false);require(renderer.savePng("setup-arid-smoke.png"));
+        menu.startFailed("The selected map could not be loaded. Your setup choices have been kept.");
+        menu.render(false);require(renderer.savePng("setup-error-smoke.png"));
+        key(SDLK_RETURN);require(menu.screen()==desktop::Screen::Setup && menu.aridMap() && menu.populationLimit()==75);
+        require(key(SDLK_RETURN)==desktop::Action::Start && startMatch());
+        const auto aridCount=game.activeObjectCount();const auto aridCheckpoint=game.worldCheckpointForTesting();
+        require(aridCount>1000 && game.skirmishActive() && game.resource(1,0)==200);
+        for(int frame=0;frame<3;++frame) {game.update(1.f/30,{});game.render(renderer,960,544);}
+        require(renderer.savePng("arid-gameplay-smoke.png"));
+        menu.pause();key(SDLK_DOWN);key(SDLK_RETURN);require(key(SDLK_RETURN)==desktop::Action::Start && startMatch());
+        require(game.activeObjectCount()==aridCount && game.worldCheckpointForTesting()==aridCheckpoint && game.matchTime()==0);
+        menu.startFailed("Return to setup for the existing small-match fixture.");key(SDLK_RETURN);
+        click.button.x=700;click.button.y=130;click.type=SDL_MOUSEBUTTONDOWN;menu.event(click,false);
+        click.type=SDL_MOUSEBUTTONUP;menu.event(click,false);
+        key(SDLK_UP);key(SDLK_RETURN);
+        require(!menu.aridMap() && menu.humanCiv()==1 && menu.aiCiv()==3);
         key(SDLK_ESCAPE); require(menu.screen()==desktop::Screen::SinglePlayer);
         key(SDLK_ESCAPE); require(menu.screen()==desktop::Screen::Main);
         key(SDLK_DOWN); key(SDLK_RETURN); require(menu.screen()==desktop::Screen::Options);
@@ -465,7 +516,7 @@ int run(const std::string &root, bool smoke) {
         key(SDLK_ESCAPE); require(menu.screen()==desktop::Screen::Pause);
         key(SDLK_DOWN); key(SDLK_RETURN); require(key(SDLK_RETURN)==desktop::Action::Start);
         require(menu.playing());
-        if (!game.initSkirmish(0x5A17, &error, menu.initiallyExplored(),menu.humanCiv(),menu.aiCiv(),menu.populationLimit(),menu.conquest())) throw std::runtime_error(error);
+        require(startMatch());
         require(!menu.initiallyExplored() && game.tileVisibilityForTesting(60,2)==0);
         game.render(renderer,960,544);
         float workerX,workerY; require(game.objectScreenPosition(8,960,544,workerX,workerY));
@@ -501,9 +552,10 @@ int run(const std::string &root, bool smoke) {
                 if (action == desktop::Action::Volume) audio.setVolumes(menu.musicVolume(),menu.effectsVolume());
                 if (action == desktop::Action::SaveSettings) saveSettings();
                 if (action == desktop::Action::Start) {
-                    if (!game.initSkirmish(0x5A17, &error, menu.initiallyExplored(),menu.humanCiv(),menu.aiCiv(),menu.populationLimit(),menu.conquest())) throw std::runtime_error(error);
-                    saveSettings();
-                    paused = false; held = false; moved = false;
+                    if(startMatch()) {
+                        saveSettings();
+                        paused = false; held = false; moved = false;
+                    }
                 }
                 if (action == desktop::Action::Resign) game.resignSkirmish();
                 continue;

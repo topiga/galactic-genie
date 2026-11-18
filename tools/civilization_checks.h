@@ -21,6 +21,7 @@
 #include "rms_session_player_checks.h"
 #include "session_initialization_checks.h"
 #include "rms_session_start_checks.h"
+#include "rms_match_checks.h"
 #include "starting_age_checks.h"
 #include "upgrade_rng_checks.h"
 #include "local_simulation_checks.h"
@@ -67,6 +68,7 @@ static void civilizationBonusChecks(swgb::Assets &assets) {
     rmsSessionPlayerChecks(assets);
     sessionInitializationChecks(assets);
     rmsSessionStartChecks(assets);
+    rmsMatchChecks(assets);
     startingAgeChecks(assets);
     const int units[]={1212,1212,933,579,1208,933,104,933};
     const int attributes[]={101,100,1,13,12,1,100,2};

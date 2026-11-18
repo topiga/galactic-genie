@@ -6993,3 +6993,9 @@ Evidence: `tactical-target-priority-controls-2026-11-18.json` and
 `tactical-priority-profile-oracle-2026-11-18.json`. Pure helper checks pass with
 sanitizers and warnings as errors; the updated local simulation checks pass in
 `arid-match-local.log`.
+
+## Packaged Arid desktop launch and terrain blending (2026-11-18)
+
+The desktop setup can now launch packaged RMS resource54201 (Arid, installed French label Désert) at Tiny120, two Empire players and normal starting resources. The custom small match remains available. Setup failures preserve choices and restart regenerates the same seed. Original installed strings supply the map/setup labels. This is one bounded map profile, not all-map UI or civilization parity; the computer uses the native fallback economy.
+
+The shared software renderer now multiplies masked terrain texture RGB by its lighting tint instead of replacing the texture with that tint. Alpha-only occlusion silhouettes retain their existing colour behavior. Pixel checks cover full/partial masks and silhouettes; desktop smoke rendered the actual Arid assets without white terrain patches. RMS match checks passed for starting objects/resources, pause, reveal, population validation and deterministic restart. A full normal-resource Arid game is still under test; completed custom-map games do not certify this profile.

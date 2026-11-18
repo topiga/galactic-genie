@@ -232,7 +232,9 @@ void SoftRenderer::drawMaskedTinted(Texture *tex, const Quad &q,
                 maskRow[mu * (m->alphaOnly ? 1 : 4) +
                         (m->alphaOnly ? 0 : 3)];
             uint8_t tinted[4] = {
-                red, green, blue,
+                (uint8_t)((t->alphaOnly ? 255u : source[tu*4]) * red / 255u),
+                (uint8_t)((t->alphaOnly ? 255u : source[tu*4+1]) * green / 255u),
+                (uint8_t)((t->alphaOnly ? 255u : source[tu*4+2]) * blue / 255u),
                 (uint8_t)((unsigned)sourceAlpha *
                           maskAlpha * alpha / (255u * 255u))};
             blend(destination + x * 4, tinted);

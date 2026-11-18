@@ -150,6 +150,18 @@ void Assets::ensureTerrainCacheSpace(size_t additionalBytes) {
     }
 }
 
+bool Assets::readRmsResource(int32_t id, std::vector<uint8_t> &data, std::string *err) {
+    data.clear();
+    const auto *entry=gameData_.find(id);
+    if(id<0 || !entry || entry->type!=DrsType::Bina || !entry->size || entry->size>4*1024*1024 ||
+       !gameData_.read(id,data)) {
+        data.clear();
+        if(err)*err="could not read packaged RMS resource "+std::to_string(id);
+        return false;
+    }
+    return true;
+}
+
 bool Assets::readAiSource(const std::string &name, std::string &source, std::string *err) {
     source.clear();
     // Original 0x5ff440..0x5ff88c registers these names as resources 60001..60056.
