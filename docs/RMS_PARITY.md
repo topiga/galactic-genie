@@ -7538,3 +7538,18 @@ regressions pass with ASan/UBSan. This does not invent capability-based target
 resetting or claim full original path/formation parity. Evidence:
 `tactical-retained-target-casualty-findings-2026-11-18.md`; native test log:
 `siege-retention-check.log`.
+
+### Coupled siege waypoint recovery (2026-11-18)
+
+The bounded replay captured actor2477 at5193 seconds oscillating against ground
+unit2461 (prototype993), not a building. Both retained a nearby waypoint; repeated
+yielding kept blockedTime at zero, bypassing the existing detour branch. The
+captured two-unit state reproduces this without a full match. After sustained
+stall, a blocked sidestep that also fails to approach its next waypoint now uses
+the existing local detour planner. Useful waypoint progress is left alone, and
+the final command/destination is retained. The restored-route regression now
+makes progress within30 seconds and arrives within120; focused ASan/UBSan
+military/movement/crowd/delivery tests pass. This is a shared native movement
+adapter repair, not exact original pathfinder parity or a completed replay of the
+whole duel. Exact captures: `siege-dynamic-coupled-movement-findings-2026-11-18.md`;
+validation: `siege-retention-check.log`.

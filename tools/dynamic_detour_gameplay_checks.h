@@ -42,8 +42,39 @@
     }
 }
 // Keep large Game fixtures out of the combined sanitizer driver's stack frame.
+[[gnu::noinline]] static void coupledWaypointMovementChecks(swgb::Assets &assets) {
+    swgb::Scenario scenario;scenario.map.width=scenario.map.height=64;
+    scenario.map.tiles.resize(64*64);scenario.nextUnitId=2461;
+    scenario.playerSlotCount=1;scenario.civilizations.fill(1);
+    scenario.players[0].active=true;scenario.players[0].human=true;scenario.players[0].civilization=1;
+    auto game=std::make_unique<swgb::Game>(assets);std::string error;
+    check(game->initScenario(scenario,&error),error.c_str());
+    const auto blocker=game->spawnObjectForTesting(1,993,1,35.7451324f,40.1027718f);
+    // Preserve the later odd-ID siege's yielding priority/handedness.
+    game->spawnObjectForTesting(1,109,1,10,10);
+    const auto siege=game->spawnObjectForTesting(1,691,1,35.3463974f,40.7489052f);
+    check(blocker && siege,"Restore the two ground units from the stalled duel snapshot");
+    game->setAttackModeForTesting(blocker,3);game->setAttackModeForTesting(siege,3);
+    game->update(0,{});
+    // Retained route state, not a newly issued formation order (which has its
+    // own replanning). The captured first waypoint is occupied by both walkers.
+    const std::vector<std::array<float,2>> route={{{35.5f,40.5f}},{{55.5f,54.5f}}};
+    check(game->restoreMovementRouteForTesting(blocker,55.5f,54.5f,route) &&
+          game->restoreMovementRouteForTesting(siege,55.5f,54.5f,route),
+          "Restore retained movement routes without replacing their final destination");
+    bool progressed=false,arrived=false;
+    for(int frame=0;frame<3600 && !arrived;++frame) {
+        game->update(1.f/30,{});
+        const auto position=game->objectPosition(siege);
+        if(frame==900)progressed=std::hypot(position[0]-35.3463974f,position[1]-40.7489052f)>3;
+        arrived=std::hypot(position[0]-55.5f,position[1]-54.5f)<1.f;
+    }
+    check(progressed,"Mutual yielding makes route progress instead of indefinitely oscillating");
+    check(arrived,"Dynamic recovery retains the original command and reaches its final destination");
+}
 [[gnu::noinline]] static void dynamicDetourGameplayChecks(swgb::Assets &assets) {
     overlappingStartMovementChecks(assets);
+    coupledWaypointMovementChecks(assets);
     swgb::Scenario scenario;scenario.map.width=scenario.map.height=64;
     scenario.map.tiles.resize(64*64);scenario.nextUnitId=1;
     scenario.playerSlotCount=1;scenario.civilizations.fill(1);

@@ -15840,6 +15840,27 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                     o.repathCount = 0;
                 } else {
                     o.moveStallTime += dt;
+                    // Mutual yielding can keep both units "moving" while
+                    // oscillating around an occupied waypoint. The fully
+                    // blocked branch below never runs in that case. Recover
+                    // through the same local planner, without cancelling the
+                    // command or mistaking useful backtracking for a stall.
+                    if (blocker && o.moveStallTime >= 1.5f && o.detourTime <= 0.f &&
+                        o.pathIndex < o.path.size() &&
+                        std::hypot(o.path[o.pathIndex][0]-o.x,
+                                   o.path[o.pathIndex][1]-o.y) >= dist) {
+                        size_t rejoin=o.pathIndex;
+                        while(rejoin+1<o.path.size()) {
+                            const float rx=o.path[rejoin][0]-o.x,ry=o.path[rejoin][1]-o.y;
+                            if(rx*rx+ry*ry>9.f)break;
+                            ++rejoin;
+                        }
+                        o.detourTime=.75f;
+                        if(detourAround(o,o.path[rejoin][0],o.path[rejoin][1])) {
+                            o.moveStallTime=0;
+                            return false;
+                        }
+                    }
                     // Sliding along an obstacle without getting closer (the
                     // unit was pushed off its route): plan again from here.
                     if (o.moveStallTime >= 1.5f && o.detourTime <= 0.0f &&

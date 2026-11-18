@@ -412,6 +412,13 @@ public:
         auto *o=findObject(id);if(!o || !o->active || x<0 || y<0 || x>=mapSize_ || y>=mapSize_)return false;
         clearUnitCommandOrder(*o);issueGroupMove({o},x,y,selectedFormation_);return true;
     }
+    bool restoreMovementRouteForTesting(uint32_t id,float x,float y,
+                                        const std::vector<std::array<float,2>> &route) {
+        auto *o=findObject(id);
+        if(!o || !o->active || route.empty() || !issueMove(*o,x,y))return false;
+        o->path=route;o->pathIndex=0;o->moveGoalActive=true;
+        return true;
+    }
     int pointMovementStatusForTesting(uint32_t id) const {
         const auto *o=findObject(id);return o && o->pointMovement.present?int(o->pointMovement.status):-1;
     }
