@@ -16,16 +16,16 @@ int Game::chooseAiOriginalBuildPosition(int player,const dat::Unit &unit,float &
         return -1;
     };
     const int category=originalBuildingPlacementCategory(unit.id);
-    const bool depot=category==11 || category==13;
+    const bool depot=category==1 || category==2 || category==11 || category==13;
     if((category!=8 && category!=10 && !depot) || unit.type!=dat::UT_Building || player<=0 ||
        size_t(player)>=aiPlayers_.size() || mapSize_<=0 || mapSize_>255)
-        return unsupported("normal Clone Campaigns prefab, farm, carbon or ore depot profile required");
+        return unsupported("normal Clone Campaigns prefab, farm or resource depot profile required");
     auto &state=aiPlayers_[size_t(player)];
-    const auto radius=state.strategicNumbers.find(depot?86:74),randomness=state.strategicNumbers.find(168);
-    // Actual596d10/597300 defaults: SN74=20, SN86=25, SN168=50.
-    const int searchRadius=radius==state.strategicNumbers.end()?(depot?25:20):radius->second;
+    const auto radius=state.strategicNumbers.find(category==2?87:depot?86:74),randomness=state.strategicNumbers.find(168);
+    // Actual596d10/597300 defaults: SN74=20, SN86=25, SN87=100, SN168=50.
+    const int searchRadius=radius==state.strategicNumbers.end()?(category==2?100:depot?25:20):radius->second;
     const int placementRandomness=randomness==state.strategicNumbers.end()?50:randomness->second;
-    if(searchRadius<0 || searchRadius>mapSize_)
+    if(searchRadius<0)
         return unsupported("placement strategic-number context unavailable");
     const float widthFloat=unit.collisionSize[0]*2.f;
     if(!std::isfinite(widthFloat) || widthFloat<1 || widthFloat>mapSize_ ||
@@ -66,6 +66,7 @@ int Game::chooseAiOriginalBuildPosition(int player,const dat::Unit &unit,float &
         return 1;
     }
     AiBuildPlacementGrid grid(mapSize_,category);
+    const bool hasCompletedFoodDepot=category==2 && aiPrototypeCount(player,68,false)>0;
     //58b100 scans remembered resource buckets. Lookup uses the live object just
     // as413850 does; absence/record.invalid=1 skip it. No new hidden knowledge.
     for(size_t bucket=0;bucket<economy.resources.size();++bucket)
@@ -73,7 +74,7 @@ int Game::chooseAiOriginalBuildPosition(int player,const dat::Unit &unit,float &
             const auto *resource=findObject(uint32_t(record.id));
             if(!resource || !resource->active || !resource->unit)continue;
             grid.resource(int(bucket),resource->unit->cls,float(mapSize_)-resource->y,resource->x,
-                          resource->unit->collisionSize[0],resource->unit->collisionSize[1],record.invalid==1);
+                          resource->unit->collisionSize[0],resource->unit->collisionSize[1],record.invalid==1,hasCompletedFoodDepot);
         }
     // shortcut: Native static-obstruction tile admission stands in for original
     // path-map bits0x4003. The scoring operations/terrain cases are original;
@@ -117,7 +118,7 @@ int Game::chooseAiOriginalBuildPosition(int player,const dat::Unit &unit,float &
     //58939e consumes this even though the remainder is only retained in the
     // timed-search continuation record, never used by candidate scoring.
     if(placementRandomness>0)(void)(genieRandomDraw(legacyRandomState_)%uint32_t(placementRandomness));
-    const int width=int(widthFloat),extent=searchRadius;
+    const int width=int(widthFloat),extent=std::min(searchRadius,mapSize_);
     struct RestorePlacementUi {
         Game &game;int player,failure;
         ~RestorePlacementUi(){game.localPlayer_=player;game.placementFailureCode_=failure;}

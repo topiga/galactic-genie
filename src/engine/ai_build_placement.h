@@ -6,7 +6,7 @@ namespace swgb {
 struct AiBuildPlacementResult {
     int x=-1, y=-1, score=-1;
 };
-// Original588b30 exhaustive scans for farm8, prefab10 and resource depots11/13.
+// Original588b30 exhaustive scans for farm8, prefab10 and resource depots1/2/11/13.
 // The caller must
 // supply its prepared original scoring grid and master placement validator.
 // This does not substitute a native walkability grid, choose a builder, derive
@@ -19,8 +19,8 @@ AiBuildPlacementResult aiScanBuildingPlacement(int category,int mapWidth,int map
     Grid grid,Random random,Blacklisted blacklisted,Validator valid,PlannedNearby plannedNearby) {
     AiBuildPlacementResult best;
     if(footprint<=0 || mapWidth<=0 || mapHeight<=0 ||
-       (category!=8 && category!=10 && category!=11 && category!=13))return best;
-    const bool resourceDepot=category==11 || category==13;
+       (category!=1 && category!=2 && category!=8 && category!=10 && category!=11 && category!=13))return best;
+    const bool resourceDepot=category==1 || category==2 || category==11 || category==13;
     const int margin=resourceDepot?1:0;
     const int half=footprint/2;
     for(int x=minX;x<=maxX;++x)for(int y=minY;y<=maxY;++y) {

@@ -19,7 +19,7 @@ inline int originalBuildingPlacementCategory(int id) {
     }
 }
 struct AiPlacementRect {int left,top,right,bottom;};
-// Categories8(farm)/10(prefab)/11(carbon)/13(nova) placement stages. All coordinates and
+// Categories1(nova)/2(food)/8(farm)/10(prefab)/11(carbon)/13(ore) placement stages. All coordinates and
 // radii must be in ORIGINAL axes. This is a scoring grid, not pathability.
 // Caller supplies persistent resource records in original order; current terrain
 // and occupancy mask; and registered owned buildings. Hostile/remembered
@@ -53,19 +53,35 @@ public:
     }
     // Category10 skips resource bucket1 entirely, and disabled record+d==1.
     // Supply only resolved persistent records; other invalidation is upstream.
-    void resource(int bucket,int unitClass,float x,float y,float radiusX,float radiusY,bool disabled=false) {
-        const bool resourceDepot=requestedCategory_==11 || requestedCategory_==13;
+    void resource(int bucket,int unitClass,float x,float y,float radiusX,float radiusY,bool disabled=false,
+                  bool hasCompletedFoodDepot=false) {
+        const bool resourceDepot=requestedCategory_==1 || requestedCategory_==2 ||
+                                 requestedCategory_==11 || requestedCategory_==13;
         if(size_==0 || (!resourceDepot && bucket==1) || disabled)return;
         auto r=clamp({int(double(x)-radiusX-.5),int(double(y)-radiusY-.5),
                       int(double(x)+radiusX+.5),int(double(y)+radiusY+.5)});
         forbid({int(x),int(y),int(x),int(y)});
+        if(requestedCategory_==2) {
+            //58bd58: owner+1038+68*2 must be positive for animal attraction.
+            if((unitClass==4 || unitClass==5 || unitClass==60) && hasCompletedFoodDepot)
+                add(expand(r,5.),5);
+            else if(unitClass==25)add(expand(r,3.),15);
+            else if(unitClass==27) {
+                r=expand(r,1.);add(r,15);
+                r=expand(r,2.);add(r,15);
+            } else if(unitClass==29 || unitClass==30)subtract(expand(r,3.),128);
+            else if(unitClass==31)subtract(expand(r,1.),5);
+            return;
+        }
         if(resourceDepot) {
             if(unitClass==27)subtract(expand(r,5.),128);
             else if((requestedCategory_==11 && (unitClass==29 || unitClass==30)) ||
-                    (requestedCategory_==13 && (unitClass==29 || unitClass==31)))
+                    (requestedCategory_==13 && (unitClass==29 || unitClass==31)) ||
+                    (requestedCategory_==1 && (unitClass==30 || unitClass==31)))
                 subtract(expand(r,requestedCategory_==11?3.:1.),128);
             else if((requestedCategory_==11 && unitClass==31) ||
-                    (requestedCategory_==13 && unitClass==30)) {
+                    (requestedCategory_==13 && unitClass==30) ||
+                    (requestedCategory_==1 && unitClass==29)) {
                 //58b100 expands the previous clamped rectangle at each step.
                 r=expand(r,1.);add(r,requestedCategory_==11?12:16);
                 r=expand(r,3.);add(r,requestedCategory_==11?4:8);
@@ -79,7 +95,7 @@ public:
     void terrain(int x,int y,int terrainId,uint32_t occupancy) {
         if(size_==0)return;
         if(occupancy&0x4003)forbid({x,y,x,y});
-        if(terrainId==1 || terrainId==22 || terrainId==23) {
+        if(requestedCategory_!=2 && (terrainId==1 || terrainId==22 || terrainId==23)) {
             forbid({x,y,x,y});subtract({x-3,y-3,x+3,y+3},10);
         }
     }
@@ -105,7 +121,7 @@ public:
         }
         if(category==9)bounds={bounds.left-3,bounds.top-3,bounds.right+3,bounds.bottom+3};
         bounds=clamp(bounds);forbid(bounds);
-        if(requestedCategory_==11 || requestedCategory_==13) {
+        if(requestedCategory_==1 || requestedCategory_==2 || requestedCategory_==11 || requestedCategory_==13) {
             //58e4d6: resource depots discourage nearby owned construction.
             double extent=lineOfSight<6.f?lineOfSight:6.f;
             if(category==9)extent*=.5;

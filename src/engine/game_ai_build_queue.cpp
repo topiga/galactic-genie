@@ -35,7 +35,7 @@ bool Game::aiBuildPositionRejected(int player,int prototype,float x,float y) con
 bool Game::chooseAiBuildPosition(int player,const dat::Unit &unit,float &x,float &y) {
     struct Restore {Game &g;int owner,failure;~Restore(){g.localPlayer_=owner;g.placementFailureCode_=failure;}} restore{*this,localPlayer_,placementFailureCode_};
     localPlayer_=player;
-    if(unit.id==70 || unit.id==50 || unit.id==562 || unit.id==584) {
+    if(unit.id==70 || unit.id==50 || unit.id==68 || unit.id==319 || unit.id==323 || unit.id==562 || unit.id==584) {
         const int result=chooseAiOriginalBuildPosition(player,unit,x,y);
         if(result>=0)return result==1;
     }

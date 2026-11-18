@@ -86,7 +86,7 @@
     for(int i=0;i<2;++i) {scenario.players[i].active=scenario.players[i].human=true;scenario.players[i].civilization=1;
         scenario.players[i].diplomacy.fill(3);scenario.players[i].diplomacy[size_t(i+1)]=0;}
     swgb::Game game(assets);std::string error;
-    for(bool upgraded:{false,true})for(const auto pair:std::array<std::array<int,2>,2>{{{562,348},{584,102}}}) {
+    for(bool upgraded:{false,true})for(const auto pair:std::array<std::array<int,2>,4>{{{68,59},{562,348},{323,66},{584,102}}}) {
         check(game.initScenario(scenario,&error),error.c_str());game.setLocalPlayerForTesting(2);
         check(game.spawnObjectForTesting(1,109,2,32,32) && game.spawnObjectForTesting(1,83,2,35,32),"Original grid home and builder");
         const auto observer=game.spawnObjectForTesting(1,83,2,42,32);
@@ -113,5 +113,30 @@
         check(std::hypot(placed[0]-44.5f,placed[1]-32.5f)<8 && !game.economyForTesting(2).resourceSlots.count(unknown),
               "Actual foundation follows original known-resource scoring without discovering hidden decoy");
     }
-    std::puts("PASS: original carbon/ore grid in normal gameplay, upgrades and hidden stationary resources");
+    check(game.initScenario(scenario,&error),error.c_str());game.setLocalPlayerForTesting(2);
+    check(game.spawnObjectForTesting(1,109,2,16,16) && game.spawnObjectForTesting(1,83,2,19,16) &&
+          game.spawnObjectForTesting(1,83,2,44,44),"Food completion gate has actual owner and observers");
+    const auto animal=game.spawnObjectForTesting(0,48,0,46,44);
+    const auto &animalMaster=assets.dat().civs[0].units[48];
+    check(animal && (animalMaster.cls==4 || animalMaster.cls==5 || animalMaster.cls==60),
+          "Actual animal prototype exercises completed-food-depot resource halo");
+    check(game.loadAiSourceForTesting(2,"food-depot-completion","(defrule (true) => (set-strategic-number 117 100) (disable-self))",{},&error),error.c_str());
+    game.update(0,{});game.updateAiGatherersForTesting(2);
+    check(game.economyForTesting(2).resourceSlots.count(animal),"Animal is admitted through actual visibility knowledge");
+    const auto firstDepot=game.spawnFoundationForTesting(1,68,2,8,50,{});
+    check(firstDepot && game.aiObjectCountForTesting(2,"68",false)==0,
+          "A real unfinished food depot does not enable animal attraction");
+    float beforeX=-1,beforeY=-1,afterX=-1,afterY=-1;
+    const auto *food=game.unitPrototypeForTesting(2,68);
+    game.seedLegacyRandomForTesting(12345);
+    check(game.chooseAiPrefabPositionForTesting(2,*food,beforeX,beforeY,&error)==1,error.c_str());
+    check(game.completeFoundationForTesting(firstDepot),"Complete the real first food depot");game.update(0,{});
+    check(game.aiObjectCountForTesting(2,"68",false)==1,"Actual completion updates original prototype68 current count");
+    game.seedLegacyRandomForTesting(12345);
+    check(game.chooseAiPrefabPositionForTesting(2,*food,afterX,afterY,&error)==1,error.c_str());
+    // Original attraction expands a rectangle, not a Euclidean circle.
+    const auto inAnimalHalo=[](float x,float y) {return std::abs(x-46.f)<=5 && std::abs(y-44.f)<=5;};
+    check(inAnimalHalo(afterX,afterY) && !inAnimalHalo(beforeX,beforeY),
+          "Real food-depot completion activates original animal attraction in production placement");
+    std::puts("PASS: original four resource-depot grids in normal gameplay, upgrades and hidden stationary resources");
 }

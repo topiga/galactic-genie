@@ -16,13 +16,12 @@
         const auto unseen=game.spawnObjectForTesting(0,pair[1],0,24,8);
         check(observer && remembered && unseen,"Known distant resource and closer unobserved decoy");
         // Keep the hidden-mutation contract on the explicitly native fallback:
-        // original category11/13 resource grids read known actors' live floats.
-        if(pair[0]==562 || pair[0]==584)
-            check(game.spawnObjectForTesting(1,72,2,8,20),"A real wall-plan context keeps this fixture on the bounded fallback");
+        // original resource grids read known actors' live floats.
+        check(game.spawnObjectForTesting(1,72,2,8,20),"A real wall-plan context keeps this fixture on the bounded fallback");
         if(upgraded)check(game.researchTechnologyForTesting(2,1),"Apply original age-up to real dropsite masters");
         const auto *master=game.unitPrototypeForTesting(2,pair[0]);
         check(master && (!upgraded || master->copyId!=master->id),"Fixture exercises actual upgraded dropsite identities");
-        if(pair[0]==562 || pair[0]==584) {
+        {
             float px=0,py=0;
             check(game.chooseAiPrefabPositionForTesting(2,*master,px,py,&error)==-1,
                   "Unrepresented wall stage explicitly selects native fallback, not original grid");

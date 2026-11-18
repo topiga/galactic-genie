@@ -7431,3 +7431,56 @@ Local evidence includes `build-placement-position-registry-controls-2026-11-18`,
 `build-placement-reachability-outcome-controls-2026-11-18`. Validation logs are
 `planned-registry-check.log`, `planned-grid-local.log` and
 `planned-grid-algorithms.log` in the external build directory.
+
+### Food and nova placement stage controls
+
+Original category1 (nova depot323) and category2 (food depots68/319) now have
+independently checked pure scoring stages. The added340 golden checks cover
+resource classes0–64, clipped/disabled resources, terrain masks, owned buildings,
+scan order and planned-position/distance penalties. Prior farm8, prefab10,
+carbon11 and ore13 checks still pass under ASan/UBSan.
+
+The categories are not interchangeable. Nova attracts class29 with cumulative
+16/8/4 preference rings. Food uses different forage, fish and animal weights;
+animal classes4/5/60 receive their preference only when the signed original
+prototype68 counter is positive (`58bd58`, owner+`1038+68*2`). The pure helper's
+new final `hasCompletedFoodDepot` argument defaults to false, preserving prior
+callers; its Game provider must use the normalized completed-prototype counter,
+not mere presence of any food-dropoff building. Food ignores the water-terrain
+penalty used by other supported categories while retaining obstruction masks.
+Food search bounds use SN87/default100 and inner4; nova uses SN86/default25 and
+inner7. Bounds clip to the map even when the configured radius exceeds its size.
+
+Nova's SN165/SN166 and remembered depot distances write search-continuation
+metadata, but do not affect the complete resource-stage scoring grid:24 original
+input permutations verified that distinction. Fresh stateless integration does
+not therefore need an invented distance provider; timed search resumption still
+requires preserving the original continuation state. Existing native occupancy,
+master validation, counter projection and ordinary reachability limitations
+remain unchanged. Pure-stage coverage alone is not a full-session parity claim.
+
+Local evidence: `build-placement-food-nova-controls-2026-11-18`,
+`build-placement-food-nova-class-audit-2026-11-18`,
+`build-placement-food-nova-terrain-controls-2026-11-18`, and
+`build-placement-food-nova-penalty-controls-2026-11-18` in the Windows-reference
+research directory. Executable checks are in `ai_resource_build_placement_test`.
+
+
+The Game integration now uses these stages for all four normal depot types,
+including the SN87 radius exceeding a64-tile map and the actual completed68
+counter. Eight production cases pass before/after real age-up with known hidden
+resources and unseen decoys. A real class4 animal fixture verifies that a68
+foundation leaves attraction disabled, then actual completion enables it.
+The full supported sanitizer test command and38 algorithm suites pass. Four
+normal-startup original-personality Arid Conquest games also finish: seeds1–4 at
+3349.388,2529.528,4567.449 and2682.683 simulated seconds. These are native victories
+against an idle human, not seed-matched Windows matches. Logs and hashes remain
+in `native-original-ai-all-depot-grids-2026-11-18.json` locally.
+
+Long-match logs now expose encountered unsupported PER operations: difficulty
+parameters, taunts/chat, commodity buying/selling, wall/gate affordability,
+town-under-attack and enemy-captured-holocrons. A completed game therefore must
+not be presented as complete original personality support. Additional original
+controls show the town fact needs persistent attacker/victim lifetime; the
+holocron fact remembers all-holocrons-control events114/115, not arbitrary carried
+objects. These remain unsupported rather than being replaced by guessed values.
