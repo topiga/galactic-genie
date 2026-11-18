@@ -7602,3 +7602,22 @@ copying only a stationary-unit exception into native static-only planning would
 not reproduce the original service. Evidence is retained locally in
 crowd-path-4a47b0-ghidra-2026-11-18.json and
 crowd-blocker-lifecycle-findings-2026-11-18.md. No new live Windows parity claim.
+
+The corrected build passes the complete ASan/UBSan gameplay suite and four fresh
+original-personality Arid games: seeds1–4 win at5032.333/2355.933/5229.500/2530.467
+seconds, with1673/2107/1026/1272 landed attacks. This prevents the previously
+observed seed3 failure in a fresh game; it does not resolve the captured jam.
+Desktop smoke passes menu/setup/pause/restart/resign/render/effects/music/EOF.
+Logs use failed-yield-final prefixes in the external build directory.
+
+Fifteen executed original movement-tail controls also verify actor+124 timestamp
+updates and retained xyz copies only when a coordinate changes by strictly more
+than the original tolerance1.0000000116860974e-7. The bounded tail uses synthetic
+actor/owner/world storage, not the full path world; results are retained in
+crowd-timestamp-tail-controls-2026-11-18.json.
+
+The final two-sided native stress replay also completes: owner1 wins at7791.333
+seconds with13753 landed attacks (failed-yield-final-duel.log). This attaches
+the original personality to the normally human owner and is not a retail
+two-computer lobby or a Windows whole-match parity claim. The earlier b80d770
+replay won at6394.934; the final result supersedes it for the shipped build.
