@@ -7988,3 +7988,92 @@ Local fixture `ggseedtwoallies.sc1` has SHA-256
 `4f5e630aaf8d3c3695dc1fcc5decf2ce043672a7db24a28c01c344dbf4e8cffb`.
 Clock trace `seed2-allied-clock.csv` has SHA-256
 `d3c4110fc57be3ca0ae794624d2b9b11c6a431d422c579d78fc40538cc11d162`.
+
+### Seed 2 opening economy on the scenario lobby clock
+
+A fresh Windows run used the SC1 and session seed above. Read-only samples
+recorded each owner's stockpile, object IDs and worker-role prototypes through
+1,013 simulated seconds. Native measurements used the same SC1 and the 53,086
+normal-speed increments from the earlier complete Windows capture. The new
+Windows run had its own frame cadence. All times below are simulation seconds.
+
+| Opening event | Windows P2 | Native P2 | Windows P3 | Native P3 |
+| --- | ---: | ---: | ---: | ---: |
+| First positive food receipt | 64.6 | 148.2 | 46.9 | 49.8 |
+| First positive carbon receipt | 36.7 | 36.7 | 40.8 | 42.1 |
+| First prefab adds population capacity | 23.8 | 27.7 | 23.8 | 29.5 |
+| Food Processing Center foundation appears | 61.9 | 63.1 | 61.9 | 63.1 |
+| Tech Level 2 purchase | 702.5 | — | 614.2 | 1,009.2 |
+| Tech Level 2 completion | 802.4 | — | 714.1 | 1,109.2 |
+
+Windows times are the first sample showing the change, with about 0.7 s
+between samples. Both age purchases debited exactly 500 food. Native credit
+times come from the worker deposit callback and age times from the Command
+Center queue and completed research. P2 stayed at Tech Level 1 until defeat.
+
+Three shared behaviors changed. The original AI producer search
+(57b7d0 → 587510 → 596680) rejects active training, queued training and
+research. Both Windows AIs bought one worker at the start. The old native
+build had prepaid four per Command Center by 4.8 s. The original map-type
+fact reads the lobby field through 5eedb0 and 57cae0. Its live value was
+9 (Desert). Preserving that field lets the installed script turn off
+civilian exploration. At 10 s, both engines assigned P2 two carbon workers
+and one builder, and P3 one carbon worker, one herder and one builder.
+The original symbol table (410ec0 → 552fd0) also distinguishes lowercase
+resource names from uppercase goal constants. Executing its registration
+routine with all entries in one hash bucket retained food=0, FOOD=2,
+metal=2 and METAL=4. Native code had evaluated the food discovery fact
+against the ore flag.
+
+At 600 s Windows P2 had eight hunters, six carbon workers and one farmer.
+Native P2 had seven workers targeting farms, six targeting animal carcasses
+and two targeting carbon. Windows P3 had nine herders and six carbon workers.
+Native P3 had four workers targeting farms, eight targeting carcasses and
+three targeting carbon. The original role and native target counts describe
+assigned work. They include travel. Native worker deposits through 600 s
+totaled 940.0 food and 387.3 carbon for P2 and 983.2 food and 490.0 carbon
+for P3. The sums of positive sampled Windows stock changes were 780 / 646
+and 941 / 630 respectively. Simultaneous spending can conceal a delivery
+from that Windows measure. Individual cargo-to-bank transitions also
+confirmed ten-unit deliveries in both engines.
+
+Windows P2 acquired the four Banthas at the map edge (IDs 2018–2021)
+by 14.3 s. Its original builder switched to herding at 24.5 s and the new
+worker joined at 25.2 s. At 29.2 s the corresponding two native workers
+were targeting an Eopie (ID 2100). The native scout captured those four
+Banthas between 64.9 and 66.4 s.
+This separates the late first food receipt from the rate paid for a delivery.
+
+Native P2 placed its first farm at 109.7 s. Windows P2 first placed one
+at 519.6 s. For P3 the native first farm appeared at 274.9 s, and the
+Windows opening capture ended before its first farm. P3’s Power Core
+foundation was much closer at 207.3 s native and 208.7 s Windows.
+
+At 605 s native P2 already held 570 food, had an idle Command Center and
+still lacked the required buildings. On Windows the Troop Center foundations
+appeared at 482.2 / 467.2 s for P2 / P3. Native P3 started its Troop Center
+at 875.6 s. The first prefab also affected production priority. On the native
+clock the first worker finished just before the prefab, and both centers
+began Basic Training at 25.5 s. Windows had already gained five population
+slots before the worker finished and spent 50 nova at 102.1 s.
+
+The opening prefab positions explain part of that delay. In original map
+coordinates, Windows placed them at (48, 4) and (15, 73). Native selected
+(56, 13) and (23, 83). Both Windows sites also passed the native placement
+validator. Each scored 240, the same as the selected site. The first native
+builders reached their foundations at 7.7 / 9.5 s and completed them 20 s
+later. Candidate order and the RNG state entering the tied placements remain
+open comparisons.
+
+To reproduce the captured-clock comparison, run
+`swgb-skirmish-test <Data> --scenario-duel ggseedtwoallies.sc1 24592 seed2-allied-clock.csv --map-id 9`.
+Omit the CSV to use the fixed 30 Hz scheduler. Each checkpoint reports the
+two owners in slot order, including remaining centers, workers, stockpiles
+and Tech Level 2 status.
+
+On the captured Windows clock, P3 destroyed P2's Command Center at
+3,069.720 s. The observer's result was 0, P3 retained its center and the
+game counted 3,794 landed attacks. A repeat after the building-type check
+produced identical checkpoint output through victory. This was 915.375 s
+earlier than the Windows match that supplied the clock. In the previous
+native comparison both centers were still standing at the end of that clock.
