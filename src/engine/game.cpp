@@ -14425,6 +14425,7 @@ void Game::snapBuildPositionForAi(const dat::Unit &unit,float &x,float &y) const
 Game::Object *Game::aiTrainer(int player, const dat::Unit &unit, bool line) {
     for (Object &building : objects_) {
         if (building.player != player || !building.active || building.hidden ||
+            !building.unit || building.unit->type != dat::UT_Building ||
             building.underConstruction || !building.productionQueue.empty())
             continue;
         const auto options = productionOptions(building);
