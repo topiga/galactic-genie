@@ -35,14 +35,17 @@
         auto game=makeGame();auto &g=*game;
         const auto aa=g.spawnObjectForTesting(1,702,1,12,12);
         const auto troop=g.spawnObjectForTesting(1,329,1,13,15);
+        const auto nearby=g.spawnObjectForTesting(1,702,1,32,12);
         const auto target=g.spawnObjectForTesting(1,87,2,36,12);
-        for(auto id:{aa,troop,target})g.setAttackModeForTesting(id,3);
+        for(auto id:{aa,troop,nearby,target})g.setAttackModeForTesting(id,3);
         g.update(0,{});
-        check(g.issueGroupAttackForTesting({aa,troop},target),"Mixed group finds a ground-attack task");
+        check(g.issueGroupAttackForTesting({aa,troop,nearby},target),"Mixed group finds a ground-attack task");
         check(g.attackTargetForTesting(troop)==target,"Valid attack dispatch is retained");
         for(int i=0;i<60;++i)g.update(1.f/30,{});
-        check(g.objectPosition(aa)[0]==12 && g.objectPosition(aa)[1]==12,
-              "A rejected member does not independently trigger the whole-group fallback");
+        check(g.objectPosition(aa)[0]>12 && !g.attackTargetForTesting(aa),
+              "Distant anti-air accompanies the attack without acquiring a ground target");
+        check(g.objectPosition(nearby)[0]==32 && g.objectPosition(nearby)[1]==12 &&
+              !g.attackTargetForTesting(nearby),"An anti-air member in range receives no movement or ground attack");
     }
     {
         auto game=makeGame();auto &g=*game;

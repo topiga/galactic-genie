@@ -9400,32 +9400,33 @@ Game::Object *Game::issueGroupAttack(const std::vector<Object *> &selected,Objec
     };
     Object *acknowledgement = nullptr;
     std::vector<Object *> attackers;
-    for (Object *source : selected)
-        if (!canAttackTarget(*source,*enemy) && issueConversionCommand(*source,*enemy)) {
-            if (!acknowledgement) acknowledgement=source;
-        } else if (!isEnemy(*source, *enemy) ||
-            !canAttackTarget(*source, *enemy))
-            continue;
-        else
+    std::vector<Object *> movers;
+    bool conversionTask=false;
+    for (Object *source : selected) {
+        if (!isEnemy(*source,*enemy)) continue;
+        if (canAttackTarget(*source,*enemy)) {
             attackers.push_back(source);
-    if (attackers.empty() && !acknowledgement && !selected.empty()) {
-        // 481560 selects one default task for the group; no task enters
-        // movement (481860), rather than discarding the order. Formation and
-        // path solving below still use the native movement adapter.
-        const bool pendingConversion = std::any_of(selected.begin(), selected.end(),
-            [&](const Object *source) {
-                return conversionEligible(*source, *enemy, true);
-            });
-        std::vector<Object *> movers;
-        if (!pendingConversion)
-            for (Object *source : selected)
-                if (source->active && !source->hidden && source->unit->speed > 0 &&
-                    isEnemy(*source, *enemy))
-                    movers.push_back(source);
-        if (!movers.empty()) {
-            acknowledgement = movers.front();
-            issueGroupMove(std::move(movers), enemy->x, enemy->y);
+        } else if (issueConversionCommand(*source,*enemy)) {
+            conversionTask=true;
+            if (!acknowledgement) acknowledgement=source;
+        } else if (conversionEligible(*source,*enemy,true)) {
+            conversionTask=true;
+        } else if (source->active && !source->hidden && source->unit->speed>0) {
+            movers.push_back(source);
         }
+    }
+    if (!attackers.empty()) {
+        // 481ed0 dispatches nearby members individually and routes the remaining
+        // group toward the target, including members without a matching weapon.
+        movers.erase(std::remove_if(movers.begin(),movers.end(),[&](const Object *source) {
+            return genieTargetDistance(source->x,source->y,source->unit->collisionSize[0],
+                source->unit->collisionSize[1],enemy->x,enemy->y,enemy->unit->collisionSize[0],
+                enemy->unit->collisionSize[1])<=modifiedUnitAttribute(*source,12,source->unit->maxRange);
+        }),movers.end());
+    }
+    if (!movers.empty() && (!attackers.empty() || !conversionTask)) {
+        if (attackers.empty()) acknowledgement=movers.front();
+        issueGroupMove(std::move(movers),enemy->x,enemy->y);
     }
     float centroidX = 0, centroidY = 0;
     for (const Object *source : attackers) {
