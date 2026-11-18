@@ -398,7 +398,7 @@ public:
             text(original(9688),40,130);
             text(original(9683),40,160); text("2",440,160);
             const int labels[]={13510,13560,13511,13512,13513,9688,13514,9747,9724,9734,10019};
-            const std::string values[]={aridMap_?original(9653):"Test Skirmish",aridMap_?original(13561):"Fixed land","",aridMap_?original(10611):"64 x 64",original(13562),"1",aridMap_?original(9742):"1200 each","","",original(4201),""};
+            const std::string values[]={aridMap_?original(9653):"Test Skirmish",aridMap_?original(13561):"Fixed land","",aridMap_?original(10611):"64 x 64",original(aridMap_ && conquest_?10784:13562),"1",aridMap_?original(9742):"1200 each","","",original(4201),""};
             for(int i=0;i<11;++i) {
                 text(original(labels[i]),512,65+i*29,false);
                 if(i!=8 && i!=7 && i!=10 && i!=2) text(values[i],650,65+i*29);
