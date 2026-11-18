@@ -16547,8 +16547,8 @@ void Game::updateFrame(float dt,float uiDt,const InputState &incoming,bool advan
     refreshVisibility();
     soundViewWidth_=std::max(1,incoming.screenW);
     InputState in=incoming;
+    if (victoryState_ >= 0) return;
     if (skirmish_) {
-        if (victoryState_ >= 0) return;
         if(advanceWorld)updateSkirmish(dt);
         if (victoryState_ >= 0) return;
     }

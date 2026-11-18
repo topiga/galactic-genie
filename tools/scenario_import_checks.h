@@ -13,7 +13,10 @@ static void scenarioImportChecks(swgb::Assets &assets) {
     swgb::ScenarioTrigger victory;victory.enabled=true;
     swgb::ScenarioCondition destroyed;destroyed.type=6;destroyed.fields.resize(4,-1);destroyed.fields[2]=0;destroyed.fields[3]=0;victory.conditions.push_back(destroyed);
     effect={};effect.type=13;effect.fields.resize(8,-1);effect.fields[7]=1;victory.effects.push_back(effect);
-    scenario.triggers={remove,victory};scenario.triggerOrder={0,1};
+    swgb::ScenarioTrigger delayedDefeat=victory;
+    swgb::ScenarioCondition timer;timer.type=10;timer.fields.resize(8,-1);timer.fields[7]=1;
+    delayedDefeat.conditions={timer};delayedDefeat.effects.front().fields[7]=2;
+    scenario.triggers={remove,victory,delayedDefeat};scenario.triggerOrder={0,1,2};
     swgb::Game game(assets);std::string error;
     check(game.initScenario(scenario,&error),error.c_str());
     check(game.objectRegisteredForTesting(2)&&game.objectUnitId(2)==109&&game.objectRegisteredForTesting(1),
@@ -24,6 +27,8 @@ static void scenarioImportChecks(swgb::Assets &assets) {
     game.update(.2f,{});
     check(!game.objectActive(2)&&game.matchResult()==1,
           "Selected-object effect and destroyed-object condition both address remapped ID0");
+    game.update(1.f,{});
+    check(game.matchResult()==1,"Later scenario triggers cannot reverse a finished match");
     check(game.spawnObjectForTesting(1,83,1,5,5)==3,"Future object IDs cannot collide with the imported replacement");
     scenario.units.push_back(center);
     check(!game.initScenario(scenario,&error),"Ambiguous duplicate zero IDs are rejected");
