@@ -394,10 +394,15 @@ static bool parseUint32(std::string_view value,uint32_t &out) {
     }
     uint32_t timeMs=0,nextReport=0;
     for(uint32_t frame=1;;++frame) {
-        if(timeMs>=nextReport || game.matchResult()>=0) {
-            std::printf("scenario seed=%u time=%.3f population=%.0f/%.0f observer_result=%d attacks=%u\n",
+        const bool clockEnded=clockPath && clock.peek()==std::char_traits<char>::eof();
+        if(timeMs>=nextReport || game.matchResult()>=0 || clockEnded) {
+            std::printf("scenario seed=%u time=%.3f population=%.0f/%.0f observer_result=%d attacks=%u centers=%d/%d workers=%d/%d food=%.1f/%.1f carbon=%.1f/%.1f tl2=%d/%d\n",
                 seed,timeMs/1000.0,game.populationUsedForTesting(2),game.populationUsedForTesting(3),
-                game.matchResult(),unsigned(game.combatStats().attacksLanded));
+                game.matchResult(),unsigned(game.combatStats().attacksLanded),
+                game.aiObjectCountForTesting(2,"109",false),game.aiObjectCountForTesting(3,"109",false),
+                game.aiObjectCountForTesting(2,"83",false),game.aiObjectCountForTesting(3,"83",false),
+                game.resource(2,0),game.resource(3,0),game.resource(2,1),game.resource(3,1),
+                int(game.technologyResearched(2,1)),int(game.technologyResearched(3,1)));
             std::fflush(stdout);
             nextReport+=60000;
         }
