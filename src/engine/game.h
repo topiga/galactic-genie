@@ -1165,7 +1165,7 @@ private:
         std::vector<int32_t> militarySoldiers;
         std::vector<int32_t> militaryHomes;
         std::vector<AiMilitaryGatherGroup> militaryGroups;
-        AiMilitaryReadinessPass militaryReadiness;
+        AiMilitaryReadinessPass militaryReadiness,airReadiness;
         AiMilitaryPhaseCycle militaryCycle;
         int32_t nextMilitaryGroup=1;
         std::unordered_map<int, int> goals;
@@ -1690,10 +1690,10 @@ private:
     void updateAiExplorationRevisit(int player);
     void notifyAiAttackMemory(Object &victim,const Object *attacker);
     bool reissueAiExploreDestination(Object &object);
-    std::optional<AiMilitaryGroups> availableAiMilitaryGroups(int player,std::optional<int> requested,bool exploring=false);
+    std::optional<AiMilitaryGroups> availableAiMilitaryGroups(int player,std::optional<int> requested,bool exploring=false,bool air=false);
     bool aiMilitaryCanUseNativePolicy(int player,uint32_t id) const;
     void updateAiMilitary(int player,uint32_t budget=2);
-    void updateAiMilitaryTargets(int player,uint32_t budget);
+    void updateAiMilitaryTargets(int player,uint32_t budget,bool air=false);
     void queueAiMilitaryAttack(int player,const AiMilitaryGatherGroup &group,const Object &target);
     void updatePlayerObjects(float dt,int player, bool auxiliary = false);
     AiSessionContext aiScriptContext(int player, const std::unordered_set<std::string> &defines) const;

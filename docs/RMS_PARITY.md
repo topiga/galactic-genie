@@ -7784,3 +7784,18 @@ foundation. A gameplay check kills the assigned builder and verifies completion
 of the same object and acknowledgement of its original construction request.
 The native tactical cadence, path provider and registry ordering remain
 approximations. Destruction of a foundation is a separate event.
+
+### Attack-now air groups
+
+The original 5ae520 applies the soldier and aircraft attack percentages
+independently. Its aircraft selector 5abf80 excludes transports and actors
+already in a group. Type 108 uses separate readiness and planning passes
+(5a1ed0 and 5a20a0) with the shared group target ranking and attack order.
+Ten retail readiness controls cover full and short wings, retry, stop,
+cursor resumption, budget exhaustion and skipping land groups.
+
+Native attack-now can now send bombers and fighters as a wing. A gameplay
+fixture sets soldier participation to zero, acquires an enemy Command Center,
+drains the attack order, checks damage and removes a dead wing member.
+The native scheduler admits air readiness after land planning. Its exact
+host-time budget, ordinary air patrols and sea groups remain open.

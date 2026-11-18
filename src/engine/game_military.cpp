@@ -18,6 +18,12 @@ void Game::refreshAiMilitaryMembers(int player) {
         const auto *object=findObject(uint32_t(id));
         return !object || !object->active || object->player!=player || object->unit->id!=109;
     }),state.militaryHomes.end());
+    for(auto &group:state.militaryGroups)if(group.type==108) {
+        group.members.erase(std::remove_if(group.members.begin(),group.members.end(),[&](int32_t id) {
+            const auto *actor=findObject(id);
+            return !actor || !actor->active || actor->player!=player;
+        }),group.members.end());
+    }
     for(auto it=state.militarySoldiers.begin();it!=state.militarySoldiers.end();) {
         const auto *object=findObject(uint32_t(*it));
         if(!object || !object->active || object->player!=player || !object->unit ||
@@ -63,22 +69,28 @@ bool Game::buildAiMilitaryRegions(int restriction,std::vector<uint8_t> &tiles) c
     tiles=std::move(result.tiles);return true;
 }
 
-std::optional<AiMilitaryGroups> Game::availableAiMilitaryGroups(int player,std::optional<int> requested,bool exploring) {
+std::optional<AiMilitaryGroups> Game::availableAiMilitaryGroups(int player,std::optional<int> requested,bool exploring,bool air) {
     if(player<=0 || size_t(player)>=aiPlayers_.size() || mapSize_<=0)return std::nullopt;
     auto &state=aiPlayers_[size_t(player)];
-    if(!state.strategicNumbers.count(230) || (!requested && !state.strategicNumbers.count(227)))return std::nullopt;
+    const int percentage=air?223:227;
+    if(!state.strategicNumbers.count(230) || (!requested && !state.strategicNumbers.count(percentage)))return std::nullopt;
     std::vector<const Object*> available;
-    for(int32_t id:state.militarySoldiers) {
-        const auto *object=findObject(uint32_t(id));
-        if(!object || object->unit->cls==51)continue;
-        // Original5ab3d2/42c410 excludes class50 only on Easy/Easiest (difficulty3/4).
-        if(object->unit->cls==50 && difficulty_>2)continue;
-        if(std::any_of(state.militaryGroups.begin(),state.militaryGroups.end(),[&](const auto &group) {
-            return std::find(group.members.begin(),group.members.end(),id)!=group.members.end();
-        }))continue;
-        // Native dispatch cannot command contained/hidden actors. The original pool itself has no such filter.
-        if(object->hidden || object->garrisonedInId>=0)continue;
-        available.push_back(object);
+    const auto consider=[&](const Object &actor) {
+        if(actor.hidden || actor.garrisonedInId>=0)return;
+        for(const auto &group:state.militaryGroups)
+            if(std::find(group.members.begin(),group.members.end(),int32_t(actor.spawnId))!=group.members.end())return;
+        available.push_back(&actor);
+    };
+    if(air) {
+        // 59fd6d registers non-boat aircraft; 5abf80 omits transports (class 59).
+        for(const auto &actor:objects_) {
+            if(!actor.active || actor.player!=player || !actor.unit || (actor.unit->trait&2))continue;
+            const int cls=actor.unit->cls;
+            if(cls==43 || cls==48 || cls==62 || cls==63 || cls==64)consider(actor);
+        }
+    } else for(int32_t id:state.militarySoldiers) {
+        const auto *actor=findObject(id);
+        if(actor && actor->unit->cls!=51 && (actor->unit->cls!=50 || difficulty_<=2))consider(*actor);
     }
     if(available.empty())return AiMilitaryGroups{};
     std::map<int,std::vector<uint8_t>> zones;
@@ -116,7 +128,7 @@ std::optional<AiMilitaryGroups> Game::availableAiMilitaryGroups(int player,std::
         projected[i*n+j]=*value;
     }
     return selectAiMilitaryGroups(candidates,projected,
-        requested?*requested:aiMilitaryAttackCount(candidates.size(),state.strategicNumbers.at(227)),
+        requested?*requested:aiMilitaryAttackCount(candidates.size(),state.strategicNumbers.at(percentage)),
         float(state.strategicNumbers.at(230)));
 }
 
@@ -199,16 +211,20 @@ bool Game::formAiMilitaryGroups(int player) {
     if(player<=0 || size_t(player)>=aiPlayers_.size() || mapSize_<=0)return false;
     auto &state=aiPlayers_[size_t(player)];refreshAiMilitaryMembers(player);
     for(int key:{34,41,227,230})if(!state.strategicNumbers.count(key))return false;
-    const auto groups=availableAiMilitaryGroups(player,std::nullopt);
-    if(!groups)return false;
-    for(const auto &members:*groups) {
-        if(state.nextMilitaryGroup==INT32_MAX)return false;
-        AiMilitaryGatherGroup group{state.nextMilitaryGroup++,1,0,{}};
-        group.members.assign(members.begin(),members.end());group.desiredCount=int(members.size());
-        group.flags|=8u; // Original5ae70a marks attack-now groups to shrink requested strength after losses.
-        if(!members.empty())group.lastMemberAdded=uint32_t(std::llround(gameTime_*1000.0));
-        for(int32_t id:group.members)queueAiMilitaryStop(player,id);
-        state.militaryGroups.push_back(std::move(group));
+    for(bool air:{false,true}) {
+        if(air && (!state.strategicNumbers.count(223) || state.strategicNumbers.at(223)<=0))continue;
+        const auto groups=availableAiMilitaryGroups(player,std::nullopt,false,air);
+        if(!groups)return false;
+        for(const auto &members:*groups) {
+            if(state.nextMilitaryGroup==INT32_MAX)return false;
+            AiMilitaryGatherGroup group{state.nextMilitaryGroup++,1,0,{}};
+            group.type=air?108:100;
+            group.members.assign(members.begin(),members.end());group.desiredCount=int(members.size());
+            group.flags|=8u; // Original5ae70a marks attack-now groups to shrink requested strength after losses.
+            if(!members.empty())group.lastMemberAdded=uint32_t(std::llround(gameTime_*1000.0));
+            for(int32_t id:group.members)queueAiMilitaryStop(player,id);
+            state.militaryGroups.push_back(std::move(group));
+        }
     }
     return true;
 }
@@ -267,7 +283,7 @@ void Game::updateAiKnownObjects(int player) {
         });
 }
 
-void Game::updateAiMilitaryTargets(int player,uint32_t budget) {
+void Game::updateAiMilitaryTargets(int player,uint32_t budget,bool air) {
     updateAiKnownObjects(player);
     auto &state=aiPlayers_[size_t(player)];
     const auto visible=[&](const Object &object) {
@@ -308,6 +324,7 @@ void Game::updateAiMilitaryTargets(int player,uint32_t budget) {
     const uint32_t started=clock();
     const uint32_t simulationTime=uint32_t(std::llround(gameTime_*1000.0));
     for(auto &group:state.militaryGroups) {
+        if((group.type==108)!=air)continue;
         if(group.type==101) {
             const bool retry=group.initialized && state.strategicNumbers.count(76) &&
                 aiExploreGroupRetry(group.flags,group.search.lastBusyTime,simulationTime,state.strategicNumbers.at(76));
@@ -512,6 +529,14 @@ void Game::updateAiMilitary(int player,uint32_t budget) {
     };
     const auto clock=[] {return uint32_t(std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count());};
+    const auto advanceReadiness=[&](AiMilitaryReadinessPass &pass,uint32_t start,uint32_t remaining,bool air) {
+        const auto stop=[&](int32_t id){queueAiMilitaryStop(player,id);};
+        return pass.advance(state.militaryGroups,start,remaining,clock,
+            [&](const auto &group){return aiMilitaryGatherReady(group,number(41),lookup);},
+            [&](auto &group){dispatchAiMilitaryGather(group,player,7,number(41),number(34),false,lookup,stop,
+                [&](const auto &order){if(order.range>=0)tacticalCommands_.enqueue(order);});},
+            stop,[] {},deficitRegions,air);
+    };
     // shortcut: Only recovered phase7/8 ordering is represented; cadence and phase9 policy remain native.
     state.militaryCycle.advance(budget,clock,[&] {
         // Original phase7 replenishes exploration groups before attack groups.
@@ -559,6 +584,7 @@ void Game::updateAiMilitary(int player,uint32_t budget) {
             }
             refreshAiGroupSearch(group.search,group.flags,searchMembers,uint32_t(std::llround(gameTime_*1000.0)));
             if(group.type==101)continue;
+            if(group.type==108) {group.desiredCount=int(group.members.size());continue;}
             // Native groups currently originate from attack-now (flag8). Other origins/initialization remain unported.
             const int initialized=group.initialized?1:0;
             refillAiMilitaryGroup(group,initialized,group.flags,uint32_t(std::llround(gameTime_*1000.0)),
@@ -569,12 +595,7 @@ void Game::updateAiMilitary(int player,uint32_t budget) {
                 });
         }
     },[&](uint32_t started,uint32_t remainingBudget) {
-        const auto result=state.militaryReadiness.advance(state.militaryGroups,started,remainingBudget,clock,
-            [&](const auto &group) {return aiMilitaryGatherReady(group,number(41),lookup);},
-            [&](auto &group) {dispatchAiMilitaryGather(group,player,7,number(41),number(34),false,lookup,
-                [&](int32_t id) {queueAiMilitaryStop(player,id);},
-                [&](const auto &order) {if(order.range>=0)tacticalCommands_.enqueue(order);});},
-            [&](int32_t id) {queueAiMilitaryStop(player,id);},[] {},deficitRegions);
+        const auto result=advanceReadiness(state.militaryReadiness,started,remainingBudget,false);
         if(result==AiMilitaryReadinessResult::Unsupported) {
             // Invalid native region input stays unsupported; skip it without releasing the group.
             const auto it=std::find_if(state.militaryGroups.begin(),state.militaryGroups.end(),[&](const auto &group) {return group.id==state.militaryReadiness.nextGroupId;});
@@ -582,6 +603,14 @@ void Game::updateAiMilitary(int player,uint32_t budget) {
             return state.militaryReadiness.nextGroupId==-1;
         }
         return result==AiMilitaryReadinessResult::Complete;
-    },[&] {updateAiMilitaryTargets(player,budget);updateSkirmishArmy(player);});
+    },[&] {
+        updateAiMilitaryTargets(player,budget);
+        if(std::any_of(state.militaryGroups.begin(),state.militaryGroups.end(),[](const auto &g){return g.type==108;})) {
+            // 5a1ed0 and 5a20a0 follow land planning and keep their own readiness cursor.
+            const auto result=advanceReadiness(state.airReadiness,clock(),budget,true);
+            if(result==AiMilitaryReadinessResult::Complete)updateAiMilitaryTargets(player,budget,true);
+        }
+        updateSkirmishArmy(player);
+    });
 }
 } // namespace swgb

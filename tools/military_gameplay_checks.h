@@ -163,6 +163,35 @@ static void militaryGameplayChecks(swgb::Assets &assets) {
                   "Next phase7 shrinks attack-now demand before original no-target wait");
         }
     }
+    {
+        scenario.players[0].diplomacy[2]=3;scenario.players[1].diplomacy[1]=3;
+        check(game.initScenario(scenario,&error),error.c_str());
+        const auto bomber=game.spawnObjectForTesting(1,762,2,20,20);
+        const auto fighter=game.spawnObjectForTesting(1,773,2,21,20);
+        const auto target=game.spawnObjectForTesting(1,109,1,24,20);
+        check(bomber && fighter && target,"Create a mixed air wing and visible enemy Command Center");
+        check(game.loadAiSourceForTesting(2,"air-attack",R"(
+(defrule (true) =>
+ (set-strategic-number sn-percent-attack-soldiers 0)
+ (set-strategic-number sn-percent-attack-air 100)
+ (attack-now) (disable-self)))",{},&error),error.c_str());
+        game.update(0,{});
+        game.updateAiMilitaryForTesting(2,UINT32_MAX);
+        const auto &groups=game.militaryGroupsForTesting(2);
+        auto wing=std::find_if(groups.begin(),groups.end(),[](const auto &g){return g.type==108;});
+        check(wing!=groups.end() && wing->members==std::vector<int32_t>{int32_t(bomber),int32_t(fighter)} &&
+              wing->targetId==int32_t(target),"Attack-now admits the aircraft and acquires the ground building");
+        game.update(0,{});
+        check(game.attackTargetForTesting(bomber)==target,"The shared attack order reaches the bomber");
+        const auto health=game.objectHitPoints(target);
+        for(int frame=0;frame<900 && game.objectHitPoints(target)==health;++frame)game.update(1.f/30,{});
+        check(game.objectHitPoints(target)<health,"The air wing damages its acquired ground target");
+        check(game.damageObjectForTesting(fighter,100000),"Remove a member of the air group");
+        game.updateAiMilitaryForTesting(2,UINT32_MAX);
+        check(std::none_of(groups.begin(),groups.end(),[&](const auto &g){
+            return std::find(g.members.begin(),g.members.end(),int32_t(fighter))!=g.members.end();
+        }),"Air group drops a dead wing member");
+    }
     for(int targetType:{329,109}) {
         scenario.players[0].diplomacy[2]=3;scenario.players[1].diplomacy[1]=3;
         check(game.initScenario(scenario,&error),error.c_str());

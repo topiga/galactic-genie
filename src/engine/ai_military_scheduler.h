@@ -186,7 +186,7 @@ struct AiMilitaryReadinessPass {
     template<class Clock,class Ready,class Gather,class Stop,class Remembered,class DeficitRegions=AiMilitaryNoDeficitRegions>
     AiMilitaryReadinessResult advance(std::vector<AiMilitaryGatherGroup> &groups,
             uint32_t started,uint32_t budget,Clock clock,Ready ready,Gather gather,
-            Stop stop,Remembered remembered,DeficitRegions deficitRegions={}) {
+            Stop stop,Remembered remembered,DeficitRegions deficitRegions={},bool air=false) {
         size_t index=0;
         if(nextGroupId!=-1) {
             const auto found=std::find_if(groups.begin(),groups.end(),[&](const auto &group){return group.id==nextGroupId;});
@@ -195,10 +195,11 @@ struct AiMilitaryReadinessPass {
         }
         for(;index<groups.size();++index) {
             auto &group=groups[index];
-            if(group.state!=0 && group.state!=1)continue;
+            if((group.type==108)!=air || (group.state!=0 && group.state!=1))continue;
             const bool isReady=group.retries>10 || ready(group);
             bool release=isReady;
-            if(int64_t(group.desiredCount)>int64_t(group.members.size())) {
+            if(air && int64_t(group.desiredCount)>int64_t(group.members.size()))release=false;
+            else if(int64_t(group.desiredCount)>int64_t(group.members.size())) {
                 // 5a1945: first member and then home109 lookup even when readiness fails.
                 // true: different member-map regions; false: same regions or a missing object.
                 // nullopt exposes a caller that cannot yet provide the original region query.
