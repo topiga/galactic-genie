@@ -4,6 +4,21 @@
 
 static void aiMilitarySchedulerChecks() {
     using namespace swgb;
+    {
+        //59f194 retains readiness;59f789 advances phase before checking host-budget expiry.
+        AiMilitaryPhaseCycle cycle;uint32_t now=0;int refreshed=0,read=0,planned=0;bool complete=false;
+        const auto tick=[&] {cycle.advance(2,[&]{return now;},[&]{++refreshed;now+=2;},
+            [&](uint32_t,uint32_t){++read;if(complete)now+=2;return complete;},[&]{++planned;});};
+        tick();check(cycle.phase==AiMilitaryPhase::Readiness && refreshed==1 && read==0 && planned==0,
+            "Expired refresh budget retains readiness without running the next phase");
+        tick();check(cycle.phase==AiMilitaryPhase::Readiness && refreshed==1 && read==1 && planned==0,
+            "Readiness continuation never refreshes destinations or plans early");
+        complete=true;tick();check(cycle.phase==AiMilitaryPhase::Planning && refreshed==1 && planned==0,
+            "Completing readiness at the deadline retains planning for the next callback");
+        tick();check(cycle.phase==AiMilitaryPhase::Refresh && refreshed==1 && planned==1,
+            "Pending planning runs before the next destination refresh");
+    }
+
     const auto fresh=[] {
         return std::vector<AiMilitaryGatherGroup>{{10,1,1,{1}},{20,1,1,{2}},{30,1,1,{3}}};
     };

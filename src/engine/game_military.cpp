@@ -110,20 +110,17 @@ bool Game::aiMilitaryCanUseNativePolicy(int player,uint32_t id) const {
     if(player<=0 || size_t(player)>=aiPlayers_.size())return false;
     const auto &groups=aiPlayers_[size_t(player)].militaryGroups;
     for(const auto &group:groups)if(std::find(group.members.begin(),group.members.end(),int32_t(id))!=group.members.end())
-        return group.state==2 || group.desiredCount>int(group.members.size());
+        return aiPlayers_[size_t(player)].militaryCycle.phase==AiMilitaryPhase::Planning &&
+               (group.state==2 || group.desiredCount>int(group.members.size()));
     const auto *object=findObject(id);
     const bool unsupported=object && (!aiMilitarySoldierClass(object->unit->cls) || object->unit->cls==51);
     return !aiPlayers_[size_t(player)].scripted && (groups.empty() || unsupported);
 }
 
-void Game::updateAiMilitary(int player) {
+void Game::updateAiMilitary(int player,uint32_t budget) {
     if(player<=0 || size_t(player)>=aiPlayers_.size())return;
     auto &state=aiPlayers_[size_t(player)];
     if(state.militaryGroups.empty())return;
-    refreshAiGatherDestinations(state.militaryGroups,[&](int32_t id)->std::optional<std::array<float,3>> {
-        const auto *object=findObject(uint32_t(id));if(!object)return std::nullopt;
-        return std::array<float,3>{object->x,object->y,object->heightAboveGround};
-    });
     for(int key:{34,41})if(!state.strategicNumbers.count(key))return;
     const auto number=[&](int key) {return state.strategicNumbers.at(key);};
     const auto lookup=[&](int32_t id,const std::array<float,3> &destination)->std::optional<AiMilitaryGatherMember> {
@@ -138,19 +135,26 @@ void Game::updateAiMilitary(int player) {
     };
     const auto clock=[] {return uint32_t(std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count());};
-    // shortcut: This owner callback schedules recovered phase7/8 with a native 2ms budget, not the complete24-phase driver.
-    const auto result=state.militaryReadiness.advance(state.militaryGroups,clock(),2,clock,
-        [&](const auto &group) {return aiMilitaryGatherReady(group,number(41),lookup);},
-        [&](auto &group) {dispatchAiMilitaryGather(group,player,7,number(41),number(34),false,lookup,
-            [&](int32_t id) {queueAiMilitaryStop(player,id);},
-            [&](const auto &order) {if(order.range>=0)tacticalCommands_.enqueue(order);});},
-        [&](int32_t id) {queueAiMilitaryStop(player,id);},[] {});
-    if(result==AiMilitaryReadinessResult::Unsupported) {
-        // shortcut: Preserve casualty deficits until original home/region callbacks exist; native policy handles those groups.
-        const auto it=std::find_if(state.militaryGroups.begin(),state.militaryGroups.end(),[&](const auto &group) {return group.id==state.militaryReadiness.nextGroupId;});
-        state.militaryReadiness.nextGroupId=it!=state.militaryGroups.end() && it+1!=state.militaryGroups.end()?(it+1)->id:-1;
-    }
-    // shortcut: Phase9 target/scouting policy remains native and is restricted to ready or unsupported-deficit groups.
-    updateSkirmishArmy(player);
+    // shortcut: Only recovered phase7/8 ordering is represented; cadence and phase9 policy remain native.
+    state.militaryCycle.advance(budget,clock,[&] {
+        refreshAiGatherDestinations(state.militaryGroups,[&](int32_t id)->std::optional<std::array<float,3>> {
+            const auto *object=findObject(uint32_t(id));if(!object)return std::nullopt;
+            return std::array<float,3>{object->x,object->y,object->heightAboveGround};
+        });
+    },[&](uint32_t started,uint32_t remainingBudget) {
+        const auto result=state.militaryReadiness.advance(state.militaryGroups,started,remainingBudget,clock,
+            [&](const auto &group) {return aiMilitaryGatherReady(group,number(41),lookup);},
+            [&](auto &group) {dispatchAiMilitaryGather(group,player,7,number(41),number(34),false,lookup,
+                [&](int32_t id) {queueAiMilitaryStop(player,id);},
+                [&](const auto &order) {if(order.range>=0)tacticalCommands_.enqueue(order);});},
+            [&](int32_t id) {queueAiMilitaryStop(player,id);},[] {});
+        if(result==AiMilitaryReadinessResult::Unsupported) {
+            // shortcut: Skip deficits until original home/region callbacks exist; planning uses native policy for them.
+            const auto it=std::find_if(state.militaryGroups.begin(),state.militaryGroups.end(),[&](const auto &group) {return group.id==state.militaryReadiness.nextGroupId;});
+            state.militaryReadiness.nextGroupId=it!=state.militaryGroups.end() && it+1!=state.militaryGroups.end()?(it+1)->id:-1;
+            return state.militaryReadiness.nextGroupId==-1;
+        }
+        return result==AiMilitaryReadinessResult::Complete;
+    },[&] {updateSkirmishArmy(player);});
 }
 } // namespace swgb

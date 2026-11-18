@@ -49,7 +49,7 @@ static void aiFogChecks(swgb::Assets &assets) {
         return wave;
     };
     auto wave=prepareWave(game);
-    game.updateSkirmishArmyForTesting(2);game.update(0,{});game.update(0,{});
+    game.updateSkirmishArmyForTesting(2);game.updateAiMilitaryForTesting(2);game.update(0,{});game.update(0,{});
     for(auto id:wave) check(game.attackTargetForTesting(id)==0,"Searching wave does not target unseen command center");
     const auto search=game.moveAnchorForTesting(wave.front());
     check(!game.observedForTesting(2,int(search[0]),int(search[1])),"Explored map still scouts genuinely unobserved ground");
@@ -59,7 +59,7 @@ static void aiFogChecks(swgb::Assets &assets) {
     const auto changedWave=prepareWave(changedEnemy);
     check(changedEnemy.moveObjectForTesting(changedEnemy.commandCenterId(1),3.5f,60.5f),"Relocate unseen enemy base");
     check(changedEnemy.damageObjectForTesting(changedEnemy.commandCenterId(1),100000),"Remove unseen enemy base");
-    changedEnemy.updateSkirmishArmyForTesting(2);changedEnemy.update(0,{});changedEnemy.update(0,{});
+    changedEnemy.updateSkirmishArmyForTesting(2);changedEnemy.updateAiMilitaryForTesting(2);changedEnemy.update(0,{});changedEnemy.update(0,{});
     check(changedEnemy.moveAnchorForTesting(changedWave.front())==search,"Scouting choice does not read unseen enemy base position or death");
 
     // Observe the old destination, then put the wave back: only knowledge changed.
@@ -68,7 +68,7 @@ static void aiFogChecks(swgb::Assets &assets) {
     check(game.observedForTesting(2,int(search[0]),int(search[1])),"Scouting records actual observation");
     check(game.moveObjectForTesting(wave.front(),start[0],start[1]),"Scout returns to initial position");
     for(auto id:wave) check(game.stopUnitForTesting(id),"Stop wave fixture");
-    game.updateSkirmishArmyForTesting(2);game.update(0,{});game.update(0,{});
+    game.updateSkirmishArmyForTesting(2);game.updateAiMilitaryForTesting(2);game.update(0,{});game.update(0,{});
     check(game.moveAnchorForTesting(wave.front())!=search,"Discovery history advances search instead of repeating old waypoint");
     wave=prepareWave(game);
     game.setDiplomacyForTesting(2,1,1);
@@ -78,17 +78,17 @@ static void aiFogChecks(swgb::Assets &assets) {
         check(game.observedForTesting(2,x,y),"Revisit fixture records actual sight");
     }
     check(game.moveObjectForTesting(surveyor,60.5f,60.5f),"Park surveyor");
-    game.updateSkirmishArmyForTesting(2);game.update(0,{});game.update(0,{});
+    game.updateSkirmishArmyForTesting(2);game.updateAiMilitaryForTesting(2);game.update(0,{});game.update(0,{});
     const auto revisit=game.moveAnchorForTesting(wave.front());
     check(game.observedForTesting(2,int(revisit[0]),int(revisit[1])),"Completed exploration enters revisit scouting");
     check(game.stopUnitForTesting(wave.front()) && game.moveObjectForTesting(wave.front(),4.5f,4.5f),
           "Relocate idle reinforcement away from travelling wave");
-    game.updateSkirmishArmyForTesting(2);game.update(0,{});game.update(0,{});
+    game.updateSkirmishArmyForTesting(2);game.updateAiMilitaryForTesting(2);game.update(0,{});game.update(0,{});
     check(game.moveAnchorForTesting(wave.front())==revisit,
           "Reinforcement keeps shared revisit destination until renewed sight, not historical observation");
     check(game.moveObjectForTesting(wave.front(),revisit[0],revisit[1]) && game.stopUnitForTesting(wave.front()),
           "Complete shared revisit");
-    game.updateSkirmishArmyForTesting(2);game.update(0,{});game.update(0,{});
+    game.updateSkirmishArmyForTesting(2);game.updateAiMilitaryForTesting(2);game.update(0,{});game.update(0,{});
     check(game.moveAnchorForTesting(wave.front())!=revisit,"Completed revisit advances search");
     std::printf("PASS: AI fog acquisition, last-seen pursuit and observation-based scouting\n");
 }

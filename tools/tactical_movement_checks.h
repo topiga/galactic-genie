@@ -84,5 +84,37 @@ static void tacticalMovementGameplayChecks(swgb::Assets &assets) {
     check(transform && game.queueTacticalMoveForTesting(transform,40,40,1),"Mobile class34 accepts ordinary724 without transformation");
     game.update(0,{});game.update(0,{});
     check(game.tacticalMovementStateForTesting(transform)==1,"Class34 dispatch reaches initial spacing completion");
+    // Original445660 controls: forced724 always replaces even identical XYZ; the new range wins.
+    // Let tactical staging flush, then observe the actual local dispatch before checking state.
+    const auto dispatchReplacement=[&](swgb::Game &fixture,uint32_t id,float range,int wanted) {
+        check(fixture.queueTacticalMoveForTesting(id,30.5f,20.5f,range),"Queue same-destination forced724 replacement");
+        fixture.update(0,{});
+        check(fixture.stagedTacticalCountForTesting()==0,"Tactical staging flushes before local command dispatch");
+        for(int i=0;i<16;++i) {
+            fixture.update(0,{});
+            if(fixture.tacticalMovementStateForTesting(id)==wanted)break;
+        }
+        check(fixture.tacticalMovementStateForTesting(id)==wanted,"Forced same-XYZ724 replaces the old range and action state after dispatch");
+    };
+    swgb::Game reissue(assets);check(reissue.initScenario(scenario,&error),error.c_str());
+    const auto moving=reissue.spawnObjectForTesting(1,83,1,20.5f,20.5f);
+    dispatchReplacement(reissue,moving,20,1);
+    dispatchReplacement(reissue,moving,0,4); // Completed head must not suppress a narrower order.
+    dispatchReplacement(reissue,moving,20,1); // Active path must not retain its previous zero range.
+    check(reissue.objectPosition(moving)==std::array<float,2>{20.5f,20.5f},"Zero-time reissues compare command lifecycle without walking");
+    swgb::Game failed(assets);check(failed.initScenario(scenario,&error),error.c_str());
+    const auto &workerData=assets.dat().civs[1].units[83];
+    const auto &terrainRules=assets.dat().terrainRestrictions.at(size_t(workerData.terrainRestriction)).passableBuildableDmgMultiplier;
+    int blocked=-1,passable=-1;
+    for(size_t i=0;i<terrainRules.size() && i<256;++i) {
+        if(terrainRules[i]<=0 && blocked<0)blocked=int(i);
+        if(terrainRules[i]>0 && passable<0)passable=int(i);
+    }
+    check(blocked>=0 && passable>=0,"Original worker restrictions supply an isolated walkable tile");
+    for(int y=0;y<64;++y)for(int x=0;x<64;++x)check(failed.setTerrainForTesting(x,y,blocked),"Prepare unreachable movement fixture");
+    check(failed.setTerrainForTesting(20,20,passable),"Keep the actor standing on legal terrain");
+    const auto stuck=failed.spawnObjectForTesting(1,83,1,20.5f,20.5f);
+    dispatchReplacement(failed,stuck,0,13);
+    dispatchReplacement(failed,stuck,20,1); // Failed head is replaced, not resurrected or deduplicated.
     std::puts("PASS: queued724 movement, pause, range arrival, deferred retirement and Stop");
 }

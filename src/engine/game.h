@@ -386,6 +386,9 @@ public:
     std::array<float,2> pointMovementDestinationForTesting(uint32_t id) const {
         const auto *o=findObject(id);return o?std::array<float,2>{o->pointMovement.destinationX,o->pointMovement.destinationY}:std::array<float,2>{-1,-1};
     }
+    bool formAiMilitaryGroupsForTesting(int player) {return formAiMilitaryGroups(player);}
+    AiMilitaryPhase militaryPhaseForTesting(int player) const {return aiPlayers_.at(size_t(player)).militaryCycle.phase;}
+    void updateAiMilitaryForTesting(int player,uint32_t budget=2) {refreshVisibility();refreshAiMilitaryMembers(player);updateAiMilitary(player,budget);}
     const std::vector<AiMilitaryGatherGroup>& militaryGroupsForTesting(int player) const {return aiPlayers_.at(size_t(player)).militaryGroups;}
     bool queueTacticalMoveForTesting(uint32_t id,float x,float y,float range) {
         auto *object=findObject(id);return object && queueTacticalMove(*object,x,y,range);
@@ -1009,6 +1012,7 @@ private:
         std::vector<int32_t> militarySoldiers;
         std::vector<AiMilitaryGatherGroup> militaryGroups;
         AiMilitaryReadinessPass militaryReadiness;
+        AiMilitaryPhaseCycle militaryCycle;
         int32_t nextMilitaryGroup=1;
         std::unordered_map<int, int> goals;
         std::map<int, double> timers;
@@ -1505,7 +1509,7 @@ private:
     void queueAiMilitaryStop(int player,int32_t id);
     bool formAiMilitaryGroups(int player);
     bool aiMilitaryCanUseNativePolicy(int player,uint32_t id) const;
-    void updateAiMilitary(int player);
+    void updateAiMilitary(int player,uint32_t budget=2);
     void updatePlayerObjects(float dt,int player, bool auxiliary = false);
     void updateAiPlayer(
         int player, AiPlayerState &state);

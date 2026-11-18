@@ -52,5 +52,31 @@ static void militaryGameplayChecks(swgb::Assets &assets) {
     check(game.loadAiSourceForTesting(3,"third-owner", "(defrule (true) => (attack-now) (disable-self))",{},&error),error.c_str());
     game.update(0,{});
     check(game.militaryGroupsForTesting(3).size()==1,"Default-profile attack-now supports owners beyond skirmish center slots");
+    check(game.initScenario(scenario,&error),error.c_str());
+    const auto leader=game.spawnObjectForTesting(1,329,2,15,15);
+    const auto later=game.spawnObjectForTesting(1,329,2,45,45);
+    check(leader && later && game.formAiMilitaryGroupsForTesting(2),"Two independent military groups");
+    check(game.militaryGroupsForTesting(2).size()==2,"Distant units form separate groups");
+    game.updateAiMilitaryForTesting(2,0);
+    check(game.militaryPhaseForTesting(2)==AiMilitaryPhase::Readiness,"Zero budget retains readiness after refresh");
+    const auto destination=game.militaryGroupsForTesting(2)[1].destination;
+    check(game.moveObjectForTesting(later,55,55),"Move later leader during retained readiness");
+    game.updateAiMilitaryForTesting(2,0);
+    check(game.militaryPhaseForTesting(2)==AiMilitaryPhase::Readiness && game.militaryGroupsForTesting(2)[0].state==2 &&
+          game.militaryGroupsForTesting(2)[1].destination==destination,"Budget continuation preserves the unprocessed group's destination");
+    const auto staged=game.stagedTacticalCountForTesting();
+    game.updateSkirmishArmyForTesting(2);
+    check(game.stagedTacticalCountForTesting()==staged,"Native fallback cannot bypass retained readiness to plan for ready members");
+    game.updatePaused(1,{});
+    check(game.militaryPhaseForTesting(2)==AiMilitaryPhase::Readiness,"Pause retains scheduler continuation");
+    game.updateAiMilitaryForTesting(2,0);
+    check(game.militaryPhaseForTesting(2)==AiMilitaryPhase::Planning && game.militaryGroupsForTesting(2)[1].destination==destination,
+          "Finished readiness retains pending planning at the deadline");
+    const auto beforePlan=game.stagedTacticalCountForTesting();
+    game.updateAiMilitaryForTesting(2,0);
+    check(game.militaryPhaseForTesting(2)==AiMilitaryPhase::Refresh && game.stagedTacticalCountForTesting()>beforePlan,
+          "Pending native planning emits commands without another refresh");
+    game.updateAiMilitaryForTesting(2,0);
+    check(game.militaryGroupsForTesting(2)[1].destination!=destination,"Only the following cycle refreshes the moving leader");
     std::puts("PASS: production PER military admission, gather movement, pause, ownership and reset");
 }

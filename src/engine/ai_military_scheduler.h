@@ -152,4 +152,23 @@ struct AiMilitaryReadinessPass {
         return AiMilitaryReadinessResult::Complete;
     }
 };
+// Bounded phase7/8/9 ordering from59f194/59f789; phase bodies and the outer cadence remain caller-owned.
+enum class AiMilitaryPhase { Refresh=7, Readiness=8, Planning=9 };
+struct AiMilitaryPhaseCycle {
+    AiMilitaryPhase phase=AiMilitaryPhase::Refresh;
+    template<class Clock,class Refresh,class Readiness,class Plan>
+    void advance(uint32_t budget,Clock clock,Refresh refresh,Readiness readiness,Plan plan) {
+        const uint32_t started=clock();
+        if(phase==AiMilitaryPhase::Refresh) {
+            refresh();phase=AiMilitaryPhase::Readiness;
+            if(uint32_t(clock()-started)>=budget)return;
+        }
+        if(phase==AiMilitaryPhase::Readiness) {
+            if(!readiness(started,budget))return;
+            phase=AiMilitaryPhase::Planning;
+            if(uint32_t(clock()-started)>=budget)return;
+        }
+        plan();phase=AiMilitaryPhase::Refresh;
+    }
+};
 } // namespace swgb

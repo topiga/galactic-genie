@@ -6830,3 +6830,25 @@ The rebuilt desktop app passes60 update/render/present smoke frames, effects,
 streamed music and EOF looping with dummy drivers. No new audible comparison is
 claimed. Other validation logs use `startup-military-` prefixes. QuickDesk audio
 and settings were not changed, and research artifacts remain local.
+
+### Retained military phase ordering (18 November 2026)
+
+The bounded military cycle now retains Refresh/Readiness/Planning state across
+callbacks. Original59f194→59f231 keeps phase8 while its group cursor remains set;
+59f789 advances the phase before59f799 checks the elapsed budget. Accordingly,
+continuation no longer refreshes group destinations or invokes target policy.
+Readiness completing at the deadline retains pending planning for the next
+callback. The fallback army path cannot bypass that gate for grouped actors.
+Unsupported deficit handling remains a native skip, but it must finish traversing
+later groups before native planning runs. Cadence, the2ms default budget, and
+phase9 policy remain adapters rather than the complete24-phase scheduler.
+
+Original724 reissue research confirms existing forced replacement behavior:
+24 object-level controls distinguish unforced sameXYZ reuse from forced head
+replacement in states1/3/4/13;20 AI controls confirm incoming forced priority wins.
+The production regression now queues changed ranges after completion, during
+movement, and after an unreachable path failure. Completed-head retirement can
+occur during staging in the native test; retained-head semantics are independently
+established by the original controls. Evidence:
+`tactical724-reissue-findings-2026-11-18.json` and the existing
+`ai-controller-facts/attack-scheduler-findings.txt`.
