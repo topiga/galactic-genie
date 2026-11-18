@@ -7882,3 +7882,38 @@ this sample to the native island battle moved its finish to 13.073 s and left
 three winners alive. The same experiment on open ground ended at 17.693 s.
 This measures sensitivity to update frequency. It uses a clock sample from
 the economic game, so each combat's original startup cadence is still unknown.
+
+The original seed-four economic match first lost P2's Command Center between
+3,773.792 and 3,775.317 seconds. P2's game-state byte changed from 0 to 2
+between 3,773.717 and 3,788.746 s, leaving P3 as the sole active computer.
+P2 still owned 101 objects at the latter sample. The observer remained in
+play because the authored trigger required zero owned objects. Its manually
+closed Achievements screen reads 1:04:51. That time records the observer
+exit, not the competitive finish. The independent native replay cycling 915
+sampled Windows step lengths lasted the full ten simulated hours without a
+result. Its last sample at 35,991.569 s had 110 and 61 live objects.
+
+### Complete Command Center raid on the same Desert terrain
+
+Using the same seed-four economy and starting stockpiles, each side also gets
+two basic rams and three mounted troopers near the opposing Command Center.
+The scenario declares victory for a player when its opponent owns zero Command
+Centers. Both computer players receive identical reinforcements before play.
+The Windows process had session seed 30795. The capture contains 680 normal
+simulation clock advances between zero and the Achievements screen.
+
+| Event | Galactic Genie, 30 Hz | Galactic Genie, captured Windows steps | Windows Clone Campaigns |
+| --- | ---: | ---: | ---: |
+| Scenario result (simulated seconds) | 41.400 | 41.465 | 52.103 |
+| Command Centers remaining, P2 / P3 | 1 / 0 | 1 / 0 | 0 / 0 |
+
+Windows first lost P2's center between 50.709 and 51.023 s, then P3's
+between 51.023 and 51.409 s. Achievements displayed both computers with
+victory markers. The native scenario ended on the first lost center. This
+run differs in target destruction order as well as result dispatch time.
+
+To use the desktop simulation clock in the headless replay, append the
+Windows clock capture path after the session seed. Each line holds the
+cumulative world time in milliseconds and the step length, separated by a
+comma, starting with the first advance from zero. The runner checks each
+consumed row and fails if the trace runs out before a native result.

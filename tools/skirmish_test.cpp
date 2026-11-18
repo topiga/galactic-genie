@@ -365,8 +365,15 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
     check(allPassed,"Every original-personality seed must win through normal combat");
 }
 
+static bool parseUint32(std::string_view value,uint32_t &out) {
+    if(value.empty()) return false;
+    const char *end=value.data()+value.size();
+    const auto parsed=std::from_chars(value.data(),end,out);
+    return parsed.ec==std::errc{} && parsed.ptr==end;
+}
+
 // The original scenario lobby reserves slot 1 for the observing human.
-[[gnu::noinline]] static void scenarioDuel(swgb::Assets &assets,const char *path,uint32_t seed) {
+[[gnu::noinline]] static void scenarioDuel(swgb::Assets &assets,const char *path,uint32_t seed,const char *clockPath) {
     std::ifstream input(path,std::ios::binary);
     check(input.is_open(),"Could not open scenario");
     const std::vector<uint8_t> data{std::istreambuf_iterator<char>(input),{}};
@@ -378,17 +385,45 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
     check(scenario.players[0].human && !game.aiRuleCountForTesting(1) &&
           game.aiRuleCountForTesting(2) && game.aiRuleCountForTesting(3),
           "Expected a human observer and two computer players in slots 2 and 3");
-    for(int frame=0;frame<=30*36000;++frame) {
-        if(frame%1800==0 || game.matchResult()>=0) {
+    std::ifstream clock;
+    uint32_t hostMs=1;
+    if(clockPath) {
+        clock.open(clockPath);
+        check(clock.is_open(),"Could not open Windows clock trace");
+        game.updateLocal(hostMs,0,{}); // The original admits an initial zero-time step.
+    }
+    uint32_t timeMs=0,nextReport=0;
+    for(uint32_t frame=1;;++frame) {
+        if(timeMs>=nextReport || game.matchResult()>=0) {
             std::printf("scenario seed=%u time=%.3f population=%.0f/%.0f observer_result=%d attacks=%u\n",
-                seed,frame/30.0,game.populationUsedForTesting(2),game.populationUsedForTesting(3),
+                seed,timeMs/1000.0,game.populationUsedForTesting(2),game.populationUsedForTesting(3),
                 game.matchResult(),unsigned(game.combatStats().attacksLanded));
             std::fflush(stdout);
+            nextReport+=60000;
         }
         if(game.matchResult()>=0) return;
-        if(frame<30*36000) game.update(1.f/30,{});
+        check(timeMs<36000000,"Scenario still running after 36000 simulated seconds");
+        if(clockPath) {
+            std::string line;
+            check(bool(std::getline(clock,line)),"Windows clock trace ended before the native scenario result");
+            if(!line.empty() && line.back()=='\r') line.pop_back();
+            const std::string_view row(line);
+            const auto comma=row.find(',');
+            uint32_t endMs=0,stepMs=0;
+            check(comma!=row.npos && parseUint32(row.substr(0,comma),endMs) &&
+                  parseUint32(row.substr(comma+1),stepMs) && stepMs>=75 && stepMs<=150 &&
+                  endMs==timeMs+stepMs,"Invalid or discontinuous normal-speed Windows clock trace");
+            // Invert the normal-speed integer clock used by the desktop client.
+            const uint32_t hostStep=(2*stepMs+2)/3;
+            check(hostStep*3/2==stepMs,"Step cannot occur at normal Windows game speed");
+            hostMs+=hostStep;
+            game.updateLocal(hostMs,hostStep/1000.f,{});
+            timeMs=endMs;
+        } else {
+            game.update(1.f/30,{});
+            timeMs=(frame*1000+15)/30;
+        }
     }
-    throw std::runtime_error("Scenario still running after 36000 simulated seconds");
 }
 
 // Keep independent fixture batches out of one oversized sanitizer stack frame.
@@ -496,13 +531,10 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
 int main(int argc, char **argv) {
     const bool originalAi=argc==3 && std::string(argv[2])=="--original-ai";
     const bool duel=(argc==3 || argc==4) && std::string(argv[2])=="--ai-duel";
-    const bool scenarioReplay=argc==5 && std::string_view(argv[2])=="--scenario-duel";
+    const bool scenarioReplay=(argc==5 || argc==6) && std::string_view(argv[2])=="--scenario-duel";
     uint32_t duelSeed=1;
     if((duel && argc==4) || scenarioReplay) {
-        const std::string_view value(argv[argc-1]);
-        const auto end=value.data()+value.size();
-        const auto parsed=std::from_chars(value.data(),end,duelSeed);
-        if(parsed.ec!=std::errc{} || parsed.ptr!=end) {
+        if(!parseUint32(argv[scenarioReplay?4:3],duelSeed)) {
             std::fprintf(stderr,"Expected an unsigned 32-bit seed.\n");
             return 2;
         }
@@ -515,7 +547,7 @@ int main(int argc, char **argv) {
         swgb::SoftRenderer renderer;
         swgb::Assets assets(&renderer); std::string error;
         check(assets.init(argv[1], &error), error.c_str());
-        if(scenarioReplay) {scenarioDuel(assets,argv[3],duelSeed);return 0;}
+        if(scenarioReplay) {scenarioDuel(assets,argv[3],duelSeed,argc==6?argv[5]:nullptr);return 0;}
         if(originalAi || duel) {originalAiMatches(assets,duel,duelSeed);return 0;}
         if(allCivilizations || conquestMatch) {civilizationMatches(assets,conquestMatch);return 0;}
         if(playerConquest) {swgb::Game game(assets);playerMatch(game,assets,renderer,true);return 0;}
