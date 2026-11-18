@@ -5,6 +5,7 @@
 #include "ai_military_scheduler.h"
 #include "ai_military.h"
 #include "ai_attack_memory.h"
+#include "ai_resource_knowledge.h"
 
 #include "local_simulation_clock.h"
 #include "local_command_queue.h"
@@ -1024,6 +1025,8 @@ private:
             std::array<uint8_t,3> position{};
         };
         AiProgram program;
+        AiResourceKnowledge resourceKnowledge;
+        std::unordered_map<int,int> matchedPlayers;
         std::vector<KnownMilitaryObject> militaryKnownObjects;
         std::vector<uint8_t> explorationInformation, explorationObserved;
         std::array<AiAttackMemoryQuarter,16> explorationQuarters{};
@@ -1039,7 +1042,7 @@ private:
         std::map<int, double> timers;
         // Verified fresh profile events run before the original's first PER evaluation.
         std::unordered_map<int, int> strategicNumbers = {
-            {0,34}, {2,66}, {4,2}, {34,50}, {41,4}, {227,75}, {230,20}, {42,0}, {74,20}, {76,15}, {106,-1}, {107,-1}, {108,-1}, {118,0}, {120,0}, {143,1}, {168,50}, {226,0}
+            {0,34}, {2,66}, {4,2}, {34,50}, {41,4}, {227,75}, {230,20}, {42,0}, {74,20}, {76,15}, {86,25}, {87,100}, {106,-1}, {107,-1}, {108,-1}, {118,0}, {120,0}, {143,1}, {168,50}, {226,0}
         };
         std::unordered_set<std::string>
             warnedFacts;
@@ -1543,6 +1546,8 @@ private:
     void updateAiMilitaryTargets(int player,uint32_t budget);
     void queueAiMilitaryAttack(int player,const AiMilitaryGatherGroup &group,const Object &target);
     void updatePlayerObjects(float dt,int player, bool auxiliary = false);
+    void updateAiResourceKnowledge(int player);
+    void reevaluateAiResourceFound(int player);
     void updateAiPlayer(
         int player, AiPlayerState &state);
     void updateAiGatherers(
@@ -1656,6 +1661,7 @@ private:
     std::array<float, 17> startupPopulationAdjustment_{};
     std::array<std::vector<int>, 17> civilizationEffects_{}, playerEffects_{};
     std::array<AiPlayerState, 17> aiPlayers_{};
+    std::optional<uint32_t> aiMapId_;
     std::array<std::array<float,4>,17> aiEscrow_{},aiEscrowPercent_{};
     std::array<std::set<int>, 17> disabledTechs_{};
     std::array<std::set<int>, 17> disabledUnits_{};

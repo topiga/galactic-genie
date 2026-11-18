@@ -31,6 +31,17 @@ static void aiControllerChecks(swgb::Assets &assets) {
     check(game.aiGoalForTesting(1,914)==1 && game.aiGoalForTesting(1,915)==1 &&
           game.aiGoalForTesting(1,916)==0 && game.aiGoalForTesting(1,917)==0 && game.aiGoalForTesting(1,918)==1,
           "Original counted OR, empty result, malformed count, unknown propagation and short circuit");
+    game.setDiplomacyForTesting(1,2,3);game.setDiplomacyForTesting(2,1,0);
+    run(1,"(defrule (player-human 1) (not (player-human 2)) (player-in-game any-computer)"
+          " (players-stance 2 ally) (stance-toward 2 enemy) (not (players-stance 1 ally))"
+          " (player-in-game every-ally) (not (player-human any-ally)) => (set-goal 919 1))");
+    check(game.aiGoalForTesting(1,919)==1,
+          "Player facts preserve directed diplomacy, human identity, selector constants and vacuous every");
+    run(1,"(defrule (player-human any-computer) => (set-goal 920 1))"
+          "(defrule (player-in-game 99) => (set-goal 921 1))");
+    check(game.aiGoalForTesting(1,920)==0 && game.aiGoalForTesting(1,921)==0,
+          "Player facts reject unmatched selectors and absent player IDs");
+    game.setDiplomacyForTesting(2,1,3);
     auto populations=[&](int civilians,int military) {
         run(3,"(defrule (civilian-population == "+std::to_string(civilians)+") (military-population == "+
             std::to_string(military)+") => (set-goal 901 1))");

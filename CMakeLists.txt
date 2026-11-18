@@ -49,6 +49,7 @@ set(SWGB_CORE_SOURCES
     src/engine/game_tactical_movement.cpp
     src/engine/game_military.cpp
     src/engine/game_explore_destination.cpp
+    src/engine/game_ai_resources.cpp
     src/engine/game_ai_memory.cpp
     src/engine/pathfinding.cpp
 )
@@ -150,6 +151,8 @@ if(NOT VITA)
         add_executable(swgb-ai-group-targets-test tools/ai_group_targets_test.cpp src/engine/ai_group_targets.cpp src/engine/ai_targets.cpp)
         add_executable(swgb-ai-group-search-test tools/ai_group_search_test.cpp)
         add_executable(swgb-ai-attack-memory-test tools/ai_attack_memory_test.cpp)
+        add_executable(swgb-ai-player-facts-test tools/ai_player_facts_test.cpp)
+        add_executable(swgb-ai-resource-knowledge-test tools/ai_resource_knowledge_test.cpp)
         add_executable(swgb-rms-map-test tools/rms_map_test.cpp src/engine/rms_walls.cpp src/engine/rms_land_placement.cpp src/engine/rms_zones.cpp src/engine/rms_connections.cpp src/engine/rms_elevation.cpp src/engine/rms_cliffs.cpp src/engine/rms_slopes.cpp src/engine/rms_early_forest.cpp src/engine/rms_terrain_cleanup.cpp src/engine/rms_scenery.cpp src/engine/rms_scenery_appearance.cpp src/engine/rms_terrain.cpp src/engine/rms_map.cpp src/engine/rms_object_rows.cpp src/engine/rms_script.cpp src/engine/rms_objects.cpp src/engine/rms_player_starts.cpp src/core/drs.cpp)
         add_executable(swgb-rms-player-starts-test tools/rms_player_starts_test.cpp src/engine/rms_player_starts.cpp)
         add_executable(swgb-rms-cliffs-test tools/rms_cliffs_test.cpp src/engine/rms_cliffs.cpp)
@@ -164,7 +167,7 @@ if(NOT VITA)
         add_executable(swgb-rms-early-forest-test tools/rms_early_forest_test.cpp src/engine/rms_early_forest.cpp src/engine/rms_scenery.cpp src/engine/rms_scenery_appearance.cpp)
         add_executable(swgb-rms-group-test tools/rms_group_test.cpp src/engine/rms_zones.cpp src/engine/rms_objects.cpp src/engine/rms_scenery_appearance.cpp)
         add_executable(swgb-rms-zones-test tools/rms_zones_test.cpp src/engine/rms_zones.cpp)
-        foreach(test rms rms-object-rows rms-cliffs rms-land-placement rms-connections rms-elevation rms-slopes rms-zones rms-group rms-object rms-map rms-player-starts rms-terrain rms-scenery rms-scenery-appearance rms-early-forest rms-terrain-cleanup ai-military ai-targets ai-group-targets ai-group-search ai-attack-memory)
+        foreach(test rms rms-object-rows rms-cliffs rms-land-placement rms-connections rms-elevation rms-slopes rms-zones rms-group rms-object rms-map rms-player-starts rms-terrain rms-scenery rms-scenery-appearance rms-early-forest rms-terrain-cleanup ai-military ai-targets ai-group-targets ai-group-search ai-attack-memory ai-player-facts ai-resource-knowledge)
             target_include_directories(swgb-${test}-test PRIVATE src)
             add_test(NAME ${test} COMMAND swgb-${test}-test)
         endforeach()

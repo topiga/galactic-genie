@@ -20,6 +20,7 @@ static void check(bool value, const char *message) {
 #include "ai_timer_checks.h"
 #include "ai_research_checks.h"
 #include "ai_controller_checks.h"
+#include "ai_resource_knowledge_gameplay_checks.h"
 #include "selection_checks.h"
 #include "civilization_checks.h"
 #include "scenario_import_checks.h"
@@ -375,6 +376,7 @@ int main(int argc, char **argv) {
     aiTimerChecks(assets);
     aiResearchChecks(assets);
     aiControllerChecks(assets);
+    aiResourceKnowledgeGameplayChecks(assets);
     additiveSelectionChecks(assets,renderer);
     civilizationChecks(assets,renderer);
     conquestChecks(assets);

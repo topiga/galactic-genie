@@ -47,7 +47,7 @@ static void rmsMatchChecks(swgb::Assets &assets) {
     // Probe the normal runtime facts after opening assertions, without adding units/resources.
     const int headroom=100-int(game.populationUsedForTesting(1));
     const std::string probe="(defrule (population-headroom == "+std::to_string(headroom)+
-        ") (difficulty == moderate) => (set-goal 925 1) (disable-self))";
+        ") (difficulty == moderate) (map-type desert) (not (map-type forest)) => (set-goal 925 1) (disable-self))";
     check(game.loadAiSourceForTesting(1,"rms-match-settings",probe,{},&error),error.c_str());
     game.update(0,{});
     check(game.aiGoalForTesting(1,925)==1,"RMS match runtime observes selected population limit and moderate difficulty");

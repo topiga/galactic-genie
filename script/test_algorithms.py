@@ -30,6 +30,8 @@ cases = {
     'ai_targets': ['src/engine/ai_targets.cpp'],
     'ai_group_search': [],
     'ai_attack_memory': [],
+    'ai_player_facts': [],
+    'ai_resource_knowledge': [],
     'ai_group_targets': ['src/engine/ai_group_targets.cpp', 'src/engine/ai_targets.cpp'],
 }
 for name, sources in cases.items():

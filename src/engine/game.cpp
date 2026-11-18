@@ -1,3 +1,4 @@
+#include "ai_player_facts.h"
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "../core/genie_graphic_random.h"
 #include "../core/genie_random.h"
@@ -420,6 +421,7 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     civilizationEffects_ = {};
     playerEffects_ = {};
     aiPlayers_ = {};
+    aiMapId_.reset();
     aiEscrow_ = {};
     aiEscrowPercent_ = {};
     techGeneration_++;
@@ -812,7 +814,8 @@ bool Game::initAridSkirmish(uint32_t seed,std::string *err,bool initiallyExplore
     if(!script.load(54201,resolver,{},err))return false;
     const std::unordered_set<std::string> defines{
         "TINY_MAP","FIXED_POSITIONS","DEFAULT_RESOURCES","RANDOM_MAP","2_PLAYERS"};
-    RmsSessionOptions options; // Normal base-age/resource tier; no original map-id claim.
+    RmsSessionOptions options;
+    options.mapId=9; // Original5c9f25 maps desert9 to packaged resource54201.
     uint32_t randomState=seed;
     if(!initRmsSession(script,defines,120,randomState,{1,1},options,err))return false;
     difficulty_=2;
@@ -1120,6 +1123,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     civilizationEffects_ = {};
     playerEffects_ = {};
     aiPlayers_ = {};
+    aiMapId_.reset();
     aiEscrow_ = {};
     aiEscrowPercent_ = {};
     techGeneration_++;
@@ -1690,6 +1694,7 @@ bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std:
     for(size_t player=1;player<=civilizations.size();++player)
         computers[player].age=aiTechLevel(int(player));
     aiPlayers_=std::move(computers);
+    aiMapId_=options.mapId;
     randomState=legacyRandomState_;
     return true;
 }
@@ -14397,6 +14402,39 @@ Game::AiTruth Game::evaluateAiCondition(
         if (!known) return AiTruth::Unknown;
         return civilizationForPlayer(player)==civilization ? AiTruth::True : AiTruth::False;
     }
+    if(fact=="player-human" || fact=="player-in-game" || fact=="players-stance" || fact=="stance-toward") {
+        const bool relation=fact=="players-stance" || fact=="stance-toward";
+        if(condition.children.size()!=(relation?3u:2u))return AiTruth::Unknown;
+        bool known=false;
+        const int selector=resolveAiValue(player,state,condition.children[1].value,known);
+        // shortcut: Native Gaia has no ScenarioPlayer/controller identity; verify its original constructor before exposing direct Gaia facts.
+        if(!known || selector==0)return AiTruth::Unknown;
+        const int stance=relation?resolveAiValue(player,state,condition.children[2].value,known):0;
+        if(!known)return AiTruth::Unknown;
+        std::vector<AiPlayerFactPlayer> slots(size_t(worldPlayerCount_)+1);
+        for(size_t id=1;id<slots.size();++id) {
+            const auto &source=players_[id-1];auto &slot=slots[id];
+            slot.computer=!source.human;
+            // shortcut: Native active slots supply player+a6 until individual defeat/resignation states are represented.
+            slot.gameState=source.active?0:1;
+            slot.diplomacy.assign(source.diplomacy.begin(),source.diplomacy.end());
+        }
+        const auto kind=fact=="player-human"?AiPlayerFact::Human:fact=="player-in-game"?AiPlayerFact::InGame:
+                        fact=="players-stance"?AiPlayerFact::PlayersStance:AiPlayerFact::StanceToward;
+        const auto result=evaluateAiPlayerFact(kind,selector,stance,player,slots);
+        if(result.matchedPlayer)state.matchedPlayers[selector]=*result.matchedPlayer;
+        return result.value?AiTruth::True:AiTruth::False;
+    }
+    if(fact=="resource-found" || fact=="map-type") {
+        if(condition.children.size()!=2)return AiTruth::Unknown;
+        bool known=false;
+        const int value=resolveAiValue(player,state,condition.children[1].value,known);
+        if(!known)return AiTruth::Unknown;
+        if(fact=="map-type")return !aiMapId_?AiTruth::Unknown:
+            *aiMapId_==uint32_t(value)?AiTruth::True:AiTruth::False;
+        if(value<0 || value>=4)return AiTruth::False;
+        return state.resourceKnowledge.found[size_t(value)]?AiTruth::True:AiTruth::False;
+    }
     if (fact == "timer-triggered") {
         if (condition.children.size()!=2) return AiTruth::Unknown;
         bool known=false;
@@ -14702,7 +14740,10 @@ bool Game::executeAiAction(
         if (!known) return false;
         const int id=state.program.strategicNumberId(action.children[1].value);
         if (id<0) return false;
+        const auto previous=state.strategicNumbers.find(id);
+        const bool changed=previous==state.strategicNumbers.end() || previous->second!=value;
         state.strategicNumbers[id]=value;
+        if(changed && (id==86 || id==87))reevaluateAiResourceFound(player);
         return true;
     }
     if ((name == "build" ||
@@ -14741,6 +14782,7 @@ bool Game::executeAiAction(
 
 void Game::updateAiPlayer(
     int player, AiPlayerState &state) {
+    updateAiResourceKnowledge(player);
     // Original40f910 visits the whole ordered program on each admitted evaluation.
     for (AiRule &rule : state.program.rules) {
         if (!rule.enabled) continue;

@@ -368,20 +368,8 @@ std::string normalizeAiSymbol(
     return normalized;
 }
 
-bool AiProgram::load(
-    const std::string &entryPath,
-    const std::unordered_set<std::string> &defines,
-    std::string *err, SourceLoader loader) {
-    sourceLoader_ = std::move(loader);
-    rules.clear();
-    constants.clear();
-    files.clear();
-    loaded_.clear();
-    defines_.clear();
-    for (const std::string &define : defines)
-        defines_.insert(
-            normalizeAiSymbol(define));
-    constants = {
+static std::unordered_map<std::string,int> defaultAiConstants() {
+    return {
         {"no", 0},
         {"yes", 1},
         {"true", 1},
@@ -400,7 +388,31 @@ bool AiProgram::load(
         {"metal", 2},
         {"ore", 2},
         {"nova", 3},
+        {"ally",0}, {"neutral",1}, {"enemy",3},
+        {"any-ally",-101}, {"any-computer",-102}, {"any-computer-ally",-103},
+        {"any-computer-enemy",-104}, {"any-computer-neutral",-105}, {"any-enemy",-106},
+        {"any-human",-107}, {"any-human-ally",-108}, {"any-human-enemy",-109},
+        {"any-human-neutral",-110}, {"any-neutral",-111},
+        {"every-ally",-201}, {"every-computer",-202}, {"every-enemy",-203},
+        {"every-human",-204}, {"every-neutral",-205},
+        {"desert",9}, {"forest",12}, {"raiders",37},
     };
+}
+
+bool AiProgram::load(
+    const std::string &entryPath,
+    const std::unordered_set<std::string> &defines,
+    std::string *err, SourceLoader loader) {
+    sourceLoader_ = std::move(loader);
+    rules.clear();
+    constants.clear();
+    files.clear();
+    loaded_.clear();
+    defines_.clear();
+    for (const std::string &define : defines)
+        defines_.insert(
+            normalizeAiSymbol(define));
+    constants = defaultAiConstants();
     const bool result = loadFile(entryPath, err);
     sourceLoader_ = {};
     return result;
@@ -420,26 +432,7 @@ bool AiProgram::loadSource(
     for (const std::string &define : defines)
         defines_.insert(
             normalizeAiSymbol(define));
-    constants = {
-        {"no", 0},
-        {"yes", 1},
-        {"true", 1},
-        {"false", 0},
-        {"hardest", 0},
-        {"hard", 1},
-        {"moderate", 2},
-        {"easy", 3},
-        {"easiest", 4},
-        {"tech-level-1", 1},
-        {"tech-level-2", 2},
-        {"tech-level-3", 3},
-        {"tech-level-4", 4},
-        {"food", 0},
-        {"carbon", 1},
-        {"metal", 2},
-        {"ore", 2},
-        {"nova", 3},
-    };
+    constants = defaultAiConstants();
     std::string key=normalizeAiSymbol(name);
     std::replace(key.begin(),key.end(),'\\','/');
     loaded_.insert(key);
