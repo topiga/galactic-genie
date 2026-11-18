@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+#include "circular_obstacle_gameplay_checks.h"
 // Restored native Arid crowd: all cargo must be credited through ordinary drop-off.
 [[gnu::noinline]] static void crowdedDepotDeliveryChecks(swgb::Assets &assets) {
     swgb::Scenario scenario;scenario.map.width=scenario.map.height=120;
@@ -201,6 +202,7 @@
     check(recoveryAttempted,"Failed mutual yielding must allow the existing detour recovery to run");
 }
 [[gnu::noinline]] static void dynamicDetourGameplayChecks(swgb::Assets &assets) {
+    circularObstacleDetourChecks(assets);
     failedYieldRecoveryChecks(assets);
     overlappingStartMovementChecks(assets);
     coupledWaypointMovementChecks(assets);

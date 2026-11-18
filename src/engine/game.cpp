@@ -11941,8 +11941,9 @@ bool Game::detourAround(Object &object, float goalX, float goalY) {
             if (nx < 0 || ny < 0 || nx >= kSize || ny >= kSize) continue;
             const int ni = ny * kSize + nx;
             if (!open[ni]) continue;
-            if (d[0] && d[1] && (!open[cy * kSize + nx] || !open[ny * kSize + cx]))
-                continue;
+            // The swept segment below checks the actual obstacle geometry.
+            // Closed orthogonal samples do not forbid a clear diagonal
+            // between circular mobile footprints.
             float ax, ay, bx, by;
             cellPos(cx, cy, ax, ay);cellPos(nx, ny, bx, by);
             if (!clearDetourSegment(ax, ay, bx, by)) continue;
