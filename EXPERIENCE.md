@@ -2,6 +2,24 @@
 
 Updated 2026-11-18. The product target is the original disk-launcher and Clone Campaigns experience on native macOS, followed by optional EF-inspired graphics improvements. A completed custom skirmish is an engine milestone, not completion of that target.
 
+
+## Latest delivered changes — 18 November 2026
+
+- Dense captured depot: all ten workers deposit their loads within240 simulated
+  seconds, with exact resource credits and checked static clearance.
+- Jedi conversion: original HUD controls, Force charge, animation/sound, real
+  ownership changes, worker/ram upgrade rules, building refunds/passengers,
+  cancellation and generic threat retaliation are connected to gameplay.
+- Final ASan/UBSan suite and desktop/audio smoke pass; scripted player victory
+  at729.9 seconds. Four original-personality Arid seeds pass the movement build.
+- The extra two-sided AI stress run reaches12000 seconds without a winner; retained
+  anti-air ground targets and congested siege routes remain open acceptance issues.
+
+This remains a native reconstruction. The original full path lifecycle, separate
+invisible attack-marker registry, specialized conversion-controller responses and
+exact animation/audio timing are not claimed1:1. Detailed bounded evidence is in
+`docs/RMS_PARITY.md`; original assets and executable controls remain local.
+
 ## Visual references supplied by the user
 
 Keep the two layers distinct:
@@ -39,7 +57,7 @@ This is a native C++ engine based on Galactic Genie, using the original installe
 | Setup | Custom64 map with eight civilizations; packaged Arid/Tiny120 with two Empire players; reveal, population and victory choices | General packaged-map selection, seeds, player counts/teams, starting settings and exact original setup behavior |
 | HUD/input | Original panel/icon/font assets, command positions, formation/garrison controls, minimap, additive selection and control groups | Remaining unit abilities, hotkey editor, all selected-unit combinations and pixel/interaction comparisons |
 | Match lifecycle | Pause allows inspection/camera but blocks orders; confirmed restart/resign; win/loss and return to menu | Save/load, complete original results/statistics and campaign progression |
-| Gameplay | Gathering, construction, queues/research, combat, healing, repair, garrison/alarm and fog memory have regression coverage; native Arid Conquest victories with the original personality pass all four seeds; a captured dense worker queue remains unresolved | Full human UI playthroughs, original path/action timing, remaining specialized abilities and full defeat/victory semantics |
+| Gameplay | Gathering, construction, queues/research, combat, healing, Jedi conversion, repair, garrison/alarm and fog memory have regression coverage; native Arid Conquest victories with the original personality pass all four seeds; the captured dense worker queue now deposits all ten loads in a bounded regression | Full human UI playthroughs, original path/action timing, remaining specialized abilities and full defeat/victory semantics |
 | Original AI | Arid Conquest loads the packaged original personality through menu startup; recovered facts, military/scouting controllers and worker allocation connected | Full24-phase scheduling, all command acknowledgements, construction placement, economic lifecycle and unsupported facts/actions |
 | RMS/startup | Original-script pipeline with extensive executable-backed terrain/object/startup controls; Arid connected to desktop | Broader seed/map/civilization/player combinations with complete startup RNG and session-state comparisons; no universal1:1 claim |
 | Rendering/audio | Native SDL frontend and software renderer; original terrain/sprite/UI assets, fog edges, positional effects and streamed music | Original-resolution fidelity, remaining renderer/audio edge cases, window/display controls and full reference comparison |

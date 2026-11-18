@@ -7621,3 +7621,83 @@ seconds with13753 landed attacks (failed-yield-final-duel.log). This attaches
 the original personality to the normally human owner and is not a retail
 two-computer lobby or a Windows whole-match parity claim. The earlier b80d770
 replay won at6394.934; the final result supersedes it for the shipped build.
+
+
+### Dense depot delivery and Jedi conversion (2026-11-18)
+
+The captured native depot regression now deposits all ten loads through ordinary
+worker movement/drop-off: 8.724384 food and 80 carbon within 240 simulated seconds.
+Every movement segment passes static-clearance checks. The exact private capture
+finishes within120 seconds; the tracked Scenario fixture has float round-trip
+coordinate differences. Sixteen executed original planner controls establish that
+moving actors are excluded unless explicitly admitted as collision blockers.
+Native local detours now approximate that admission, retry finer grids when the
+coarse route fails or the existing stall threshold is reached, and find alternative
+free destinations for already-eligible idle blockers. This is not a port of the
+complete original timestamp, parent-path and exclusion-list lifecycle. No cargo,
+resources, idle-farm facts or map-specific rules are changed to force progress.
+
+Jedi conversion is now connected to gameplay: original Convert icon14 at slot13,
+original cursor and Force icon50731/frame10, target selection, approach, orientation,
+work animation/sound, pulse rolls, resistance, charge consumption/recovery, pause,
+Stop and target cancellation. Sixteen original start controls and fifteen original
+orientation controls supplement the existing conversion-roll/charge checks.
+Original task104 and source/target resource attributes drive the action. Generic
+orders retain melee where the original task selector chooses it; conversion-only
+military targets now use the live action rather than an eligibility-only placeholder.
+
+Successful conversion retains private source-master upgrades and HP, resets actions,
+handles original resource192 destruction/resource193 friendly-target charge policy,
+and records original conversion/loss/value counters. Converted worker role changes
+adopt recipient role statistics with the recovered HP rule; primary-list captured
+ram upgrades use the separately recovered ratio. Paid building queues refund their
+old owner. Building/class53 occupants use original reverse admission and failure
+policy; other mobile containers retain occupants and ownership. Native radial exits,
+annex/service projections and derived projectile totals remain adapters.
+
+Conversion500 notifications queue without HP damage or hit statistics and deliver
+owner513 through shared AI attack memory on the target update. Pausing defers that
+delivery. Nine original generic response controls now drive conversion retaliation: idle
+human/computer targets and computer movement may respond, while human movement
+orders are preserved. Specialized controller branches, exact original notification-list
+scheduling and unreachable fallback remain unported. These controls execute the original Windows code in a
+local bounded harness; no new live Windows comparison or whole-match1:1 claim.
+
+Focused ASan/UBSan gameplay, ownership, threat and military checks pass in
+conversion-runtime-check.log and conversion-ownership-check.log; the crowded depot
+and existing dynamic-detour checks pass in dense-crowd-check.log. Research remains
+local in crowd-blocker-lifecycle-findings-2026-11-18.md and the jedi/conversion
+controls dated2026-11-18. The complete final ASan/UBSan suite passes at2756919, including a scripted player
+victory at729.9 seconds. Final desktop smoke covers menus, rendering, effects,
+streamed music and EOF. Actual conversion sound556 resolves to DRS8762
+JCONA-S.wav and decodes to70818 stereo frames at44100Hz.
+
+The movement integration's four original-personality Arid seeds at6540386 all win:
+2982.867/4419.167/5134.200/2770.833 seconds with1753/1665/1094/1571 landed attacks.
+That sweep predates the subsequent conversion-only presentation/retaliation fix;
+its behavior is covered by the final focused and complete sanitizer tests. Logs
+use conversion-crowd-final-original-ai-matrix and conversion-retaliation-final
+prefixes in the external build directory. The superseded earlier full suite was
+stopped deliberately when the final suite started, not counted as a passing run.
+
+A presentation check corrected an earlier callback interpretation: state7 selects
+`proceedingGraphic`, not `workingGraphic`. Actual Empire Master115 uses graphic6018
+with DAT sound556; its task gathering sound is absent. The native pulse now uses
+that sprite and its sound; the callback test verifies repeated audible cue requests.
+Three executed null-graphic controls establish that Orient's absent moving graphic
+resolves to standing. The owner+b4 callback creates invisible unit112
+(`ENGINE-SHOWATTAC`), not a sound or visible effect. That separate marker registry
+and exact frame-specific audio scheduling remain unported; no sound112 is fabricated.
+The original controls' callback labels and local correction ledger were updated.
+
+
+The additional two-sided native stress run at6540386 does **not** pass its victory
+criterion: it reaches12000.001 seconds with6549 landed attacks and no winner.
+Both Command Centers remain intact. At9000 and the final capture, owner1's surviving
+anti-air702 group retains enemy Troop Center87 while native command dispatch skips
+its ineligible members; owner2 also has congested artillery/ram routes. The original
+ineligible-member fallback and group maintenance require further closure. This
+supersedes the older successful duel as acceptance evidence for this movement build;
+the four ordinary original-personality games and final scripted player match still
+pass. The stress setup attaches PER to the normally human side and is not a retail
+Windows lobby comparison. Complete diagnostic: conversion-crowd-final-duel.log.
