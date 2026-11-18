@@ -19,7 +19,7 @@ inline int originalBuildingPlacementCategory(int id) {
     }
 }
 struct AiPlacementRect {int left,top,right,bottom;};
-// Categories8(farm)/10(prefab) stages58af10/58b100/58c8e0/58e2d0. All coordinates and
+// Categories8(farm)/10(prefab)/11(carbon)/13(nova) placement stages. All coordinates and
 // radii must be in ORIGINAL axes. This is a scoring grid, not pathability.
 // Caller supplies persistent resource records in original order; current terrain
 // and occupancy mask; and registered owned buildings. Hostile/remembered
@@ -54,10 +54,25 @@ public:
     // Category10 skips resource bucket1 entirely, and disabled record+d==1.
     // Supply only resolved persistent records; other invalidation is upstream.
     void resource(int bucket,int unitClass,float x,float y,float radiusX,float radiusY,bool disabled=false) {
-        if(size_==0 || bucket==1 || disabled)return;
+        const bool resourceDepot=requestedCategory_==11 || requestedCategory_==13;
+        if(size_==0 || (!resourceDepot && bucket==1) || disabled)return;
         auto r=clamp({int(double(x)-radiusX-.5),int(double(y)-radiusY-.5),
                       int(double(x)+radiusX+.5),int(double(y)+radiusY+.5)});
         forbid({int(x),int(y),int(x),int(y)});
+        if(resourceDepot) {
+            if(unitClass==27)subtract(expand(r,5.),128);
+            else if((requestedCategory_==11 && (unitClass==29 || unitClass==30)) ||
+                    (requestedCategory_==13 && (unitClass==29 || unitClass==31)))
+                subtract(expand(r,requestedCategory_==11?3.:1.),128);
+            else if((requestedCategory_==11 && unitClass==31) ||
+                    (requestedCategory_==13 && unitClass==30)) {
+                //58b100 expands the previous clamped rectangle at each step.
+                r=expand(r,1.);add(r,requestedCategory_==11?12:16);
+                r=expand(r,3.);add(r,requestedCategory_==11?4:8);
+                r=expand(r,5.);add(r,requestedCategory_==11?1:4);
+            }
+            return;
+        }
         if(unitClass!=31)r=expand(r,2.);
         subtract(r,5);
     }
@@ -90,6 +105,14 @@ public:
         }
         if(category==9)bounds={bounds.left-3,bounds.top-3,bounds.right+3,bounds.bottom+3};
         bounds=clamp(bounds);forbid(bounds);
+        if(requestedCategory_==11 || requestedCategory_==13) {
+            //58e4d6: resource depots discourage nearby owned construction.
+            double extent=lineOfSight<6.f?lineOfSight:6.f;
+            if(category==9)extent*=.5;
+            else if(category==1 || category==2 || category==11 || category==13)extent=5.;
+            subtract(expand(bounds,extent),10);
+            return;
+        }
         const float powerExpansion=float(double(resource18)-2.);
         const float cappedSight=lineOfSight<6.f?lineOfSight:6.f;
         if(category==10) {add(expand(bounds,powerExpansion),60);return;}

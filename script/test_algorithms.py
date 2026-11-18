@@ -46,6 +46,7 @@ cases = {
     'ai_build_placement': [],
     'ai_builder_selection': [],
     'ai_prefab_grid': [],
+    'ai_resource_build_placement': [],
 
     'ai_group_targets': ['src/engine/ai_group_targets.cpp', 'src/engine/ai_targets.cpp'],
 }
