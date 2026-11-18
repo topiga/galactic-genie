@@ -7701,3 +7701,34 @@ supersedes the older successful duel as acceptance evidence for this movement bu
 the four ordinary original-personality games and final scripted player match still
 pass. The stress setup attaches PER to the normally human side and is not a retail
 Windows lobby comparison. Complete diagnostic: conversion-crowd-final-duel.log.
+
+### Anti-air group orders and siege movement (2026-11-18)
+
+The original task loader and selector reject Troop Center class 18 for the
+Empire anti-air vehicle 702 and admit aircraft using task 7. In executable
+controls for group dispatch (481560), a group with no matching task calls
+481860 with the target and its position. A matching attack calls 481ed0.
+Galactic Genie now sends the whole group toward the target when no member has
+an attack or conversion task. Mixed groups retain their eligible attack orders.
+The original path descriptor and formation placement are still native adapters.
+
+In the seed-1 two-AI replay the fallback alone increased landed hits from 6,549
+to 9,878 at 12,000 simulated seconds. Neither run had a winner at that point.
+The replay identified a second failure near tile (46, 30). An attack route was
+statically passable, but animals beside the forest occupied the two neighboring
+samples of a diagonal step. In the reduced case the soldier moved only 0.018
+tiles in 90 seconds. The ram at its own observed position reproduced the pinch.
+
+The local planner now exhausts the existing route search before admitting
+additional diagonals whose entire swept segment clears static and mobile
+obstacles. Allowing those diagonals unconditionally caused three carbon carriers
+to remain stuck at a crowded depot. The final policy passes that ten-carrier
+regression and the eight approach/convoy cases, including reversed direction
+and rejection of solid building crossings. This change repairs native route
+geometry. Exact original path choices around these animals remain unverified.
+
+Filtering obstacles once per local search preserved the ordered results of all
+910 measured detours. Median runtime for the dense movement fixtures fell from
+4.668 to 2.558 seconds. The two-AI replay still has both Command Centers at
+2,500 HP at 15,600 simulated seconds. At 9,000 seconds the Moderate script
+required 30 defending soldiers. The players had 25 and 27 respectively.
