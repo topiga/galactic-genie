@@ -18,11 +18,17 @@ Updated 2026-11-18. The product target is the original disk-launcher and Clone C
 - AI workers replace builders killed at unfinished foundations. The original
   personality can trade at its Spaceport, account for housing and send bomber
   and fighter groups when its script orders an attack.
-- **Two-AI Conquest completed.** On tiny Arid, seed 1, Moderate, 75 population,
-  both sides ran the packaged `RandomGame.per`. Player 2 won after 6,653.333
-  simulated seconds and 10,809 landed attacks. Player 1's Command Center was
-  gone by 5,400 seconds. This headless native test gives the normally human
-  slot an AI script. The repository replay is `swgb-skirmish-test <Data> --ai-duel`.
+- **Four of six two-AI Conquest matches finished.** On Tiny Arid with
+  Moderate Empire computers and 75 population, seeds 1, 2 and 5 ended in
+  player 2 victories. Player 1 won seed 4. Seeds 3 and 6 were still active
+  after ten simulated hours each. Replay any seed with
+  `swgb-skirmish-test <Data> --ai-duel <seed>`.
+- A paired Windows and native Desert match exposed differences in wall
+  construction and resignation. A five-trooper island comparison finished
+  in both engines with the same winner and a different survivor count.
+  Imported scenarios now freeze and show their result as soon as victory is
+  declared. The seed table and Windows clock comparisons are in
+  [the parity report](docs/RMS_PARITY.md#six-seed-native-conquest-sweep).
 - The desktop smoke test verifies rendering, effects, streamed music and looping.
 
 This remains a native reconstruction. The original full path lifecycle, separate

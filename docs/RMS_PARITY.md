@@ -7927,3 +7927,23 @@ before setting a resignation goal. Subsequent rules can delete owned workers
 and buildings, announce resignation and resign with other objects still on
 the map. The original P2 state transition is consistent with this mechanism.
 The exact rule that fired in that match was not captured.
+
+### Six-seed native Conquest sweep
+
+Each Tiny Arid match used Moderate difficulty, 75 population, two Empire
+players, the installed RandomGame personality on both sides and a ten-hour
+simulation limit. Result times and attack counts are from the ordinary
+two-player headless skirmish entry point.
+
+| Map seed | Outcome | Simulated seconds | Landed attacks |
+| ---: | --- | ---: | ---: |
+| 1 | P2 won | 6,653.333 | 10,809 |
+| 2 | P2 won | 6,883.434 | 11,070 |
+| 3 | Still active at limit | 36,000.000 | 4,946 |
+| 4 | P1 won | 4,215.134 | 8,833 |
+| 5 | P2 won | 8,368.967 | 10,547 |
+| 6 | Still active at limit | 36,000.000 | 15,069 |
+
+Seeds 3 and 6 both returned a failing test status. Four wins in this fixed
+set establish seed-dependent outcomes. No population-wide win or completion
+rate follows from six consecutive seeds.
