@@ -2527,6 +2527,8 @@ static int cmdTestCombat(const char *dataDir, const char *out) {
     const uint32_t mobilePoweredBuildingId =
         systems.spawnObjectForTesting(
             3, 335, 1, 38.0f, 20.0f);
+    // Original power is captured once per world step, not by the query.
+    systems.update(.1f, {});
     const bool mobilePowerWorked =
         mobilePowerId &&
         mobilePoweredBuildingId &&
@@ -2535,6 +2537,7 @@ static int cmdTestCombat(const char *dataDir, const char *out) {
     if (mobilePowerId)
         systems.moveObjectForTesting(
             mobilePowerId, 15.0f, 15.0f);
+    systems.update(.1f, {});
     const bool mobilePowerRemoved =
         mobilePoweredBuildingId &&
         !systems.objectPoweredForTesting(
