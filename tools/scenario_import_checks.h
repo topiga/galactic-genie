@@ -25,6 +25,8 @@ static void scenarioImportChecks(swgb::Assets &assets) {
     check(scenario.units[0].spawnId==0&&scenario.units[1].garrisonedInId==0&&scenario.triggers[0].effects[0].selectedUnitIds[0]==0&&scenario.triggers[1].conditions[0].fields[3]==0,
           "Import normalization leaves source scenario untouched");
     game.update(.2f,{});
+    check(game.currentInstruction()==assets.localizedString(9004)+" Enter: main menu.",
+          "Imported scenario immediately shows the localized match result");
     check(!game.objectActive(2)&&game.matchResult()==1,
           "Selected-object effect and destroyed-object condition both address remapped ID0");
     game.update(1.f,{});

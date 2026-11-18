@@ -845,8 +845,8 @@ bool Game::initAridSkirmish(uint32_t seed,std::string *err,bool initiallyExplore
     return activateTwoPlayerMatch(initiallyExplored,populationLimit,conquest,!conquest,err);
 }
 
-void Game::finishSkirmish(int result) {
-    if (!skirmish_ || victoryState_ >= 0) return;
+void Game::finishMatch(int result) {
+    if (victoryState_ >= 0) return;
     victoryState_ = result;
     currentInstruction_ = result == 1 ? assets_.localizedString(9004)+" Enter: main menu."
                          : result == 0 ? assets_.localizedString(9005)+" Enter: main menu."
@@ -859,7 +859,7 @@ void Game::finishSkirmish(int result) {
 
 void Game::resignSkirmish() {
     if (!skirmish_ || victoryState_ >= 0) return;
-    finishSkirmish(0);
+    finishMatch(0);
     currentInstruction_ = "DEFEAT - you resigned. Enter: main menu.";
 }
 
@@ -978,7 +978,7 @@ void Game::updateSkirmish(float dt) {
         alive[player] = center && center->active && center->hitPoints > 0;
     }
     if (!alive[1] || !alive[2]) {
-        finishSkirmish(alive[1] ? 1 : alive[2] ? 0 : 2);
+        finishMatch(alive[1] ? 1 : alive[2] ? 0 : 2);
         return;
     }
     matchTime_ = float(gameTime_ + dt);
@@ -13832,13 +13832,7 @@ void Game::executeEffect(const ScenarioEffect &effect) {
         break;
     }
     case 13:
-        if (sourcePlayer == localPlayer_) {
-            victoryState_ = 1;
-            queueInstruction("Victory", 3600);
-        } else if (sourcePlayer > 0) {
-            victoryState_ = 0;
-            queueInstruction("Defeat", 3600);
-        }
+        if (sourcePlayer > 0) finishMatch(sourcePlayer == localPlayer_ ? 1 : 0);
         break;
     case 14:
     case 15:

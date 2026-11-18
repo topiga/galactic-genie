@@ -1894,7 +1894,7 @@ private:
     void updateSkirmish(float dt);
     bool activateTwoPlayerMatch(bool initiallyExplored,int populationLimit,bool conquest,bool fallbackAi,std::string *err);
     void updateSkirmishArmy(int player);
-    void finishSkirmish(int result);
+    void finishMatch(int result);
     std::set<int> warnedEffects_;
     std::set<int> warnedConditions_;
     int localPlayer_ = 0;
