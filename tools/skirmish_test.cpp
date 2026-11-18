@@ -13,6 +13,7 @@ static void check(bool value, const char *message) {
 #include "healing_checks.h"
 #include "conversion_gameplay_checks.h"
 #include "conversion_threat_checks.h"
+#include "conversion_retaliation_checks.h"
 #include "conversion_ownership_gameplay_checks.h"
 #include "power_gameplay_checks.h"
 #include "combat_modifier_checks.h"
@@ -437,6 +438,7 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
     healingChecks(assets,renderer);
     conversionGameplayChecks(assets,renderer);
     conversionThreatChecks(assets);
+    conversionRetaliationChecks(assets);
     conversionOwnershipGameplayChecks(assets);
     combatModifierChecks(assets);
     unitCostChecks(assets);

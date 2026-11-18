@@ -17,9 +17,10 @@ void Game::drainConversionThreats(Object &target) {
     for(uint32_t attackerId:pending) {
         // 41f2e0 emits owner513 before target reselection. Reuse the same
         // owner admission/RNG/dedup path as damage, without damage statistics.
-        // Specialized retaliation and original notification-list scheduling
-        // remain separate from this bounded owner-memory bridge.
-        notifyAiAttackMemory(target,findObject(attackerId));
+        Object *attacker=findObject(attackerId);
+        notifyAiAttackMemory(target,attacker);
+        // The same generic target response follows owner513, without damage.
+        respondToAttackThreat(target,attacker,true);
     }
 }
 
@@ -120,7 +121,8 @@ void Game::updateConversion(Object &source,float dt) {
         if (!result.ready) return;
         source.conversionClock.beginPulse(modifiedUnitAttribute(source,10,source.unit->reloadTime));
         source.conversionPhase=Phase::Pulse;source.state=State::Convert;
-        resetObjectGraphicAnimation(source,task->workingGraphic);
+        resetObjectGraphicAnimation(source,task->proceedingGraphic);
+        playWorldUnitSound(source,graphicSound(task->proceedingGraphic));
         playWorldUnitSound(source,task->resourceGatheringSound);
         if(source.conversionClock.elapsed<=0)queueConversionThreat(*target,source);
         return;

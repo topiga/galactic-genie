@@ -1636,6 +1636,7 @@ private:
     void updateProjectiles(float dt);
     void updateRemains(float dt);
     void damageObject(Object &object, int damage, uint32_t attackerId);
+    void respondToAttackThreat(Object &object,Object *attacker,bool conversionThreat);
     void killObject(Object &object, bool countKill = true, bool retainRemains = true);
     void objectScreenPosition(const Object &object, int screenW, int screenH,
                               float &screenX, float &screenY) const;

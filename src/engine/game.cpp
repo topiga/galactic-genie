@@ -4990,7 +4990,11 @@ int Game::objectGraphic(const Object &o,const dat::Unit &base) const {
         gid = base.attackGraphic;
     if (o.state==State::Convert) {
         const auto *task=conversionTask(o);
-        if (task && task->workingGraphic>=0) gid=task->workingGraphic;
+        if (task) {
+            const int graphic=o.conversionPhase==Object::ConversionPhase::Pulse
+                ? task->proceedingGraphic:task->movingGraphic;
+            if (graphic>=0) gid=graphic;
+        }
     }
     return gid;
 }
@@ -10876,6 +10880,31 @@ void Game::damageObject(Object &object, int damage, uint32_t attackerId) {
         return;
     }
 
+    respondToAttackThreat(object,attacker,false);
+
+    int soundId = object.unit->damageSound;
+    const float currentDamage =
+        100.0f * (1.0f - object.hitPoints / std::max(1.0f, object.maxHitPoints));
+    for (const dat::DamageGraphic &damageGraphic : object.unit->damageGraphics)
+        if (object.unit->type != dat::UT_Building && // buildings loop it in update
+            previousDamage < damageGraphic.damagePercent &&
+            currentDamage >= damageGraphic.damagePercent)
+            soundId = graphicSound(damageGraphic.graphicId);
+    playWorldUnitSound(object, soundId);
+}
+
+void Game::respondToAttackThreat(Object &object,Object *attacker,bool conversionThreat) {
+    if (conversionThreat) {
+        // Original41f558: generic500 response respects human higher orders.
+        // Native order adapter: idle/current attack correspond to -1/600;
+        // point/tactical moves and other explicit jobs remain human-owned.
+        // Specialized controllers and group-order callbacks are not modeled here.
+        if (!genieGenericTroopController(object.unit->cls) ||
+            object.conversionTargetId || object.garrisonedInId>=0) return;
+        const bool human=object.player>0 && players_[size_t(object.player-1)].human;
+        if (human && !object.attackTargetId && object.state!=State::Idle) return;
+    }
+    const uint32_t attackerId=attacker?attacker->spawnId:0;
     const bool originalHit=object.player>0 && players_[size_t(object.player-1)].human &&
         genieGenericTroopController(object.unit->cls) &&
         (object.attackTargetId || object.state==State::Idle);
@@ -10884,7 +10913,7 @@ void Game::damageObject(Object &object, int damage, uint32_t attackerId) {
         combatTargetVisible(object,*attacker) &&
         canAttackTarget(object, *attacker) &&
         object.attackMode != AttackMode::Passive &&
-        (!object.attackTargetId || object.attackAutomatic) &&
+        (conversionThreat || !object.attackTargetId || object.attackAutomatic) &&
         (originalHit || !retainCurrentTargetOnHit(object))) {
         const float dx = attacker->x - object.x;
         const float dy = attacker->y - object.y;
@@ -10900,7 +10929,7 @@ void Game::damageObject(Object &object, int damage, uint32_t attackerId) {
                           automaticAcquisitionRadius(object)
                 : homeDx * homeDx + homeDy * homeDy <= leash * leash;
         bool selected=canReach && object.attackTargetId!=attackerId;
-        if(selected && originalHit) {
+        if(selected && (originalHit || conversionThreat)) {
             selected=chooseCombatTarget(object,attacker)==attacker;
             if(selected && retainCurrentTargetOnHit(object))selected=false;
         }
@@ -10915,15 +10944,6 @@ void Game::damageObject(Object &object, int damage, uint32_t attackerId) {
         }
     }
 
-    int soundId = object.unit->damageSound;
-    const float currentDamage =
-        100.0f * (1.0f - object.hitPoints / std::max(1.0f, object.maxHitPoints));
-    for (const dat::DamageGraphic &damageGraphic : object.unit->damageGraphics)
-        if (object.unit->type != dat::UT_Building && // buildings loop it in update
-            previousDamage < damageGraphic.damagePercent &&
-            currentDamage >= damageGraphic.damagePercent)
-            soundId = graphicSound(damageGraphic.graphicId);
-    playWorldUnitSound(object, soundId);
 }
 
 const dat::Unit *Game::projectileUnitForTarget(

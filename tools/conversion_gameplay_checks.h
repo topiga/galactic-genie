@@ -22,6 +22,14 @@
           "Original Convert icon occupies original command slot13");
     check(!g.issueConversionForTesting(padawan,troop),"Padawans cannot start conversion");
     check(!g.issueConversionForTesting(jedi,padawan),"Conversion rejects friendly targets");
+    int conversionSound=-1,conversionSounds=0;
+    for(const auto &task:assets.dat().unitHeaders[115].tasks)
+        if(task.actionType==104) {
+            const auto *graphic=assets.dat().graphic(task.proceedingGraphic);
+            if(graphic)conversionSound=graphic->soundId;
+        }
+    check(conversionSound>=0,"Actual conversion proceeding graphic supplies its original sound");
+    g.setUnitSoundPlayer([&](int sound,int){if(sound==conversionSound)++conversionSounds;});
     g.lookAt(23,20);g.render(renderer,960,544);
     swgb::InputState button;button.selectPressed=true;button.pointerX=80;button.pointerY=510;
     g.updatePaused(0,button);
@@ -44,9 +52,17 @@
     const float hp=g.objectHitPoints(troop);
     const float conversions=g.resource(1,41),losses=g.resource(2,154);
     const float convertedValue=g.resource(1,170);
-    float elapsed=0;
-    while(g.objectPlayer(troop)==2 && elapsed<40) {g.update(1.f/30,{});elapsed+=1.f/30;}
+    float elapsed=0;bool renderedPulse=false;
+    while(g.objectPlayer(troop)==2 && elapsed<40) {
+        g.update(1.f/30,{});elapsed+=1.f/30;
+        if(conversionSounds && !renderedPulse) {
+            g.render(renderer,960,544);
+            check(renderer.savePng("jedi-conversion-pulse.png"),"Render original conversion proceeding graphic");
+            renderedPulse=true;
+        }
+    }
     check(g.objectPlayer(troop)==1 && elapsed>=4,"Real conversion pulses finish after the original minimum time");
+    check(conversionSounds>=2,"Original conversion work sound plays again on repeated pulse entry");
     check(g.objectHitPoints(troop)==hp && g.privateMasterForTesting(troop),
           "Conversion preserves HP and captures the source-owner prototype");
     check(g.resource(1,41)==conversions+1 && g.resource(2,154)==losses+1 &&
