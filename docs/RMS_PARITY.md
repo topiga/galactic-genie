@@ -7343,7 +7343,8 @@ repeated food-processor construction and blocked age advancement. The shared
 helper now uses interface kind. Pure tests deliberately distinguish the two
 fields; a regression applies the installed Tech Level2 effect and checks current,
 total and production PER building facts. This is a counter correction, not an AI
-policy change; validation of the changed helper is pending the next build.
+policy change. The pure helper, real-age-up production fixture and complete
+original-personality matches pass with the corrected mapping.
 
 ### 2026-11-18: dropsite identity and remembered-resource placement adapter
 
@@ -7390,3 +7391,43 @@ The integration test now compares omitted and explicit3 and distinguishes them
 from retained radius2 references. This is a parser/controller consistency check;
 it does not claim another original-executable golden. Restricted low-level
 radius2 checks remain intact.
+
+
+### 2026-11-18: persistent planned positions and carbon/ore placement
+
+Normal carbon562/category11 and ore584/category13 requests now use the recovered
+scoring grid and exhaustive candidate scan, alongside farm50 and prefab70.
+Resource influence, owned-building penalties, distance adjustment and same-type
+planned-position penalties follow the executed original controls. SN86 supplies
+the depot search radius (default25); the first owned Command Center supplies the
+normal search origin, with the original civilian fallback. Food68 and nova323
+still use the documented native radial adapter.
+
+The original InfoAI planned-position registry is now persistent gameplay state,
+not a list reconstructed from current buildings. It starts with200 ordered slots,
+reuses empty slots and doubles capacity. Shared object admission and ownership
+changes insert status1 for original classes6–10/18. Completion and ordinary death
+retain history. PER reload and RMS/scenario computer-state installation preserve
+it; a new world resets it. Execution feedback updates existing entries only;
+selected-worker reachability failure can separately insert status2. The first
+status0 preset is consumed before fresh placement RNG.
+
+Focused ASan/UBSan production checks pass for admission, actual completion,
+destruction, ownership transfer, reload, session reset, presets, unreachable
+selected builders and UI cancellation. Normal PER-to-foundation tests cover
+carbon and ore before/after real age-up, previously observed hidden stationary
+resources and a closer never-observed decoy. The existing fallback tests retain
+moved/depleted remembered-resource cases by explicitly selecting an unsupported
+wall context. Original grid resource geometry resolves admitted IDs as the
+original does; it does not discover unseen actors.
+
+Boundaries remain explicit: native occupancy and final-center validation supply
+original path-map/master callbacks; ordinary builder reachability is conservative
+native path completion, not the original zone/transport path service. Timed scan
+continuation, event rectangles and wall planning remain unsupported. These
+connected stages do not establish full original placement or whole-match parity.
+Local evidence includes `build-placement-position-registry-controls-2026-11-18`,
+`build-placement-registration-removal-controls-2026-11-18` and
+`build-placement-reachability-outcome-controls-2026-11-18`. Validation logs are
+`planned-registry-check.log`, `planned-grid-local.log` and
+`planned-grid-algorithms.log` in the external build directory.

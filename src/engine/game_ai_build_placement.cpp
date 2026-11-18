@@ -15,13 +15,15 @@ int Game::chooseAiOriginalBuildPosition(int player,const dat::Unit &unit,float &
         if(unsupportedReason)*unsupportedReason=reason;
         return -1;
     };
-    if((unit.id!=70 && unit.id!=50) || unit.type!=dat::UT_Building || player<=0 ||
+    const int category=originalBuildingPlacementCategory(unit.id);
+    const bool depot=category==11 || category==13;
+    if((category!=8 && category!=10 && !depot) || unit.type!=dat::UT_Building || player<=0 ||
        size_t(player)>=aiPlayers_.size() || mapSize_<=0 || mapSize_>255)
-        return unsupported("normal Clone Campaigns prefab or farm profile required");
+        return unsupported("normal Clone Campaigns prefab, farm, carbon or ore depot profile required");
     auto &state=aiPlayers_[size_t(player)];
-    const auto radius=state.strategicNumbers.find(74),randomness=state.strategicNumbers.find(168);
-    // Actual596d10 profile followed by597300 installs SN74=20/SN168=50.
-    const int searchRadius=radius==state.strategicNumbers.end()?20:radius->second;
+    const auto radius=state.strategicNumbers.find(depot?86:74),randomness=state.strategicNumbers.find(168);
+    // Actual596d10/597300 defaults: SN74=20, SN86=25, SN168=50.
+    const int searchRadius=radius==state.strategicNumbers.end()?(depot?25:20):radius->second;
     const int placementRandomness=randomness==state.strategicNumbers.end()?50:randomness->second;
     if(searchRadius<0 || searchRadius>mapSize_)
         return unsupported("placement strategic-number context unavailable");
@@ -56,7 +58,14 @@ int Game::chooseAiOriginalBuildPosition(int player,const dat::Unit &unit,float &
     const float powerRadius=playerAttribute(player,18),specialRadius=playerAttribute(player,24);
     if(!std::isfinite(powerRadius) || !std::isfinite(specialRadius))
         return unsupported("invalid player placement attributes");
-    AiBuildPlacementGrid grid(mapSize_,originalBuildingPlacementCategory(unit.id));
+    if(const auto preset=state.buildPositions.consumePreset(unit.id)) {
+        // Original stored coordinates return at+.5; use the same explicitly
+        // native final-centre snapping as the fresh scanner below.
+        const float offset=int(widthFloat)%2?.5f:0.f;
+        x=float(preset->y)+offset;y=float(mapSize_)-(float(preset->x)+offset);
+        return 1;
+    }
+    AiBuildPlacementGrid grid(mapSize_,category);
     //58b100 scans remembered resource buckets. Lookup uses the live object just
     // as413850 does; absence/record.invalid=1 skip it. No new hidden knowledge.
     for(size_t bucket=0;bucket<economy.resources.size();++bucket)
@@ -114,7 +123,7 @@ int Game::chooseAiOriginalBuildPosition(int player,const dat::Unit &unit,float &
         ~RestorePlacementUi(){game.localPlayer_=player;game.placementFailureCode_=failure;}
     } restore{*this,localPlayer_,placementFailureCode_};
     localPlayer_=player;
-    const auto result=aiScanPrefabPlacement(mapSize_,mapSize_,
+    const auto result=aiScanBuildingPlacement(category,mapSize_,mapSize_,
         std::max(0,originX-extent),std::max(0,originY-extent),
         std::min(mapSize_-1,originX+extent),std::min(mapSize_-1,originY+extent),
         originX,originY,width,[&](int gx,int gy){return grid.at(gx,gy);},
@@ -130,6 +139,8 @@ int Game::chooseAiOriginalBuildPosition(int player,const dat::Unit &unit,float &
             const float offset=width%2?.5f:0.f;
             const float nx=float(int(oy))+offset,ny=float(mapSize_)-(float(int(ox))+offset);
             return placementValid(unit,nx,ny);
+        },[&](int ox,int oy,int radius) {
+            return state.buildPositions.plannedNearby(unit.id,ox,oy,radius);
         });
     if(result.score<0)return 0;
     const float offset=width%2?.5f:0.f;

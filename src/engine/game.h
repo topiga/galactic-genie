@@ -11,6 +11,7 @@
 #include "ai_known_categories.h"
 #include "ai_build_admission.h"
 #include "ai_build_request_queue.h"
+#include "ai_build_positions.h"
 #include "../core/genie_explore_search.h"
 
 #include "local_simulation_clock.h"
@@ -388,6 +389,13 @@ public:
         return object?object->constructionTotal:0;
     }
     bool completeFoundationForTesting(uint32_t spawnId);
+    const AiBuildPositions &aiBuildPositionsForTesting(int player) const {return aiPlayers_.at(size_t(player)).buildPositions;}
+    void setAiBuildPositionForTesting(int player,int prototype,int x,int y,int status) {
+        aiPlayers_.at(size_t(player)).buildPositions.upsert(prototype,x,y,status);
+    }
+    void failAiBuildRequestForTesting(int player,int sequence,int code,float x,float y) {
+        failAiBuildRequest(player,sequence,code,x,y);
+    }
     bool admitAiBuildForTesting(int p,const dat::Unit &u) {return aiBuild(p,u);}
     int aiPendingBuildsForTesting(int p,int id) const {return aiPlayers_.at(p).buildRequests.pending(id);}
     void updateAiBuildRequestsForTesting(int p) {updateAiBuildRequests(p);}
@@ -1080,7 +1088,7 @@ private:
         AiBuildAttemptLatch buildAttempt;
         AiBuildRequestQueue buildRequests;
         int nextBuildRequestSequence=0;
-        std::vector<std::array<int,3>> rejectedBuildPositions;
+        AiBuildPositions buildPositions;
         std::unordered_map<int,int> matchedPlayers;
         std::vector<KnownMilitaryObject> militaryKnownObjects;
         std::vector<uint8_t> explorationInformation, explorationObserved;
@@ -1661,6 +1669,7 @@ private:
     bool aiBuild(
         int player, const dat::Unit &unit);
     bool aiBuildPositionRejected(int player,int prototype,float x,float y) const;
+    void registerAiBuildPosition(const Object &object);
     bool chooseAiBuildPosition(int player,const dat::Unit&,float &x,float &y);
     uint32_t chooseAiBuildWorker(int player,const dat::Unit&,float x,float y);
     void updateAiBuildRequests(int player);

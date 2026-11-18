@@ -18,17 +18,24 @@ bool Game::aiBuild(int player,const dat::Unit &unit) {
     return true; // Accepted request, not completed construction or resources spent.
 }
 
+void Game::registerAiBuildPosition(const Object &object) {
+    if(object.player<=0 || size_t(object.player)>=aiPlayers_.size() || !object.unit ||
+       !std::isfinite(object.x) || !std::isfinite(object.y))return;
+    const int cls=object.unit->cls;
+    if((cls>=6 && cls<=10) || cls==18)
+        aiPlayers_[size_t(object.player)].buildPositions.upsert(object.unit->id,
+            int(float(mapSize_)-object.y),int(object.x),1);
+}
+
 bool Game::aiBuildPositionRejected(int player,int prototype,float x,float y) const {
     if(player<=0 || size_t(player)>=aiPlayers_.size())return true;
-    const std::array<int,3> key{prototype,int(float(mapSize_)-y),int(x)};
-    const auto &rejected=aiPlayers_[size_t(player)].rejectedBuildPositions;
-    return std::find(rejected.begin(),rejected.end(),key)!=rejected.end();
+    return aiPlayers_[size_t(player)].buildPositions.rejected(prototype,int(float(mapSize_)-y),int(x));
 }
 
 bool Game::chooseAiBuildPosition(int player,const dat::Unit &unit,float &x,float &y) {
     struct Restore {Game &g;int owner,failure;~Restore(){g.localPlayer_=owner;g.placementFailureCode_=failure;}} restore{*this,localPlayer_,placementFailureCode_};
     localPlayer_=player;
-    if(unit.id==70 || unit.id==50) {
+    if(unit.id==70 || unit.id==50 || unit.id==562 || unit.id==584) {
         const int result=chooseAiOriginalBuildPosition(player,unit,x,y);
         if(result>=0)return result==1;
     }
@@ -104,10 +111,25 @@ uint32_t Game::chooseAiBuildWorker(int player,const dat::Unit &unit,float x,floa
     const auto *worker=findObject(uint32_t(id));
     // shortcut: Native synchronous path solving supplies the original direct
     // reach/path-service provider. It runs AFTER original worker selection.
+    // Original initial4bd5b0 uses zone reachability; transport-specific23c
+    // filters remain unrepresented. Full native reach is a conservative adapter.
     Object site;site.unit=&unit;site.player=player;site.x=x;site.y=y;site.active=true;
     float approachX=0,approachY=0;interactionPoint(*worker,site,.35f,approachX,approachY);
     std::vector<std::array<float,2>> path;
-    return findPath(*worker,approachX,approachY,path,&site,.35f)?uint32_t(id):0;
+    const bool solved=findPath(*worker,approachX,approachY,path,&site,.35f);
+    const auto end=path.empty()?std::array<float,2>{worker->x,worker->y}:path.back();
+    const float dx=std::max(0.f,std::abs(end[0]-x)-std::max(.1f,unit.collisionSize[0]));
+    const float dy=std::max(0.f,std::abs(end[1]-y)-std::max(.1f,unit.collisionSize[1]));
+    // interactionPoint stores float coordinates; allow their round-trip error.
+    const bool reached=solved && std::hypot(dx,dy)<=collisionRadius(*worker)+.35f+1e-5f;
+    if(!reached) {
+        //5a8d22 inserts a rejected position after the selected actor's path
+        // query fails. Unlike578540 feedback this can create a new record.
+        // Do not treat a distant native partial endpoint as reachable.
+        aiPlayers_[size_t(player)].buildPositions.upsert(unit.id,int(float(mapSize_)-y),int(x),2);
+        return 0;
+    }
+    return uint32_t(id);
 }
 
 void Game::updateAiBuildRequests(int player) {
@@ -140,11 +162,10 @@ void Game::updateAiBuildRequests(int player) {
 void Game::failAiBuildRequest(int player,int sequence,int code,float x,float y) {
     if(player<=0 || size_t(player)>=aiPlayers_.size())return;
     auto &state=aiPlayers_[size_t(player)];const auto *request=state.buildRequests.find(sequence);if(!request)return;
-    const std::array<int,3> position{request->prototype,int(float(mapSize_)-y),int(x)};
-    auto &rejected=state.rejectedBuildPositions;
-    auto i=std::find(rejected.begin(),rejected.end(),position);
-    if(code==-1) {if(i!=rejected.end())rejected.erase(i);}
-    else if(i==rejected.end())rejected.push_back(position);
+    //578540 updates an existing record only. Tactical validation's58ef40
+    // insertion is a distinct boundary; execution feedback must not invent it.
+    if(code==-1 || code==0 || code==1 || code==6 || code==8 || code==9 || code==10)
+        state.buildPositions.updateExisting(request->prototype,int(float(mapSize_)-y),int(x),code==-1?0:2);
     state.buildRequests.failed(sequence);
     // Original worker-release/construction callbacks are distinct from this
     // request/blacklist mutation. No refund, deletion or completed count here.

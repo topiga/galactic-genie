@@ -174,6 +174,7 @@ if(NOT VITA)
         add_executable(swgb-ai-builder-selection-test tools/ai_builder_selection_test.cpp)
         add_executable(swgb-ai-prefab-grid-test tools/ai_prefab_grid_test.cpp)
         add_executable(swgb-ai-resource-build-placement-test tools/ai_resource_build_placement_test.cpp)
+        add_executable(swgb-ai-build-positions-test tools/ai_build_positions_test.cpp)
 
 
         add_executable(swgb-rms-map-test tools/rms_map_test.cpp src/engine/rms_walls.cpp src/engine/rms_land_placement.cpp src/engine/rms_zones.cpp src/engine/rms_connections.cpp src/engine/rms_elevation.cpp src/engine/rms_cliffs.cpp src/engine/rms_slopes.cpp src/engine/rms_early_forest.cpp src/engine/rms_terrain_cleanup.cpp src/engine/rms_scenery.cpp src/engine/rms_scenery_appearance.cpp src/engine/rms_terrain.cpp src/engine/rms_map.cpp src/engine/rms_object_rows.cpp src/engine/rms_script.cpp src/engine/rms_objects.cpp src/engine/rms_player_starts.cpp src/core/drs.cpp)

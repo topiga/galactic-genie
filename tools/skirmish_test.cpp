@@ -51,6 +51,7 @@ static void check(bool value, const char *message) {
 #include "ai_counter_identity_checks.h"
 #include "ai_prefab_placement_gameplay_checks.h"
 #include "ai_dropsite_placement_gameplay_checks.h"
+#include "ai_build_positions_gameplay_checks.h"
 #include "movement_progress_gameplay_checks.h"
 #include "dynamic_detour_gameplay_checks.h"
 #include "crowd_yield_gameplay_checks.h"
@@ -352,7 +353,7 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
     aiContextGameplayChecks(assets);
     playerMilitaryFactsGameplayChecks(assets);aiKnownCategoryChecks();playerBuildingFactGameplayChecks(assets);playerUnitFactGameplayChecks(assets);
     deliveryCorridorGameplayChecks(assets);
-    aiConstructorMetadataChecks();rmsConstructorMetadataGameplayChecks(assets);exploreRevisitChecks();exploreRevisitGameplayChecks(assets);movementProgressGameplayChecks(assets);dynamicDetourGameplayChecks(assets);crowdYieldGameplayChecks(assets);economyGameplayChecks(assets);unitLineGameplayChecks(assets);aiCounterIdentityChecks();aiCounterIdentityGameplayChecks(assets);aiPrefabPlacementGameplayChecks(assets);aiDropsitePlacementGameplayChecks(assets);
+    aiConstructorMetadataChecks();rmsConstructorMetadataGameplayChecks(assets);exploreRevisitChecks();exploreRevisitGameplayChecks(assets);movementProgressGameplayChecks(assets);dynamicDetourGameplayChecks(assets);crowdYieldGameplayChecks(assets);economyGameplayChecks(assets);unitLineGameplayChecks(assets);aiCounterIdentityChecks();aiCounterIdentityGameplayChecks(assets);aiPrefabPlacementGameplayChecks(assets);aiDropsitePlacementGameplayChecks(assets);aiBuildPositionsGameplayChecks(assets);aiResourceGridGameplayChecks(assets);
     civilianExploreGameplayChecks(assets);
     scenarioAiChecks(assets);
     actorAiTimingChecks(assets);

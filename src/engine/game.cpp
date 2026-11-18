@@ -798,6 +798,7 @@ bool Game::activateTwoPlayerMatch(bool initiallyExplored,int populationLimit,boo
         state.explorationRevisitTime=aiPlayers_[2].explorationRevisitTime;
         state.economy.foodRefreshTime=aiPlayers_[2].economy.foodRefreshTime;
         state.knownCategoryMemory.lastRefreshTime=aiPlayers_[2].knownCategoryMemory.lastRefreshTime;
+        state.buildPositions=std::move(aiPlayers_[2].buildPositions);
         state.loaded=true;state.age=aiTechLevel(2);
         state.strategicNumbers[117]=50;
         state.strategicNumbers[120]=35;
@@ -1058,6 +1059,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, int difficul
         if (!initScenario(imported,err,false,nullptr,initialRandomState)) return false;
         difficulty_ = difficulty;
         for (size_t player = 1; player < computers.size(); ++player) {
+            computers[player].buildPositions=std::move(aiPlayers_[player].buildPositions);
             computers[player].age = aiTechLevel(int(player));
             computers[player].explorationRevisitTime = aiPlayers_[player].explorationRevisitTime;
             computers[player].economy.foodRefreshTime = aiPlayers_[player].economy.foodRefreshTime;
@@ -1753,6 +1755,7 @@ bool Game::initRmsSession(const RmsScript &script, const std::unordered_set<std:
         if(!initializeStartingAge(int(player),int(options.startingAge)))
             return fail("RMS starting-age research could not be initialized");
     for(size_t player=1;player<=civilizations.size();++player) {
+        computers[player].buildPositions=std::move(aiPlayers_[player].buildPositions);
         computers[player].age=aiTechLevel(int(player));
         computers[player].explorationRevisitTime=aiPlayers_[player].explorationRevisitTime;
         computers[player].economy.foodRefreshTime=aiPlayers_[player].economy.foodRefreshTime;
@@ -1805,7 +1808,7 @@ bool Game::loadAiScript(
     state.knownCategoryMemory=std::move(aiPlayers_[size_t(player)].knownCategoryMemory);
     state.buildRequests=std::move(aiPlayers_[size_t(player)].buildRequests);
     state.nextBuildRequestSequence=aiPlayers_[size_t(player)].nextBuildRequestSequence;
-    state.rejectedBuildPositions=std::move(aiPlayers_[size_t(player)].rejectedBuildPositions);
+    state.buildPositions=std::move(aiPlayers_[size_t(player)].buildPositions);
     state.explorationRevisitTime = aiPlayers_[size_t(player)].explorationRevisitTime;
     state.economy.foodRefreshTime = aiPlayers_[size_t(player)].economy.foodRefreshTime;
     state.loaded = true;
@@ -1844,7 +1847,7 @@ bool Game::loadAiSourceForTesting(
     state.knownCategoryMemory=std::move(aiPlayers_[size_t(player)].knownCategoryMemory);
     state.buildRequests=std::move(aiPlayers_[size_t(player)].buildRequests);
     state.nextBuildRequestSequence=aiPlayers_[size_t(player)].nextBuildRequestSequence;
-    state.rejectedBuildPositions=std::move(aiPlayers_[size_t(player)].rejectedBuildPositions);
+    state.buildPositions=std::move(aiPlayers_[size_t(player)].buildPositions);
     state.explorationRevisitTime = aiPlayers_[size_t(player)].explorationRevisitTime;
     state.economy.foodRefreshTime = aiPlayers_[size_t(player)].economy.foodRefreshTime;
     state.loaded = true;
@@ -2125,6 +2128,7 @@ void Game::setObjectOwner(Object &object, int player) {
     unregisterObjectUpdate(object);
     object.player = player;
     registerObjectUpdate(index);
+    registerAiBuildPosition(object);
 }
 
 Game::Object *Game::addObject(const dat::Unit *unit, int player, float x, float y, float facing,
@@ -2170,6 +2174,7 @@ Game::Object *Game::addObject(const dat::Unit *unit, int player, float x, float 
     objects_.push_back(object);
     registerObjectUpdate(objects_.size() - 1);
     if (spawnId) objectIndices_[spawnId] = objects_.size() - 1;
+    registerAiBuildPosition(objects_.back());
     return &objects_.back();
 }
 
