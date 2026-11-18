@@ -1054,6 +1054,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, int difficul
             computers[player].age = aiTechLevel(int(player));
             computers[player].explorationRevisitTime = aiPlayers_[player].explorationRevisitTime;
             computers[player].economy.foodRefreshTime = aiPlayers_[player].economy.foodRefreshTime;
+            computers[player].knownCategoryMemory.lastRefreshTime = aiPlayers_[player].knownCategoryMemory.lastRefreshTime;
         }
         aiPlayers_ = std::move(computers);
         return true;
@@ -1298,6 +1299,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
                 const auto metadata=geniePlayerConstructorWithMetadata(legacyRandomState_);
                 aiPlayers_[player+1].explorationRevisitTime=metadata.infoRevisitTime;
                 aiPlayers_[player+1].economy.foodRefreshTime=metadata.infoFoodRefreshTime;
+                aiPlayers_[player+1].knownCategoryMemory.lastRefreshTime=metadata.infoKnownRefreshTime;
             }
         genieRandomDraw(legacyRandomState_); // 61e10e after normal players
     }
@@ -1775,6 +1777,7 @@ bool Game::loadAiScript(
     AiPlayerState state;
     if (!loadGameAiProgram(state.program,assets_,path,aiScriptContext(player,defines),err))
         return false;
+    state.knownCategoryMemory=std::move(aiPlayers_[size_t(player)].knownCategoryMemory);
     state.buildRequests=std::move(aiPlayers_[size_t(player)].buildRequests);
     state.nextBuildRequestSequence=aiPlayers_[size_t(player)].nextBuildRequestSequence;
     state.rejectedBuildPositions=std::move(aiPlayers_[size_t(player)].rejectedBuildPositions);
@@ -1813,6 +1816,7 @@ bool Game::loadAiSourceForTesting(
     if (!state.program.loadSource(
             name, source, context.defines, err,{},context.constants))
         return false;
+    state.knownCategoryMemory=std::move(aiPlayers_[size_t(player)].knownCategoryMemory);
     state.buildRequests=std::move(aiPlayers_[size_t(player)].buildRequests);
     state.nextBuildRequestSequence=aiPlayers_[size_t(player)].nextBuildRequestSequence;
     state.rejectedBuildPositions=std::move(aiPlayers_[size_t(player)].rejectedBuildPositions);
@@ -3740,7 +3744,7 @@ void Game::interactionPoint(const Object &source, const Object &target,
 }
 
 bool Game::freeInteractionPoint(const Object &source, const Object &target,
-                                float clearance, float &x, float &y) const {
+                                float clearance, float &x, float &y,bool requireClearSegment) const {
     const float radius = collisionRadius(source);
     const float hw = std::max(0.1f, target.unit->collisionSize[0]) + radius + clearance;
     const float hh = std::max(0.1f, target.unit->collisionSize[1]) + radius + clearance;
@@ -3758,10 +3762,11 @@ bool Game::freeInteractionPoint(const Object &source, const Object &target,
         const float sx = px - source.x, sy = py - source.y;
         const float score = sx * sx + sy * sy;
         if (score >= best || !staticPassableAt(source, px, py)) continue;
+        if(requireClearSegment && !segmentClear(source,source.x,source.y,px,py))continue;
         bool occupied = false;
         for (uint32_t index : mobileObjectIndices_) {
             const Object &other = objects_[(size_t)index];
-            if (&other == &source || !other.active || other.hidden ||
+            if (&other == &source || (source.spawnId && other.spawnId==source.spawnId) || !other.active || other.hidden ||
                 isAirUnit(other) != isAirUnit(source))
                 continue;
             // Walking units will have moved on; only settled ones (or ones
@@ -12150,8 +12155,14 @@ bool Game::findPath(const Object &object, float targetX, float targetY,
         float edgeX = 0, edgeY = 0;
         interactionPoint(probe, *goalObject, std::max(0.0f, clearance) * 0.6f,
                          edgeX, edgeY);
-        if (staticPassableAt(object, edgeX, edgeY) &&
-            segmentClear(object, from[0], from[1], edgeX, edgeY)) {
+        bool reachableEdge=staticPassableAt(object,edgeX,edgeY) &&
+            segmentClear(object,from[0],from[1],edgeX,edgeY);
+        // A neighboring building can block the nearest edge while another
+        // point on the same work perimeter is reachable between tile centers.
+        // This is a native final-segment adapter, not a wider work range.
+        if(!reachableEdge)reachableEdge=freeInteractionPoint(probe,*goalObject,
+            std::max(0.0f,clearance)*0.6f,edgeX,edgeY,true);
+        if (reachableEdge) {
             tiles.push_back({edgeX, edgeY});
             result = PathResult::Complete;
             targetX = edgeX;
@@ -12179,8 +12190,11 @@ bool Game::findPath(const Object &object, float targetX, float targetY,
             float edgeX = 0, edgeY = 0;
             interactionPoint(probe, *goalObject, std::max(0.0f, clearance) * 0.6f,
                              edgeX, edgeY);
-            if (staticPassableAt(object, edgeX, edgeY) &&
-                segmentClear(object, finalPoint[0], finalPoint[1], edgeX, edgeY))
+            bool reachableEdge=staticPassableAt(object,edgeX,edgeY) &&
+                segmentClear(object,finalPoint[0],finalPoint[1],edgeX,edgeY);
+            if(!reachableEdge)reachableEdge=freeInteractionPoint(probe,*goalObject,
+                std::max(0.0f,clearance)*0.6f,edgeX,edgeY,true);
+            if (reachableEdge)
                 finalPoint = {edgeX, edgeY};
         }
     }
@@ -14403,6 +14417,72 @@ Game::AiTruth Game::evaluateAiCondition(
         if(result.matchedPlayer)state.matchedPlayers[selector]=*result.matchedPlayer;
         return result.value?AiTruth::True:AiTruth::False;
     }
+    if(fact=="players-building-type-count" || fact=="cc-players-building-type-count" ||
+       fact=="cc-players-unit-type-count") {
+        const bool unitFact=fact=="cc-players-unit-type-count";
+        if(condition.children.size()!=5)return AiTruth::Unknown;
+        for(size_t i=1;i<5;++i)if(condition.children[i].isList())return AiTruth::Unknown;
+        bool known=false;
+        const int selector=resolveAiValue(player,state,condition.children[1].value,known);
+        if(!known)return AiTruth::Unknown;
+        // Gaia exists in original slot0. CC counts need no diplomacy; ordinary
+        // counts can use the known-cache path when our stance is non-allied.
+        // Reciprocal Gaia diplomacy is not represented by ScenarioPlayer.
+        if(selector==0 && fact=="players-building-type-count" &&
+           players_[size_t(player-1)].diplomacy[0]==0)return AiTruth::Unknown;
+        int operand=resolveAiValue(player,state,condition.children[2].value,known);
+        if(!known) {
+            const auto *unit=aiUnit(player,condition.children[2].value);
+            if(!unit)return AiTruth::Unknown;
+            operand=unit->id;
+        }
+        std::vector<int> prototypes;
+        // Original57bcb0 expands unit lines10..42; building facts expand2..4.
+        if(unitFact?(operand>=-42 && operand<=-10):(operand>=-4 && operand<=-2)) {
+            if(size_t(-operand)<assets_.dat().unitLines.size())
+                for(int id:assets_.dat().unitLines[size_t(-operand)].unitIds)prototypes.push_back(id);
+        } else {
+            // Other negative IDs index unrelated original player memory on the
+            // live path. Keep them unsupported, including beneath NOT.
+            if(operand<0 || operand>INT16_MAX)return AiTruth::Unknown;
+            prototypes.push_back(operand);
+        }
+        const int expected=resolveAiValue(player,state,condition.children[4].value,known);
+        const auto &op=condition.children[3].value;
+        if(!known || (op!="<" && op!="<=" && op!=">" && op!=">=" && op!="==" && op!="!="))return AiTruth::Unknown;
+        std::vector<AiPlayerFactPlayer> slots(size_t(worldPlayerCount_)+1);
+        for(size_t id=1;id<slots.size();++id) {
+            const auto &source=players_[id-1];auto &slot=slots[id];
+            slot.computer=!source.human;slot.gameState=source.active?0:1;
+            slot.diplomacy.assign(source.diplomacy.begin(),source.diplomacy.end());
+        }
+        const bool unrestricted=fact!="players-building-type-count";
+        const auto result=evaluateAiPlayerSelection(selector,player,slots,[&](int id) {
+            const bool live=unrestricted || id==player ||
+                (id>0 && slots[size_t(player)].diplomacy[size_t(id)]==0 &&
+                 slots[size_t(id)].diplomacy[size_t(player)]==0);
+            int actual=0;
+            for(int prototype:prototypes) {
+                if(!live) {actual+=state.knownCategoryMemory.count(id,prototype);continue;}
+                // shortcut: Physical native actors/job roles supply the original
+                // signed per-prototype completed counter, including garrisoned units.
+                int count=0;
+                for(const auto &object:objects_) {
+                    if(!object.active || !object.unit || object.player!=id || object.underConstruction ||
+                       (object.hidden && object.garrisonedInId<0))continue;
+                    const auto *role=object.jobUnit?object.jobUnit:object.unit;
+                    //57bcb0 special-cases83 to the worker aggregate+1d2c,
+                    // whereas other operands read their exact prototype counter.
+                    if((unitFact && operand==83)?isWorker(object):role->id==prototype)++count;
+                }
+                actual+=int16_t(count);
+            }
+            return op=="<"?actual<expected:op=="<="?actual<=expected:op==">"?actual>expected:
+                   op==">="?actual>=expected:op=="=="?actual==expected:actual!=expected;
+        });
+        if(result.matchedPlayer)state.matchedPlayers[selector]=*result.matchedPlayer;
+        return result.value?AiTruth::True:AiTruth::False;
+    }
     if(fact=="players-military-population") {
         if(condition.children.size()!=4)return AiTruth::Unknown;
         bool known=false;
@@ -14974,6 +15054,7 @@ void Game::updateAi(int player,float dt) {
     bool militaryTick=false;
     if(!state.militaryGroups.empty())refreshAiMilitaryMembers(player);
     if(state.loaded) {
+        updateAiKnownObjects(player);
         const int age=aiTechLevel(int(player));
         if(age!=state.age) {state.age=age;state.ageTime=0.f;}
         else state.ageTime+=dt;
@@ -15677,7 +15758,8 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                         {other->x + px * push, other->y + py * push},
                         {other->x - px * push, other->y - py * push}};
                     for (const auto &point : aside)
-                        if (staticPassableAt(*other, point[0], point[1])) {
+                        if (staticPassableAt(*other, point[0], point[1]) &&
+                            !unitBlockerAt(*other, point[0], point[1])) {
                             const bool wander = other->wander;
                             issueMove(*other, point[0], point[1]);
                             other->wander = wander;

@@ -6,6 +6,10 @@
 
 namespace swgb {
 bool Game::queueAiCivilianExplore(Object &worker) {
+    return queueAiInitialExplore(worker,true);
+}
+
+bool Game::queueAiInitialExplore(Object &worker,bool civilian) {
     if(!worker.active || !worker.unit || worker.player<=0 || size_t(worker.player)>=aiPlayers_.size())return false;
     auto &economy=aiPlayers_[size_t(worker.player)].economy;
     const int32_t id=int32_t(worker.spawnId);
@@ -16,8 +20,10 @@ bool Game::queueAiCivilianExplore(Object &worker) {
     // tactical waypoint search fails. That failure emits negative705 and lets
     // actor41c1d0 find a local unexplored destination; it is not a Stop.
     append(economy.pendingCivilianAssignments);
-    append(economy.civilianExplorers);
-    removeAiEconomicWorker(worker.player,id);
+    if(civilian) {
+        append(economy.civilianExplorers);
+        removeAiEconomicWorker(worker.player,id);
+    }
     if(queueAiExploreDestination(worker))return true;
     return queueExplore(worker,-1.f,-1.f);
 }

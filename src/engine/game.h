@@ -8,6 +8,7 @@
 #include "ai_resource_knowledge.h"
 #include "ai_session_context.h"
 #include "ai_economy.h"
+#include "ai_known_categories.h"
 #include "ai_build_admission.h"
 #include "ai_build_request_queue.h"
 #include "../core/genie_explore_search.h"
@@ -436,7 +437,7 @@ public:
         return o?std::array<float,3>{o->moveBestDistance,o->moveStallTime,o->detourTime}:std::array<float,3>{};
     }
     int chooseAiPrefabPositionForTesting(int player,const dat::Unit &unit,float &x,float &y,std::string *reason=nullptr) {
-        return chooseAiPrefabPosition(player,unit,x,y,reason);
+        return chooseAiOriginalBuildPosition(player,unit,x,y,reason);
     }
     std::optional<uint32_t> explorationRevisitTimeForTesting(int player) const { return aiPlayers_[size_t(player)].explorationRevisitTime; }
     const AiEconomyState &economyForTesting(int player) const {return aiPlayers_.at(size_t(player)).economy;}
@@ -1065,6 +1066,7 @@ private:
         AiProgram program;
         AiResourceKnowledge resourceKnowledge;
         AiEconomyState economy;
+        AiKnownCategoryMemory knownCategoryMemory;
         AiBuildAttemptLatch buildAttempt;
         AiBuildRequestQueue buildRequests;
         int nextBuildRequestSequence=0;
@@ -1226,6 +1228,7 @@ private:
     bool issueExplore(Object &object,float x,float y,bool force);
     bool chooseLocalExploreDestination(Object &object,float commandX,float commandY);
     bool queueAiCivilianExplore(Object &object);
+    bool queueAiInitialExplore(Object &object,bool civilian);
     bool queueExplore(Object &object,float x,float y);
     void focusRmsStart();
     void applyPendingFoundation(Object &object);
@@ -1355,7 +1358,7 @@ private:
     // Closest spot around the target's footprint that no other unit is
     // standing on (the original treats the whole perimeter as the goal).
     bool freeInteractionPoint(const Object &source, const Object &target,
-                              float clearance, float &x, float &y) const;
+                              float clearance, float &x, float &y,bool requireClearSegment=false) const;
     void interactionPoint(const Object &source, const Object &target,
                           float clearance, float &x, float &y) const;
     bool withinInteractionRange(const Object &source, const Object &target,
@@ -1594,8 +1597,9 @@ private:
     void updatePlayerObjects(float dt,int player, bool auxiliary = false);
     AiSessionContext aiScriptContext(int player, const std::unordered_set<std::string> &defines) const;
     AiSessionContext aiScriptContext(AiSessionContextSettings settings, const std::unordered_set<std::string> &defines) const;
-    int chooseAiPrefabPosition(int player,const dat::Unit &unit,float &x,float &y,std::string *reason=nullptr);
+    int chooseAiOriginalBuildPosition(int player,const dat::Unit &unit,float &x,float &y,std::string *reason=nullptr);
     void refreshAiEconomyKnowledge(int player);
+    void updateAiKnownObjects(int player);
     void removeAiEconomicWorker(int player,int32_t id);
     bool aiEconomicWorkerIdle(const Object &object) const;
     void updateAiGatherersFallback(int player,AiPlayerState &state);

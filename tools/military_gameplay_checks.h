@@ -48,6 +48,29 @@ static void militaryGameplayChecks(swgb::Assets &assets) {
               explorer.militaryGroupsForTesting(2)[0].search.lastBusyTime==16000,
               "Initialized idle exploration retries with forced705 after sixteen whole seconds");
     }
+    {
+        // No home means5ad950 has no ring anchor or remembered enemy fallback.
+        // Original state6 still dispatches5a9c90(actor,0), hence negative705.
+        Game explorer(assets);check(explorer.initScenario(scenario,&error),error.c_str());
+        const auto scout=explorer.spawnObjectForTesting(1,550,2,31,31);
+        check(scout && explorer.loadAiSourceForTesting(2,"anchorless-military-explore",R"(
+(defrule (true) => (set-strategic-number sn-minimum-explore-group-size 1)
+ (set-strategic-number sn-number-explore-groups 1) (disable-self))
+)",{},&error),error.c_str());
+        for(int i=0;i<12 && explorer.explorationStateForTesting(scout)!=11;++i)explorer.update(0,{});
+        const auto destination=explorer.explorationDestinationForTesting(scout);
+        check(explorer.explorationStateForTesting(scout)==11 && destination[0]>=0 && destination[1]>=0,
+              "Military ring failure dispatches negative705 and actor-local unknown-tile search");
+        const auto start=explorer.objectPosition(scout);
+        check(destination!=start,"Anchorless scout receives a concrete unexplored destination");
+        for(int i=0;i<80 && explorer.objectPosition(scout)==start;++i)explorer.update(.05f,{});
+        check(explorer.objectPosition(scout)!=start,"Military fallback actually moves the scout");
+        const auto &economy=explorer.economyForTesting(2);
+        check(economy.civilianExplorers.empty() &&
+              std::none_of(economy.economicWorkers.begin(),economy.economicWorkers.end(),
+                  [&](const auto &record){return record.id==int32_t(scout);}),
+              "Military dispatch does not create civilian explorer or gather assignments");
+    }
     const uint32_t first=game.spawnObjectForTesting(1,329,2,20,20);
     const uint32_t second=game.spawnObjectForTesting(1,329,2,29,20);
     check(first && second,"Military admission fixture");

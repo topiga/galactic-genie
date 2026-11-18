@@ -28,11 +28,11 @@ bool Game::aiBuildPositionRejected(int player,int prototype,float x,float y) con
 bool Game::chooseAiBuildPosition(int player,const dat::Unit &unit,float &x,float &y) {
     struct Restore {Game &g;int owner,failure;~Restore(){g.localPlayer_=owner;g.placementFailureCode_=failure;}} restore{*this,localPlayer_,placementFailureCode_};
     localPlayer_=player;
-    if(unit.id==70) {
-        const int result=chooseAiPrefabPosition(player,unit,x,y);
+    if(unit.id==70 || unit.id==50) {
+        const int result=chooseAiOriginalBuildPosition(player,unit,x,y);
         if(result>=0)return result==1;
     }
-    // shortcut: Non-prefab/unrepresented grid stages retain the existing native
+    // shortcut: Other building categories/unrepresented grid stages retain the existing native
     // radial placement policy. This selects an anchor, never the eventual builder.
     const Object *anchor=nullptr;
     for(int32_t id:aiPlayers_[size_t(player)].economy.civilianIds) {

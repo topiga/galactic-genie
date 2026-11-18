@@ -5,7 +5,10 @@
 #include <iostream>
 using namespace swgb;
 static void check(bool value,const char *message) {if(!value){std::cerr<<message<<'\n';std::exit(1);}}
+#include "ai_known_category_checks.h"
+
 int main() {
+    aiKnownCategoryChecks();
     const std::vector<AiPlayerFactPlayer> players={
         {true,true,0,{0,0,0,0,0}}, {true,true,0,{1,0,3,0,0}},
         {true,false,0,{1,0,0,1,3}}, {true,true,0,{1,3,1,0,3}}, {true,false,2,{1,0,3,3,0}}};

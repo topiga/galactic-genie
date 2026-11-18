@@ -19,16 +19,17 @@ inline int originalBuildingPlacementCategory(int id) {
     }
 }
 struct AiPlacementRect {int left,top,right,bottom;};
-// Category10 grid stages58af10/58b100/58c8e0/58e2d0. All coordinates and
+// Categories8(farm)/10(prefab) stages58af10/58b100/58c8e0/58e2d0. All coordinates and
 // radii must be in ORIGINAL axes. This is a scoring grid, not pathability.
 // Caller supplies persistent resource records in original order; current terrain
 // and occupancy mask; and registered owned buildings. Hostile/remembered
 // buildings, recent attack rectangles, planned wall segments and master
 // placement validation remain separate explicit providers, never silently
 // inferred from an unexplored native object list.
-class AiPrefabGrid {
+class AiBuildPlacementGrid {
 public:
-    explicit AiPrefabGrid(int size):size_(std::max(0,size)),cells_(size_t(size_)*size_,60) {}
+    explicit AiBuildPlacementGrid(int size,int requestedCategory=10):size_(std::max(0,size)),
+        requestedCategory_(requestedCategory),cells_(size_t(size_)*size_,60) {}
     int size() const{return size_;}
     int at(int x,int y) const{return cells_[size_t(y)*size_+x];}
     const std::vector<uint8_t> &cells() const{return cells_;}
@@ -72,6 +73,21 @@ public:
         if(size_==0)return;
         const int category=originalBuildingPlacementCategory(prototype);
         auto bounds=buildingBounds(x,y,collisionRadius);
+        if(requestedCategory_==8) {
+            //58e3cd bypasses the CC access halo for farms;58d470 adds three
+            // overlapping preference rectangles around CCs, food depots, farms.
+            bounds=clamp(bounds);forbid(bounds);
+            const int weight=category==9?240:category==2?120:category==8?60:0;
+            if(weight) {
+                const double sight=lineOfSight<6.f?lineOfSight:6.f;
+                add(expand(bounds,sight),weight);
+                add(expand(bounds,sight*.5),weight);
+                // Preserve original float32 third before the wider product:
+                // LOS6 expands14 leftward to11, not12, after truncation.
+                add(expand(bounds,sight*double(0.3333333432674408f)),weight);
+            }
+            return;
+        }
         if(category==9)bounds={bounds.left-3,bounds.top-3,bounds.right+3,bounds.bottom+3};
         bounds=clamp(bounds);forbid(bounds);
         const float powerExpansion=float(double(resource18)-2.);
@@ -119,6 +135,7 @@ private:
             operation(cells_[size_t(y)*size_+x]);
     }
     int size_;
+    int requestedCategory_;
     std::vector<uint8_t> cells_;
 };
 } // namespace swgb

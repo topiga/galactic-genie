@@ -26,6 +26,7 @@ static void check(bool value, const char *message) {
 #include "ai_build_queue_gameplay_checks.h"
 #include "dropsite_fact_gameplay_checks.h"
 #include "military_admission_gameplay_checks.h"
+#include "military_difficulty_gameplay_checks.h"
 #include "ai_resource_knowledge_gameplay_checks.h"
 #include "selection_checks.h"
 #include "civilization_checks.h"
@@ -42,11 +43,15 @@ static void check(bool value, const char *message) {
 #include "ai_source_checks.h"
 #include "ai_context_gameplay_checks.h"
 #include "player_military_facts_gameplay_checks.h"
+#include "ai_known_category_checks.h"
+#include "player_building_fact_gameplay_checks.h"
+#include "player_unit_fact_gameplay_checks.h"
 #include "economy_gameplay_checks.h"
 #include "unit_line_gameplay_checks.h"
 #include "ai_prefab_placement_gameplay_checks.h"
 #include "movement_progress_gameplay_checks.h"
 #include "dynamic_detour_gameplay_checks.h"
+#include "crowd_yield_gameplay_checks.h"
 #include "ai_constructor_metadata_checks.h"
 #include "explore_revisit_checks.h"
 #include "explore_revisit_gameplay_checks.h"
@@ -326,13 +331,13 @@ int main(int argc, char **argv) {
         scenarioImportChecks(assets);
         aiSourceChecks(assets);
     aiContextGameplayChecks(assets);
-    playerMilitaryFactsGameplayChecks(assets);
-    aiConstructorMetadataChecks();exploreRevisitChecks();exploreRevisitGameplayChecks(assets);movementProgressGameplayChecks(assets);dynamicDetourGameplayChecks(assets);economyGameplayChecks(assets);unitLineGameplayChecks(assets);aiPrefabPlacementGameplayChecks(assets);
+    playerMilitaryFactsGameplayChecks(assets);aiKnownCategoryChecks();playerBuildingFactGameplayChecks(assets);playerUnitFactGameplayChecks(assets);
+    aiConstructorMetadataChecks();exploreRevisitChecks();exploreRevisitGameplayChecks(assets);movementProgressGameplayChecks(assets);dynamicDetourGameplayChecks(assets);crowdYieldGameplayChecks(assets);economyGameplayChecks(assets);unitLineGameplayChecks(assets);aiPrefabPlacementGameplayChecks(assets);
     civilianExploreGameplayChecks(assets);
         scenarioAiChecks(assets);
         actorAiTimingChecks(assets);
         exploreActionChecks();exploreSearchChecks();tacticalExploreQueueChecks();exploreSpiralChecks();
-        militaryGameplayChecks(assets);militaryAdmissionGameplayChecks(assets);
+        militaryGameplayChecks(assets);militaryAdmissionGameplayChecks(assets);militaryDifficultyGameplayChecks(assets);
         tacticalMovementChecks();tacticalMovementGameplayChecks(assets);
         explorationGameplayChecks(assets);
         fogEdgeChecks(argv[1]);

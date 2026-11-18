@@ -70,7 +70,8 @@ std::optional<AiMilitaryGroups> Game::availableAiMilitaryGroups(int player,std::
     for(int32_t id:state.militarySoldiers) {
         const auto *object=findObject(uint32_t(id));
         if(!object || object->unit->cls==51)continue;
-        // shortcut: Original class50 gate reads game+9c2; its native option mapping is unresolved.
+        // Original5ab3d2/42c410 excludes class50 only on Easy/Easiest (difficulty3/4).
+        if(object->unit->cls==50 && difficulty_>2)continue;
         if(std::any_of(state.militaryGroups.begin(),state.militaryGroups.end(),[&](const auto &group) {
             return std::find(group.members.begin(),group.members.end(),id)!=group.members.end();
         }))continue;
@@ -237,7 +238,7 @@ void Game::queueAiMilitaryAttack(int player,const AiMilitaryGatherGroup &group,c
     });
 }
 
-void Game::updateAiMilitaryTargets(int player,uint32_t budget) {
+void Game::updateAiKnownObjects(int player) {
     auto &state=aiPlayers_[size_t(player)];
     const auto visible=[&](const Object &object) {
         return visibleTargets_.slot(size_t(player-1),object.spawnId)!=size_t(-1);
@@ -245,6 +246,8 @@ void Game::updateAiMilitaryTargets(int player,uint32_t budget) {
     // shortcut: Observed native objects supply append/update order until original AI knowledge callbacks are ported.
     for(const auto &object:objects_)if(object.active && object.unit && object.spawnId<=uint32_t(INT32_MAX) && visible(object)) {
         const int32_t id=int32_t(object.spawnId);
+        state.knownCategoryMemory.observe(player,id,object.player,object.unit->id,
+                                         object.unit->cls,uint32_t(gameTime_*1000.0));
         auto slot=state.militaryKnownSlots.emplace(id,state.militaryKnownObjects.size());
         if(slot.second)state.militaryKnownObjects.push_back({});
         auto &record=state.militaryKnownObjects[slot.first->second];
@@ -252,6 +255,23 @@ void Game::updateAiMilitaryTargets(int player,uint32_t budget) {
         record={id,object.player,{uint8_t(int(float(mapSize_)-object.y)),uint8_t(int(object.x)),
                                 uint8_t(int(object.heightAboveGround))}};
     }
+    // Original591eb0 periodically rebuilds from known IDs, not from the world.
+    // Its lookup deliberately sees current type/owner outside sight and retains
+    // dying actors until the world actually removes their IDs.
+    state.knownCategoryMemory.refreshIfDue(player,uint32_t(gameTime_*1000.0),
+        [&](int id)->std::optional<AiKnownCategorySnapshot> {
+            const auto *object=findObject(uint32_t(id));
+            if(!object || !object->unit)return std::nullopt;
+            return AiKnownCategorySnapshot{object->unit->id,object->unit->cls,object->player};
+        });
+}
+
+void Game::updateAiMilitaryTargets(int player,uint32_t budget) {
+    updateAiKnownObjects(player);
+    auto &state=aiPlayers_[size_t(player)];
+    const auto visible=[&](const Object &object) {
+        return visibleTargets_.slot(size_t(player-1),object.spawnId)!=size_t(-1);
+    };
     std::map<int,std::vector<uint8_t>> zones;
     const auto region=[&](const Object &member,const Object &sample)->std::optional<uint8_t> {
         const int restriction=member.unit->terrainRestriction;
@@ -290,7 +310,7 @@ void Game::updateAiMilitaryTargets(int player,uint32_t budget) {
                 group.targetId=-1;group.initialized=true;
                 for(int32_t id:group.members) {
                     auto *object=id>=0?findObject(uint32_t(id)):nullptr;
-                    if(object && object->active && object->player==player)queueAiExploreDestination(*object);
+                    if(object && object->active && object->player==player)queueAiInitialExplore(*object,false);
                 }
                 if(retry)group.search.lastBusyTime=simulationTime;
             }

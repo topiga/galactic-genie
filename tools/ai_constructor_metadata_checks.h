@@ -3,6 +3,11 @@
 #include "../src/core/genie_ai_constructor_metadata.h"
 #include "../src/core/genie_ai_timing.h"
 static void aiConstructorMetadataChecks() {
+    check(swgb::genieInfoConstructorMetadata(0).infoKnownRefreshTime==173 &&
+          swgb::genieInfoConstructorMetadata(1).infoKnownRefreshTime==187 &&
+          swgb::genieInfoConstructorMetadata(12345).infoKnownRefreshTime==34717 &&
+          swgb::genieInfoConstructorMetadata(UINT32_MAX).infoKnownRefreshTime==160,
+          "Original first constructor draw supplies known-category refresh timer");
     // Actual594f00 prefix controls stop at583a83 after the second draw.
     check(swgb::genieInfoConstructorRevisitTime(1)==33815,"Original AI constructor timer seed1");
     check(swgb::genieInfoConstructorRevisitTime(12345)==35091,"Original AI constructor timer seed12345");

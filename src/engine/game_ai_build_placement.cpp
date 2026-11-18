@@ -8,16 +8,16 @@
 
 namespace swgb {
 //1=found,0=supported search found no location,-1=unsupported provider context.
-int Game::chooseAiPrefabPosition(int player,const dat::Unit &unit,float &x,float &y,
+int Game::chooseAiOriginalBuildPosition(int player,const dat::Unit &unit,float &x,float &y,
                                  std::string *unsupportedReason) {
     if(unsupportedReason)unsupportedReason->clear();
     const auto unsupported=[&](const char *reason) {
         if(unsupportedReason)*unsupportedReason=reason;
         return -1;
     };
-    if(unit.id!=70 || unit.type!=dat::UT_Building || player<=0 ||
+    if((unit.id!=70 && unit.id!=50) || unit.type!=dat::UT_Building || player<=0 ||
        size_t(player)>=aiPlayers_.size() || mapSize_<=0 || mapSize_>255)
-        return unsupported("normal Clone Campaigns prefab profile required");
+        return unsupported("normal Clone Campaigns prefab or farm profile required");
     auto &state=aiPlayers_[size_t(player)];
     const auto radius=state.strategicNumbers.find(74),randomness=state.strategicNumbers.find(168);
     // Actual596d10 profile followed by597300 installs SN74=20/SN168=50.
@@ -28,7 +28,7 @@ int Game::chooseAiPrefabPosition(int player,const dat::Unit &unit,float &x,float
     const float widthFloat=unit.collisionSize[0]*2.f;
     if(!std::isfinite(widthFloat) || widthFloat<1 || widthFloat>mapSize_ ||
        widthFloat!=std::floor(widthFloat) || unit.collisionSize[0]!=unit.collisionSize[1])
-        return unsupported("non-square prefab footprint");
+        return unsupported("non-square building footprint");
     //58f260's event rectangles and58e9f0's wall plans are not native registries
     // yet. Restrict this adapter to contexts where they are absent, before RNG.
     for(const auto &quarter:state.explorationQuarters)
@@ -56,7 +56,7 @@ int Game::chooseAiPrefabPosition(int player,const dat::Unit &unit,float &x,float
     const float powerRadius=playerAttribute(player,18),specialRadius=playerAttribute(player,24);
     if(!std::isfinite(powerRadius) || !std::isfinite(specialRadius))
         return unsupported("invalid player placement attributes");
-    AiPrefabGrid grid(mapSize_);
+    AiBuildPlacementGrid grid(mapSize_,originalBuildingPlacementCategory(unit.id));
     //58b100 scans remembered resource buckets. Lookup uses the live object just
     // as413850 does; absence/record.invalid=1 skip it. No new hidden knowledge.
     for(size_t bucket=0;bucket<economy.resources.size();++bucket)

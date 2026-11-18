@@ -7171,3 +7171,71 @@ existing player controls,144 population controls and42 defender controls pass.
 Production tests cover hidden enemy population, any/every caches, garrison,
 death, actual group membership, Gaia and invalid-slot negation. The combined
 sanitizer suite passes.
+
+### 2026-11-18: remembered building counts
+
+`players-building-type-count` now distinguishes live self/mutual-allied counts
+from hostile remembered category counts; `cc-players-building-type-count` uses
+live counts. Both retain original any/every selectors and building-line expansion.
+Original controls cover 480 direct comparisons, 144 selector comparisons, 24 line
+cases and 96 Gaia/unsafe-operand cases. Unsupported negative prototype memory
+reads remain Unknown rather than becoming true under `not`.
+
+The remembered cache credits first observation and preserves the original
+type-change/owner-change arithmetic. It rebuilds only after unsigned elapsed time
+exceeds five minutes, considering observations from the last twenty minutes.
+That original rebuild reads current objects through retained IDs, even outside
+sight; it does not discover unknown objects. Missing IDs disappear at rebuild,
+not through an invented immediate death decrement. Original update, removal,
+refresh and timer controls support these boundaries, including signed overflow
+in the first constructor timer draw. Retaining that draw adds no RNG consumption.
+
+Production sanitizer tests pass for discovery without a military group, hidden
+destruction, ordinary/CC differences, Gaia and script reload. Native observation
+order/cadence and physical per-prototype counts remain adapters. The verified
+owned-removal bookkeeping helper is not a general death callback. RMS startup
+still lacks a verified constructor epoch: its periodic cache timer stays absent,
+although observed admissions work. Scenario startup retains the known epoch;
+script reload preserves both memory and timer. These tests do not establish full
+RandomGame or whole-match parity.
+
+### 2026-11-18: CC unit-count predicates
+
+`cc-players-unit-type-count` now shares the original ordered player selectors.
+Operand83 uses the worker aggregate; other prototypes use signed completed
+counts, and only unit lines10–42 expand. It has no fog gate and does not include
+pending training. The original fact performs no extra master/copy-ID lookup.
+Controls cover216 direct cases,144 selector cases and24 line cases, including
+the distinction between direct83 and83 inside a line. Unsafe negative operands
+remain Unknown under negation.
+
+The focused production sanitizer test passes with hidden male/female/farmer
+workers, mixed line upgrades, Gaia, a real queued worker, actual garrison and
+death. It supplies normal prefab capacity so training is genuinely admitted.
+Physical actors and persistent job roles remain the native counter adapter;
+these checks do not establish the complete original counter lifecycle.
+
+### 2026-11-18: farm placement and military exploration fallback
+
+The shared placement grid now supports farm50 as well as prefab70. Nine original
+full-grid controls cover farm influence around Command Centers, food depots and
+existing farms, including the original float32-third rectangle boundary. Resource,
+terrain, known-building and candidate-scan stages reuse the recovered algorithms;
+native occupancy, pathability and unsupported attack/wall contexts remain adapters.
+The production PER test creates a farm, completes it and gathers its food.
+
+That test exposed a native path bug beside a neighboring building: the nearest
+interaction edge was blocked while another edge point was reachable. The shared
+final-segment fallback now checks alternative existing perimeter points without
+widening work range. Idle crowd yielding also rejects occupied side-step endpoints;
+two production fixtures verify blocked sides, the free alternative and arrival.
+These repairs improve the native path adapter; they do not establish original
+pathfinder equivalence.
+
+Military exploration now uses the same original initial dispatcher as civilian
+exploration, with the civilian flag disabled. Exhausted tactical searches still
+queue negative705, allowing actor-local unexplored-tile search. A production
+anchorless scout test verifies a concrete destination, actual movement and no
+civilian bookkeeping. Original class50 attack-pool admission also now respects
+Easy/Easiest exclusion, with Moderate/Easy/Easiest production checks. The combined
+ASan/UBSan gameplay regression and asset-independent algorithm suite pass.
