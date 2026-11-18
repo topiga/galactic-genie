@@ -20,7 +20,10 @@ static void economyGameplayChecks(swgb::Assets &assets) {
             (explorers?"34":"0")+") (set-strategic-number sn-cap-civilian-explorers "+(explorers?"1":"0")+
             ") (disable-self)) "
             "(defrule (sheep-and-forage-too-far) => (set-goal 90 1)) "
-            "(defrule (not (sheep-and-forage-too-far)) => (set-goal 90 0))",{},&error),error.c_str());
+            "(defrule (not (sheep-and-forage-too-far)) => (set-goal 90 0)) "
+            "(defrule (idle-farm-count == 0) => (set-goal 91 0)) "
+            "(defrule (idle-farm-count == 1) => (set-goal 91 1)) "
+            "(defrule (idle-farm-count < 0) => (set-goal 91 -1))",{},&error),error.c_str());
     };
     auto advance=[&](int ticks) {for(int n=0;n<ticks;++n)game.update(.1f,{});};
     initialize(false);
@@ -118,5 +121,19 @@ static void economyGameplayChecks(swgb::Assets &assets) {
         check(delivered?credited>0:credited==0,"AI batch credit follows actual delivery, not gathering progress");
     }
     check(delivered,"Native workers finish a real gather-and-deposit cycle");
+    initialize(false);
+    const auto farm=game.spawnObjectForTesting(1,50,2,20,20);
+    const auto farmerA=game.spawnObjectForTesting(1,83,2,18,20);
+    const auto farmerB=game.spawnObjectForTesting(1,83,2,22,20);
+    check(farm && farmerA && farmerB,"Idle farm counter fixture spawns");
+    game.setObjectResourceForTesting(farm,300);
+    const auto evaluateFarms=[&] {for(int n=0;n<25;++n)game.update(0,{});return game.aiGoalForTesting(2,91);};
+    check(evaluateFarms()==1,"Completed farm contributes to original current counter");
+    check(game.issueGatherForTesting(farmerA,farm),"First worker adopts the farmer prototype role");
+    check(evaluateFarms()==0,"Farmer role subtracts from idle farm count");
+    check(game.issueGatherForTesting(farmerB,farm),"Second worker shares the farm");
+    check(evaluateFarms()==-1,"Original idle farm count subtracts both farmers without clamping or deduplicating farms");
+    check(game.stopUnitForTesting(farmerA) && game.stopUnitForTesting(farmerB),"Stop both farmer tasks");
+    check(evaluateFarms()==-1,"Idle farmer roles remain counted after their tasks stop");
     std::puts("PASS: production original economic quotas, resource memory, pause and civilian exploration");
 }

@@ -4,6 +4,15 @@
 #include <cstdlib>
 #include <string>
 int main() {
+    // Actual57ca40 controls: each triple exercised all six comparisons to zero.
+    struct FarmRow {int16_t farms,a,b;int expected;};
+    const FarmRow farmRows[]{{0,0,0,0},{1,0,0,1},{1,1,0,0},{1,0,1,0},
+        {1,1,1,-1},{7,2,3,2},{-1,0,0,-1},{32767,-32768,-32768,98303}};
+    for(const auto &row:farmRows) {
+        if(swgb::aiIdleFarmCount(row.farms,row.a,row.b)!=row.expected) {
+            std::fprintf(stderr,"FAIL original signed idle-farm counters\n");return 1;
+        }
+    }
     struct Row {const char *name;int count,cls,contained,invalid,cooldown,distance;uint32_t blocked,now;bool expected;};
     const Row rows[]{
         {"empty",0,27,0,0,0,10,4294967295u,100000u,true},
@@ -39,5 +48,5 @@ int main() {
             std::fprintf(stderr,"FAIL %s\n",row.name);return 1;
         }
     }
-    std::puts("PASS original sheep-and-forage fact (19 oracle controls)");
+    std::puts("PASS original food facts (19 forage and 48 idle-farm oracle controls)");
 }

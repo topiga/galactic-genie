@@ -7121,3 +7121,25 @@ records, retained depot distance, cooldown/invalid flags and containment. It
 never discovers unseen food. Nineteen original controls and a production
 processor-add/remove test pass. This alone does not certify the complete farming
 policy or a full original-script victory.
+
+### 2026-11-18: farming gates and complete native matches
+
+`idle-farm-count` now preserves the original signed current-farm minus total-
+farmer counter arithmetic, including negative values. Ordinary farm50 and worker
+roles259/214 are identified directly in DAT; native persistent job roles supply
+the normal gameplay adapter. Hypothetical queued farmer variants and the entire
+original counter lifecycle are not covered. Forty-eight original comparisons
+and real PER farm/worker/Stop checks pass.
+
+`dropsite-min-distance` reads the existing cached metric without an extra world
+scan or geometry refresh. Original controls establish all four resource IDs,
+empty-cache -1, invalid numeric resource0 and six signed comparisons (504 cases).
+Production tests cover exact distinct distances and retained cache after sight
+loss. The combined sanitizer regression passes with both new facts.
+
+At commit7ebab82 the fallback opponent wins the custom match in861.6s (Explored)
+and862.0s (Standard). A normal-cost scripted player wins Conquest in2209.0s after
+the test driver searches the whole64-tile map rather than only the enemy base
+perimeter; it does not read hidden survivor positions. RMS session-finalization,
+starting resource/age and fog/Conquest checks also pass. These completed matches
+use the fallback opponent, not a certified full original RandomGame personality.

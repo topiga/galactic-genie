@@ -2,6 +2,11 @@
 #pragma once
 #include "ai_resource_selection.h"
 namespace swgb {
+// Original57ca40: signed current prototype50 minus signed total prototypes
+// 259 and 214. Negative results are intentional; no per-farm assignment scan.
+inline int aiIdleFarmCount(int16_t farms,int16_t farmersA,int16_t farmersB) {
+    return int(farms)-int(farmersA)-int(farmersB);
+}
 struct AiForageTarget {int unitClass=0;bool contained=false;};
 // Original5857a0 updates InfoAI20f8, read by zero-argument57df40.
 // This scan does not age cooldowns, invalidate missing IDs, or request fresh sight.

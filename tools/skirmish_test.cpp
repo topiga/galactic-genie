@@ -24,6 +24,7 @@ static void check(bool value, const char *message) {
 #include "ai_build_escrow_checks.h"
 #include "ai_build_admission_gameplay_checks.h"
 #include "ai_build_queue_gameplay_checks.h"
+#include "dropsite_fact_gameplay_checks.h"
 #include "ai_resource_knowledge_gameplay_checks.h"
 #include "selection_checks.h"
 #include "civilization_checks.h"
@@ -276,10 +277,12 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
                 if(target && game.attackTargetForTesting(unit.spawnId)!=target)
                     game.issueAttackForTesting(unit.spawnId,target);
                 else if(conquest && !target && frame%(30*30)==0) {
-                    // Search the known enemy base perimeter without reading hidden survivors.
-                    const float offsets[4][2]={{-10,-10},{10,-10},{10,10},{-10,10}};
-                    const auto &offset=offsets[(frame/(30*30))%4];
-                    game.groupMoveForTesting({unit.spawnId},enemyCenter[0]+offset[0],enemyCenter[1]+offset[1]);
+                    // Conquest includes roaming survivors outside the enemy base.
+                    // Sweep the fixture's 64-tile map in separate lanes without reading hidden positions.
+                    const int row=(frame/(30*30))%14;
+                    const float x=4.f+8.f*float(unit.spawnId%8);
+                    const float y=4.f+8.f*float(row<=7?row:14-row);
+                    game.groupMoveForTesting({unit.spawnId},x,y);
                 }
             }
         }
@@ -394,7 +397,7 @@ int main(int argc, char **argv) {
     aiTimeChecks(assets);
     aiTimerChecks(assets);
     aiResearchChecks(assets);
-    aiControllerChecks(assets);aiBuildEscrowChecks(assets);aiBuildAdmissionGameplayChecks(assets);aiBuildQueueGameplayChecks(assets);
+    aiControllerChecks(assets);aiBuildEscrowChecks(assets);aiBuildAdmissionGameplayChecks(assets);aiBuildQueueGameplayChecks(assets);dropsiteFactGameplayChecks(assets);
     aiResourceKnowledgeGameplayChecks(assets);
     additiveSelectionChecks(assets,renderer);
     civilizationChecks(assets,renderer);

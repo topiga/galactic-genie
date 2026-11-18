@@ -14239,6 +14239,22 @@ bool Game::evaluateAiFactValue(
     const std::string fact =
         normalizeAiSymbol(
             condition.name());
+    if (fact=="idle-farm-count") {
+        if(argumentEnd!=1)return false;
+        int farms=0,farmersA=0,farmersB=0;
+        for(const auto &object:objects_) {
+            if(!object.active || !object.unit || object.player!=player ||
+               (object.hidden && object.garrisonedInId<0))continue;
+            if(object.unit->id==50 && !object.underConstruction)++farms;
+            // Native persistent job roles adapt the original prototype-change
+            // counters. Stopping a farmer does not change that prototype.
+            const auto *role=object.jobUnit?object.jobUnit:object.unit;
+            if(role->id==259)++farmersA;
+            if(role->id==214)++farmersB;
+        }
+        value=aiIdleFarmCount(int16_t(farms),int16_t(farmersA),int16_t(farmersB));
+        return true;
+    }
     if (fact=="random-number") {
         if (argumentEnd!=1) return false;
         value=aiRandomNumbers_[size_t(player)];
@@ -14264,6 +14280,16 @@ bool Game::evaluateAiFactValue(
     if (fact=="civilian-population" || fact=="military-population") {
         if (argumentEnd!=1) return false;
         value=aiPopulationCount(player,fact=="military-population");
+        return true;
+    }
+    if (fact=="dropsite-min-distance") {
+        if(argumentEnd!=2 || condition.children[1].isList())return false;
+        bool known=false;
+        const int type=resolveAiValue(player,state,condition.children[1].value,known);
+        if(!known)return false;
+        // Original57c500 reads InfoAI's cached minimum, including -1 for an
+        // empty registry. Invalid numeric resource IDs compare as zero.
+        value=type>=0 && type<4?state.economy.resources[size_t(type)].cachedBestDistance:0;
         return true;
     }
     if (fact=="strategic-number") {
