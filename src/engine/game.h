@@ -182,7 +182,8 @@ public:
         uint32_t seed, int mapSize,
         std::string *err);
     // Resolved startup CRT seed; the default remains deterministic, without host-time selection.
-    bool initScenario(const Scenario &scenario, std::string *err, int difficulty = 2, uint32_t initialRandomState = 1);
+    bool initScenario(const Scenario &scenario, std::string *err, int difficulty = 2, uint32_t initialRandomState = 1,
+                      uint8_t lobbyMapId = 2);
     // Original default ungrouped timber row; requires an empty, flat initialized map.
     bool populateRmsTimber(uint32_t count, uint32_t &randomState, std::string *err = nullptr);
     // Diagnostic RMS world; explicit civilization context is required for supported owned starts.

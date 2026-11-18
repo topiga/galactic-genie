@@ -51,5 +51,17 @@ static void aiContextGameplayChecks(swgb::Assets &assets) {
         "(defrule (true) => (set-goal 955 1))\n#end-if\n",{},&error),error.c_str());game.update(0,{});
     check(game.aiGoalForTesting(2,954)==0 && game.aiGoalForTesting(2,955)==1,
           "Custom generated match does not inherit or invent the packaged desert map define");
+    swgb::Scenario scenario;
+    scenario.map.width=scenario.map.height=32;
+    scenario.map.tiles.resize(32*32);
+    auto &computer=scenario.players[1];
+    computer.active=true;computer.human=false;computer.aiType=1;computer.civilization=1;
+    computer.aiSource="#load-if-defined DESERT-MAP\n"
+        "(defrule (map-type desert) (not (map-type raiders)) => (set-goal 956 1))\n"
+        "#else\n(defrule (map-type 2) => (set-goal 956 2))\n#end-if\n";
+    check(game.initScenario(scenario,&error,2,1,9),error.c_str());game.update(0,{});
+    check(game.aiGoalForTesting(2,956)==1,"Scenario AI reads the selected lobby map during compilation and play");
+    check(game.initScenario(scenario,&error),error.c_str());game.update(0,{});
+    check(game.aiGoalForTesting(2,956)==2,"A fresh scenario uses the original initial lobby map");
     std::puts("PASS: production AI context, root/include aliases, explicit defines, reload atomicity and unknown map");
 }

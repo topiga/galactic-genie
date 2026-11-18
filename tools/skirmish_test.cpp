@@ -373,7 +373,7 @@ static bool parseUint32(std::string_view value,uint32_t &out) {
 }
 
 // The original scenario lobby reserves slot 1 for the observing human.
-[[gnu::noinline]] static void scenarioDuel(swgb::Assets &assets,const char *path,uint32_t seed,const char *clockPath) {
+[[gnu::noinline]] static void scenarioDuel(swgb::Assets &assets,const char *path,uint32_t seed,const char *clockPath,uint8_t lobbyMapId) {
     std::ifstream input(path,std::ios::binary);
     check(input.is_open(),"Could not open scenario");
     const std::vector<uint8_t> data{std::istreambuf_iterator<char>(input),{}};
@@ -381,7 +381,7 @@ static bool parseUint32(std::string_view value,uint32_t &out) {
     std::string error;
     if(!scenario.load(data,&error)) throw std::runtime_error(error);
     swgb::Game game(assets);
-    if(!game.initScenario(scenario,&error,2,seed)) throw std::runtime_error(error);
+    if(!game.initScenario(scenario,&error,2,seed,lobbyMapId)) throw std::runtime_error(error);
     check(scenario.players[0].human && !game.aiRuleCountForTesting(1) &&
           game.aiRuleCountForTesting(2) && game.aiRuleCountForTesting(3),
           "Expected a human observer and two computer players in slots 2 and 3");
@@ -531,7 +531,16 @@ static bool parseUint32(std::string_view value,uint32_t &out) {
 int main(int argc, char **argv) {
     const bool originalAi=argc==3 && std::string(argv[2])=="--original-ai";
     const bool duel=(argc==3 || argc==4) && std::string(argv[2])=="--ai-duel";
-    const bool scenarioReplay=(argc==5 || argc==6) && std::string_view(argv[2])=="--scenario-duel";
+    uint32_t lobbyMapId=2; // Clone Campaigns initializes its lobby map field to 2.
+    int replayArgs=argc;
+    if(argc>=7 && std::string_view(argv[2])=="--scenario-duel" && std::string_view(argv[argc-2])=="--map-id") {
+        if(!parseUint32(argv[argc-1],lobbyMapId) || lobbyMapId>255) {
+            std::fprintf(stderr,"Expected a lobby map ID between 0 and 255.\n");
+            return 2;
+        }
+        replayArgs-=2;
+    }
+    const bool scenarioReplay=(replayArgs==5 || replayArgs==6) && std::string_view(argv[2])=="--scenario-duel";
     uint32_t duelSeed=1;
     if((duel && argc==4) || scenarioReplay) {
         if(!parseUint32(argv[scenarioReplay?4:3],duelSeed)) {
@@ -547,7 +556,7 @@ int main(int argc, char **argv) {
         swgb::SoftRenderer renderer;
         swgb::Assets assets(&renderer); std::string error;
         check(assets.init(argv[1], &error), error.c_str());
-        if(scenarioReplay) {scenarioDuel(assets,argv[3],duelSeed,argc==6?argv[5]:nullptr);return 0;}
+        if(scenarioReplay) {scenarioDuel(assets,argv[3],duelSeed,replayArgs==6?argv[5]:nullptr,uint8_t(lobbyMapId));return 0;}
         if(originalAi || duel) {originalAiMatches(assets,duel,duelSeed);return 0;}
         if(allCivilizations || conquestMatch) {civilizationMatches(assets,conquestMatch);return 0;}
         if(playerConquest) {swgb::Game game(assets);playerMatch(game,assets,renderer,true);return 0;}

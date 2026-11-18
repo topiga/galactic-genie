@@ -1021,7 +1021,7 @@ void Game::updateSkirmish(float dt) {
     if (matchTime_ >= 45) updateSkirmishArmy(player);
 }
 
-bool Game::initScenario(const Scenario &scenario, std::string *err, int difficulty, uint32_t initialRandomState) {
+bool Game::initScenario(const Scenario &scenario, std::string *err, int difficulty, uint32_t initialRandomState, uint8_t lobbyMapId) {
     if (difficulty < 0 || difficulty > 4) {
         if (err) *err = "scenario difficulty must be between hardest (0) and easiest (4)";
         return false;
@@ -1051,6 +1051,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, int difficul
         settings.difficulty=difficulty;settings.population=std::isfinite(player.populationLimit) &&
             player.populationLimit>=0 && double(player.populationLimit)<=INT32_MAX?int(player.populationLimit):-1;
         settings.victory=scenario.victoryType;
+        settings.mapId=lobbyMapId;
         const auto context=aiScriptContext(settings,{difficultyDefines[difficulty]});
         const bool loaded = player.aiSource.empty()
             ? state.program.load(name, context.defines, err, sourceLoader,context.constants)
@@ -1061,6 +1062,8 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, int difficul
     const auto initialize = [&](const Scenario &imported) {
         if (!initScenario(imported,err,false,nullptr,initialRandomState)) return false;
         difficulty_ = difficulty;
+        aiMapId_ = lobbyMapId;
+        aiSessionContext_.mapId = lobbyMapId;
         for (size_t player = 1; player < computers.size(); ++player) {
             computers[player].buildPositions=std::move(aiPlayers_[player].buildPositions);
             computers[player].age = aiTechLevel(int(player));
