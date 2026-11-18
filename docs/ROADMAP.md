@@ -1,5 +1,7 @@
 # Roadmap
 
+This is the upstream Vita roadmap. The macOS fork’s current scope and verification gaps are maintained in [EXPERIENCE.md](../EXPERIENCE.md) and its runnable profiles in [DESKTOP.md](../DESKTOP.md). Historical milestone wording below does not certify Clone Campaigns engine parity.
+
 The goal is a playable SWGB: Clone Campaigns skirmish on the PS Vita, running on the original data files.
 
 ## Milestone 1: engine foundation (done)

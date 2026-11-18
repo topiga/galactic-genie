@@ -29,19 +29,24 @@ Previously observed native UI: selection/movement, action menus, recruitment, bu
 
 Fresh logs are `~/.local/share/swgb/galactic-genie-build/verification-{skirmish,combat,smoke}.log`. Binary/log SHA-256 values and exit codes are retained in the local research folder's `verification-2026-11-06.json`.
 
-## Current gaps and acceptance order
+## Current status and acceptance order — 18 November 2026
 
-| Priority | Area | Current implementation | Acceptance target |
-| --- | --- | --- | --- |
-| 1 | Launch | Original-art launcher with Start/Help/Options/Exit; bare app uses local asset default; no asset picker | Double-clickable native launcher matching the disk reference; persistent asset location, working Start/Help/Options/Exit; no terminal required |
-| 1 | Main menu | Original CC background/logo with functional Single Player, Options and Quit; unsupported destinations disabled | Clone Campaigns reference layout, original assets and interaction feedback; functional navigation and return paths |
-| 1 | Single-player setup | Fixed seed, map, factions, resources and custom Command Center objective | Original-style setup and only options actually supported by simulation; verify each setting reaches the match |
-| 2 | Match HUD | Installed original bottom-panel artwork, persistent commands, selection/queues and interactive minimap; first desktop integration | Original-style persistent command panel/minimap, familiar selection and feedback, legible scaling; compare against original in-game reference |
-| 2 | Keyboard/mouse | Small custom mapping, no desktop control-group bindings; F10 opens a game menu with confirmed resignation | Reference-verified hotkeys and selection modifiers, control groups, cancellation and confirmation flows; user-configurable shortcuts later |
-| 2 | Match lifecycle | Pause/resume/options, confirmed resign, result banner, Enter returns to main menu | In-game menu, resume, options, confirmed resign, results and return to main menu; save/load requires actual serialization |
-| 3 | Simulation fidelity | Custom opening/AI/objective and deterministic fixture | Compare economy, visibility/fog, pathing, targeting, technology progression and victory rules with original reference matches; measure discrepancies |
-| 3 | Display/audio settings | Fixed 960×544 software surface and mute toggle | Window/fullscreen and scale choices, volume controls, persistent settings, correct pointer mapping and audio feedback |
-| 4 | Enhanced graphics | Original Clone Campaigns assets; no EF graphics mode | Optional enhanced asset profile, validated palettes/animation/footprints; preserve classic mode and gameplay readability |
+This is a native C++ engine based on Galactic Genie, using the original installed assets. It is not running the Windows executable or the earlier static-recompilation experiment. Original executable controls and native regression matches establish bounded behavior; neither establishes whole-engine equivalence. Later dated entries below are a historical evidence ledger and can supersede older implementation notes.
+
+| Area | Working implementation | Remaining acceptance target |
+| --- | --- | --- |
+| Launch/menu | Native app, original-art launcher and Clone Campaigns main menu; Single Player, Options and Quit | Full original navigation/content, all reference interactions and supported resolution layouts |
+| Setup | Custom64 map with eight civilizations; packaged Arid/Tiny120 with two Empire players; reveal, population and victory choices | General packaged-map selection, seeds, player counts/teams, starting settings and exact original setup behavior |
+| HUD/input | Original panel/icon/font assets, command positions, formation/garrison controls, minimap, additive selection and control groups | Remaining unit abilities, hotkey editor, all selected-unit combinations and pixel/interaction comparisons |
+| Match lifecycle | Pause allows inspection/camera but blocks orders; confirmed restart/resign; win/loss and return to menu | Save/load, complete original results/statistics and campaign progression |
+| Gameplay | Gathering, construction, queues/research, combat, healing, repair, garrison/alarm and fog memory have regression coverage; completed custom-map matches are verified | Complete small matches using the original personality, original path/action timing, remaining specialized abilities and full defeat/victory semantics |
+| Original AI | Packaged PER loading with civilization/setup context; recovered facts, military/scouting controllers and worker allocation connected | Full24-phase scheduling, all command acknowledgements, construction placement, economic lifecycle and unsupported facts/actions |
+| RMS/startup | Original-script pipeline with extensive executable-backed terrain/object/startup controls; Arid connected to desktop | Broader seed/map/civilization/player combinations with complete startup RNG and session-state comparisons; no universal1:1 claim |
+| Rendering/audio | Native SDL frontend and software renderer; original terrain/sprite/UI assets, fog edges, positional effects and streamed music | Original-resolution fidelity, remaining renderer/audio edge cases, window/display controls and full reference comparison |
+| EF/base SWGB | Clone Campaigns is the current data/behavior reference | Separate validated EF and base-game profiles; importing artwork alone does not establish rules compatibility |
+| Multiplayer/enhanced graphics | Deferred | Windows-compatible multiplayer, Metal and optional enhanced art after core fidelity |
+
+The immediate acceptance sequence is: finish shared economy/construction/movement controllers; complete original-personality small matches; broaden seed-matched session comparisons; then extend frontend/profile coverage. There is no defensible whole-project completion percentage yet.
 
 Do not treat screen resemblance as feature completion. Every enabled control must work; unsupported legacy destinations must be visibly unavailable. The Zone reference should not be wired to an unverified modern destination. Multiplayer remains deferred.
 
