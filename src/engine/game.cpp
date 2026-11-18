@@ -11845,7 +11845,7 @@ const Game::Object *Game::unitBlockerAt(const Object &object, float x,
 bool Game::detourAround(Object &object, float goalX, float goalY) {
     // Original4a9cc0 omits moving objects except explicit collision blockers.
     // Pending native routes approximate its velocity predicate here.
-    const auto attempt = [&](float kStep,int kHalf) {
+    const auto attempt = [&](float kStep,int kHalf,bool sweptOnly) {
     const int kSize = kHalf * 2 + 1;
     const float originX = object.x - kHalf * kStep;
     const float originY = object.y - kHalf * kStep;
@@ -11941,9 +11941,9 @@ bool Game::detourAround(Object &object, float goalX, float goalY) {
             if (nx < 0 || ny < 0 || nx >= kSize || ny >= kSize) continue;
             const int ni = ny * kSize + nx;
             if (!open[ni]) continue;
-            // The swept segment below checks the actual obstacle geometry.
-            // Closed orthogonal samples do not forbid a clear diagonal
-            // between circular mobile footprints.
+            if (!sweptOnly && d[0] && d[1] &&
+                (!open[cy * kSize + nx] || !open[ny * kSize + cx]))
+                continue;
             float ax, ay, bx, by;
             cellPos(cx, cy, ax, ay);cellPos(nx, ny, bx, by);
             if (!clearDetourSegment(ax, ay, bx, by)) continue;
@@ -11999,7 +11999,14 @@ bool Game::detourAround(Object &object, float goalX, float goalY) {
     return true;
     };
     // Escalate when coarse paths fail to produce movement, not on every search.
-    return ((object.moveStallTime>=1.5f || object.blockedTime>=1.5f) && attempt(.0625f,64)) || attempt(.25f,16) || attempt(.125f,32) || attempt(.0625f,64);
+    if (((object.moveStallTime>=1.5f || object.blockedTime>=1.5f) && attempt(.0625f,64,false)) ||
+        attempt(.25f,16,false) || attempt(.125f,32,false) || attempt(.0625f,64,false))
+        return true;
+    // Preserve established crowd routing when it finds a useful detour.
+    // Otherwise closed orthogonal samples may hide a clear diagonal between
+    // circular footprints. Every fallback edge still passes the same exact
+    // swept static/mobile checks; no collision clearance is relaxed.
+    return attempt(.25f,16,true) || attempt(.125f,32,true) || attempt(.0625f,64,true);
 }
 
 // A closed gate only stops units it would not open for: enemies, or
