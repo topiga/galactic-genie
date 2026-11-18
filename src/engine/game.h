@@ -1740,6 +1740,8 @@ private:
         bool includeFoundations) const;
     int aiPopulationCount(int player,bool military) const;
     float aiSpendableResource(int player,int type,bool withEscrow=false) const;
+    int commodityPrice(int player,int type,bool buy) const;
+    bool canTradeCommodity(int player,int type,bool buy,bool withEscrow) const;
     void addResource(int player,int type,float amount);
     bool aiResearchAvailable(int player,int id) const;
     Object *aiResearcher(int player,const dat::Tech &technology);
@@ -1837,6 +1839,8 @@ private:
     std::optional<uint32_t> aiMapId_;
     AiSessionContextSettings aiSessionContext_;
     std::vector<uint16_t> powerTiles_;
+    std::array<float,3> commodityRates_{1.f,1.f,1.3f};
+    std::array<int,3> commodityDemand_{};
     std::array<std::array<float,4>,17> aiEscrow_{},aiEscrowPercent_{};
     std::array<std::set<int>, 17> disabledTechs_{};
     std::array<std::set<int>, 17> disabledUnits_{};

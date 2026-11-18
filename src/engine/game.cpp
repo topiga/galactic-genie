@@ -431,6 +431,8 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     aiMapId_.reset();
     aiSessionContext_={};
     powerTiles_.clear();
+    commodityRates_ = {1.f,1.f,1.3f};
+    commodityDemand_ = {};
     aiEscrow_ = {};
     aiEscrowPercent_ = {};
     techGeneration_++;
@@ -1158,6 +1160,8 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     aiSessionContext_={};
     aiSessionContext_.victory=scenario.victoryType;
     powerTiles_.clear();
+    commodityRates_ = {1.f,1.f,1.3f};
+    commodityDemand_ = {};
     aiEscrow_ = {};
     aiEscrowPercent_ = {};
     techGeneration_++;
@@ -14312,6 +14316,20 @@ float Game::aiSpendableResource(int player,int type,bool withEscrow) const {
         ? total-aiEscrow_[size_t(player)][size_t(type)] : total;
 }
 
+int Game::commodityPrice(int player,int type,bool buy) const {
+    const double base=double(commodityRates_[type])*100;
+    const double fee=base*playerAttribute(player,78);
+    const int quote=int(base+(buy?fee:-fee)+0.5);
+    return buy?std::max(25,quote):quote;
+}
+
+bool Game::canTradeCommodity(int player,int type,bool buy,bool withEscrow) const {
+    if(aiSpendableResource(player,buy?3:type,withEscrow)<(buy?commodityPrice(player,type,true):100))
+        return false;
+    // Original counts completed Spaceports and scenario ports (57b640/57b740).
+    return aiPrototypeCount(player,84,false)+aiPrototypeCount(player,530,false)>0;
+}
+
 void Game::addResource(int player,int type,float amount) {
     if (player<0 || size_t(player)>=resources_.size() || type<0 || !std::isfinite(amount)) return;
     auto &stock=resources_[size_t(player)][type];
@@ -14532,6 +14550,14 @@ bool Game::evaluateAiFactValue(
     const std::string fact =
         normalizeAiSymbol(
             condition.name());
+    if(fact=="commodity-selling-price" || fact=="commodity-buying-price") {
+        if(argumentEnd!=2)return false;
+        bool known=false;
+        const int type=resolveAiValue(player,state,condition.children[1].value,known);
+        if(!known || type<0 || type>=3)return false;
+        value=commodityPrice(player,type,fact=="commodity-buying-price");
+        return true;
+    }
     if (fact=="idle-farm-count") {
         if(argumentEnd!=1)return false;
         value=aiIdleFarmCount(int16_t(aiPrototypeCount(player,50,false)),
@@ -14663,6 +14689,13 @@ Game::AiTruth Game::evaluateAiCondition(
         const int civilization=resolveAiValue(player,state,condition.children[1].value,known);
         if (!known) return AiTruth::Unknown;
         return civilizationForPlayer(player)==civilization ? AiTruth::True : AiTruth::False;
+    }
+    if(fact=="can-buy-commodity" || fact=="can-sell-commodity") {
+        if(condition.children.size()!=2)return AiTruth::Unknown;
+        bool known=false;
+        const int type=resolveAiValue(player,state,condition.children[1].value,known);
+        if(!known || type<0 || type>=3)return AiTruth::Unknown;
+        return canTradeCommodity(player,type,fact=="can-buy-commodity",false)?AiTruth::True:AiTruth::False;
     }
     if(fact=="player-human" || fact=="player-in-game" || fact=="players-stance" || fact=="stance-toward") {
         const bool relation=fact=="players-stance" || fact=="stance-toward";
@@ -15038,6 +15071,22 @@ bool Game::executeAiAction(
     if (!action.isList()) return false;
     const std::string name =
         normalizeAiSymbol(action.name());
+    if(name=="buy-commodity" || name=="sell-commodity") {
+        if(action.children.size()!=2)return false;
+        bool known=false;
+        const int type=resolveAiValue(player,state,action.children[1].value,known);
+        const bool buy=name=="buy-commodity";
+        if(!known || type<0 || type>=3 || !canTradeCommodity(player,type,buy,true))return false;
+        const int quote=commodityPrice(player,type,buy);
+        addResource(player,buy?3:type,buy?-quote:-100);
+        addResource(player,buy?type:3,buy?100:quote);
+        commodityDemand_[type]+=buy?1:-1;
+        auto &rate=commodityRates_[type];
+        if(!commodityDemand_[type])rate=type==2?1.3f:1.f;
+        // Original 605220 truncates 100 * binary32(0.03) to 2 in x87 extended precision.
+        else rate=std::clamp(rate+(buy?0.02f:-0.02f),0.2f,99.99f);
+        return true;
+    }
     if(name=="attack-now" && action.children.size()==1)return formAiMilitaryGroups(player);
     if (name == "disable-self") {
         rule.enabled = false;

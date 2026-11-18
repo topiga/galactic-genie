@@ -24,6 +24,7 @@ static void check(bool value, const char *message) {
 #include "ai_time_checks.h"
 #include "ai_timer_checks.h"
 #include "ai_research_checks.h"
+#include "ai_commodity_checks.h"
 #include "ai_controller_checks.h"
 #include "ai_build_escrow_checks.h"
 #include "ai_build_admission_gameplay_checks.h"
@@ -450,6 +451,7 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
     aiTimeChecks(assets);
     aiTimerChecks(assets);
     aiResearchChecks(assets);
+    aiCommodityChecks(assets);
     aiControllerChecks(assets);aiBuildEscrowChecks(assets);aiBuildAdmissionGameplayChecks(assets);aiBuildQueueGameplayChecks(assets);dropsiteFactGameplayChecks(assets);
     aiResourceKnowledgeGameplayChecks(assets);
     additiveSelectionChecks(assets,renderer);
