@@ -7471,7 +7471,7 @@ including the SN87 radius exceeding a64-tile map and the actual completed68
 counter. Eight production cases pass before/after real age-up with known hidden
 resources and unseen decoys. A real class4 animal fixture verifies that a68
 foundation leaves attraction disabled, then actual completion enables it.
-The full supported sanitizer test command and38 algorithm suites pass. Four
+The full supported sanitizer test command and 41 algorithm suites pass. Four
 normal-startup original-personality Arid Conquest games also finish: seeds1–4 at
 3349.388,2529.528,4567.449 and2682.683 simulated seconds. These are native victories
 against an idle human, not seed-matched Windows matches. Logs and hashes remain
@@ -7484,3 +7484,28 @@ not be presented as complete original personality support. Additional original
 controls show the town fact needs persistent attacker/victim lifetime; the
 holocron fact remembers all-holocrons-control events114/115, not arbitrary carried
 objects. These remain unsupported rather than being replaced by guessed values.
+
+### Fresh Arid seeds and worker animation rounding (2026-11-18)
+
+Three additional full original `4df9b0` controls cover packaged Arid 54201,
+Tiny 120, two Empire players, fixed positions and default resources. Seeds 2/3/4
+produce respectively 2038/1969/2064 live objects and final CRT states
+4135318061/1588487930/2581643513. Every ordered object ID, owner, prototype,
+facet and XY coordinate matches native, as does every terrain, elevation and
+slope byte. The existing real Tatooine asset captures supply predator 1251,
+which seed 2 selects; no new synthetic factory provider was needed.
+
+This batch exposed an independent worker animation rounding defect: seed 2
+worker 293 stored an excess idle delay 0.3925905227661133 instead of the
+original 0.392590045928955078125. Original `423c73..423cab` retains elapsed
+precision until subtracting the last-frame time, then stores the hold float.
+The shared RMS worker path now preserves that order; RNG, placement and frame
+selection are unchanged. `rmsAridFreshChecks` verifies the independent map
+hashes and the exact timer after native Game import. Build/test outcomes are
+reported separately; this section records evidence and implementation scope.
+
+The original controls retain explicit x87 CW037f and modeled allocation/IO/time
+boundaries. They establish the stated generation outputs, not complete Windows
+session equivalence or every object property. Private evidence is retained in
+`rms-arid-fresh-comparison-2026-11-18.json` and
+`rms-arid-fresh-findings-2026-11-18.md` in the local research directory.

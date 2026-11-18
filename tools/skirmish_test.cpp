@@ -82,6 +82,7 @@ static void check(bool value, const char *message) {
 #include "rms_global_predator_checks.h"
 #include "rms_forest_hunt_checks.h"
 #include "rms_packaged_forest_checks.h"
+#include "rms_arid_fresh_checks.h"
 #include "rms_packaged_startup_checks.h"
 #include "rms_gaia_foundation_checks.h"
 #include "rms_general_object_checks.h"
@@ -391,6 +392,7 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
     checkRmsCliffMap(assets.dat());
     checkRmsCliffImport(assets);
     rmsPackagedForestChecks(assets,dataPath);
+    rmsAridFreshChecks(assets);
     rmsPackagedStartupChecks(assets,dataPath);
     rmsGaiaFoundationChecks(assets,renderer,dataPath);
     rmsGeneralObjectChecks(assets);

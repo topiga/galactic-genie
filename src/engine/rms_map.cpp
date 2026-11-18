@@ -1934,9 +1934,11 @@ bool generateRmsMap(const RmsScript &script, const std::unordered_set<std::strin
                 for (int draw=0;draw<7;++draw) {
                     const auto value=genieRandomDraw(rng);
                     if (draw==2) {
-                        const float elapsed=float(value*11u)*(1.f/32767.f);
+                        // Original423c73..423cab keeps elapsed in x87 until
+                        // subtracting the last frame, then stores the hold float.
+                        const double elapsed=double(value)*11.f*(1.f/32767.f);
                         frame=uint8_t(std::min(7,int(elapsed)));
-                        delay=std::max(0.f,elapsed-8.f);
+                        delay=std::max(0.f,float(elapsed-7.f)-1.f);
                     }
                     if (draw==3) facet=uint8_t((value*8u/32767u+7)%8);
                 }
