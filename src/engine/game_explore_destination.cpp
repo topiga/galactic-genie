@@ -71,7 +71,25 @@ bool Game::reissueAiExploreDestination(Object &object) {
                        !(visibleTiles_[native]&mask))state.explorationInformation[index]=2;
                 }
             },x,y);
-        if(!found)return false;
+        auto &economy=state.economy;
+        const int32_t id=int32_t(object.spawnId);
+        if(!found) {
+            // Original5a55d0 releases the civilian exploration assignment and
+            // gathering record, not the general civilian pool or pending list.
+            auto &explorers=economy.civilianExplorers;
+            explorers.erase(std::remove(explorers.begin(),explorers.end(),id),explorers.end());
+            removeAiEconomicWorker(object.player,id);
+            return false; // The notification caller queues original opcode1 Stop.
+        }
+        //5a9ee0 reserves this dispatch, then recognizes civilians through +f8.
+        const auto append=[&](std::vector<int32_t> &ids) {
+            if(std::find(ids.begin(),ids.end(),id)==ids.end())ids.push_back(id);
+        };
+        append(economy.pendingCivilianAssignments);
+        if(std::find(economy.civilianIds.begin(),economy.civilianIds.end(),id)!=economy.civilianIds.end()) {
+            append(economy.civilianExplorers);
+            removeAiEconomicWorker(object.player,id);
+        }
         //5a9ee0 retries5ad950 before using the supplied spiral destination.
         if(queueAiExploreDestination(object))return true;
         return queueExplore(object,float(y),float(mapSize_-x));

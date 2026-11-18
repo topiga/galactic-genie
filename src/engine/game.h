@@ -7,6 +7,9 @@
 #include "ai_attack_memory.h"
 #include "ai_resource_knowledge.h"
 #include "ai_session_context.h"
+#include "ai_economy.h"
+#include "ai_build_admission.h"
+#include "../core/genie_explore_search.h"
 
 #include "local_simulation_clock.h"
 #include "local_command_queue.h"
@@ -411,6 +414,10 @@ public:
     bool reissueExploreForTesting(uint32_t id) {
         auto *o=findObject(id);return o && reissueAiExploreDestination(*o);
     }
+    const AiEconomyState &economyForTesting(int player) const {return aiPlayers_.at(size_t(player)).economy;}
+    void updateAiGatherersForTesting(int player) {refreshVisibility();updateAiGatherers(player,aiPlayers_.at(size_t(player)));}
+    uint32_t aiGatherTargetForTesting(uint32_t id) const {const auto *o=findObject(id);return o?o->gatherTargetId:0;}
+    bool queueCivilianExploreForTesting(uint32_t id) {auto *o=findObject(id);return o && queueAiCivilianExplore(*o);}
     bool queueExploreForTesting(uint32_t id,float x,float y) {
         auto *o=findObject(id);return o && queueExplore(*o,x,y);
     }
@@ -977,6 +984,7 @@ private:
         GenieMovementAction pointMovement;
         GenieTacticalMovementAction tacticalMovement;
         std::optional<GenieExploreAction> exploration;
+        GenieExploreHistory explorationHistory;
         GenieMovementAction explorationChild;
         uint32_t pathGoalId = 0;      // object approached (region goal), 0 = point
         float pathGoalClearance = 0;
@@ -1030,6 +1038,8 @@ private:
         };
         AiProgram program;
         AiResourceKnowledge resourceKnowledge;
+        AiEconomyState economy;
+        AiBuildAttemptLatch buildAttempt;
         std::unordered_map<int,int> matchedPlayers;
         std::vector<KnownMilitaryObject> militaryKnownObjects;
         std::vector<uint8_t> explorationInformation, explorationObserved;
@@ -1184,6 +1194,8 @@ private:
     bool issueMove(Object &object, float targetX, float targetY,
                    const Object *goalObject = nullptr, float clearance = 0.0f);
     bool issueExplore(Object &object,float x,float y,bool force);
+    bool chooseLocalExploreDestination(Object &object,float commandX,float commandY);
+    bool queueAiCivilianExplore(Object &object);
     bool queueExplore(Object &object,float x,float y);
     void focusRmsStart();
     void applyPendingFoundation(Object &object);
@@ -1551,6 +1563,10 @@ private:
     void updatePlayerObjects(float dt,int player, bool auxiliary = false);
     AiSessionContext aiScriptContext(int player, const std::unordered_set<std::string> &defines) const;
     AiSessionContext aiScriptContext(AiSessionContextSettings settings, const std::unordered_set<std::string> &defines) const;
+    void refreshAiEconomyKnowledge(int player);
+    void removeAiEconomicWorker(int player,int32_t id);
+    bool aiEconomicWorkerIdle(const Object &object) const;
+    void updateAiGatherersFallback(int player,AiPlayerState &state);
     void updateAiResourceKnowledge(int player);
     void reevaluateAiResourceFound(int player);
     void updateAiPlayer(

@@ -21,6 +21,8 @@ static void check(bool value, const char *message) {
 #include "ai_timer_checks.h"
 #include "ai_research_checks.h"
 #include "ai_controller_checks.h"
+#include "ai_build_escrow_checks.h"
+#include "ai_build_admission_gameplay_checks.h"
 #include "ai_resource_knowledge_gameplay_checks.h"
 #include "selection_checks.h"
 #include "civilization_checks.h"
@@ -36,6 +38,8 @@ static void check(bool value, const char *message) {
 #include "exploration_gameplay_checks.h"
 #include "ai_source_checks.h"
 #include "ai_context_gameplay_checks.h"
+#include "economy_gameplay_checks.h"
+#include "civilian_explore_gameplay_checks.h"
 #include "conquest_checks.h"
 #include "fog_edge_checks.h"
 #include "rms_spawn_checks.h"
@@ -308,6 +312,8 @@ int main(int argc, char **argv) {
         scenarioImportChecks(assets);
         aiSourceChecks(assets);
     aiContextGameplayChecks(assets);
+    economyGameplayChecks(assets);
+    civilianExploreGameplayChecks(assets);
         scenarioAiChecks(assets);
         actorAiTimingChecks(assets);
         exploreActionChecks();exploreSearchChecks();tacticalExploreQueueChecks();exploreSpiralChecks();
@@ -379,7 +385,7 @@ int main(int argc, char **argv) {
     aiTimeChecks(assets);
     aiTimerChecks(assets);
     aiResearchChecks(assets);
-    aiControllerChecks(assets);
+    aiControllerChecks(assets);aiBuildEscrowChecks(assets);aiBuildAdmissionGameplayChecks(assets);
     aiResourceKnowledgeGameplayChecks(assets);
     additiveSelectionChecks(assets,renderer);
     civilizationChecks(assets,renderer);

@@ -33,6 +33,10 @@ cases = {
     'ai_player_facts': [],
     'ai_resource_knowledge': [],
     'ai_session_context': [],
+    'ai_build_admission': [],
+    'ai_gather_allocation': [],
+    'ai_gather_quota': [],
+    'ai_resource_selection': [],
     'ai_group_targets': ['src/engine/ai_group_targets.cpp', 'src/engine/ai_targets.cpp'],
 }
 for name, sources in cases.items():

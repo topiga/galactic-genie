@@ -60,8 +60,9 @@ static void explorationGameplayChecks(swgb::Assets &assets) {
     game.update(.05f,{});
     check(game.explorationStateForTesting(worker)==3&&game.explorationChildStatusForTesting(worker)==-1,
           "Arrived exploration parent survives its next update");
-    check(game.issueExploreForTesting(worker,-1,-1,true)&&game.explorationStateForTesting(worker)==3,
-          "Unknown exploration destination requests planning without fabricating a route");
+    check(game.issueExploreForTesting(worker,-1,-1,true)&&game.explorationStateForTesting(worker)==11 &&
+          game.explorationDestinationForTesting(worker)[0]>=0 && game.explorationDestinationForTesting(worker)[1]>=0,
+          "Unknown exploration destination runs the recovered local picker and starts a concrete movement child");
     check(game.issueExploreForTesting(worker,35,40.5f,true),"Resume exploration with a known destination");
     game.stopUnitForTesting(worker);
     check(game.explorationStateForTesting(worker)==-1&&game.explorationChildStatusForTesting(worker)==-1,

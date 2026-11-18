@@ -12234,6 +12234,9 @@ bool Game::issueExplore(Object &object,float x,float y,bool force) {
     object.path.clear();object.pathIndex=0;object.pathGoalId=0;
     object.moveGoalActive=false;object.moveGroupId=0;object.marchGroupId=0;object.moveSpeedLimit=0;
     object.state=State::Idle;object.wander=false;
+    if(transition.requestDestination && !chooseLocalExploreDestination(object,x,y) &&
+       object.player>0 && aiPlayers_[size_t(object.player)].loaded)
+        if(!reissueAiExploreDestination(object))queueAiMilitaryStop(object.player,int32_t(object.spawnId));
     if (transition.rebuildChild) {
         object.explorationChild.begin(x,y);
         object.moveAnchorX=x;object.moveAnchorY=y;object.moveGoalActive=true;
@@ -13817,12 +13820,14 @@ bool Game::selectObjectsForTesting(
 const dat::Unit *Game::aiUnit(
     int player,
     const std::string &symbol) const {
+    if(player<0 || size_t(player)>=aiPlayers_.size())return nullptr;
     const int civilization =
         civilizationForPlayer(player);
-    const dat::Unit *unit =
-        findUnit(civilization, symbol);
-    if (!unit && civilization != 0)
-        unit = findUnit(0, symbol);
+    const AiProgram &program=aiPlayers_[size_t(player)].program;
+    const bool numeric=program.hasConstant(symbol);
+    const int id=numeric?program.constant(symbol):-1;
+    const dat::Unit *unit=numeric?findUnit(civilization,id):findUnit(civilization,symbol);
+    if(!unit && civilization!=0)unit=numeric?findUnit(0,id):findUnit(0,symbol);
     return unit
                ? effectiveUnitForPlayer(
                      player, unit)
@@ -14534,7 +14539,7 @@ Game::AiTruth Game::evaluateAiCondition(
         return aiCanAfford(player,tech,fact=="can-research-with-escrow") && aiResearcher(player,tech)
             ? AiTruth::True : AiTruth::False;
     }
-    if ((fact == "can-build" ||
+    if ((fact == "can-build" || fact == "can-build-with-escrow" ||
          fact == "can-train" ||
          fact == "can-train-with-escrow") &&
         condition.children.size() == 2) {
@@ -14544,11 +14549,13 @@ Game::AiTruth Game::evaluateAiCondition(
                 condition.children[1]
                     .value);
         if (!unit) return AiTruth::Unknown;
+        if((fact=="can-build" || fact=="can-build-with-escrow") && !state.buildAttempt.canCheck(unit->id,false))
+            return AiTruth::False;
         if (!unitAvailable(
                 player, unit->id) ||
-            !aiCanAfford(player, *unit,fact=="can-train-with-escrow"))
+            !aiCanAfford(player, *unit,fact=="can-train-with-escrow" || fact=="can-build-with-escrow"))
             return AiTruth::False;
-        if (fact == "can-build") {
+        if (fact == "can-build" || fact=="can-build-with-escrow") {
             const bool worker =
                 std::any_of(
                     objects_.begin(),
@@ -14742,8 +14749,8 @@ bool Game::executeAiAction(
             aiUnit(
                 player,
                 action.children[1].value);
-        return unit &&
-               aiBuild(player, *unit);
+        // shortcut: Native matches have no original owner296c construction restriction or deferred BuildAI queue.
+        return unit && state.buildAttempt.begin(unit->id,false) && aiBuild(player,*unit);
     }
     if (name == "train" &&
         action.children.size() == 2) {
@@ -14771,6 +14778,7 @@ bool Game::executeAiAction(
 
 void Game::updateAiPlayer(
     int player, AiPlayerState &state) {
+    state.buildAttempt.reset(); // Original5993b4 resets77fca0 before this owner evaluates PER.
     updateAiResourceKnowledge(player);
     // Original40f910 visits the whole ordered program on each admitted evaluation.
     for (AiRule &rule : state.program.rules) {
@@ -14794,7 +14802,7 @@ void Game::updateAiPlayer(
     }
 }
 
-void Game::updateAiGatherers(
+void Game::updateAiGatherersFallback(
     int player, AiPlayerState &state) {
     static constexpr const char *names[4] = {
         "sn-food-gatherer-percentage",
@@ -15894,8 +15902,9 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
             o.explorationChild.status!=GenieMovementStatus::Active) {
             const auto transition=o.exploration->update(o.explorationChild.status==GenieMovementStatus::Completed?1:3);
             o.explorationChild.cancel();
-            if(transition && transition->requestDestination && aiPlayers_[size_t(o.player)].loaded &&
-               o.exploration->destinationX>=0 && o.exploration->destinationY>=0)
+            if(transition && transition->requestDestination &&
+               !chooseLocalExploreDestination(o,o.exploration->destinationX,o.exploration->destinationY) &&
+               o.player>0 && aiPlayers_[size_t(o.player)].loaded)
                 if(!reissueAiExploreDestination(o))queueAiMilitaryStop(o.player,int32_t(o.spawnId));
         }
         if (o.resourceDeathState == 2) {
