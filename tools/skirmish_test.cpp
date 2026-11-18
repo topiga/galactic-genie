@@ -326,6 +326,10 @@ static void playerMatch(swgb::Game &game, swgb::Assets &assets, swgb::SoftRender
     bool allPassed=true;
     for(uint32_t seed:{1u,2u,3u,4u}) {
         swgb::Game game(assets);std::string error;
+        game.setLogger([seed](const std::string &message) {
+            if(message.find("AI fact not implemented:")==0 || message.find("AI action not implemented:")==0)
+                std::printf("original AI seed=%u %s\n",seed,message.c_str());
+        });
         check(game.initAridSkirmish(seed,&error,false,75,true),error.c_str());
         check(game.aiRuleCountForTesting(2)>0,"Normal Arid Conquest entry loads the packaged original personality");
         for(int frame=0;frame<30*12000 && game.matchResult()<0;++frame) {
