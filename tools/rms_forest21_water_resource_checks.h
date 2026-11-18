@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
-// Actual original 413/109/83/550/285/59/66/102 creation on native authored
-// geometry, with real unit headers, terrain zones and controller maxima119.
-// Includes original shoreline clearance rejections and full eligibility raster.
+#include <cstring>
+// Fresh original derived4e7420/4df9b0 full RMS controls (2026-11-18), seeds1/12345.
+// rms-text-full-water-forest21-current-*-oracle: actual parser, geometry and factories.
+// Original symbolic terrain/object aliases carry the same IDs as these native literals.
+// Replaces Nov14 authored-geometry goldens predating the shallow-water flat default.
+// Includes every object pose, shoreline clearance and full persistent eligibility.
 static void checkRmsForest21WaterResources(const swgb::dat::DatFile &data) {
     const std::string source=R"(<LAND_GENERATION> base_terrain 6 create_player_lands { terrain_type 6 base_size 3 number_of_tiles 60 }
 <ELEVATION_GENERATION> create_elevation 2 { base_terrain 6 number_of_tiles 200 number_of_clumps 4 }
@@ -26,15 +29,25 @@ create_object 102 { set_place_for_every_player set_gaia_object_only set_tight_gr
     auto hash=[](const std::vector<uint8_t>&bytes) {
         uint32_t value=2166136261u;for(auto b:bytes)value=(value^b)*16777619u;return value;
     };
+    auto poseHash=[](const auto &objects) {
+        uint32_t value=2166136261u;
+        for(const auto &object:objects) {
+            uint32_t x,y;std::memcpy(&x,&object.x,4);std::memcpy(&y,&object.y,4);
+            for(uint32_t field:{uint32_t(object.unitId),x,y,uint32_t(object.facet)})
+                for(unsigned shift=0;shift<32;shift+=8)value=(value^uint8_t(field>>shift))*16777619u;
+        }
+        return value;
+    };
     struct Point {int unit;float x,y,heading;int facet;};
     {
         uint32_t rng=1u;swgb::RmsMap map;
         check(swgb::generateRmsMap(script,{},120,120,data,rng,map,&error,2,{1,1}),error.c_str());
-        check(rng==3135654677u && map.ownedObjects.size()==10 && map.resourcesAfterOwned.size()==65 && map.scenery.size()==103,"Water/Forest21 resource final RNG/count");
-        check(hash(map.terrain)==226656437u,"Water/Forest21 original terrain");
+        check(rng==2670305172u && map.ownedObjects.size()==10 && map.resourcesAfterOwned.size()==65 && map.scenery.size()==104,"Water/Forest21 resource final RNG/count");
+        check(hash(map.terrain)==2264591383u,"Water/Forest21 original terrain");
         check(hash(map.elevation)==4089223887u,"Water/Forest21 original elevation");
         check(hash(map.slopes)==140112869u,"Water/Forest21 original slopes");
-        const Point expected[]={{285,12.5f,19.5f,0.0f,7},{285,78.5f,55.5f,0.0f,7},{285,14.5f,52.5f,0.0f,7},{285,82.5f,79.5f,0.0f,7},{285,18.5f,80.5f,0.0f,7},{59,82.5f,17.5f,0.0f,1},{59,82.5f,18.5f,0.0f,3},{59,83.5f,17.5f,0.0f,1},{59,81.5f,17.5f,0.0f,3},{59,81.5f,18.5f,0.0f,4},{59,80.5f,18.5f,0.0f,3},{59,40.5f,92.5f,0.0f,5},{59,41.5f,92.5f,0.0f,1},{59,41.5f,93.5f,0.0f,3},{59,39.5f,92.5f,0.0f,2},{59,42.5f,92.5f,0.0f,0},{59,39.5f,93.5f,0.0f,1},{66,72.5f,0.5f,5.654866695404053f,8},{66,73.5f,0.5f,0.6283185482025146f,0},{66,72.5f,1.5f,2.5132741928100586f,3},{66,71.5f,0.5f,5.026548385620117f,7},{66,70.5f,0.5f,2.5132741928100586f,3},{66,69.5f,0.5f,5.026548385620117f,7},{66,70.5f,1.5f,3.1415927410125732f,4},{66,30.5f,93.5f,1.884955644607544f,2},{66,29.5f,93.5f,1.2566370964050293f,1},{66,29.5f,92.5f,0.0f,9},{66,28.5f,92.5f,1.884955644607544f,2},{66,28.5f,93.5f,3.769911289215088f,5},{66,27.5f,92.5f,5.026548385620117f,7},{66,28.5f,91.5f,0.6283185482025146f,0},{66,91.5f,27.5f,3.769911289215088f,5},{66,90.5f,27.5f,0.0f,9},{66,90.5f,28.5f,2.5132741928100586f,3},{66,89.5f,28.5f,1.884955644607544f,2},{66,22.5f,71.5f,4.398229598999023f,6},{66,22.5f,70.5f,5.026548385620117f,7},{66,23.5f,70.5f,3.1415927410125732f,4},{66,24.5f,70.5f,5.026548385620117f,7},{66,47.5f,30.5f,2.5132741928100586f,3},{66,46.5f,30.5f,0.0f,9},{66,48.5f,30.5f,1.884955644607544f,2},{66,49.5f,30.5f,1.884955644607544f,2},{66,47.5f,54.5f,2.5132741928100586f,3},{66,46.5f,54.5f,5.654866695404053f,8},{66,46.5f,53.5f,4.398229598999023f,6},{66,45.5f,53.5f,0.6283185482025146f,0},{102,83.5f,0.5f,4.398229598999023f,6},{102,84.5f,0.5f,1.2566370964050293f,1},{102,85.5f,0.5f,1.884955644607544f,2},{102,85.5f,1.5f,1.2566370964050293f,1},{102,82.5f,0.5f,0.0f,9},{102,31.5f,71.5f,3.1415927410125732f,4},{102,32.5f,71.5f,5.026548385620117f,7},{102,33.5f,71.5f,1.884955644607544f,2},{102,31.5f,70.5f,0.6283185482025146f,0},{102,30.5f,70.5f,1.884955644607544f,2},{102,52.5f,1.5f,2.5132741928100586f,3},{102,51.5f,1.5f,1.884955644607544f,2},{102,51.5f,2.5f,0.6283185482025146f,0},{102,50.5f,2.5f,0.6283185482025146f,0},{102,41.5f,103.5f,1.884955644607544f,2},{102,42.5f,103.5f,0.6283185482025146f,0},{102,42.5f,104.5f,1.884955644607544f,2},{102,42.5f,102.5f,1.884955644607544f,2}};
+        check(poseHash(map.ownedObjects)==2546703060u && poseHash(map.scenery)==3149863926u,"Original full RMS owned/scenery poses in creation order");
+        const Point expected[]={{285,94.5f,39.5f,0.0f,7},{285,68.5f,47.5f,0.0f,7},{285,22.5f,28.5f,0.0f,7},{285,100.5f,89.5f,0.0f,7},{285,116.5f,30.5f,0.0f,7},{59,71.5f,24.5f,0.0f,4},{59,70.5f,24.5f,0.0f,5},{59,70.5f,25.5f,0.0f,4},{59,71.5f,25.5f,0.0f,0},{59,71.5f,26.5f,0.0f,5},{59,72.5f,26.5f,0.0f,5},{59,48.5f,70.5f,0.0f,5},{59,48.5f,71.5f,0.0f,5},{59,47.5f,70.5f,0.0f,0},{59,46.5f,70.5f,0.0f,1},{59,46.5f,69.5f,0.0f,4},{59,46.5f,71.5f,0.0f,1},{66,62.5f,1.5f,2.5132741928100586f,3},{66,63.5f,1.5f,5.654866695404053f,8},{66,63.5f,2.5f,1.884955644607544f,2},{66,61.5f,1.5f,0.0f,9},{66,62.5f,0.5f,5.026548385620117f,7},{66,62.5f,2.5f,1.884955644607544f,2},{66,64.5f,1.5f,3.1415927410125732f,4},{66,44.5f,94.5f,1.2566370964050293f,1},{66,44.5f,93.5f,0.6283185482025146f,0},{66,44.5f,92.5f,0.6283185482025146f,0},{66,45.5f,93.5f,3.769911289215088f,5},{66,45.5f,92.5f,0.0f,9},{66,46.5f,92.5f,4.398229598999023f,6},{66,46.5f,93.5f,0.6283185482025146f,0},{66,90.5f,8.5f,5.026548385620117f,7},{66,90.5f,7.5f,5.654866695404053f,8},{66,89.5f,7.5f,5.026548385620117f,7},{66,89.5f,8.5f,0.6283185482025146f,0},{66,31.5f,61.5f,0.0f,9},{66,31.5f,62.5f,0.6283185482025146f,0},{66,32.5f,62.5f,2.5132741928100586f,3},{66,33.5f,62.5f,5.026548385620117f,7},{66,44.5f,10.5f,0.0f,9},{66,44.5f,9.5f,3.1415927410125732f,4},{66,43.5f,9.5f,1.2566370964050293f,1},{66,44.5f,8.5f,1.884955644607544f,2},{66,49.5f,49.5f,3.1415927410125732f,4},{66,50.5f,49.5f,0.6283185482025146f,0},{66,51.5f,49.5f,3.1415927410125732f,4},{66,51.5f,50.5f,0.6283185482025146f,0},{102,59.5f,29.5f,3.1415927410125732f,4},{102,59.5f,30.5f,1.2566370964050293f,1},{102,60.5f,30.5f,1.884955644607544f,2},{102,58.5f,30.5f,1.2566370964050293f,1},{102,59.5f,28.5f,0.6283185482025146f,0},{102,40.5f,67.5f,2.5132741928100586f,3},{102,40.5f,66.5f,5.026548385620117f,7},{102,39.5f,66.5f,5.654866695404053f,8},{102,41.5f,66.5f,2.5132741928100586f,3},{102,38.5f,66.5f,1.2566370964050293f,1},{102,76.5f,36.5f,5.654866695404053f,8},{102,76.5f,37.5f,4.398229598999023f,6},{102,76.5f,35.5f,1.884955644607544f,2},{102,76.5f,38.5f,4.398229598999023f,6},{102,63.5f,59.5f,1.884955644607544f,2},{102,63.5f,60.5f,4.398229598999023f,6},{102,62.5f,59.5f,3.1415927410125732f,4},{102,62.5f,58.5f,1.884955644607544f,2}};
         auto checkPoints=[&](const std::vector<swgb::RmsTimberPlacement> &points,size_t offset) {
             for(size_t i=0;i<points.size();++i) {
                 const auto &a=points[i];const auto &e=expected[offset+i];
@@ -44,7 +57,7 @@ create_object 102 { set_place_for_every_player set_gaia_object_only set_tight_gr
         checkPoints(map.resourcesAfterOwned,0);
         std::vector<uint32_t> occupied;
         for(const auto &tree:map.scenery)if(tree.alive)occupied.push_back(uint32_t(tree.y)*120+uint32_t(tree.x));
-        rng=2981612379u;std::vector<swgb::RmsTimberPlacement> out;
+        rng=802124419u;std::vector<swgb::RmsTimberPlacement> out;
         check(swgb::generateRmsHolocronPlacements(120,120,map.terrain,data,map.playerStarts,rng,out,&error,occupied),error.c_str());
         check(out.size()==5,"original holocron helper count");checkPoints(out,0);
         for(const auto &o:map.ownedObjects) {
@@ -54,7 +67,7 @@ create_object 102 { set_place_for_every_player set_gaia_object_only set_tight_gr
         for(const auto &o:out)occupied.push_back(uint32_t(o.y)*120+uint32_t(o.x));
         std::vector<uint8_t> eligibility;size_t offset=5;
         const int units[]={59,66,66,66,102,102},counts[]={6,7,4,4,5,4};
-        const uint32_t states[]={3541210060u,1677541948u,3956775486u,4053341110u,3276564539u,1895164218u};
+        const uint32_t states[]={2165959828u,1721049864u,3435158515u,1278257995u,2200510882u,4199171685u};
         for(int row=0;row<6;++row) {
             const auto distance=row==2?swgb::RmsResourceDistance::Medium:(row==3||row==5)?swgb::RmsResourceDistance::Far:swgb::RmsResourceDistance::Near;
             check(swgb::generateRmsGroupedResourcePlacements(120,120,map.terrain,data,units[row],{2,1,uint32_t(counts[row]),0,row>=4?2u:3u},rng,out,&error,occupied,16000000,map.playerStarts,distance,&eligibility),error.c_str());
@@ -62,16 +75,17 @@ create_object 102 { set_place_for_every_player set_gaia_object_only set_tight_gr
             checkPoints(out,offset);offset+=out.size();
             for(const auto &o:out)occupied.push_back(uint32_t(o.y)*120+uint32_t(o.x));
         }
-        check(hash(eligibility)==3873339827u,"original nonuniform persistent eligibility");
+        check(hash(eligibility)==1870250032u,"original nonuniform persistent eligibility");
     }
     {
         uint32_t rng=12345u;swgb::RmsMap map;
         check(swgb::generateRmsMap(script,{},120,120,data,rng,map,&error,2,{1,1}),error.c_str());
-        check(rng==2401144792u && map.ownedObjects.size()==10 && map.resourcesAfterOwned.size()==65 && map.scenery.size()==104,"Water/Forest21 resource final RNG/count");
-        check(hash(map.terrain)==3791020342u,"Water/Forest21 original terrain");
+        check(rng==360311268u && map.ownedObjects.size()==10 && map.resourcesAfterOwned.size()==65 && map.scenery.size()==105,"Water/Forest21 resource final RNG/count");
+        check(hash(map.terrain)==456671907u,"Water/Forest21 original terrain");
         check(hash(map.elevation)==2763925479u,"Water/Forest21 original elevation");
         check(hash(map.slopes)==2713444239u,"Water/Forest21 original slopes");
-        const Point expected[]={{285,93.5f,0.5f,0.0f,7},{285,78.5f,90.5f,0.0f,7},{285,9.5f,103.5f,0.0f,7},{285,52.5f,46.5f,0.0f,7},{285,7.5f,52.5f,0.0f,7},{59,15.5f,67.5f,0.0f,3},{59,15.5f,68.5f,0.0f,0},{59,14.5f,68.5f,0.0f,3},{59,16.5f,68.5f,0.0f,0},{59,17.5f,68.5f,0.0f,3},{59,17.5f,67.5f,0.0f,4},{59,87.5f,31.5f,0.0f,4},{59,87.5f,32.5f,0.0f,2},{59,87.5f,30.5f,0.0f,4},{59,86.5f,30.5f,0.0f,4},{59,86.5f,31.5f,0.0f,4},{59,85.5f,31.5f,0.0f,0},{66,27.5f,89.5f,1.2566370964050293f,1},{66,27.5f,88.5f,1.2566370964050293f,1},{66,27.5f,87.5f,3.1415927410125732f,4},{66,26.5f,87.5f,3.769911289215088f,5},{66,25.5f,87.5f,2.5132741928100586f,3},{66,25.5f,88.5f,0.0f,9},{66,24.5f,87.5f,4.398229598999023f,6},{66,81.5f,55.5f,1.884955644607544f,2},{66,81.5f,54.5f,3.1415927410125732f,4},{66,80.5f,54.5f,2.5132741928100586f,3},{66,81.5f,53.5f,0.0f,9},{66,80.5f,53.5f,3.1415927410125732f,4},{66,80.5f,52.5f,2.5132741928100586f,3},{66,81.5f,52.5f,1.2566370964050293f,1},{66,5.5f,100.5f,0.0f,9},{66,5.5f,99.5f,0.0f,9},{66,6.5f,99.5f,0.6283185482025146f,0},{66,6.5f,100.5f,0.6283185482025146f,0},{66,62.5f,48.5f,2.5132741928100586f,3},{66,62.5f,49.5f,0.6283185482025146f,0},{66,63.5f,48.5f,4.398229598999023f,6},{66,64.5f,48.5f,0.6283185482025146f,0},{66,29.5f,44.5f,1.2566370964050293f,1},{66,28.5f,44.5f,3.769911289215088f,5},{66,27.5f,44.5f,4.398229598999023f,6},{66,27.5f,45.5f,0.0f,9},{66,111.5f,46.5f,5.026548385620117f,7},{66,111.5f,45.5f,1.884955644607544f,2},{66,110.5f,45.5f,2.5132741928100586f,3},{66,112.5f,45.5f,5.026548385620117f,7},{102,0.5f,78.5f,1.884955644607544f,2},{102,0.5f,79.5f,3.1415927410125732f,4},{102,0.5f,80.5f,3.1415927410125732f,4},{102,1.5f,78.5f,4.398229598999023f,6},{102,2.5f,78.5f,3.769911289215088f,5},{102,97.5f,43.5f,2.5132741928100586f,3},{102,96.5f,43.5f,5.026548385620117f,7},{102,96.5f,42.5f,1.884955644607544f,2},{102,95.5f,43.5f,3.1415927410125732f,4},{102,97.5f,44.5f,1.2566370964050293f,1},{102,33.5f,99.5f,0.6283185482025146f,0},{102,33.5f,98.5f,0.6283185482025146f,0},{102,33.5f,97.5f,1.2566370964050293f,1},{102,32.5f,98.5f,5.026548385620117f,7},{102,56.5f,26.5f,1.884955644607544f,2},{102,55.5f,26.5f,1.884955644607544f,2},{102,55.5f,27.5f,5.654866695404053f,8},{102,55.5f,28.5f,4.398229598999023f,6}};
+        check(poseHash(map.ownedObjects)==3551480818u && poseHash(map.scenery)==519843192u,"Original full RMS owned/scenery poses in creation order");
+        const Point expected[]={{285,112.5f,94.5f,0.0f,7},{285,70.5f,93.5f,0.0f,7},{285,102.5f,5.5f,0.0f,7},{285,11.5f,52.5f,0.0f,7},{285,63.5f,3.5f,0.0f,7},{59,4.5f,76.5f,0.0f,3},{59,4.5f,75.5f,0.0f,0},{59,5.5f,75.5f,0.0f,1},{59,4.5f,74.5f,0.0f,1},{59,3.5f,74.5f,0.0f,0},{59,2.5f,74.5f,0.0f,5},{59,78.5f,31.5f,0.0f,2},{59,78.5f,32.5f,0.0f,4},{59,78.5f,33.5f,0.0f,0},{59,78.5f,34.5f,0.0f,1},{59,79.5f,32.5f,0.0f,0},{59,77.5f,33.5f,0.0f,3},{66,22.5f,89.5f,3.769911289215088f,5},{66,22.5f,88.5f,3.769911289215088f,5},{66,21.5f,88.5f,4.398229598999023f,6},{66,23.5f,88.5f,5.026548385620117f,7},{66,21.5f,89.5f,0.6283185482025146f,0},{66,20.5f,89.5f,0.0f,9},{66,19.5f,89.5f,5.654866695404053f,8},{66,91.5f,55.5f,4.398229598999023f,6},{66,91.5f,56.5f,5.654866695404053f,8},{66,92.5f,56.5f,0.6283185482025146f,0},{66,93.5f,56.5f,0.0f,9},{66,93.5f,55.5f,5.654866695404053f,8},{66,93.5f,54.5f,1.2566370964050293f,1},{66,94.5f,56.5f,2.5132741928100586f,3},{66,18.5f,101.5f,1.2566370964050293f,1},{66,17.5f,101.5f,5.654866695404053f,8},{66,17.5f,100.5f,3.769911289215088f,5},{66,16.5f,100.5f,1.884955644607544f,2},{66,77.5f,64.5f,0.0f,9},{66,76.5f,64.5f,3.769911289215088f,5},{66,78.5f,64.5f,1.884955644607544f,2},{66,77.5f,65.5f,1.884955644607544f,2},{66,0.5f,43.5f,0.0f,9},{66,1.5f,43.5f,2.5132741928100586f,3},{66,1.5f,42.5f,0.0f,9},{66,0.5f,42.5f,4.398229598999023f,6},{66,50.5f,9.5f,5.026548385620117f,7},{66,51.5f,9.5f,5.654866695404053f,8},{66,52.5f,9.5f,0.0f,9},{66,51.5f,10.5f,2.5132741928100586f,3},{102,6.5f,91.5f,1.2566370964050293f,1},{102,5.5f,91.5f,5.026548385620117f,7},{102,5.5f,90.5f,3.1415927410125732f,4},{102,4.5f,90.5f,1.884955644607544f,2},{102,5.5f,89.5f,3.1415927410125732f,4},{102,70.5f,55.5f,3.769911289215088f,5},{102,70.5f,56.5f,3.1415927410125732f,4},{102,71.5f,56.5f,0.6283185482025146f,0},{102,72.5f,56.5f,5.026548385620117f,7},{102,72.5f,57.5f,0.6283185482025146f,0},{102,8.5f,57.5f,5.026548385620117f,7},{102,9.5f,57.5f,3.1415927410125732f,4},{102,9.5f,58.5f,5.654866695404053f,8},{102,8.5f,58.5f,3.1415927410125732f,4},{102,58.5f,35.5f,5.654866695404053f,8},{102,58.5f,36.5f,1.2566370964050293f,1},{102,58.5f,34.5f,0.0f,9},{102,58.5f,33.5f,0.0f,9}};
         auto checkPoints=[&](const std::vector<swgb::RmsTimberPlacement> &points,size_t offset) {
             for(size_t i=0;i<points.size();++i) {
                 const auto &a=points[i];const auto &e=expected[offset+i];
@@ -81,7 +95,7 @@ create_object 102 { set_place_for_every_player set_gaia_object_only set_tight_gr
         checkPoints(map.resourcesAfterOwned,0);
         std::vector<uint32_t> occupied;
         for(const auto &tree:map.scenery)if(tree.alive)occupied.push_back(uint32_t(tree.y)*120+uint32_t(tree.x));
-        rng=1686193382u;std::vector<swgb::RmsTimberPlacement> out;
+        rng=3220867577u;std::vector<swgb::RmsTimberPlacement> out;
         check(swgb::generateRmsHolocronPlacements(120,120,map.terrain,data,map.playerStarts,rng,out,&error,occupied),error.c_str());
         check(out.size()==5,"original holocron helper count");checkPoints(out,0);
         for(const auto &o:map.ownedObjects) {
@@ -91,7 +105,7 @@ create_object 102 { set_place_for_every_player set_gaia_object_only set_tight_gr
         for(const auto &o:out)occupied.push_back(uint32_t(o.y)*120+uint32_t(o.x));
         std::vector<uint8_t> eligibility;size_t offset=5;
         const int units[]={59,66,66,66,102,102},counts[]={6,7,4,4,5,4};
-        const uint32_t states[]={582344033u,3953461002u,2605059885u,1067849797u,85973489u,2888241401u};
+        const uint32_t states[]={3422471330u,4242641121u,1442532267u,3456787222u,1324166253u,1729905397u};
         for(int row=0;row<6;++row) {
             const auto distance=row==2?swgb::RmsResourceDistance::Medium:(row==3||row==5)?swgb::RmsResourceDistance::Far:swgb::RmsResourceDistance::Near;
             check(swgb::generateRmsGroupedResourcePlacements(120,120,map.terrain,data,units[row],{2,1,uint32_t(counts[row]),0,row>=4?2u:3u},rng,out,&error,occupied,16000000,map.playerStarts,distance,&eligibility),error.c_str());
@@ -99,6 +113,6 @@ create_object 102 { set_place_for_every_player set_gaia_object_only set_tight_gr
             checkPoints(out,offset);offset+=out.size();
             for(const auto &o:out)occupied.push_back(uint32_t(o.y)*120+uint32_t(o.x));
         }
-        check(hash(eligibility)==1991804077u,"original nonuniform persistent eligibility");
+        check(hash(eligibility)==2652320376u,"original nonuniform persistent eligibility");
     }
 }
