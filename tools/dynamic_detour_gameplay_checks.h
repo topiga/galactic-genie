@@ -72,7 +72,51 @@
     check(progressed,"Mutual yielding makes route progress instead of indefinitely oscillating");
     check(arrived,"Dynamic recovery retains the original command and reaches its final destination");
 }
+// A timer eligibility regression only: this packed snapshot still needs the
+// original cooperative path-blocker lifecycle before all cargo can be delivered.
+[[gnu::noinline]] static void failedYieldRecoveryChecks(swgb::Assets &assets) {
+    swgb::Scenario scenario;scenario.map.width=scenario.map.height=120;
+    scenario.map.tiles.resize(120*120);scenario.playerSlotCount=2;scenario.civilizations.fill(1);
+    for(int p=0;p<2;++p){scenario.players[p].active=true;scenario.players[p].human=true;scenario.players[p].civilization=1;}
+    auto game=std::make_unique<swgb::Game>(assets);auto &g=*game;std::string error;
+    check(g.initScenario(scenario,&error),error.c_str());
+    std::map<uint32_t,uint32_t> ids;ids[1925]=g.spawnObjectForTesting(1,109,2,81.0f,12.0f);
+    ids[1929]=g.spawnObjectForTesting(1,293,2,79.974945068f,17.647932053f);
+    ids[1931]=g.spawnObjectForTesting(1,293,2,79.580841064f,15.410697937f);
+    ids[2040]=g.spawnObjectForTesting(1,83,2,79.805297852f,16.639230728f);
+    ids[2052]=g.spawnObjectForTesting(1,83,2,79.502975464f,16.98756218f);
+    ids[2055]=g.spawnObjectForTesting(1,83,2,79.562927246f,17.438938141f);
+    ids[2057]=g.spawnObjectForTesting(1,83,2,79.808654785f,15.021357536f);
+    ids[2090]=g.spawnObjectForTesting(1,101,2,77.0f,16.0f);
+    ids[2091]=g.spawnObjectForTesting(1,83,2,79.493118286f,16.309179306f);
+    ids[2094]=g.spawnObjectForTesting(1,83,2,79.446266174f,14.749534607f);
+    ids[2096]=g.spawnObjectForTesting(1,83,2,79.198631287f,15.141284943f);
+    ids[2101]=g.spawnObjectForTesting(1,83,2,79.191833496f,16.652046204f);
+    ids[2102]=g.spawnObjectForTesting(1,104,2,81.5f,15.5f);
+    ids[2106]=g.spawnObjectForTesting(1,83,2,79.518157959f,15.858880997f);
+    ids[2107]=g.spawnObjectForTesting(1,83,2,79.964607239f,17.19383812f);
+    g.update(0,{});
+    check(g.restoreMovementRouteForTesting(ids[1929],83.349998f,13.54719f,{{79.5f,16.5f},{79.5f,14.35f}}),"Restore the crowded approach waypoint");
+    check(g.restoreMovementRouteForTesting(ids[1931],79.580841f,14.35f,{{79.580841f,14.35f}}),"Restore the crowded approach waypoint");
+    check(g.restoreMovementRouteForTesting(ids[2040],79.805298f,14.35f,{{79.805298f,14.35f}}),"Restore the crowded approach waypoint");
+    check(g.restoreMovementRouteForTesting(ids[2052],83.349998f,11.223755f,{{79.5f,14.35f}}),"Restore the crowded approach waypoint");
+    check(g.restoreMovementRouteForTesting(ids[2055],83.349998f,12.0f,{{79.5f,14.35f}}),"Restore the crowded approach waypoint");
+    check(g.restoreMovementRouteForTesting(ids[2057],95.720078f,24.7899f,{{79.5f,17.5f},{86.5f,22.5f},{95.720078f,24.7899f}}),"Restore the crowded approach waypoint");
+    check(g.restoreMovementRouteForTesting(ids[2091],78.650002f,11.223753f,{{79.5f,18.5f},{75.5f,22.5f},{70.5f,22.5f},{70.5f,17.5f},{77.5f,11.5f},{78.650002f,11.223753f}}),"Restore the crowded approach waypoint");
+    check(g.restoreMovementRouteForTesting(ids[2094],94.720078f,25.7899f,{{79.5f,17.5f},{86.5f,22.5f},{94.720078f,25.7899f}}),"Restore the crowded approach waypoint");
+    check(g.restoreMovementRouteForTesting(ids[2096],78.650002f,13.54719f,{{79.5f,18.5f},{75.5f,22.5f},{70.5f,22.5f},{70.5f,17.5f},{74.5f,13.5f},{78.650002f,13.54719f}}),"Restore the crowded approach waypoint");
+    check(g.restoreMovementRouteForTesting(ids[2101],78.650002f,10.452808f,{{79.5f,18.5f},{75.5f,22.5f},{70.5f,22.5f},{70.5f,17.5f},{78.650002f,10.452808f}}),"Restore the crowded approach waypoint");
+    check(g.restoreMovementRouteForTesting(ids[2106],79.452812f,9.65f,{{79.5f,14.35f}}),"Restore the crowded approach waypoint");
+    check(g.restoreMovementRouteForTesting(ids[2107],83.349998f,12.776246f,{{79.5f,17.5f},{79.5f,14.35f}}),"Restore the crowded approach waypoint");
+    bool recoveryAttempted=false;
+    for(int frame=0;frame<40;++frame) {
+        g.update(1.f/30,{});
+        recoveryAttempted |= g.movementProgressForTesting(ids[2091])[2]>0;
+    }
+    check(recoveryAttempted,"Failed mutual yielding must allow the existing detour recovery to run");
+}
 [[gnu::noinline]] static void dynamicDetourGameplayChecks(swgb::Assets &assets) {
+    failedYieldRecoveryChecks(assets);
     overlappingStartMovementChecks(assets);
     coupledWaypointMovementChecks(assets);
     swgb::Scenario scenario;scenario.map.width=scenario.map.height=64;

@@ -7578,3 +7578,27 @@ controls, not enabled or added as unused state to every live object. Boundaries
 and addresses: `jedi-dispatch-action-findings-2026-11-18.md`,
 `mobile-conversion-owner-findings-2026-11-18.md`, and
 `jedi-target-metric-expanded-controls-2026-11-18.json`.
+
+### Failed yielding and the unresolved crowded depot (2026-11-18)
+
+The latest four-seed original-personality sweep exposed a seed3 food stall.
+Two farmers retain cargo behind opposing traffic in a narrow Command Center
+approach. With no active farms, the original signed idle-farm-count is −2;
+its exact-zero farm rule therefore remains unsatisfied. The native economy
+must recover delivery rather than clamp this fact or grant resources.
+
+A reduced captured crowd reproduces a separate shared movement error: failed
+higher-ID yielding unconditionally clamps blockedTime below the detour threshold.
+The clamp now applies only when yielding actually moves the unit. The regression
+checks that recovery is attempted; it deliberately does not claim delivery or
+queue clearance. The full captured queue still stalls with this correction.
+
+Original4a47b0 inspection confirms path timestamp versus actor virtual30c,
+path-record exclusions, and a half-second delay of higher-ID colliders before
+parent-path replanning. Troop vtable663110 resolves30c to408bf0 (actor+124),
+310 to4a3f10 (wrapper+28 delay), and314 to4b76a0 (actor+10 ID). The remaining
+registration, timestamp-write and path-record lifecycle must be closed together;
+copying only a stationary-unit exception into native static-only planning would
+not reproduce the original service. Evidence is retained locally in
+crowd-path-4a47b0-ghidra-2026-11-18.json and
+crowd-blocker-lifecycle-findings-2026-11-18.md. No new live Windows parity claim.

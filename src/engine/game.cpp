@@ -15774,7 +15774,8 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                             break;
                         }
                     }
-                    o.blockedTime = std::min(o.blockedTime, 0.4f);
+                    // Failed yielding must not suppress the later detour recovery.
+                    if (moved) o.blockedTime = std::min(o.blockedTime, 0.4f);
                 }
                 if (moved || (friendlyWalker && !mutual && other->blockedTime < 0.3f)) {
                     // handled above
