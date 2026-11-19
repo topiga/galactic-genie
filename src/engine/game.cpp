@@ -7442,8 +7442,7 @@ void Game::updateGathering(Object &worker, float dt) {
             worker.resourcePreparationState = 4;
         }
 
-        if (!resource ||
-            !isGatherable(*resource)) {
+        if (worker.gatherTargetId && (!resource || !isGatherable(*resource))) {
             Object *next = nextResourceLike(worker, *gatherer);
             setGatherTarget(worker, next ? next->spawnId : 0);
         }
