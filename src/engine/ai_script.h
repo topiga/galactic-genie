@@ -62,6 +62,7 @@ public:
 
 private:
     std::unordered_map<std::string,int> exactConstants_;
+    int civilization_=0;
     void initializeConstants(const std::unordered_map<std::string,int> &initial);
     void defineConstant(const std::string &name,int value);
     SourceLoader sourceLoader_;

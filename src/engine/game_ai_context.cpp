@@ -22,6 +22,20 @@ AiSessionContext Game::aiScriptContext(AiSessionContextSettings settings,
     std::vector<std::string> civilizations;
     for(const auto &civilization:assets_.dat().civs)civilizations.push_back(civilization.name2);
     auto context=makeAiSessionContext(settings,civilizations);
+    const auto &data=assets_.dat();
+    if(!data.civs.empty())for(const auto &unit:data.civs.front().units) {
+        if(!unit.exists || (unit.type!=dat::UT_Creatable && unit.type!=dat::UT_Building))continue;
+        const auto symbol=normalizeAiSymbol(unit.name2);
+        if(symbol.rfind("unit-",0)==0 || symbol.rfind("boat-",0)==0 ||
+           symbol.rfind("siege-",0)==0 || symbol.rfind("sub-",0)==0)
+            context.constants.emplace(symbol,unit.id);
+    }
+    for(size_t id=0;id<data.techs.size();++id) {
+        const auto &tech=data.techs[id];
+        const auto symbol=normalizeAiSymbol(tech.name2);
+        if(tech.locationId>=0 && symbol.rfind("ut-",0)==0)
+            context.constants.emplace(symbol,int(id));
+    }
     //57f886 registers the signed line identity before parsing any personality/includes.
     for(const auto &line:assets_.dat().unitLines)if(!line.name.empty())
         context.constants[normalizeAiSymbol(line.name)]=-int(line.id);
