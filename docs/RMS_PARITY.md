@@ -8443,3 +8443,54 @@ deadline in optimized and sanitized runs. Extending only the diagnostic
 runner established that the AI wins at 922.4 seconds in both map reveal
 modes and the scripted player wins at 637.5 seconds. The checked-in
 deadline is unchanged.
+
+### Failed approaches to live trees (19 November 2026)
+
+A failed movement request at 408731 sets movement state 13. For a live
+tree, the gather action has an attack child for felling. Its failed pursuit
+returns status 3 (401f0d). The gather parent's state-12 dispatch at 56b512
+enters state 3. Five bounded executable controls in the local
+`live-tree-route-failure-control.py` distinguish a completed felling child
+from a failed one and exercise the next drop-site request. The original
+uses the secondary site if present, otherwise queries the owner's buildings
+with the worker's two DAT drop-site IDs. It sends event 514, task 613,
+resource class 31 and the resulting site ID. This control supplies the
+lookup result and intercepts the notification. It does not run Windows
+pathfinding or show which individual tree the worker chooses next.
+
+In Galactic Genie, a worker that cannot approach a live tree now releases
+its target references and uses the existing drop-off action for a partial
+load. The native continuation selects an equivalent nearby resource whose
+route ends within work range. A partial path that stops short is
+insufficient. A temporarily throttled approach keeps its order. An empty
+worker with no accessible alternative becomes available for assignment.
+Both recovery cases have isolated gameplay tests. The loaded-worker case
+fails on the preceding engine and passes on the corrected engine.
+
+On seed 2, workers 2127 and 2134 previously kept tree 514 and partial
+loads for ten minutes. On the corrected build both were already working
+toward tree 531 at 19:00. From 16:00 through 27:00, positive per-step
+changes to P2's carbon stock totaled 586.4, up from 140 in the baseline.
+These totals measure the bank and can include other transactions during
+the same simulation step.
+
+| P2 milestone | Before | After | Windows reference |
+| --- | --- | --- | --- |
+| Building prerequisite for Tech Level 3 | Never met | 40:46 | Seen complete at 25:45 |
+| Tech Level 3 research begins | Never started | 40:47 | About 26:49 |
+| Tech Level 3 reached | Never reached | 43:17 | Seen at 29:20 |
+| Registered soldiers at 32:00 | 5 | 5 | 14 |
+| Soldiers assigned to land attack at 32:00 | 0 | 0 | 0 |
+
+The native Mech Factory foundation was placed at 35:58 and finished at
+36:58. The Jedi Temple foundation was placed at 38:07 and finished at
+40:46. Research began 1.051 seconds after the Temple completed. Windows
+P3 had seven soldiers targeting P2's power core at 27:46. Neither native
+player had an attack group in that window. Later, the native 56:00 sample
+shows P3 assembling 25 attackers. By 56:30 the group had target 2135.
+
+P2's first nonempty land attack group in the 30-second samples appears
+at 1:13:30 with 26 members in assembly state. At 1:14:00 those same
+26 members had target 2213. These are observations at sample boundaries.
+The saved Windows order trace ends at 32:32, so it cannot establish when
+P2 first attacked later in that particular Windows run.
