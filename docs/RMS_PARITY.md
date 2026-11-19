@@ -8141,3 +8141,39 @@ explored bit. This matches the original waypoint routine reserving a cell
 before the scout reaches it. The first capture showed the same sequence.
 Native selected (27, 13) while it was still unexplored. The first discrepancy
 to resolve is which tiles are marked explored at arrival.
+
+The updated match still had both centers at the end of the 3,985.095 s
+recording, with 2,424 attacks landed. To inspect what followed, a second run
+used the original frame intervals in their recorded order, then repeated them
+with cumulative timestamps. Only its first pass through the intervals is
+paired with Windows.
+
+The continuation reached Tech Level 4 at 5,159.3 s (P3) and 5,704.4 s (P2).
+At 6,600 s the original script's attack-control goal was enabled for both
+players. Both classified the enemy force at 30. For that classification,
+attack.per's timed attack rule requires 30 defenders. P2 had 28 and no
+attack group. P3 had 16 soldiers, 15 available defenders and a one-member
+group targeting unit 2501 (prototype 993). Both attack timers advanced. At
+10,800 s both centers still had 2,500 HP and the players had 28 and 27 idle
+soldiers. Housing capacity was 75 for each.
+
+P2 and P3 reached Tech Level 3 at 28:36 and 28:09 on the recorded clock.
+The Windows match that supplied that clock recorded 30:19 and 28:30.
+Windows P3 reached Tech Level 4 at 50:18. Native P3 was still at Tech Level
+3 when that recording ended.
+
+At 6,600 s the P2 PER trace showed why several reinforcements were missing.
+The laser trooper, two mech lines, artillery, ram and mobile anti-air rules
+already counted their requested forces. The mounted, fighter and bomber
+lines had no available member. Both Mech Factories were idle and could train
+prototype 500, but its 350 nova cost exceeded the 128 available outside
+escrow (540 in the bank). The ordinary attack timer and the 30-soldier
+threshold are present in the installed script. Unit availability, army mix
+and escrow remain separate Windows comparisons.
+
+The extended replay hit the runner's ten-hour cutoff at 36,000.066 simulated
+seconds. Both centers were still standing, both populations were 48, and the
+final attack counter was 5,932. The previous native build won on the captured
+clock, so the improved opening exposes a full-match completion regression
+on this seed. The optimized skirmish suite, full ASan/UBSan skirmish suite
+and desktop render/audio smoke test passed.
