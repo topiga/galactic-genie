@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "game.h"
+#include "ai_unit_line.h"
 #include "../core/genie_random.h"
 #include "ai_prefab_grid.h"
 #include "ai_build_placement.h"
@@ -31,7 +32,11 @@ void Game::initializeAiWallPlans(const Scenario &scenario) {
             if (std::none_of(segments.begin(),segments.end(),[](const auto &s){return s.active && s.length>3;}))
                 segments.clear();
         }
-        aiWallPlans_[plan]=std::move(boundary.segments);
+        auto &owners=aiWallPlans_[plan];
+        owners.resize(boundary.segments.size());
+        for(size_t owner=0;owner<owners.size();++owner)
+            for(const auto &geometry:boundary.segments[owner])
+                owners[owner].push_back({geometry,-1,geometry.length,0,false});
     }
 }
 
@@ -179,5 +184,111 @@ int Game::chooseAiOriginalBuildPosition(int player,const dat::Unit &unit,float &
     const float offset=width%2?.5f:0.f;
     x=float(result.y)+offset;y=float(mapSize_)-(float(result.x)+offset);
     return 1;
+}
+
+std::vector<Game::AiWallSegment> *Game::aiWallSegments(int player,int plan) {
+    if(plan<1 || plan>2 || player<=0 || size_t(player)>=aiWallPlanEnabled_.size() ||
+       !aiWallPlanEnabled_[player][plan-1])return nullptr;
+    auto &owners=aiWallPlans_[plan-1];
+    return size_t(player)<owners.size()?&owners[player]:nullptr;
+}
+
+void Game::surveyAiWallSegment(int player) {
+    auto &cursor=aiPlayers_[player].wallSurveyIndex;
+    auto *inner=aiWallSegments(player,1),*outer=aiWallSegments(player,2);
+    const size_t n=inner?inner->size():0,total=n+(outer?outer->size():0);
+    if(!total)return;
+    cursor%=total;
+    auto &s=cursor<n?(*inner)[cursor]:(*outer)[cursor-n];
+    cursor=(cursor+1)%total;
+    const auto *unit=findUnit(civilizationForPlayer(player),117);
+    if(!unit)return;
+    const int dx=(s.toX>s.fromX)-(s.toX<s.fromX),dy=(s.toY>s.fromY)-(s.toY<s.fromY);
+    s.unexplored=s.buildable=0;
+    Object probe;probe.player=player;probe.unit=unit;
+    const auto sight=sharedSightMask(player);
+    for(int i=0;i<s.length;++i) {
+        const int x=s.fromY+i*dy,y=mapSize_-1-(s.fromX+i*dx);
+        if(x<0 || y<0 || x>=mapSize_ || y>=mapSize_)continue;
+        const size_t tile=size_t(y)*mapSize_+x;
+        // shortcut: Native exploration and obstruction supply the original master placement query.
+        if(tile>=observedTiles_.size() || !(observedTiles_[tile]&sight))++s.unexplored;
+        else if(positionPassable(probe,x+.5f,y+.5f,true))++s.buildable;
+    }
+    if(s.buildable)s.gateReserved=false; // 58a39d releases a gate request on a newly buildable segment.
+}
+
+const dat::Unit *Game::aiWallUnit(int player,const std::string &symbol) const {
+    const auto &program=aiPlayers_[player].program;
+    if(program.constant(symbol)!=-2)return aiUnit(player,symbol);
+    const auto &lines=assets_.dat().unitLines;
+    if(lines.size()<=2)return nullptr;
+    const int id=aiUnitLineSelection(lines[2].unitIds,true,[&](int member){return aiBaseUnitEnabled(player,member);});
+    return effectiveUnitForPlayer(player,findUnit(civilizationForPlayer(player),id));
+}
+
+bool Game::aiWallRequest(int player,int plan,const dat::Unit *unit,bool gate,bool whole,bool escrow,bool execute) {
+    auto *segments=aiWallSegments(player,plan);
+    if(!unit || !segments || !aiBaseUnitEnabled(player,unit->id))return false;
+    if(!gate && unit->id!=72 && unit->id!=117 && unit->id!=155 && unit->id!=195)return false;
+    if(whole) {
+        int tiles=0;
+        for(const auto &s:*segments)tiles+=s.unexplored+s.buildable;
+        return aiCanAfford(player,*unit,escrow,tiles);
+    }
+    const int longSegments=gate?std::count_if(segments->begin(),segments->end(),[](const auto &s) {
+        return s.active && s.length>3;
+    }):0;
+    for(auto &s:*segments) {
+        if(gate) {
+            if(s.wallMaster<0 || s.gateReserved || s.length<(longSegments>3?4:3))continue;
+        } else if(s.unexplored || !s.buildable)continue;
+        if(!aiCanAfford(player,*unit,escrow,gate?1:s.buildable))return false;
+        if(execute) {
+            if(gate)s.gateReserved=true;
+            else {s.wallMaster=unit->id;s.buildable=0;}
+            localCommands_.enqueue([this,player,s,id=unit->id,gate]{executeAiWall(player,s,id,gate);});
+        }
+        return true;
+    }
+    return false;
+}
+
+void Game::executeAiWall(int player,const AiWallSegment &s,int prototype,bool gate) {
+    const auto *price=findUnit(civilizationForPlayer(player),prototype);
+    if(!price)return;
+    int id=prototype;
+    float x=s.fromX+.5f,y=s.fromY+.5f;
+    const int dx=(s.toX>s.fromX)-(s.toX<s.fromX),dy=(s.toY>s.fromY)-(s.toY<s.fromY);
+    if(gate) {
+        const bool even=s.length%2==0;
+        x=(s.fromX+s.toX)*.5f;y=(s.fromY+s.toY)*.5f;
+        if(!dx){id=490;x+=.5f;if(even)y+=.5f;}
+        else if(!dy){id=487;y+=.5f;if(even)x+=.5f;}
+        else {id=dy>0?665:673;if(even){x+=.5f;y+=.5f;}else if(dy<0)x+=1.f;}
+    }
+    const auto *unit=findUnit(civilizationForPlayer(player),id);
+    if(!unit)return;
+    struct Restore {Game &game;int owner,failure;~Restore(){game.localPlayer_=owner;game.placementFailureCode_=failure;}}
+        restore{*this,localPlayer_,placementFailureCode_};
+    localPlayer_=player;
+    const auto costs=unitCosts(player,*price);
+    for(int i=0;i<(gate?1:s.length);++i) {
+        const float wx=y+i*dy,wy=mapSize_-(x+i*dx);
+        std::vector<Object *> replaced;
+        if(!placementValid(*unit,wx,wy,&replaced))continue;
+        for(const auto &cost:costs)
+            if(cost.flag && cost.type>=0 && cost.amount>resource(player,cost.type))return;
+        std::vector<uint32_t> wallIds;
+        for(const auto *wall:replaced)wallIds.push_back(wall->spawnId);
+        auto *building=createFoundation(*unit,player,wx,wy);
+        if(!building)continue;
+        for(auto wallId:wallIds)if(auto *wall=findObject(wallId)) {
+            wall->active=false;wall->selected=false;
+        }
+        for(const auto &cost:costs)if(cost.flag && cost.type>=0 && cost.amount>0)
+            resources_[player][cost.type]-=cost.amount;
+        rebuildAdjacency();
+    }
 }
 } // namespace swgb

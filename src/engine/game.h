@@ -412,6 +412,10 @@ public:
     }
     bool admitAiBuildForTesting(int p,const dat::Unit &u) {return aiBuild(p,u);}
     int aiPendingBuildsForTesting(int p,int id) const {return aiPlayers_.at(p).buildRequests.pending(id);}
+    void setAiWallSegmentForTesting(int player,int plan,const RmsWallSegment &s) {
+        auto &owners=aiWallPlans_.at(size_t(plan-1));owners.resize(aiPlayers_.size());
+        owners.at(size_t(player))={{s,-1,s.length,0,false}};
+    }
     void updateAiBuildRequestsForTesting(int p) {updateAiBuildRequests(p);}
     bool aiBuildRequestInProgressForTesting(int p) const {
         for(const auto &r:aiPlayers_.at(p).buildRequests.requests())if(r.inProgress)return true;
@@ -1156,6 +1160,7 @@ private:
         AiBuildAttemptLatch buildAttempt;
         AiBuildRequestQueue buildRequests;
         int nextBuildRequestSequence=0;
+        size_t wallSurveyIndex=0;
         AiBuildPositions buildPositions;
         std::unordered_map<int,int> matchedPlayers;
         std::vector<KnownMilitaryObject> militaryKnownObjects;
@@ -1755,7 +1760,7 @@ private:
     Object *aiResearcher(int player,const dat::Tech &technology);
     bool aiCanAfford(
         int player,
-        const dat::Unit &unit,bool withEscrow=false) const;
+        const dat::Unit &unit,bool withEscrow=false,int quantity=1) const;
     bool aiCanAfford(
         int player,
         const dat::Tech &technology,bool withEscrow=false) const;
@@ -1848,7 +1853,17 @@ private:
     std::array<float, 17> startupPopulationAdjustment_{};
     std::array<std::vector<int>, 17> civilizationEffects_{}, playerEffects_{};
     std::array<AiPlayerState, 17> aiPlayers_{};
-    std::array<std::vector<std::vector<RmsWallSegment>>,2> aiWallPlans_;
+    struct AiWallSegment : RmsWallSegment {
+        int wallMaster=-1, unexplored=0, buildable=0;
+        bool gateReserved=false;
+    };
+    std::array<std::vector<std::vector<AiWallSegment>>,2> aiWallPlans_;
+    std::vector<AiWallSegment> *aiWallSegments(int player,int plan);
+    void surveyAiWallSegment(int player);
+    const dat::Unit *aiWallUnit(int player,const std::string &symbol) const;
+    bool aiWallRequest(int player,int plan,const dat::Unit *wall,bool gate,bool whole,bool escrow,bool execute);
+    void executeAiWall(int player,const AiWallSegment &segment,int prototype,bool gate);
+
     std::array<std::array<bool,2>,17> aiWallPlanEnabled_{};
     void initializeAiWallPlans(const Scenario &scenario);
     std::optional<uint32_t> aiMapId_;

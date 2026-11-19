@@ -61,6 +61,7 @@ static void check(bool value, const char *message) {
 #include "ai_counter_identity_checks.h"
 #include "ai_prefab_placement_gameplay_checks.h"
 #include "ai_dropsite_placement_gameplay_checks.h"
+#include "ai_wall_gameplay_checks.h"
 #include "ai_build_positions_gameplay_checks.h"
 #include "movement_progress_gameplay_checks.h"
 #include "dynamic_detour_gameplay_checks.h"
@@ -438,7 +439,7 @@ static bool parseUint32(std::string_view value,uint32_t &out) {
     aiContextGameplayChecks(assets);
     playerMilitaryFactsGameplayChecks(assets);aiKnownCategoryChecks();playerBuildingFactGameplayChecks(assets);playerUnitFactGameplayChecks(assets);
     deliveryCorridorGameplayChecks(assets);
-    aiConstructorMetadataChecks();rmsConstructorMetadataGameplayChecks(assets);exploreRevisitChecks();exploreRevisitGameplayChecks(assets);movementProgressGameplayChecks(assets);dynamicDetourGameplayChecks(assets);crowdedDepotDeliveryChecks(assets);crowdYieldGameplayChecks(assets);economyGameplayChecks(assets);unitLineGameplayChecks(assets);aiCounterIdentityChecks();aiCounterIdentityGameplayChecks(assets);aiPrefabPlacementGameplayChecks(assets);aiDropsitePlacementGameplayChecks(assets);aiBuildPositionsGameplayChecks(assets);aiResourceGridGameplayChecks(assets);
+    aiConstructorMetadataChecks();rmsConstructorMetadataGameplayChecks(assets);exploreRevisitChecks();exploreRevisitGameplayChecks(assets);movementProgressGameplayChecks(assets);dynamicDetourGameplayChecks(assets);crowdedDepotDeliveryChecks(assets);crowdYieldGameplayChecks(assets);economyGameplayChecks(assets);unitLineGameplayChecks(assets);aiCounterIdentityChecks();aiCounterIdentityGameplayChecks(assets);aiPrefabPlacementGameplayChecks(assets);aiDropsitePlacementGameplayChecks(assets);aiWallGameplayChecks(assets);aiBuildPositionsGameplayChecks(assets);aiResourceGridGameplayChecks(assets);
     civilianExploreGameplayChecks(assets);
     scenarioAiChecks(assets);
     actorAiTimingChecks(assets);

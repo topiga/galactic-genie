@@ -138,8 +138,10 @@ void Game::updateAiGatherers(int player,AiPlayerState &state) {
     const auto sn=[&](int n,int initial) {auto i=state.strategicNumbers.find(n);return i==state.strategicNumbers.end()?initial:i->second;};
     const std::array<int32_t,4> percentages{sn(117,0),sn(120,0),sn(119,0),sn(118,0)};
     const std::array<int32_t,4> adjustments{sn(156,0),sn(157,0),sn(158,0),sn(159,0)};
+    // Construction also consumes these worker and foundation lists when gathering is disabled.
+    refreshAiEconomyKnowledge(player);
     if(std::none_of(percentages.begin(),percentages.end(),[](int n){return n>0;}))return;
-    refreshAiEconomyKnowledge(player);auto &economy=state.economy;
+    auto &economy=state.economy;
     int militaryExplorers=0;for(const auto &group:state.militaryGroups)if(group.type==101)militaryExplorers+=int(group.members.size());
     size_t explored=0;const auto sight=sharedSightMask(player);
     for(uint16_t tile:observedTiles_)if(tile&sight)++explored;

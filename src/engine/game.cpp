@@ -14409,7 +14409,7 @@ int Game::aiPopulationCount(int player,bool military) const {
 
 bool Game::aiCanAfford(
     int player,
-    const dat::Unit &unit,bool withEscrow) const {
+    const dat::Unit &unit,bool withEscrow,int quantity) const {
     if (player <= 0 ||
         (size_t)player >=
             resources_.size())
@@ -14419,7 +14419,7 @@ bool Game::aiCanAfford(
         if (cost.flag && cost.type >= 0 &&
             cost.amount > 0 &&
             aiSpendableResource(player,cost.type,withEscrow) <
-                cost.amount)
+                cost.amount*quantity)
             return false;
     return true;
 }
@@ -14567,6 +14567,18 @@ bool Game::evaluateAiFactValue(
     const std::string fact =
         normalizeAiSymbol(
             condition.name());
+    if(fact=="wall-completed-percentage") {
+        if(argumentEnd!=2)return false;
+        bool known=false;
+        const int plan=resolveAiValue(player,state,condition.children[1].value,known);
+        if(!known || plan<1 || plan>2)return false;
+        int total=0,remaining=0;
+        if(auto *segments=aiWallSegments(player,plan))for(const auto &s:*segments) {
+            total+=s.length;remaining+=s.unexplored+s.buildable;
+        }
+        value=total?100-100*remaining/total:100;
+        return true;
+    }
     if(fact=="commodity-selling-price" || fact=="commodity-buying-price") {
         if(argumentEnd!=2)return false;
         bool known=false;
@@ -14966,6 +14978,16 @@ Game::AiTruth Game::evaluateAiCondition(
         return aiCanAfford(player,tech,fact=="can-research-with-escrow") && aiResearcher(player,tech)
             ? AiTruth::True : AiTruth::False;
     }
+    const bool gateFact=fact=="can-build-gate" || fact=="can-build-gate-with-escrow";
+    const bool wholeWall=fact=="can-afford-complete-wall";
+    if(gateFact || wholeWall || fact=="can-build-wall" || fact=="can-build-wall-with-escrow") {
+        if(condition.children.size()!=(gateFact?2u:3u))return AiTruth::Unknown;
+        bool known=false;
+        const int plan=resolveAiValue(player,state,condition.children[1].value,known);
+        const auto *unit=gateFact?findUnit(civilizationForPlayer(player),487):aiWallUnit(player,condition.children[2].value);
+        return known && aiWallRequest(player,plan,unit,gateFact,wholeWall,fact.find("escrow")!=std::string::npos,false)
+            ? AiTruth::True : AiTruth::False;
+    }
     if ((fact == "can-build" || fact == "can-build-with-escrow" ||
          fact == "can-train" ||
          fact == "can-train-with-escrow") &&
@@ -15119,6 +15141,14 @@ bool Game::executeAiAction(
             state.timers[id]=gameTime_+seconds;
         }
         return true;
+    }
+    if(name=="build-wall" || name=="build-gate") {
+        const bool gate=name=="build-gate";
+        if(action.children.size()!=(gate?2u:3u))return false;
+        bool known=false;
+        const int plan=resolveAiValue(player,state,action.children[1].value,known);
+        const auto *unit=gate?findUnit(civilizationForPlayer(player),487):aiWallUnit(player,action.children[2].value);
+        return known && aiWallRequest(player,plan,unit,gate,false,false,true);
     }
     if (name=="enable-wall-placement" && action.children.size()==2) {
         bool known=false;
@@ -15404,6 +15434,7 @@ void Game::updateAi(int player,float dt) {
     if(militaryTick) {
         // Original59dcd0 resets notification dedup before each admitted tactical update.
         state.processedAttackMemoryVictims.clear();
+        surveyAiWallSegment(player);
         updateAiBuildRequests(player);
         updateAiMilitary(player);
         resumeAiConstruction(player);
