@@ -14221,7 +14221,7 @@ const dat::UnitLine *Game::aiUnitLine(int player,const std::string &symbol) cons
     if(!aiUnitLineOperand(operand) || size_t(-operand)>=assets_.dat().unitLines.size())return nullptr;
     return &assets_.dat().unitLines[size_t(-operand)];
 }
-bool Game::aiLineUnitAvailable(int player,int unitId) const {
+bool Game::aiBaseUnitEnabled(int player,int unitId) const {
     //4c06f0 follows master+1c (baseId), then reads its enabled byte.
     const auto *unit=effectiveUnitForPlayer(player,findUnit(civilizationForPlayer(player),unitId));
     if(!unit || unit->baseId<0)return false;
@@ -14275,7 +14275,7 @@ const dat::Unit *Game::aiUnit(
     const bool numeric=program.hasConstant(symbol);
     int id=numeric?program.constant(symbol):-1;
     if(const auto *line=aiUnitLine(player,symbol))
-        id=aiUnitLineSelection(line->unitIds,true,[&](int member){return aiLineUnitAvailable(player,member);});
+        id=aiUnitLineSelection(line->unitIds,true,[&](int member){return aiBaseUnitEnabled(player,member);});
     const dat::Unit *unit=numeric?findUnit(civilization,id):findUnit(civilization,symbol);
     if(!unit && civilization!=0)unit=numeric?findUnit(0,id):findUnit(0,symbol);
     return unit
@@ -14445,23 +14445,21 @@ void Game::snapBuildPositionForAi(const dat::Unit &unit,float &x,float &y) const
     snapBuildingPosition(unit,x,y);
 }
 
-Game::Object *Game::aiTrainer(int player, const dat::Unit &unit, bool line) {
+Game::Object *Game::aiTrainer(int player, const dat::Unit &unit) {
     for (Object &building : objects_) {
         if (building.player != player || !building.active || building.hidden ||
             !building.unit || building.unit->type != dat::UT_Building ||
             building.underConstruction || !building.productionQueue.empty())
             continue;
-        const auto options = productionOptions(building);
-        for (const auto *option : options)
-            if (option && (option->id == unit.id || (line && option->id == unit.baseId)))
-                return &building;
+        if (building.unit->id == unit.trainLocationId)
+            return &building;
     }
     return nullptr;
 }
 
 bool Game::aiTrain(
     int player, const dat::Unit &unit,const dat::Unit *queuedUnit) {
-    if (!(queuedUnit?aiLineUnitAvailable(player,unit.id):unitAvailable(player, unit.id)) ||
+    if (!aiBaseUnitEnabled(player, unit.id) ||
         !aiCanAfford(player, unit))
         return false;
     const float population =
@@ -14472,7 +14470,7 @@ bool Game::aiTrain(
             populationCapacity(player) +
                 0.001f)
         return false;
-    Object *producer = aiTrainer(player, unit, queuedUnit != nullptr);
+    Object *producer = aiTrainer(player, unit);
     if (!producer) return false;
     for (const dat::ResourceCost &cost :
          unitCosts(player,unit))
@@ -14968,13 +14966,14 @@ Game::AiTruth Game::evaluateAiCondition(
                     .value);
         const auto *line=aiUnitLine(player,condition.children[1].value);
         if (!unit) return line?AiTruth::False:AiTruth::Unknown;
-        if((fact=="can-build" || fact=="can-build-with-escrow") && (!state.buildAttempt.canCheck(unit->id,false) || state.buildRequests.pending(unit->id)>0))
+        const bool building = fact == "can-build" || fact == "can-build-with-escrow";
+        if(building && (!state.buildAttempt.canCheck(unit->id,false) || state.buildRequests.pending(unit->id)>0))
             return AiTruth::False;
-        if (!(line?aiLineUnitAvailable(player,unit->id):unitAvailable(
-                player, unit->id)) ||
+        const bool enabled = building && !line ? unitAvailable(player, unit->id) : aiBaseUnitEnabled(player, unit->id);
+        if (!enabled ||
             !aiCanAfford(player, *unit,fact=="can-train-with-escrow" || fact=="can-build-with-escrow"))
             return AiTruth::False;
-        if (fact == "can-build" || fact=="can-build-with-escrow") {
+        if (building) {
             const bool worker =
                 std::any_of(
                     objects_.begin(),
@@ -14998,7 +14997,7 @@ Game::AiTruth Game::evaluateAiCondition(
                 populationCapacity(player) +
                     0.001f)
             return AiTruth::False;
-        return aiTrainer(player, *unit, line != nullptr) ? AiTruth::True : AiTruth::False;
+        return aiTrainer(player, *unit) ? AiTruth::True : AiTruth::False;
     }
 
     size_t comparison = 0;
@@ -15179,7 +15178,7 @@ bool Game::executeAiAction(
                 line=&assets_.dat().unitLines[size_t(gaia->unitLine)];
         }
         if(!line)return aiTrain(player,*unit);
-        const int first=aiUnitLineSelection(line->unitIds,false,[&](int member){return aiLineUnitAvailable(player,member);});
+        const int first=aiUnitLineSelection(line->unitIds,false,[&](int member){return aiBaseUnitEnabled(player,member);});
         const auto *queued=effectiveUnitForPlayer(player,findUnit(civilizationForPlayer(player),first));
         return queued && aiTrain(player,*unit,queued);
     }

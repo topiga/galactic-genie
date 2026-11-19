@@ -1729,7 +1729,7 @@ private:
         int player,
         const std::string &symbol) const;
     const dat::UnitLine *aiUnitLine(int player,const std::string &symbol) const;
-    bool aiLineUnitAvailable(int player,int unitId) const;
+    bool aiBaseUnitEnabled(int player,int unitId) const;
     int aiOperandCount(int player,const std::string &symbol,bool total) const;
     int aiPrototypeCount(int player,int prototype,bool total,bool workerAggregate=false,
                          bool includeQueued=true) const;
@@ -1766,7 +1766,7 @@ private:
     void completeAiBuildRequest(Object &building);
     void cancelAiBuildRequest(Object &building);
     void snapBuildPositionForAi(const dat::Unit&,float &x,float &y) const;
-    Object *aiTrainer(int player, const dat::Unit &unit, bool line);
+    Object *aiTrainer(int player, const dat::Unit &unit);
     bool aiTrain(
         int player, const dat::Unit &unit,const dat::Unit *queuedUnit=nullptr);
     bool aiResearch(

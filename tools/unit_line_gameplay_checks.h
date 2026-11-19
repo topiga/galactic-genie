@@ -50,5 +50,14 @@
     check(game.aiObjectCountForTesting(2,"UNIT-LASER-LINE",false)==lineBefore &&
           game.aiObjectCountForTesting(2,"307",false)==unitBefore,
           "Unloading does not double-register prototype counts");
+    check(game.spawnObjectForTesting(1,87,2,20,12)!=0 &&
+          game.researchTechnologyForTesting(2,261),
+          "Empire Troop Center and trooper upgrade are available");
+    for(int type=0;type<4;++type)game.setResourceForTesting(2,type,1000);
+    check(game.loadAiSourceForTesting(2,"upgraded-trooper",
+        "(defrule (can-train 448) => (train 448) (set-goal 84 1) (disable-self))",{},&error),error.c_str());
+    for(int tick=0;tick<65;++tick)game.update(.1f,{});
+    check(game.aiGoalForTesting(2,84)==1 && game.aiQueuedUnitCountForTesting(2,-laser->id)==1,
+          "An upgraded numeric troop operand uses its enabled base and queues at its Troop Center");
     std::puts("PASS production DAT unit-line constants, aliases, counts and training");
 }
