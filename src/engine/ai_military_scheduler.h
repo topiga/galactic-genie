@@ -33,9 +33,14 @@ struct AiMilitaryGatherGroup {
 };
 
 // Original57c280/5ae490: current attack-group members, regardless of state.
+inline int aiAttackSoldierCount(const std::vector<AiMilitaryGatherGroup> &groups) {
+    int attackers=0;
+    for(const auto &group:groups)if(group.type==100)attackers+=int(group.members.size());
+    return attackers;
+}
+
 inline int aiDefendSoldierCount(int soldiers,const std::vector<AiMilitaryGatherGroup> &groups) {
-    for(const auto &group:groups)if(group.type==100)soldiers-=int(group.members.size());
-    return soldiers;
+    return soldiers-aiAttackSoldierCount(groups);
 }
 
 // 59fa80 admits these classes before testing the master air/boat trait.

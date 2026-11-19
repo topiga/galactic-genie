@@ -14582,6 +14582,11 @@ bool Game::evaluateAiFactValue(
                              int16_t(aiPrototypeCount(player,214,true)));
         return true;
     }
+    if(fact=="soldier-count" || fact=="attack-soldier-count") {
+        if(argumentEnd!=1)return false;
+        value=fact=="soldier-count"?int(state.militarySoldiers.size()):aiAttackSoldierCount(state.militaryGroups);
+        return true;
+    }
     if(fact=="defend-soldier-count") {
         if(argumentEnd!=1)return false;
         // Original57c280 subtracts current type100 group membership, not

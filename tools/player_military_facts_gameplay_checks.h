@@ -16,6 +16,8 @@
 (defrule (players-military-population 0 == 0) => (set-goal 97 1))
 (defrule (not (players-military-population -99 != 100)) => (set-goal 98 1))
 (defrule (not (players-military-population 99 == 0)) => (set-goal 99 1))
+(defrule (soldier-count == 2) (attack-soldier-count == 0) => (set-goal 93 1))
+(defrule (soldier-count == 2) (attack-soldier-count == 1) => (set-goal 93 2))
 (defrule (defend-soldier-count == 2) => (set-goal 96 2))
 (defrule (defend-soldier-count == 1) => (set-goal 96 1))
 )",{},&error),error.c_str());
@@ -32,11 +34,11 @@
           "Military population accepts direct Gaia and rejects invalid numeric slots as false under negation");
     check(game.aiMatchedPlayerForTesting(2,-106)==1 && !game.aiMatchedPlayerForTesting(2,-203),
           "Any military selector retains matching player while every leaves its cache untouched");
-    check(game.aiGoalForTesting(2,96)==2,"Ungrouped soldier registry contributes to defenders");
+    check(game.aiGoalForTesting(2,96)==2 && game.aiGoalForTesting(2,93)==1,"Ungrouped soldier registry contributes to defenders");
     check(game.formAiMilitaryGroupsForTesting(2),"Original attack-now admission creates an actual group");
     check(game.militaryGroupsForTesting(2).size()==1 && game.militaryGroupsForTesting(2)[0].members.size()==1,
           "Explicit half-strength attack percentage admits one of two soldiers");
-    evaluate();check(game.aiGoalForTesting(2,96)==1,"Defender fact subtracts actual group members");
+    evaluate();check(game.aiGoalForTesting(2,96)==1 && game.aiGoalForTesting(2,93)==2,"Defender fact subtracts actual group members");
     check(game.garrisonForTesting(enemy,home),"Enemy military population fixture garrisons");
     for(int n=0;n<80;++n)game.update(.1f,{});
     check(game.garrisonContainerForTesting(enemy)==int(home),"Enemy troop actually enters its container");
