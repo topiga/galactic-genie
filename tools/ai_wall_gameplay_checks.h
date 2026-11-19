@@ -26,13 +26,21 @@
           "Unseen wall route stays unpurchased");
     check(game.aiGoalForTesting(2,909)==1,"Disabled inner plan is complete and costs zero ore");
     game.setResourceForTesting(2,2,29);
-    check(game.spawnObjectForTesting(1,109,2,26,37) && game.spawnObjectForTesting(1,83,2,28,37),
-          "Command Center reveals route and worker can reach it");
+    check(game.spawnObjectForTesting(1,109,2,26,37),"Command Center reveals route");
+    const auto farm=game.spawnObjectForTesting(1,50,2,26,42);
+    const auto farmer=game.spawnObjectForTesting(1,83,2,28,42);
+    game.setObjectResourceForTesting(farm,300);
+    check(game.issueGatherForTesting(farmer,farm),"Worker assigned to farm");
     advance(60);
     check(game.underConstructionObjectIds().empty() && game.resource(2,2)==29,
           "Segment affordability covers six tiles at five ore each");
     game.setResourceForTesting(2,2,60);advance(100);
     check(game.resource(2,2)==0,"Six wall tiles and one gate debit exactly sixty ore");
+    const auto foundations=game.underConstructionObjectIds();
+    check(!foundations.empty() && std::all_of(foundations.begin(),foundations.end(),[&](auto id) {
+        return game.constructionBuilderId(id)!=farmer;
+    }),"AI leaves the farmer working when wall foundations need builders");
+    check(game.spawnObjectForTesting(1,83,2,28,37),"Add available builder");
     advance(1500);
     check(game.aiObjectCountForTesting(2,"117",false)>0 && game.aiObjectCountForTesting(2,"64",false)>0,
           "AI builders finish wall pieces and the oriented gate");

@@ -91,7 +91,9 @@ uint32_t Game::nearestAiBuilder(int player,float x,float y) {
         const auto *worker=findObject(uint32_t(id));AiBuilderCandidate candidate;candidate.id=id;
         candidate.resolved=worker && worker->active && worker->player==player && worker->unit;
         if(candidate.resolved) {
-            candidate.prototype=worker->unit->id;candidate.carriedAmount=worker->carriedAmount;
+            const auto *role=worker->jobUnit?worker->jobUnit:worker->unit;
+            candidate.prototype=role->id;
+            candidate.carriedAmount=worker->carriedAmount;
             // shortcut: Native action eligibility supplies the actor-AI callback;
             // the original +7c->+28 order code is not represented. Do not invent
             // a700-series order code from a600-series task identifier.
