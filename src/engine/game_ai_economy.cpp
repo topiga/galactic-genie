@@ -66,7 +66,7 @@ void Game::refreshAiEconomyKnowledge(int player) {
             depots.push_back({id,depot->unit->id,float(mapSize_)-depot->y,depot->x,true,
                 ownZone && at && *ownZone==*at});
         }
-        return aiResourceDepotMetric(o.unit->cls,float(mapSize_)-o.y,o.x,true,depots);
+        return aiResourceDepotMetric(gatherClass(o),float(mapSize_)-o.y,o.x,true,depots);
     };
     const auto refresh=[&](int bucket) {
         // Preflight unsupported native region mappings, separately from original missing IDs.
@@ -108,7 +108,7 @@ void Game::refreshAiEconomyKnowledge(int player) {
     std::unordered_set<uint32_t> currentlyVisible;
     for(const auto &o:objects_) {
         if(!o.active || !o.unit || visibleTargets_.slot(size_t(player-1),o.spawnId)==size_t(-1))continue;
-        const int bucket=originalResourceBucket(o.unit->cls);if(bucket<0)continue;
+        const int bucket=originalResourceBucket(gatherClass(o));if(bucket<0)continue;
         currentlyVisible.insert(o.spawnId);
         auto known=economy.resourceSlots.find(o.spawnId);
         if(known!=economy.resourceSlots.end() && economy.visibleResources.count(o.spawnId))continue;
@@ -239,8 +239,8 @@ void Game::updateAiGatherers(int player,AiPlayerState &state) {
                         }
                         // shortcut: Native state/task references supply original live lookup fields;
                         // the specialized farm-blocking registry remains unrepresented.
-                        return AiResourceTarget{o->unit->id,o->unit->cls,o->player,float(mapSize_)-o->y,o->x,o->resourceAmount,
-                            uint8_t(o->hitPoints<=0?3:o->constructionRemaining>0?0:2),o->taskReferences,
+                        return AiResourceTarget{o->unit->id,gatherClass(*o),o->player,float(mapSize_)-o->y,o->x,o->resourceAmount,
+                            uint8_t(o->carcassClass>=0 || o->hitPoints<=0?3:o->constructionRemaining>0?0:2),o->taskReferences,
                             uint8_t(playerSees(player,o->x,o->y)?15:0),o->garrisonedInId>=0,false,hunters};
                     },[&](int n)->std::optional<int> {
                         if(n==204)return sn(n,5);

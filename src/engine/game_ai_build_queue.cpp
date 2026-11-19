@@ -61,7 +61,7 @@ bool Game::chooseAiBuildPosition(int player,const dat::Unit &unit,float &x,float
             for(const auto &record:resources[bucket].records) {
                 if(record.invalid==1 || record.x>=mapSize_ || record.y>=mapSize_)continue;
                 const Object *known=findObject(uint32_t(record.id));
-                if(!known || !known->unit || !aiResourceDepotCompatible(known->unit->cls,unit.id,false))continue;
+                if(!known || !known->unit || !aiResourceDepotCompatible(gatherClass(*known),unit.id,false))continue;
                 // Only admitted knowledge supplies position/validity. Hidden
                 // live movement, destruction or depletion cannot change it here.
                 const float rx=float(record.y),ry=float(mapSize_)-record.x;

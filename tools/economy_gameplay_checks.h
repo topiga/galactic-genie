@@ -27,6 +27,17 @@ static void economyGameplayChecks(swgb::Assets &assets) {
     };
     auto advance=[&](int ticks) {for(int n=0;n<ticks;++n)game.update(.1f,{});};
     initialize(false);
+    check(game.spawnObjectForTesting(1,109,2,12,12)!=0,"Bantha has a nearby food depot");
+    const auto bantha=game.spawnObjectForTesting(1,833,2,16,12);
+    check(bantha && game.damageObjectForTesting(bantha,100),"Slaughter an owned Bantha");
+    advance(65);
+    const auto &foodRecords=game.economyForTesting(2).resources[0].records;
+    check(std::any_of(foodRecords.begin(),foodRecords.end(),[&](const auto &record) {
+        return game.objectUnitId(record.id)==834 && game.objectPlayer(record.id)==0 &&
+               game.objectResourceAmount(record.id)>0;
+    }) && game.aiGoalForTesting(2,90)==0,
+          "A slaughtered Bantha remains nearby neutral food for the original farming rule");
+    initialize(false);
     std::vector<int32_t> workers;
     for(int n=0;n<3;++n)workers.push_back(int32_t(game.spawnObjectForTesting(1,83,2,20.f+n,20.f)));
     const auto food=game.spawnObjectForTesting(0,berry,0,22,22);

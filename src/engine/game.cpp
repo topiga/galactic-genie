@@ -10851,7 +10851,7 @@ void Game::killObject(Object &object, bool countKill, bool retainRemains) {
         pending.amount = object.resourceAmount;
         pending.decay = object.unit->resourceDecay;
         pending.animalClass = object.unit->cls;
-        pending.owner = object.player;
+        pending.owner = object.unit->cls == 1 ? 0 : object.player;
         pending.x = object.x;
         pending.y = object.y;
         pending.facing = object.facing;
@@ -14821,7 +14821,7 @@ Game::AiTruth Game::evaluateAiCondition(
             [&](int32_t id)->std::optional<AiForageTarget> {
                 const auto *object=findObject(uint32_t(id));
                 if(!object || !object->active || !object->unit)return std::nullopt;
-                return AiForageTarget{object->unit->cls,object->garrisonedInId>=0};
+                return AiForageTarget{gatherClass(*object),object->garrisonedInId>=0};
             });
         return tooFar?AiTruth::True:AiTruth::False;
     }
