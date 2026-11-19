@@ -1822,6 +1822,7 @@ bool Game::loadAiScript(
     state.buildRequests=std::move(aiPlayers_[size_t(player)].buildRequests);
     state.nextBuildRequestSequence=aiPlayers_[size_t(player)].nextBuildRequestSequence;
     state.buildPositions=std::move(aiPlayers_[size_t(player)].buildPositions);
+    state.lastTrainingProducer=aiPlayers_[size_t(player)].lastTrainingProducer;
     state.explorationRevisitTime = aiPlayers_[size_t(player)].explorationRevisitTime;
     state.economy.foodRefreshTime = aiPlayers_[size_t(player)].economy.foodRefreshTime;
     state.loaded = true;
@@ -1861,6 +1862,7 @@ bool Game::loadAiSourceForTesting(
     state.buildRequests=std::move(aiPlayers_[size_t(player)].buildRequests);
     state.nextBuildRequestSequence=aiPlayers_[size_t(player)].nextBuildRequestSequence;
     state.buildPositions=std::move(aiPlayers_[size_t(player)].buildPositions);
+    state.lastTrainingProducer=aiPlayers_[size_t(player)].lastTrainingProducer;
     state.explorationRevisitTime = aiPlayers_[size_t(player)].explorationRevisitTime;
     state.economy.foodRefreshTime = aiPlayers_[size_t(player)].economy.foodRefreshTime;
     state.loaded = true;
@@ -8624,6 +8626,22 @@ bool Game::activateActionMenuOption(size_t optionIndex) {
     return true;
 }
 
+// 596680 and 596980 share these producer-history slots, including the Spaceport pair.
+static int producerHistorySlot(int location) {
+    switch(location) {
+    case 87:return 1;
+    case 12:return 2;
+    case 82:return 3;
+    case 104:return 4;
+    case 45:return 5;
+    case 84:case 530:return 6;
+    case 49:return 7;
+    case 101:return 8;
+    case 109:return 9;
+    default:return 0;
+    }
+}
+
 void Game::executeTrainingCommand(uint32_t buildingId, int owner, int unitId) {
     Object *subject=findObject(buildingId);
     if (!subject || !subject->active || subject->player!=owner || subject->underConstruction) return;
@@ -8654,6 +8672,7 @@ void Game::executeTrainingCommand(uint32_t buildingId, int owner, int unitId) {
         unitTrainingTime(owner,*unit);
     statusMessage_ = "UNIT QUEUED";
     subject->productionQueue.push_back(item);
+    aiPlayers_[owner].lastTrainingProducer[producerHistorySlot(subject->unit->id)]=buildingId;
     if (subject->productionQueue.size()==1) subject->productionRemaining=item.duration;
     statusTime_=2.f;
     playInterfaceFeedback(kInterfaceButtonSound);
@@ -14378,12 +14397,21 @@ bool Game::aiResearchAvailable(int player,int id) const {
     return true;
 }
 
-Game::Object *Game::aiResearcher(int player,const dat::Tech &tech) {
-    for (auto &building:objects_)
-        if (building.active && !building.hidden && !building.underConstruction && building.player==player &&
-            building.unit && building.unit->type==dat::UT_Building && building.unit->id==tech.locationId &&
-            building.productionQueue.empty()) return &building;
-    return nullptr;
+Game::Object *Game::aiProducer(int player,int location) {
+    const auto last=aiPlayers_[player].lastTrainingProducer[producerHistorySlot(location)];
+    const auto *previous=last?findObject(*last):nullptr;
+    Object *first=nullptr,*latest=nullptr;
+    int count=0;
+    for(auto &building:objects_) {
+        if(!building.active || building.hidden || building.underConstruction || building.player!=player ||
+           !building.unit || building.unit->type!=dat::UT_Building || building.unit->id!=location ||
+           !building.productionQueue.empty())continue;
+        if(!first)first=&building;
+        if(previous && previous->active && latest==previous)return &building;
+        latest=&building;
+        if(++count==16)break;
+    }
+    return previous && previous->active?first:latest;
 }
 
 int Game::aiPopulationCount(int player,bool military) const {
@@ -14445,18 +14473,6 @@ void Game::snapBuildPositionForAi(const dat::Unit &unit,float &x,float &y) const
     snapBuildingPosition(unit,x,y);
 }
 
-Game::Object *Game::aiTrainer(int player, const dat::Unit &unit) {
-    for (Object &building : objects_) {
-        if (building.player != player || !building.active || building.hidden ||
-            !building.unit || building.unit->type != dat::UT_Building ||
-            building.underConstruction || !building.productionQueue.empty())
-            continue;
-        if (building.unit->id == unit.trainLocationId)
-            return &building;
-    }
-    return nullptr;
-}
-
 bool Game::aiTrain(
     int player, const dat::Unit &unit,const dat::Unit *queuedUnit) {
     if (!aiBaseUnitEnabled(player, unit.id) ||
@@ -14470,7 +14486,7 @@ bool Game::aiTrain(
             populationCapacity(player) +
                 0.001f)
         return false;
-    Object *producer = aiTrainer(player, unit);
+    Object *producer = aiProducer(player,unit.trainLocationId);
     if (!producer) return false;
     for (const dat::ResourceCost &cost :
          unitCosts(player,unit))
@@ -14485,6 +14501,7 @@ bool Game::aiTrain(
         unitTrainingTime(player,unit);
     producer->productionQueue.push_back(
         item);
+    aiPlayers_[player].lastTrainingProducer[producerHistorySlot(producer->unit->id)]=producer->spawnId;
     if (producer->productionQueue.size() ==
         1)
         producer->productionRemaining =
@@ -14497,7 +14514,7 @@ bool Game::aiResearch(
     if (!aiResearchAvailable(player,technologyId)) return false;
     const auto &technology=assets_.dat().techs[size_t(technologyId)];
     if (!aiCanAfford(player,technology)) return false;
-    Object *researcher=aiResearcher(player,technology);
+    Object *researcher=aiProducer(player,technology.locationId);
     if (!researcher) return false;
     for (const auto &cost :
          researchCosts(player,technology))
@@ -14975,7 +14992,7 @@ Game::AiTruth Game::evaluateAiCondition(
         if (!aiResearchAvailable(player,id)) return AiTruth::False;
         if (fact=="research-available") return AiTruth::True;
         const auto &tech=assets_.dat().techs[size_t(id)];
-        return aiCanAfford(player,tech,fact=="can-research-with-escrow") && aiResearcher(player,tech)
+        return aiCanAfford(player,tech,fact=="can-research-with-escrow") && aiProducer(player,tech.locationId)
             ? AiTruth::True : AiTruth::False;
     }
     const bool gateFact=fact=="can-build-gate" || fact=="can-build-gate-with-escrow";
@@ -15031,7 +15048,7 @@ Game::AiTruth Game::evaluateAiCondition(
                 populationCapacity(player) +
                     0.001f)
             return AiTruth::False;
-        return aiTrainer(player, *unit) ? AiTruth::True : AiTruth::False;
+        return aiProducer(player,unit->trainLocationId) ? AiTruth::True : AiTruth::False;
     }
 
     size_t comparison = 0;

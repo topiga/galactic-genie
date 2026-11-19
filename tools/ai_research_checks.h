@@ -62,5 +62,20 @@ static void aiResearchChecks(swgb::Assets &assets) {
     check(game.aiEscrowForTesting(1,0)==0,"New match clears escrow");
     run("(defrule (true) => (set-goal 801 1))"); game.addResourceForTesting(1,0,10);
     check(game.aiEscrowForTesting(1,0)==0,"New match clears escrow percentage");
+    const auto first=game.commandCenterId(1);
+    const auto second=game.spawnObjectForTesting(1,109,1,40,40);
+    check(second && second!=first,"Second completed Command Center");
+    game.setResourceForTesting(1,0,1500);
+    run("(defrule (true) => (train 83) (disable-self))");
+    check(game.productionQueueSizeForTesting(second)==1 && game.cancelProductionForTesting(second),
+          "First train order uses last eligible producer");
+    run("(defrule (true) => (research tech-level-2) (disable-self))");
+    check(game.productionQueueSizeForTesting(first)==1 && game.cancelProductionForTesting(first),
+          "Research selects the next eligible producer after training");
+    run("(defrule (true) => (train 83) (disable-self))");
+    check(game.productionQueueSizeForTesting(first)==1 && game.cancelProductionForTesting(first),
+          "Research leaves training history intact across script reloads");
+    run("(defrule (true) => (train 83) (disable-self))");
+    check(game.productionQueueSizeForTesting(second)==1,"Training advances the producer cursor");
     std::puts("PASS: original AI research gates, busy researchers, age-up payment and persistent escrow lifecycle");
 }

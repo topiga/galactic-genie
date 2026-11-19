@@ -1161,6 +1161,7 @@ private:
         AiBuildRequestQueue buildRequests;
         int nextBuildRequestSequence=0;
         size_t wallSurveyIndex=0;
+        std::array<std::optional<uint32_t>,10> lastTrainingProducer{};
         AiBuildPositions buildPositions;
         std::unordered_map<int,int> matchedPlayers;
         std::vector<KnownMilitaryObject> militaryKnownObjects;
@@ -1757,7 +1758,7 @@ private:
     bool canTradeCommodity(int player,int type,bool buy,bool withEscrow) const;
     void addResource(int player,int type,float amount);
     bool aiResearchAvailable(int player,int id) const;
-    Object *aiResearcher(int player,const dat::Tech &technology);
+    Object *aiProducer(int player,int location);
     bool aiCanAfford(
         int player,
         const dat::Unit &unit,bool withEscrow=false,int quantity=1) const;
@@ -1778,7 +1779,6 @@ private:
     void completeAiBuildRequest(Object &building);
     void cancelAiBuildRequest(Object &building);
     void snapBuildPositionForAi(const dat::Unit&,float &x,float &y) const;
-    Object *aiTrainer(int player, const dat::Unit &unit);
     bool aiTrain(
         int player, const dat::Unit &unit,const dat::Unit *queuedUnit=nullptr);
     bool aiResearch(
