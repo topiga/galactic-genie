@@ -8509,3 +8509,59 @@ and failed there. An optimized diagnostic run with a longer observation
 window still won at 922.4 seconds in each reveal mode, matching the
 previous build. The focused recovery checks passed; the preceding
 engine failed the loaded-worker case with the same fixture.
+
+### Seed 2 Mech Factory and Jedi Temple construction
+
+Same two-AI scenario, map ID 9, session seed 24592 and recorded simulation
+steps as above. The Windows production capture samples owned objects roughly
+every two seconds. Each Windows foundation time below marks first appearance.
+The capture does not record individual building completion times.
+
+| P2 milestone | Windows | Previous native | Corrected native |
+| --- | ---: | ---: | ---: |
+| Mech Factory foundation | 22:46 | 35:58 | 30:29 |
+| Mech Factory complete | — | 36:58 | 31:14 |
+| Jedi Temple foundation | 24:27 | 38:07 | 31:11 |
+| Jedi Temple complete | — | 40:46 | 32:33 |
+| Building prerequisite complete | Seen by 25:45 | 40:46 | 32:33 |
+| Tech Level 3 research begins | ~26:49 | 40:47 | 35:26 |
+| Tech Level 3 reached | 29:20 | 43:17 | 37:56 |
+
+P2 pays 180 carbon and 25 ore for the factory, and 180 carbon and 25 nova
+for the temple. Previously the factory first became affordable at 2157.385 s.
+The AI requested it 0.375 s later, and placed it another 0.075 s later.
+On the corrected run it became affordable at 1828.818 s, with 184.4 carbon.
+The request followed in 0.225 s and the foundation in another 0.075 s.
+The factory builder started in that same update. The temple builder took
+21.539 s to start work, down from 99.510 s. Its 60 seconds of work agrees
+with the unmodified single-builder rate.
+
+Two shared mechanics changed. Resource gathering now reads the active
+worker role's upgrades, including work rate and the rounded carrying limit.
+For a carbon worker with the 25% carrying upgrade, a base capacity of 10
+becomes 13. With only this correction the factory appeared at 36:49,
+the temple at 37:22 and P2 reached Tech Level 3 at 40:59.
+The original construction update at 0x566b37 also uses the builder role's
+work rate, task 101's work value and positive owner attribute 195 (capped at
+1.2 for monument 276). For N active builders, each contributes a fraction
+(1 + 0.33 × (N − 1)) / N of that work. Executing the original instructions
+with one to four builders verified the multiplier and monument cap. Native
+gameplay checks measure one and three workers on the same factory type.
+
+The remaining factory delay coincides with fewer carbon workers. At 20:00
+P2 had seven on Windows and four natively. At 22:00 it had eight and three.
+From 15:00 to 25:00, sums of positive observed carbon-bank changes were
+about 1,029 on Windows and 599 natively. Sums of decreases were about 991
+and 595. These are changes between samples, so simultaneous spending and
+deliveries can cancel. From 25:00 to 30:00 positive changes were similar
+(558 and 559). At 33:00 the native building prerequisite was satisfied,
+but P2 had only 91 nova and could no longer afford Tech Level 3.
+
+The shipped Moderate AI sets goal 67 (halt worker training) when it
+enters Tech Level 2 without its economic upgrades. Native P2 set the goal
+at 13:40 and stayed at 15 workers. Upgraded Motivator completed at 17:22,
+Fusion Cutter at 19:41 and Irrigation at 21:50. The AI cleared the goal
+and ordered a worker at 21:51. Windows P2 was already training workers in
+the 16:51 sample. The Windows production trace covers the Command Center
+and Troop Center, so it cannot date the original Irrigation completion
+at the Food Processing Center.
