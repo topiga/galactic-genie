@@ -9138,7 +9138,20 @@ bool Game::placementValid(const dat::Unit &unit, float x, float y,
             return false;
         }
     }
-    if (unit.hillMode != 0 &&
+    if (unit.hillMode == 3 && !cornerElevation_.empty()) {
+        const GenieStartFootprint area{mapSize_-y1,x0,mapSize_-1-y0,x1-1};
+        const auto height=[&](int ox,int oy) {
+            const int ny=mapSize_-1-ox;
+            if(rmsTileElevation_)return tileElevation_[size_t(ny)*mapSize_+oy];
+            // Scenario import retains the original tile byte at this rotated corner.
+            return cornerElevation_[size_t(ny+1)*(mapSize_+1)+oy];
+        };
+        if(!genieHillMode3Allows(area,height)) {
+            placementFailureCode_=6;
+            return false;
+        }
+    }
+    if ((unit.hillMode == 1 || unit.hillMode == 2) &&
         !cornerElevation_.empty()) {
         uint8_t minimum =
             std::numeric_limits<uint8_t>::max();
@@ -9161,15 +9174,8 @@ bool Game::placementValid(const dat::Unit &unit, float x, float y,
             }
         const int difference =
             (int)maximum - (int)minimum;
-        if ((unit.hillMode == 1 ||
-             unit.hillMode == 2) &&
-            difference != 0) {
+        if (difference != 0) {
             placementFailureCode_ = 5;
-            return false;
-        }
-        if (unit.hillMode == 3 &&
-            difference > 1) {
-            placementFailureCode_ = 6;
             return false;
         }
     }

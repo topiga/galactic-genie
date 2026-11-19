@@ -149,8 +149,9 @@ neighbouring terrain of either listed type. Shipyards use water `1/4` under
 their entire footprint and shore `2/35` beside it.
 
 DAT `hillMode` supplies the elevation rule. Mode 0 is unrestricted, modes 1
-and 2 require a level footprint, and mode 3 allows at most one elevation level
-between the lowest and highest footprint corner. Ordinary foundations paint
+and 2 currently require a level footprint in the native game. Mode 3 compares
+the tile elevations along the original left column and last row with their
+shared corner. Each tile along those edges may differ by one level. Ordinary foundations paint
 their DAT `foundationTerrainId`; terrain 27 changes to snow foundation 36 over
 snow. Farms retain their separate staged terrain, and shore buildings do not
 replace their water.

@@ -3,6 +3,7 @@
 #include "../src/engine/ai_build_placement.h"
 #include "../src/engine/ai_prefab_grid.h"
 #include "../src/engine/rms_walls.h"
+#include "../src/core/genie_start_placement.h"
 #include <cassert>
 #include <cstdio>
 #include <vector>
@@ -373,6 +374,12 @@ void foodNovaChecks() {
 }
 
 int main() {
+ const swgb::GenieStartFootprint footprint{0,0,1,1};
+ int heights[2][2]={{1,6},{2,3}};
+ auto hillAllows=[&]{return swgb::genieHillMode3Allows(footprint,[&](int x,int y){return heights[y][x];});};
+ assert(hillAllows());
+ heights[0][0]=0;assert(!hillAllows());
+ heights[0][0]=1;heights[1][1]=4;assert(!hillAllows());
  const auto tree=swgb::pathMapFootprint(35.5f,30.5f,.5f,.5f);
  assert(tree.left==35 && tree.right==36 && tree.top==30 && tree.bottom==31);
  const auto narrow=swgb::pathMapFootprint(5.5f,6.5f,.25f,1.f);

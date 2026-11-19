@@ -24,6 +24,17 @@ inline bool genieStartFootprint(float x,float y,float halfX,float halfY,
     return true;
 }
 
+// 48e697 checks mode 3 against the original left column and last row.
+template<class Elevation>
+bool genieHillMode3Allows(const GenieStartFootprint &area,Elevation height) {
+    const int reference=height(area.minX,area.maxY);
+    for(int y=area.minY;y<area.maxY;++y)
+        if(std::abs(int(height(area.minX,y))-reference)>1)return false;
+    for(int x=area.minX+1;x<=area.maxX;++x)
+        if(std::abs(int(height(x,area.maxY))-reference)>1)return false;
+    return true;
+}
+
 inline bool genieStartTerrainPassable(float multiplier) {
     // 48e603: not the movement rule (>0).
     return multiplier>0.05f;

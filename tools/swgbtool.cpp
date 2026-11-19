@@ -4979,11 +4979,15 @@ static int cmdTestFixes(const char *dataDir, const char *outPrefix) {
         const bool steepHill =
             !g.placementValidForTesting(
                 3, 68, 80.0f, 80.0f);
+        g.setCornerElevationForTesting(80, 80, 0);
+        g.setCornerElevationForTesting(79, 80, 2);
+        const bool uncheckedCorner =
+            g.placementValidForTesting(3, 68, 80.0f, 80.0f);
         report(
             "building-placement-footprint",
             parity && edgeClearance && flatValid &&
                 completeFootprint && strictHill &&
-                gentleHill && steepHill,
+                gentleHill && steepHill && uncheckedCorner,
             "parity " + std::to_string(parity) +
                 " edge " +
                 std::to_string(edgeClearance) +
@@ -4993,7 +4997,8 @@ static int cmdTestFixes(const char *dataDir, const char *outPrefix) {
                 " hills " +
                 std::to_string(strictHill) + "/" +
                 std::to_string(gentleHill) + "/" +
-                std::to_string(steepHill) +
+                std::to_string(steepHill) + "/" +
+                std::to_string(uncheckedCorner) +
                 " reason " +
                 std::to_string(gentleFailure));
     }

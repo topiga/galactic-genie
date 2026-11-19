@@ -4,6 +4,7 @@
 #include "rms_zones.h"
 #include "rms_scenery_appearance.h"
 #include "../core/genie_random.h"
+#include "../core/genie_start_placement.h"
 #include "../core/genie_dat.h"
 #include <algorithm>
 #include <cmath>
@@ -586,10 +587,8 @@ bool generateRmsGroupedResourcePlacements(uint32_t width,uint32_t height,
             for(int yy=y+low;yy<y+high;++yy)for(int xx=x+low;xx<x+high;++xx)
                 if((!crater && !vent && !aquatic && occupied[yy*width+xx]) || restriction[terrain[yy*width+xx]]<=.05f)return false;
             if(unitId==1295) {
-                // Original48e697 checks only the left column and last row of the footprint, within one height of their shared corner.
-                const int reference=(*elevation)[(y+high-1)*width+x+low];
-                for(int yy=y+low;yy<y+high;++yy)for(int xx=x+low;xx<x+high;++xx)
-                    if((xx==x+low || yy==y+high-1) && std::abs(int((*elevation)[yy*width+xx])-reference)>1)return false;
+                return genieHillMode3Allows({x+low,y+low,x+high-1,y+high-1},
+                    [&](int xx,int yy){return (*elevation)[yy*width+xx];});
             }
             return true;
         }
