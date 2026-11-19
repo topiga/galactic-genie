@@ -8316,7 +8316,7 @@ resource differences as gather-rate errors.
 The wall survey in Clone Campaigns (58a320, 578aa0) examines one segment
 at a time. It records the number of unexplored and buildable tiles. An
 outer-wall survey on the seed-2 scenario matched the players’ explored-tile
-masks on 740 of 740 early segment readings. A selected segment must have
+masks on all 3,145 outer-segment readings through 15:55. A selected segment must have
 no unknown tiles and at least one buildable tile. The PER affordability fact
 prices that number of tiles. The build action itself dispatches the line
 without a second whole-segment funds check. The native world command pays
@@ -8334,3 +8334,36 @@ Native surveying currently runs on PER evaluation ticks and uses native
 visibility and obstruction. Wall geometry still uses the supported 120-tile
 startup profiles. Site choice, build timing and exact survey cadence remain
 open comparisons.
+
+### Seed 2 after enabling paid walls and gates
+
+With the same scenario, Empire players, map ID 9 and session seed 24592,
+the native AI built fortifications on both sides. At 30:00 native P2 had
+50 standard wall pieces and four closed gates. P3 had 55 pieces and five
+closed gates. The new Windows run had 55 pieces and four closed gates for
+P2, and 60 pieces and four closed gates for P3.
+
+The army difference was already present before contact. At 32:00 Windows
+P2 had eight laser troopers, four mounted troopers and two medics. Three
+of those troopers were within nine tiles of the enemy Command Center.
+Native P2 had five laser troopers, four within 15 tiles of its own Command
+Center. Its fifth trooper was 18.5 tiles from the enemy center. Windows P2
+had seven soldiers assigned to land attack groups at 29:00 and 32:00.
+Native P2 had none on either reading and still had none at 35:00. At 34:00
+native P3 had 15 assigned attackers targeting a P2 worker, and by 35:00 the
+group was targeting P2’s animal nursery.
+
+Windows P2 had reached Tech Level 3 by 28:35 in this run and by 29:10 in
+the earlier run. Native P2 reached it at 35:28. Compare the original
+production queues and attack-group admission across this transition when
+investigating the missing early offensive.
+
+Between 32:00 and 35:00 the new Windows capture lost track of three P2
+laser troopers and three mounted troopers after their HP dropped. The three
+mounted troopers were last seen within five tiles of P3’s Command Center.
+New arrivals left P2 with five laser troopers, four mounted troopers and
+both medics at 35:00. The earlier Windows run had lost all twelve troopers
+by 34:56. The native run retained all five of its 32:00 laser troopers and
+had eight laser and two mounted troopers by 35:00. A 47-second interval
+of the Windows position capture is missing before 31:00. Both engines
+have position coverage throughout the full 32–35 minute window.
