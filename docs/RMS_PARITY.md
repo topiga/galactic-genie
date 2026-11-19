@@ -8565,3 +8565,31 @@ and ordered a worker at 21:51. Windows P2 was already training workers in
 the 16:51 sample. The Windows production trace covers the Command Center
 and Troop Center, so it cannot date the original Irrigation completion
 at the Food Processing Center.
+
+An earlier difference is visible at the Carbon Processing Center. Windows
+P2 placed it at 5:31 and spent 100 carbon, taking the bank from 109.46
+to 9.46 between consecutive samples. Native P2 had 130 carbon at 5:00,
+but the original script's dropsite distance condition (>5 tiles) was false.
+By the 6:00 sample that condition passed and affordability failed. The
+native foundation appeared at 11:11 and finished at 11:44. From 10:00
+to 12:00 both engines showed six carbon workers at both endpoints.
+Positive observed bank changes totaled 210 on Windows and 120 natively.
+P2 entered Tech Level 2 with 120 food and 45 carbon on the native run.
+The Windows observation immediately before its age transition showed
+266 food and 277 carbon. This puts a measurable divergence before any
+of the three Tech Level 2 economic upgrades.
+
+The complete native rerun ended in a P3 victory at 11,688.482 seconds
+(3:14:48). P2 had no workers or Command Center at the end. P3 retained
+its Command Center and 30 workers. In the 30-second group samples P3
+first had 11 assigned attackers at 36:00, compared with seven already
+targeting P2 at 27:46 on Windows. P2 had five registered soldiers at
+32:00, versus 14 on Windows; both showed zero assigned land attackers.
+The previous native run took 5:29:16. The completed Windows references
+span 52:57–1:07:16. After 3,985.095 seconds the native driver repeats the
+captured clock sequence.
+
+The desktop menu, rendering, sound effects and streamed music smoke passed.
+Optimized and ASan/UBSan checks still stop at the existing 900-second
+idle-opponent victory assertion. Extending only the diagnostic observation
+window yielded a win at 922.4 seconds in each map reveal mode, as before.
