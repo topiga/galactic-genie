@@ -28,6 +28,22 @@ ScanResult penalty(int category,int test) {
   [&](float x,float y){out.visited.push_back({int(x),int(y)});return true;},
   [&](int x,int y,int radius){return (test==3 || test==4) && std::abs(x-10)<=radius && std::abs(y-10)<=radius;});return out;
 }
+// Final Windows scoring grid from P2's first seed-2 carbon processor search.
+void carbonSiteScores() {
+ struct Site { int x,y,score; uint8_t cells[16]; };
+ const Site sites[]={
+  {37,33,3813,{254,254,254,220,254,254,254,209,254,254,240,197,254,254,224,185}},
+  {41,27,1948,{158,127,100,93,165,129,101,94,165,129,101,94,169,129,101,94}},
+  {27,23,1700,{138,138,17,0,156,156,40,0,175,187,87,0,228,254,126,0}}
+ };
+ for(const auto &site:sites) {
+  const auto result=swgb::aiScanBuildingPlacement(11,120,120,site.x,site.y,site.x,site.y,47,13,2,
+   [&](int x,int y){return site.cells[(y-site.y+2)*4+x-site.x+2];},
+   []{return 0u;},[](int,int){return false;},[](float,float){return true;},
+   [](int,int,int){return false;});
+  assert(result.x==site.x && result.y==site.y && result.score==site.score);
+ }
+}
 uint32_t fingerprint(const swgb::AiBuildPlacementGrid &grid) {
  uint32_t hash=2166136261u;for(auto value:grid.cells())hash=(hash^value)*16777619u;return hash;
 }
@@ -374,6 +390,7 @@ void foodNovaChecks() {
 }
 
 int main() {
+ carbonSiteScores();
  const swgb::GenieStartFootprint footprint{0,0,1,1};
  int heights[2][2]={{1,6},{2,3}};
  auto hillAllows=[&]{return swgb::genieHillMode3Allows(footprint,[&](int x,int y){return heights[y][x];});};
