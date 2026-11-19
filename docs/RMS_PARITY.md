@@ -8647,5 +8647,39 @@ The partial-load and reachable-depot changes alone left the processor at
 Windows center was at original coordinates (37,33), bringing the cached
 minimum down to two. Native chose (41,27), bringing it down to five;
 a second native center appeared at 13:46. Opening timing therefore agrees
-more closely than site placement. Full original depot site scoring and
-resource-selection scheduling remain open.
+more closely than site placement. Tracing the native placement return showed
+that its depot scoring grid picked (41,27) on a fresh search. There was no
+preset or fallback for this foundation. At the Windows candidate, one
+cell (35,31) in the 4×4 footprint-plus-margin was marked occupied by
+object 637 (prototype 217) centered at (35.5,30.5). The resource pass
+left that cell open. The static-obstruction pass closed it. A diagnostic
+build requiring positive area overlap opened that cell, but selected
+(27,23) instead. This rules out boundary contact alone as a complete
+placement fix. The original path-map bits and the competing candidate
+scores still need comparison.
+
+The complete rerun used the same two-AI scenario, clock trace and seed.
+The downstream Windows milestones come from earlier captures of this
+scenario. The fresh Windows observation stopped at 12:33.
+
+| P2 milestone (game clock) | Clone Campaigns | Native before | Native after |
+| --- | ---: | ---: | ---: |
+| Mech Factory foundation | 22:46 | 30:29 | 25:20 |
+| Jedi Temple foundation | 24:27 | 31:11 | 26:35 |
+| Tech Level 3 | 29:20 | 37:56 | 31:44 |
+| End of match, either player | 52:57–1:07:16 | 3:14:48 (P3) | 1:16:50 (P2) |
+
+At 32:00 native P2 had 12 registered soldiers and 11 assigned to attack
+object 2404. Windows P2 had 14 soldiers and none assigned to attack at
+that point. Native P3 had eight soldiers and none assigned at 32:00.
+Windows P3 already had seven targeting P2 at 27:46. Native P2 won at
+4,609.749 seconds with 29 workers and its Command Center intact. The driver
+repeats the Windows step sequence after 3,985.095 seconds. Completed Windows
+captures include wins for both players, so a matching winner by itself
+does not establish tactical parity.
+
+The desktop menu, rendering and audio smoke passed. Both optimized and
+ASan/UBSan runs reached the existing 900-second idle-opponent victory timeout.
+The sanitized run reported no sanitizer diagnostic before that assertion. With
+the observation window extended, the native AI won at 922.4 seconds in
+both reveal modes and the remaining checks passed.
