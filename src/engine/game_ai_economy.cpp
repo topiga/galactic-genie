@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <tuple>
 namespace swgb {
 namespace {
 bool includesId(const std::vector<int32_t> &ids,int32_t id) {
@@ -105,6 +106,9 @@ void Game::refreshAiEconomyKnowledge(int player) {
     }
     for(size_t bucket=0;bucket<4;++bucket)if(economy.pendingDepotRefresh[bucket])
         economy.pendingDepotRefresh[bucket]=!refresh(int(bucket));
+    // 615771 queues first-sight tiles by row and column; 585570 visits their occupants in order.
+    struct Observation { const Object *object; size_t source; int row, column; };
+    std::vector<Observation> observations;
     std::unordered_set<uint32_t> currentlyVisible;
     for(const auto &o:objects_) {
         if(!o.active || !o.unit || visibleTargets_.slot(size_t(player-1),o.spawnId)==size_t(-1))continue;
@@ -112,6 +116,27 @@ void Game::refreshAiEconomyKnowledge(int player) {
         currentlyVisible.insert(o.spawnId);
         auto known=economy.resourceSlots.find(o.spawnId);
         if(known!=economy.resourceSlots.end() && economy.visibleResources.count(o.spawnId))continue;
+        observations.push_back({&o,objects_.size(),int(o.x),int(float(mapSize_)-o.y)});
+    }
+    if (observations.size()>1) {
+        const uint16_t mask=sharedSightMask(player);
+        for (size_t index=0;index<objects_.size();++index) {
+            const Object &source=objects_[index];
+            if (!source.active || source.hidden || source.garrisonedInId>=0 || !source.unit ||
+                source.hitPoints<=0 || source.player<=0 || source.player>16 || !(mask & (1u<<(source.player-1)))) continue;
+            const int radius=std::clamp(int(modifiedUnitAttribute(source,1,source.unit->lineOfSight)),0,20);
+            for (auto &entry:observations)
+                if (entry.source==objects_.size() && sourceSeesTile(source,entry.column,entry.row,radius))
+                    entry.source=index;
+        }
+        std::stable_sort(observations.begin(),observations.end(),[](const Observation &a,const Observation &b) {
+            return std::tie(a.source,a.row,a.column)<std::tie(b.source,b.row,b.column);
+        });
+    }
+    for (const auto &entry:observations) {
+        const Object &o=*entry.object;
+        const int bucket=originalResourceBucket(gatherClass(o));
+        const auto known=economy.resourceSlots.find(o.spawnId);
         const auto value=metric(o);if(!value) {currentlyVisible.erase(o.spawnId);continue;}
         auto &resources=economy.resources[size_t(bucket)];
         if(known==economy.resourceSlots.end()) {

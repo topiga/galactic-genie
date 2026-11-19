@@ -41,13 +41,19 @@
     };
     const int food=prototype(27),carbon=prototype(31),metal=prototype(30),nova=prototype(29);
     check(food>=0 && carbon>=0 && metal>=0 && nova>=0,"Four original resource classes available");
-    check(game.spawnObjectForTesting(0,food,0,24,20) &&
-          game.spawnObjectForTesting(0,carbon,0,20,23) &&
+    const auto laterRow=game.spawnObjectForTesting(0,carbon,0,23,20);
+    const auto laterColumn=game.spawnObjectForTesting(0,carbon,0,20,17);
+    const auto firstTile=game.spawnObjectForTesting(0,carbon,0,20,23);
+    check(laterRow && laterColumn && firstTile && game.spawnObjectForTesting(0,food,0,24,20) &&
           game.spawnObjectForTesting(0,metal,0,20,25) &&
           game.spawnObjectForTesting(0,nova,0,26,20),"Observe four distinct depot distances");
     // The second PER evaluation precedes that tick's economy refresh. Wait for
     // the following evaluation to observe the newly admitted resource cache.
     advance(35);
+    const auto &trees=game.economyForTesting(2).resources[1];
+    check(trees.records.size()==3 && trees.records[0].id==int32_t(firstTile) &&
+          trees.records[1].id==int32_t(laterColumn) && trees.records[2].id==int32_t(laterRow) &&
+          trees.cachedBestId==int32_t(firstTile),"Equal-distance trees retain original revealed tile order");
     check(game.aiGoalForTesting(2,963)==1,
           "PER reads each resource's registered center-to-depot distance with original ID mapping");
     check(game.moveObjectForTesting(center,3,3) && game.moveObjectForTesting(observer,4,4),
