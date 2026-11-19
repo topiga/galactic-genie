@@ -1861,7 +1861,8 @@ private:
     std::vector<AiWallSegment> *aiWallSegments(int player,int plan);
     void surveyAiWallSegment(int player);
     const dat::Unit *aiWallUnit(int player,const std::string &symbol) const;
-    bool aiWallRequest(int player,int plan,const dat::Unit *wall,bool gate,bool whole,bool escrow,bool execute);
+    enum class AiWallRequest { Segment, CompletePlan, Gate };
+    bool aiWallRequest(int player,int plan,const dat::Unit *unit,AiWallRequest request,bool escrow,bool execute);
     void executeAiWall(int player,const AiWallSegment &segment,int prototype,bool gate);
 
     std::array<std::array<bool,2>,17> aiWallPlanEnabled_{};

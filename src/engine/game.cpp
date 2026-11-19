@@ -14985,7 +14985,8 @@ Game::AiTruth Game::evaluateAiCondition(
         bool known=false;
         const int plan=resolveAiValue(player,state,condition.children[1].value,known);
         const auto *unit=gateFact?findUnit(civilizationForPlayer(player),487):aiWallUnit(player,condition.children[2].value);
-        return known && aiWallRequest(player,plan,unit,gateFact,wholeWall,fact.find("escrow")!=std::string::npos,false)
+        const auto request=gateFact?AiWallRequest::Gate:wholeWall?AiWallRequest::CompletePlan:AiWallRequest::Segment;
+        return known && aiWallRequest(player,plan,unit,request,fact.find("escrow")!=std::string::npos,false)
             ? AiTruth::True : AiTruth::False;
     }
     if ((fact == "can-build" || fact == "can-build-with-escrow" ||
@@ -15148,7 +15149,7 @@ bool Game::executeAiAction(
         bool known=false;
         const int plan=resolveAiValue(player,state,action.children[1].value,known);
         const auto *unit=gate?findUnit(civilizationForPlayer(player),487):aiWallUnit(player,action.children[2].value);
-        return known && aiWallRequest(player,plan,unit,gate,false,false,true);
+        return known && aiWallRequest(player,plan,unit,gate?AiWallRequest::Gate:AiWallRequest::Segment,false,true);
     }
     if (name=="enable-wall-placement" && action.children.size()==2) {
         bool known=false;

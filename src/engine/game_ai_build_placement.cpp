@@ -227,15 +227,17 @@ const dat::Unit *Game::aiWallUnit(int player,const std::string &symbol) const {
     return effectiveUnitForPlayer(player,findUnit(civilizationForPlayer(player),id));
 }
 
-bool Game::aiWallRequest(int player,int plan,const dat::Unit *unit,bool gate,bool whole,bool escrow,bool execute) {
+bool Game::aiWallRequest(int player,int plan,const dat::Unit *unit,AiWallRequest request,bool escrow,bool execute) {
     auto *segments=aiWallSegments(player,plan);
-    if(!unit || !segments || !aiBaseUnitEnabled(player,unit->id))return false;
+    if(!unit || plan<1 || plan>2 || !aiBaseUnitEnabled(player,unit->id))return false;
+    const bool gate=request==AiWallRequest::Gate;
     if(!gate && unit->id!=72 && unit->id!=117 && unit->id!=155 && unit->id!=195)return false;
-    if(whole) {
+    if(request==AiWallRequest::CompletePlan) {
         int tiles=0;
-        for(const auto &s:*segments)tiles+=s.unexplored+s.buildable;
+        if(segments)for(const auto &s:*segments)tiles+=s.unexplored+s.buildable;
         return aiCanAfford(player,*unit,escrow,tiles);
     }
+    if(!segments)return false;
     const int longSegments=gate?std::count_if(segments->begin(),segments->end(),[](const auto &s) {
         return s.active && s.length>3;
     }):0;
@@ -243,7 +245,8 @@ bool Game::aiWallRequest(int player,int plan,const dat::Unit *unit,bool gate,boo
         if(gate) {
             if(s.wallMaster<0 || s.gateReserved || s.length<(longSegments>3?4:3))continue;
         } else if(s.unexplored || !s.buildable)continue;
-        if(!aiCanAfford(player,*unit,escrow,gate?1:s.buildable))return false;
+        // 575e40 dispatches a wall line without repeating the fact's whole-segment credit check.
+        if((!execute || gate) && !aiCanAfford(player,*unit,escrow,gate?1:s.buildable))return false;
         if(execute) {
             if(gate)s.gateReserved=true;
             else {s.wallMaster=unit->id;s.buildable=0;}
