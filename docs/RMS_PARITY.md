@@ -8367,3 +8367,12 @@ by 34:56. The native run retained all five of its 32:00 laser troopers and
 had eight laser and two mounted troopers by 35:00. A 47-second interval
 of the Windows position capture is missing before 31:00. Both engines
 have position coverage throughout the full 32–35 minute window.
+
+The full native seed-2 rerun at 41197f7 finished at **17,843.046 s
+(4:57:23)**. P2 won with 15 workers and its Command Center standing. P3
+had zero workers and lost its Command Center on the final step. The
+simulation recorded 17,286 landed attacks. The preceding build finished at
+2:10:54, also with P2 winning. The two completed Windows references ended
+in P3 victories at 1:06:25 and 1:07:16. The Windows clock trace used to
+drive the native replay repeats after 3,985.095 s. Wall construction is now
+observable in the match, while the winner and match length still diverge.
