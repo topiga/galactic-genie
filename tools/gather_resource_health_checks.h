@@ -95,6 +95,26 @@ static void gatherResourceHealthChecks(swgb::Assets &assets) {
           "Exhausting a tree deposits partial cargo before gathering from the next tree");
 
     check(recovery.initScenario(blocked,&error),error.c_str());
+    // A nearer depot across water or a continuous wall cannot receive this load.
+    for (bool water : {true,false}) {
+        check(recovery.initScenario(blocked,&error),error.c_str());
+        for (int y=0;y<32;++y) {
+            if (water) recovery.setTerrainForTesting(18,y,1);
+            else recovery.spawnObjectForTesting(1,72,1,18.5f,y+.5f);
+        }
+        recovery.spawnObjectForTesting(1,562,1,21.5f,16.5f);
+        recovery.spawnObjectForTesting(1,109,1,7.5f,16.5f);
+        const auto carrier=recovery.spawnObjectForTesting(1,83,1,16.5f,16.5f);
+        const auto tree=recovery.spawnObjectForTesting(0,349,0,16.f,16.f);
+        check(recovery.issueGatherForTesting(carrier,tree) && recovery.setWorkerCargoForTesting(carrier,1,10),
+              "Assign loaded worker on the Command Center side of the barrier");
+        const float initial=recovery.resource(1,1);
+        for(int i=0;i<600 && recovery.resource(1,1)==initial;++i) recovery.update(.1f,{});
+        check(recovery.resource(1,1)==initial+10,
+              "A worker deposits at the reachable building despite a nearer blocked processor");
+    }
+
+    check(recovery.initScenario(blocked,&error),error.c_str());
     const auto lumberjack=recovery.spawnObjectForTesting(1,83,1,16.f,16.5f);
     const auto timber=recovery.spawnObjectForTesting(0,349,0,16.5f,16.5f);
     check(recovery.issueGatherForTesting(lumberjack,timber),"Assign isolated lumberjack");

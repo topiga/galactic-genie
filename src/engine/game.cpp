@@ -6841,6 +6841,14 @@ Game::Object *Game::nearestDropSite(
     Object *closest = nullptr;
     float closestDistance =
         std::numeric_limits<float>::max();
+    std::vector<uint8_t> zones;
+    const bool haveZones = buildAiMilitaryRegions(worker.unit->terrainRestriction, zones);
+    const auto zoneAt = [&](const Object &object) {
+        const int x = int(float(mapSize_) - object.y), y = int(object.x);
+        return haveZones && x >= 0 && y >= 0 && x < mapSize_ && y < mapSize_
+            ? int(zones[size_t(y) * mapSize_ + x]) : -1;
+    };
+    const int workerZone = zoneAt(worker);
     for (Object &building : objects_) {
         if (!building.active || building.hidden ||
             building.underConstruction ||
@@ -6855,10 +6863,15 @@ Game::Object *Game::nearestDropSite(
         const float dx = building.x - worker.x;
         const float dy = building.y - worker.y;
         const float distance = dx * dx + dy * dy;
-        if (distance < closestDistance) {
-            closest = &building;
-            closestDistance = distance;
+        if (distance >= closestDistance || (workerZone >= 0 && zoneAt(building) != workerZone))
+            continue;
+        // 4af3e0 filters routes before comparing squared center distances.
+        if (!withinInteractionRange(worker, building, 0.35f)) {
+            std::vector<std::array<float, 2>> path;
+            if (!findPath(worker, building.x, building.y, path, &building, 0.25f, true)) continue;
         }
+        closest = &building;
+        closestDistance = distance;
     }
     return closest;
 }
@@ -12438,7 +12451,7 @@ bool Game::staticPassableAt(const Object &object, float x, float y) const {
 // object, which is how the original approaches gather/build/attack targets.
 bool Game::findPath(const Object &object, float targetX, float targetY,
                     std::vector<std::array<float, 2>> &path,
-                    const Object *goalObject, float clearance) const {
+                    const Object *goalObject, float clearance, bool requireComplete) const {
     path.clear();
     if (mapSize_ <= 0) return false;
     const bool air = isAirUnit(object);
@@ -12551,6 +12564,8 @@ bool Game::findPath(const Object &object, float targetX, float targetY,
             return false;
         }
     }
+
+    if (requireComplete && result != PathResult::Complete) return false;
 
     // Final point: the exact destination when it is reachable from the last
     // tile, otherwise the goal tile centre.

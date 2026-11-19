@@ -1345,7 +1345,8 @@ private:
                         FormationType formation = FormationType::Line);
     bool findPath(const Object &object, float targetX, float targetY,
                   std::vector<std::array<float, 2>> &path,
-                  const Object *goalObject = nullptr, float clearance = 0.0f) const;
+                  const Object *goalObject = nullptr, float clearance = 0.0f,
+                  bool requireComplete = false) const;
     bool segmentClear(const Object &object, float ax, float ay, float bx, float by) const;
     bool staticPassableAt(const Object &object, float x, float y) const;
     const Object *unitBlockerAt(const Object &object, float x, float y) const;
