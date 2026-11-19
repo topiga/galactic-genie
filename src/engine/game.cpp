@@ -7276,7 +7276,7 @@ void Game::updateRepairing(float dt,int player) {
 // When a resource runs out, the worker looks around where it was for more
 // of the same (same class, e.g. trees, or at least the same resource) and
 // carries on until nothing is left in range.
-Game::Object *Game::nextResourceLike(const Object &worker) {
+Game::Object *Game::nextResourceLike(const Object &worker, bool failedApproach) {
     if (worker.lastGatherType < 0) return nullptr;
     const dat::Unit *currentGatherer =
         gathererUnit(worker);
@@ -7294,6 +7294,7 @@ Game::Object *Game::nextResourceLike(const Object &worker) {
         if (candidate.player > 0 &&
             candidate.player != worker.player)
             continue;
+        if (failedApproach && candidate.spawnId == worker.gatherTargetId) continue;
         Object probe = worker;
         probe.gatherTargetId =
             candidate.spawnId;
@@ -7312,6 +7313,18 @@ Game::Object *Game::nextResourceLike(const Object &worker) {
         const float distance =
             wx * wx + wy * wy;
         if (distance < bestDistance) {
+            if (failedApproach) {
+                const auto *task = gatherTask(probe, *candidateGatherer);
+                const float clearance = task ? std::max(0.25f, task->workRange) : 0.35f;
+                std::vector<std::array<float, 2>> path;
+                if (!withinInteractionRange(worker, candidate, clearance)) {
+                    if (!findPath(worker, candidate.x, candidate.y, path, &candidate, clearance) || path.empty())
+                        continue;
+                    probe.x = path.back()[0];
+                    probe.y = path.back()[1];
+                    if (!withinInteractionRange(probe, candidate, clearance)) continue;
+                }
+            }
             bestDistance = distance;
             best = &candidate;
         }
@@ -7452,7 +7465,15 @@ void Game::updateGathering(Object &worker, float dt) {
         worker.resourcePreparationState = 0;
         worker.initialFrame = 0;
         setTaskReference(worker.gatherChildReference,resource->spawnId);
-        approach(worker, *resource, workRange);
+        if (worker.approachRetry > 0.0f) return;
+        if (!approach(worker, *resource, workRange) && task && task->actionType == 110 &&
+            gatherClass(*resource) == 31 && resource->resourceDeathState < 3) {
+            // Failed felling movement requests a drop site (56b5a2 -> 56a637).
+            // Use the native continuation search for the next accessible work site.
+            Object *next = nextResourceLike(worker, true);
+            setGatherTarget(worker, next ? next->spawnId : 0);
+            worker.manualDropOff = hasCarry(worker);
+        }
         return;
     }
     const bool completedResourceApproach = worker.resourcePreparationState == 0 &&

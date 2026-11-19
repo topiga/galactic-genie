@@ -50,4 +50,35 @@ static void gatherResourceHealthChecks(swgb::Assets &assets) {
     check(exhausted.objectSelected(living) && exhausted.selectObjectForTesting(living),
           "Exhausted living resource retains selection and inspection");
 
+    swgb::Scenario blocked;
+    blocked.map.width=blocked.map.height=32;
+    blocked.map.tiles.resize(32*32);
+    blocked.civilizations.fill(1);
+    blocked.nextUnitId=1;
+    blocked.players[0].active=blocked.players[0].human=true;
+    blocked.players[0].civilization=1;
+    swgb::Game recovery(assets);
+    check(recovery.initScenario(blocked,&error),error.c_str());
+    const auto center=recovery.spawnObjectForTesting(1,109,1,16.f,16.f);
+    const auto buried=recovery.spawnObjectForTesting(0,349,0,16.f,16.f);
+    const auto accessible=recovery.spawnObjectForTesting(0,349,0,19.5f,16.5f);
+    const auto cutter=recovery.spawnObjectForTesting(1,83,1,18.5f,16.5f);
+    check(center && buried && accessible && cutter &&
+          recovery.setWorkerCargoForTesting(cutter,1,4.f) && recovery.issueGatherForTesting(cutter,buried),
+          "Loaded worker ordered to a tree inside a Command Center footprint");
+    const float bank=recovery.resource(1,1);
+    for(int i=0;i<400 && recovery.resource(1,1)==bank;++i) recovery.update(.1f,{});
+    check(recovery.objectTaskReferencesForTesting(buried)==0 && recovery.resource(1,1)==bank+4 &&
+          recovery.aiGatherTargetForTesting(cutter)==accessible,
+          "Failed felling releases the blocked tree, deposits partial carbon and resumes at the reachable tree");
+
+    check(recovery.initScenario(blocked,&error),error.c_str());
+    recovery.spawnObjectForTesting(1,109,1,16.f,16.f);
+    const auto isolated=recovery.spawnObjectForTesting(0,349,0,16.f,16.f);
+    const auto idle=recovery.spawnObjectForTesting(1,293,1,18.5f,16.5f);
+    check(recovery.issueGatherForTesting(idle,isolated),"Empty worker assigned to isolated tree");
+    for(int i=0;i<400 && recovery.aiGatherTargetForTesting(idle);++i) recovery.update(.1f,{});
+    check(recovery.aiGatherTargetForTesting(idle)==0 && recovery.objectTaskReferencesForTesting(isolated)==0,
+          "An empty worker releases an unreachable tree with no alternative");
+
 }
