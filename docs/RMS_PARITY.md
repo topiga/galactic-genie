@@ -8683,3 +8683,91 @@ ASan/UBSan runs reached the existing 900-second idle-opponent victory timeout.
 The sanitized run reported no sanitizer diagnostic before that assertion. With
 the observation window extended, the native AI won at 922.4 seconds in
 both reveal modes and the remaining checks passed.
+
+### Seed 2 first processor site scores
+
+A fresh Windows restart of the two-AI scenario (seed 24592, map ID 9)
+produced a placement grid at 324.129–324.279 simulated seconds. The
+next foundation observation at 324.734 contained P2's processor at (37,33).
+The grid changes during the search. At (27,23) the early pass still
+scored 3,018. The final captured grid scored 1,700.
+
+The following scores use the final 4×4 footprint-plus-margin at each
+site. The original x86 scanner was run separately on each captured byte
+matrix with category 11, a two-tile building, origin (47,13), and no
+planned-position penalty. That isolated scan measures preference before
+master placement validation. A live native trace checked the validator
+and confirmed the selected site.
+
+| Candidate in original coordinates | Windows | Native before | Native after |
+| --- | ---: | ---: | ---: |
+| (37,33) | 3,813 | Blocked | 3,873 |
+| (41,27) | 1,948 | 2,036 | 2,036 |
+| (27,23) | 1,700 | Blocked | 2,085 |
+
+Two different checks rejected (37,33). The Windows path map had bit
+0x4000 at (35,30), and none of bits 0x4003 at (35,31). Native included
+the latter tile in the broad collision index for object 637. Placement
+now uses the same half-open static footprint as original wall planning.
+With only that correction, the three sites were scoreable, but native
+rejected (37,33) with hill error 6 and placed the processor at (27,23).
+
+DAT hill mode 3 in the original master validator (0x48e697) compares
+tile heights along the left column and last row with their shared
+corner, within one level. In original axes the two rows at the winning
+site read [5,4] and [5,4] in the Windows inspection. Native previously
+used the range of all rendered corners. Shared building placement now
+applies the same tile rule to human and AI orders and to RMS temple
+validation, including the coordinate rotation for imported scenarios.
+
+| P2 event (game clock) | Windows | Native before | Native after |
+| --- | ---: | ---: | ---: |
+| Processor foundation | 5:25 this replay | 5:09 | 5:15 |
+| Minimum tree distance after foundation | 2 | 5 | 2 |
+| Second processor foundation | One processor at 20:00 in earlier capture | 13:46 | 44:18 |
+| Mech Factory foundation | 22:46 | 25:20 | 21:41 |
+| Jedi Temple foundation | 24:27 | 26:35 | 23:30 |
+| Tech Level 3 | 29:20 | 31:44 | 27:12 |
+
+The later Windows milestones come from earlier sessions. Native's
+processor finished at 348.519 seconds. At 32:00 native P2 had 12 soldiers
+and zero assigned attackers, compared with 14 and zero on Windows.
+Native P3 still had zero assigned attackers at that point, while seven
+had an attack target at 27:46 in the Windows comparison.
+
+A second original restart exposed a different outcome from the same seed.
+P2 built at (41,25), present by 336.631 s. In the final grid at 333.175 s
+two live class-60 food animals occupied margin tiles. Object 2045 was at
+(38.143,34.377), inside the margin of (37,33). Object 2044 was at
+(41.603,28.551), inside the margin of (41,27). Both sites were blocked.
+The (27,23) and (41,25) sites scored 1,575 and 1,865, respectively.
+
+The nearest read of the original resource list at 333.251 s contained
+373 resolved, enabled records, including 325 carbon records. Replaying
+those records in order through the native resource scoring code exactly
+reproduced all 64 bytes of the four 4×4 Windows candidate matrices.
+This comparison covers those sites at that decision. Native's own live
+decision had 447 resolved records, including 379 carbon records.
+The divergence is already measurable at 1:00. The repeat Windows sample
+at 60.647 s had 68 resolved carbon records and native had 146, with 59
+IDs in common. At 5:30 the counts were 325 and 379, with 189 IDs in
+common. Differences in sight, resource knowledge and moving animals can
+change the site ranking even with identical score arithmetic.
+
+The full native match ended in a P3 victory at 8,854.698 s (2:27:35).
+The preceding native run ended in a P2 victory at 4,609.749 s (1:16:50).
+At 67:00 this run still had 16 P2 workers and 30 P3 workers, versus 30
+and one in the preceding run. Both Command Centers were still standing.
+The longest captured Windows result was 1:07:16. The native run repeats
+the captured clock sequence after 3,985.095 s.
+
+The asset-backed building placement check passed on flat ground, a gentle
+slope, a disallowed edge and an allowed interior height difference. The
+three captured site-score regressions passed under ASan/UBSan. Original
+wall route/annex and full Forest regression checks passed, along with
+the desktop menu and the 60-frame rendering/audio smoke. Running the
+same combat and general gameplay checks on the previous commit reproduced
+the combat validation failure and the same six general check failures.
+The default 900-second idle-opponent limit remains red. With the time
+window extended, native won both reveal modes at 966.9 s (previously
+922.4 s). The scripted player won at 727.0 s.
