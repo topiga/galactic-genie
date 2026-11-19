@@ -8376,3 +8376,70 @@ simulation recorded 17,286 landed attacks. The preceding build finished at
 in P3 victories at 1:06:25 and 1:07:16. The Windows clock trace used to
 drive the native replay repeats after 3,985.095 s. Wall construction is now
 observable in the match, while the winner and match length still diverge.
+
+### Seed 2 production before first contact (19 November 2026)
+
+The original AI training and research lookups share producer selection at
+596680. They use the first 16 eligible producers in enumeration order. A
+successful training command remembers its producer for the next lookup in
+that building category. Research and availability checks leave the cursor
+alone. A two-Command-Center fixture checks this through actual production
+queues. Clone Campaigns queues worker 83 and chooses its variant when the
+worker exits (56e390). The native production path now performs that draw,
+and the worker-exit test observes both 83 and 293. Builder selection now
+checks the worker's active job against the farmer exclusions in 5a7c10.
+The wall-and-gate fixture exercises this with a working farmer.
+
+The Windows comparison used the two-AI scenario, session seed 24592 and
+map ID 9. The native replay used the saved Windows clock steps. Windows
+unit training was sampled at the buildings. Research was independently
+checked against P2's technology table, progress and age. A blank training
+queue can coincide with active research. Group snapshots record the land
+attack group's member count, state, target object and target owner.
+
+Windows P2 finished Tech Level 2 near 12:15, against 13:39 natively.
+It had a Mech Factory, a Jedi Temple and eleven farm objects by 25:00.
+The building prerequisite (technology 7) was first seen complete at 25:45.
+Tech Level 3 was underway by 26:52 with 2.78 seconds elapsed and the
+age changed by 29:20. Earlier Windows runs reached this age by 28:35 and
+29:10. Native P2 had 1,629 food and 250 nova at 25:00, but neither
+prerequisite building. It eventually completed a Mech Factory and never
+qualified for Tech Level 3 before defeat. The producer-only control still
+reached it at 35:28. Enabling the farmer change in isolation moved it to
+39:28. The final build also draws the worker variant on exit.
+
+The native carbon bank gained only 10–20 per minute from 17:00 through
+27:00. Two workers (2127 and 2134) stayed at the same positions with
+partial loads and a live tree target (514). At 19:00, 22:00 and 25:00,
+both had passable start positions but the path search to the tree's work
+range failed. Their gather order kept the same target. This reproduces one
+source of lost income. It does not establish where the original chooses
+another tree after a failed approach.
+
+Between 15:00 and 32:00 the Windows Command Center spent approximately
+404 seconds training workers and medics. The native center spent zero
+seconds training units in that interval. It did research technologies 128
+and 126. The Windows Troop Center spent about 161 seconds training laser
+and mounted troopers, against 80 seconds of native laser-trooper training.
+Durations are estimated from sampled Windows actions and native queue
+transitions. At 32:00 Windows P2 had 14 registered soldiers, native P2
+had five, and both had zero assigned to land attack groups. Earlier
+Windows runs saw seven P2 attackers at that time. In this Windows run
+P3 had seven soldiers targeting P2's power core (object 2128) at 27:46.
+The group still held that target with one member at 30:06 and was gone
+by 30:27. Native P3 had no assigned attackers on the half-minute samples
+over that window.
+
+The full native seed-2 replay finished at **3,949.969 s (1:05:50)**.
+P3 destroyed P2's Command Center. Remaining workers were 9 and 30 for
+P2 and P3 respectively, with 4,061 landed attacks recorded. The native
+match finished inside the original clock capture. Two previous Windows
+games ended in P3 victories at 1:06:25 and 1:07:16. A third Windows
+achievement screen showed P2 winning at 52:57.
+
+The desktop smoke test passed 60 frames with effects, streamed music and
+looping. The separate fallback skirmish exceeded its 900-second victory
+deadline in optimized and sanitized runs. Extending only the diagnostic
+runner established that the AI wins at 922.4 seconds in both map reveal
+modes and the scripted player wins at 637.5 seconds. The checked-in
+deadline is unchanged.
