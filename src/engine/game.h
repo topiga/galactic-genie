@@ -12,6 +12,7 @@
 #include "ai_build_admission.h"
 #include "ai_build_request_queue.h"
 #include "ai_build_positions.h"
+#include "rms_walls.h"
 #include "../core/genie_explore_search.h"
 
 #include "local_simulation_clock.h"
@@ -1841,6 +1842,9 @@ private:
     std::array<float, 17> startupPopulationAdjustment_{};
     std::array<std::vector<int>, 17> civilizationEffects_{}, playerEffects_{};
     std::array<AiPlayerState, 17> aiPlayers_{};
+    std::array<std::vector<std::vector<RmsWallSegment>>,2> aiWallPlans_;
+    std::array<std::array<bool,2>,17> aiWallPlanEnabled_{};
+    void initializeAiWallPlans(const Scenario &scenario);
     std::optional<uint32_t> aiMapId_;
     AiSessionContextSettings aiSessionContext_;
     std::vector<uint16_t> powerTiles_;

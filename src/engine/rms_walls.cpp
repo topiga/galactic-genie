@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <queue>
+#include <utility>
 #include <stdexcept>
 
 // Original499a60 pipeline; see local rms-wall117-native-prototype findings (2026-11-16).
@@ -27,7 +28,7 @@ constexpr std::array<Point, 8> pruneNeighbors{{{-1,0},{1,0},{0,-1},{0,1},{-1,-1}
 class Controller {
     const RmsWallInput& in;
     int w, h;
-    std::array<Point, 2> starts{};
+    std::vector<Point> starts;
     RmsWallBoundary result;
     std::vector<uint8_t> boundary, deposits;
     int index(int x, int y) const { return x*h+y; }
@@ -40,15 +41,17 @@ class Controller {
         for (float value: in.restrictions) require(std::isfinite(value), "Nonfinite restriction");
         require(in.restrictions[0]>0, "Expected initially passable original terrain0 cache");
         for (uint8_t value: in.terrain) require(value<in.restrictions.size(), "Terrain index out of range");
-        require((in.minimumDistance==16 && in.maximumDistance==20) || (in.minimumDistance==18 && in.maximumDistance==22), "Unverified wall-distance profile");
-        require(in.commandCenters.size()==2, "Expected two command centers");
-        std::array<bool,2> seen{};
+        const auto distances=std::make_pair(in.minimumDistance,in.maximumDistance);
+        require(distances==std::make_pair(10,20) || distances==std::make_pair(18,30) ||
+                distances==std::make_pair(16,20) || distances==std::make_pair(18,22), "Unverified wall-distance profile");
+        require(starts.size()==2 || starts.size()==3, "Expected two or three command centers");
+        std::array<bool,3> seen{};
         auto geometry=[&](float x,float y,float rx,float ry) {
             require(std::isfinite(x)&&std::isfinite(y)&&std::isfinite(rx)&&std::isfinite(ry), "Nonfinite object geometry");
             require(x>=0 && y>=0 && x<w && y<h && rx>=0 && ry>=0 && rx<=w && ry<=h, "Invalid object geometry");
         };
         for (const auto& cc: in.commandCenters) {
-            require(cc.owner==1 || cc.owner==2, "Invalid command center owner");
+            require(cc.owner>=1 && size_t(cc.owner)<=starts.size(), "Invalid command center owner");
             require(!seen[cc.owner-1], "Duplicate command center owner");seen[cc.owner-1]=true;
             geometry(cc.x,cc.y,cc.radiusX,cc.radiusY);
             require(cc.radiusX==2 && cc.radiusY==2, "Unverified command center radius");
@@ -58,7 +61,7 @@ class Controller {
         }
         require(!in.objects.empty() && in.objects.size()<=size_t(w*h*2), "Invalid object count");
         for (const auto& o: in.objects) {
-            require(o.owner>=0 && o.owner<=2, "Invalid object owner");geometry(o.x,o.y,o.radiusX,o.radiusY);
+            require(o.owner>=0 && size_t(o.owner)<=starts.size(), "Invalid object owner");geometry(o.x,o.y,o.radiusX,o.radiusY);
             require(o.obstructionType>=0 && o.obstructionType<=255 && o.obstructionClass>=0 && o.obstructionClass<=255, "Invalid obstruction metadata");
             require(o.unitClass>=0 && o.unitClass<=32767, "Invalid unit class");
             if(o.unitClass==29 || o.unitClass==30)
@@ -146,7 +149,7 @@ class Controller {
     }
     void reachable() {
         auto& scratch=result.reachableScratch;scratch.assign(w*h,0);
-        for (int owner=0;owner<2;++owner) {
+        for (int owner=0;owner<int(starts.size());++owner) {
             uint8_t bit=uint8_t(1<<owner);std::vector<Point> stack{starts[owner]};scratch[index(starts[owner].x,starts[owner].y)]+=bit;
             while (!stack.empty()) {
                 Point p=stack.back();stack.pop_back();
@@ -164,7 +167,7 @@ class Controller {
     void prune() {
         auto& scratch=result.prunedScratch;scratch.assign(w*h,0);
         struct Item { int x,y,cost; };
-        for (int owner=0;owner<2;++owner) {
+        for (int owner=0;owner<int(starts.size());++owner) {
             uint8_t bit=uint8_t(1<<owner);std::vector<Item> stack{{starts[owner].x,starts[owner].y,0}};scratch[index(starts[owner].x,starts[owner].y)]+=bit;
             while (!stack.empty()) {
                 Item p=stack.back();stack.pop_back();int flags=result.directions[index(p.x,p.y)];
@@ -187,10 +190,10 @@ class Controller {
         for (int i=0;i<w*h;++i) boundary[i]&=scratch[i];result.prunedBoundary=boundary;
     }
     void collectSegments() {
-        auto& seen=result.segmentScratch;seen.assign(w*h,1);result.segments.resize(3);
+        auto& seen=result.segmentScratch;seen.assign(w*h,1);result.segments.resize(starts.size()+1);
         for (int x=0;x<w;++x) for (int y=0;y<w;++y) {
             int i=index(x,y);int value=boundary[i];if (!seen[i] || !value) continue;
-            for (int owner=1;owner<=2;++owner) {
+            for (int owner=1;owner<=int(starts.size());++owner) {
                 uint8_t bit=uint8_t(1<<(owner-1));if (!(value&bit)) continue;
                 bool active=result.directions[i]!=0;int dx=0,dy=0;
                 auto same=[&](int nx,int ny) {return inside(nx,ny) && boundary[index(nx,ny)]==bit && (result.directions[index(nx,ny)]!=0)==active;};
@@ -211,10 +214,10 @@ class Controller {
         }
     }
 public:
-    explicit Controller(const RmsWallInput& input):in(input),w(input.width),h(input.height) {}
+    explicit Controller(const RmsWallInput& input):in(input),w(input.width),h(input.height),starts(input.commandCenters.size()) {}
     RmsWallBoundary run() {
         validate();makeObstruction();boundary.assign(w*h,0);
-        for (int owner=0;owner<2;++owner) {
+        for (int owner=0;owner<int(starts.size());++owner) {
             const auto p=starts[owner];const int lo=in.minimumDistance,hi=in.maximumDistance;uint8_t bit=uint8_t(1<<owner);
             route(p.x-hi,p.y-hi,p.x-lo,p.y+hi,2,bit);result.routeBoundaries.push_back(boundary);
             route(p.x+lo,p.y-hi,p.x+hi,p.y+hi,4,bit);result.routeBoundaries.push_back(boundary);

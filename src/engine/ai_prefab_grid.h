@@ -23,7 +23,7 @@ struct AiPlacementRect {int left,top,right,bottom;};
 // radii must be in ORIGINAL axes. This is a scoring grid, not pathability.
 // Caller supplies persistent resource records in original order; current terrain
 // and occupancy mask; and registered owned buildings. Hostile/remembered
-// buildings, recent attack rectangles, planned wall segments and master
+// buildings, recent attack rectangles and master
 // placement validation remain separate explicit providers, never silently
 // inferred from an unexplored native object list.
 class AiBuildPlacementGrid {
@@ -39,6 +39,12 @@ public:
         return {c(r.left),c(r.top),c(r.right),c(r.bottom)};
     }
     void forbid(AiPlacementRect r) {rect(r,[&](uint8_t &v){v=255;});}
+    // 58e9f0 marks every cell of an enabled plan, including gate spans and both endpoints.
+    void wall(int x,int y,int endX,int endY) {
+        const int dx=(endX>x)-(endX<x),dy=(endY>y)-(endY<y);
+        const int length=dx?std::abs(endX-x):std::abs(endY-y);
+        for (int step=0;step<=length;++step,x+=dx,y+=dy) forbid({x,y,x,y});
+    }
     void add(AiPlacementRect r,int amount) {
         rect(r,[&](uint8_t &v){if(v<255)v=uint8_t(std::min(254,int(v)+(amount&255)));});
     }

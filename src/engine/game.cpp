@@ -428,6 +428,8 @@ bool Game::init(uint32_t seed, int mapSize, std::string *err, int humanCiv, int 
     civilizationEffects_ = {};
     playerEffects_ = {};
     aiPlayers_ = {};
+    aiWallPlans_ = {};
+    aiWallPlanEnabled_ = {};
     aiMapId_.reset();
     aiSessionContext_={};
     powerTiles_.clear();
@@ -1159,6 +1161,8 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     civilizationEffects_ = {};
     playerEffects_ = {};
     aiPlayers_ = {};
+    aiWallPlans_ = {};
+    aiWallPlanEnabled_ = {};
     aiMapId_.reset();
     aiSessionContext_={};
     aiSessionContext_.victory=scenario.victoryType;
@@ -1408,6 +1412,7 @@ bool Game::initScenario(const Scenario &scenario, std::string *err, bool rmsComp
     } else {
         lookAt(mapSize_ * 0.5f, mapSize_ * 0.5f);
     }
+    initializeAiWallPlans(scenario);
     refreshPowerFields();
     return true;
 }
@@ -15107,6 +15112,14 @@ bool Game::executeAiAction(
             // Original 0x4181f0 overwrites the deadline; querying a timer never consumes it.
             state.timers[id]=gameTime_+seconds;
         }
+        return true;
+    }
+    if (name=="enable-wall-placement" && action.children.size()==2) {
+        bool known=false;
+        const int plan=resolveAiValue(player,state,action.children[1].value,known);
+        if (!known || plan<1 || plan>2) return false;
+        const auto &owners=aiWallPlans_[plan-1];
+        if (size_t(player)<owners.size() && !owners[player].empty()) aiWallPlanEnabled_[player][plan-1]=true;
         return true;
     }
     if (name=="set-escrow-percentage" || name=="release-escrow") {

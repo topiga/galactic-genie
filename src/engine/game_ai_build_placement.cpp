@@ -7,6 +7,34 @@
 #include <cmath>
 
 namespace swgb {
+void Game::initializeAiWallPlans(const Scenario &scenario) {
+    if (mapSize_!=120 || assets_.dat().terrainRestrictions.size()<=25) return;
+    RmsWallInput input;
+    input.width=input.height=mapSize_;
+    input.restrictions=assets_.dat().terrainRestrictions[25].passableBuildableDmgMultiplier;
+    for (const auto &tile:scenario.map.tiles) input.terrain.push_back(tile.terrain);
+    for (const auto &object:objects_) {
+        if (!object.active || !object.unit) continue;
+        const auto &unit=*object.unit;
+        const float x=float(mapSize_)-object.y,y=object.x;
+        const float rx=unit.collisionSize[1],ry=unit.collisionSize[0];
+        input.objects.push_back({object.player,x,y,rx,ry,unit.obstructionType,unit.obstructionClass,unit.cls});
+        if (unit.id==109) input.commandCenters.push_back({object.player,x,y,rx,ry});
+    }
+    // 5813f0 requests inner and outer plans. Only the first distance pair of each search is verified.
+    for (int plan=0;plan<2;++plan) {
+        input.minimumDistance=plan==0?10:18;
+        input.maximumDistance=plan==0?20:30;
+        RmsWallBoundary boundary;
+        if (!generateRmsWallBoundary(input,boundary)) continue;
+        for (auto &segments:boundary.segments) {
+            if (std::none_of(segments.begin(),segments.end(),[](const auto &s){return s.active && s.length>3;}))
+                segments.clear();
+        }
+        aiWallPlans_[plan]=std::move(boundary.segments);
+    }
+}
+
 //1=found,0=supported search found no location,-1=unsupported provider context.
 int Game::chooseAiOriginalBuildPosition(int player,const dat::Unit &unit,float &x,float &y,
                                  std::string *unsupportedReason) {
@@ -31,8 +59,7 @@ int Game::chooseAiOriginalBuildPosition(int player,const dat::Unit &unit,float &
     if(!std::isfinite(widthFloat) || widthFloat<1 || widthFloat>mapSize_ ||
        widthFloat!=std::floor(widthFloat) || unit.collisionSize[0]!=unit.collisionSize[1])
         return unsupported("non-square building footprint");
-    //58f260's event rectangles and58e9f0's wall plans are not native registries
-    // yet. Restrict this adapter to contexts where they are absent, before RNG.
+    // Recent attack rectangles still require the placement fallback before RNG.
     for(const auto &quarter:state.explorationQuarters)
         if(quarter.received || quarter.issued)
             return unsupported("attack-history placement rectangles are not represented");
@@ -42,7 +69,7 @@ int Game::chooseAiOriginalBuildPosition(int player,const dat::Unit &unit,float &
     auto &economy=state.economy;
     for(int32_t id:economy.depotIds) {
         const auto *building=findObject(uint32_t(id));
-        if(building && building->unit && (building->unit->cls==6 || building->unit->cls==8))
+        if(aiWallPlans_[0].empty() && aiWallPlans_[1].empty() && building && building->unit && (building->unit->cls==6 || building->unit->cls==8))
             return unsupported("wall-plan placement stage is not represented");
     }
     if(economy.civilianIds.empty())return 0;
@@ -114,6 +141,11 @@ int Game::chooseAiOriginalBuildPosition(int player,const dat::Unit &unit,float &
             building->unit->collisionSize[0],allied,
             modifiedUnitAttribute(*building,12,building->unit->maxRange),
             modifiedUnitAttribute(*building,1,building->unit->lineOfSight));
+    }
+    for (size_t plan=0;plan<aiWallPlans_.size();++plan) {
+        if (!aiWallPlanEnabled_[player][plan]) continue;
+        for (const auto &segment:aiWallPlans_[plan][player])
+            grid.wall(segment.fromX,segment.fromY,segment.toX,segment.toY);
     }
     //58939e consumes this even though the remainder is only retained in the
     // timed-search continuation record, never used by candidate scoring.

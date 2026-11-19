@@ -6,6 +6,12 @@ uint32_t fingerprint(const swgb::AiBuildPlacementGrid &grid) {
     uint32_t value=2166136261u;for(uint8_t cell:grid.cells())value=(value^cell)*16777619u;return value;
 }
 int main() {
+    {swgb::AiBuildPlacementGrid grid(12);
+     grid.wall(2,6,5,3);grid.wall(8,1,8,3);grid.wall(4,9,4,9);
+     for(int y=0;y<12;++y)for(int x=0;x<12;++x) {
+         const bool reserved=(x>=2 && x<=5 && y==8-x) || (x==8 && y>=1 && y<=3) || (x==4 && y==9);
+         assert(grid.at(x,y)==(reserved?255:60));
+     }}
     // Complete-grid fingerprints from executed original53-bit x87 controls.
     {swgb::AiBuildPlacementGrid grid(32);grid.ownedBuilding(109,16.0f,16.0f,2.0f,6.0f,10.0f,10.0f);
      assert(fingerprint(grid)==463919817u);}
