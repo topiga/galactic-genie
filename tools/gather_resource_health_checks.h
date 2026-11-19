@@ -81,4 +81,23 @@ static void gatherResourceHealthChecks(swgb::Assets &assets) {
     check(recovery.aiGatherTargetForTesting(idle)==0 && recovery.objectTaskReferencesForTesting(isolated)==0,
           "An empty worker releases an unreachable tree with no alternative");
 
+    check(recovery.initScenario(blocked,&error),error.c_str());
+    const auto lumberjack=recovery.spawnObjectForTesting(1,83,1,16.f,16.5f);
+    const auto timber=recovery.spawnObjectForTesting(0,349,0,16.5f,16.5f);
+    check(recovery.issueGatherForTesting(lumberjack,timber),"Assign isolated lumberjack");
+    for(int i=0;i<600 && recovery.objectCarriedAmount(lumberjack)<1.f;++i) recovery.update(.1f,{});
+    const float beforeUpgrade=recovery.objectCarriedAmount(lumberjack);
+    recovery.update(.1f,{});
+    const float normalWork=recovery.objectCarriedAmount(lumberjack)-beforeUpgrade;
+    check(normalWork>0 && recovery.researchTechnologyForTesting(1,160),"Upgrade active carbon gatherer");
+    const float onUpgrade=recovery.objectCarriedAmount(lumberjack);
+    recovery.update(.1f,{});
+    check(std::abs(recovery.objectCarriedAmount(lumberjack)-onUpgrade-normalWork*1.2f)<.0001f,
+          "Carbon upgrade applies to the working prototype during an existing order");
+    for(int i=0;i<500;++i) recovery.update(.1f,{});
+    check(recovery.objectCarriedAmount(lumberjack)==10 && recovery.researchTechnologyForTesting(1,128),
+          "Standard worker stops at ten carbon without a depot");
+    for(int i=0;i<150;++i) recovery.update(.1f,{});
+    check(recovery.objectCarriedAmount(lumberjack)==13,"Worker carry upgrade rounds 12.5 up to 13 carbon");
+
 }

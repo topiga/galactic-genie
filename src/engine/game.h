@@ -1394,6 +1394,8 @@ private:
     float modifiedUnitAttribute(const Object &object,
                                 int attribute,
                                 float baseValue) const;
+    const UnitPrototype &workerRolePrototype(const Object &worker, const dat::Unit &role) const;
+    float workerCapacity(const UnitPrototype &role) const;
     int graphicSound(int graphicId) const;
     float collisionRadius(const Object &object) const;
     bool workingOn(const Object &unit, uint32_t targetId) const;

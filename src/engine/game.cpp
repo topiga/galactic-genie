@@ -3645,26 +3645,32 @@ bool Game::technologyCommandApplies(
     return command.b>=0 && command.b==object.unit->cls;
 }
 
-float Game::modifiedUnitAttribute(const Object &object,
-                                  int attribute,
-                                  float baseValue) const {
-    float value = baseValue;
-    if (object.player < 0 ||
-        (size_t)object.player >= researchedTechs_.size())
-        return value;
-    for (const auto &command:objectUnitCommands(object)) {
-            if (command.c != attribute)
-                continue;
-            if (attribute==0)
-                value=applyShortEffect(truncateShort(value),command);
-            else if (command.type == 0)
-                value = command.d;
-            else if (command.type == 4)
-                value += command.d;
-            else if (command.type == 5)
-                value *= command.d;
+static float applyAttributeEffects(float value, int attribute, const std::vector<dat::EffectCommand> &commands) {
+    for (const auto &command : commands) {
+        if (command.c != attribute) continue;
+        if (attribute == 0 || attribute == 14)
+            value = applyShortEffect(truncateShort(value), command);
+        else if (command.type == 0) value = command.d;
+        else if (command.type == 4) value += command.d;
+        else if (command.type == 5) value *= command.d;
     }
     return value;
+}
+
+float Game::modifiedUnitAttribute(const Object &object, int attribute, float baseValue) const {
+    if (object.player < 0 || size_t(object.player) >= researchedTechs_.size()) return baseValue;
+    return applyAttributeEffects(baseValue, attribute, objectUnitCommands(object));
+}
+
+const Game::UnitPrototype &Game::workerRolePrototype(const Object &worker, const dat::Unit &role) const {
+    if (worker.privateJobPrototype && worker.privateJobPrototype->unit.id == role.id)
+        return *worker.privateJobPrototype;
+    ensureUnitPrototypes(worker.player);
+    return unitPrototypes_[size_t(worker.player)].at(role.id);
+}
+
+float Game::workerCapacity(const UnitPrototype &role) const {
+    return std::max(1.f, applyAttributeEffects(role.unit.resourceCapacity, 14, role.commands));
 }
 
 namespace {
@@ -7357,10 +7363,8 @@ void Game::updateGathering(Object &worker, float dt) {
         std::any_of(pendingCarcasses_.begin(), pendingCarcasses_.end(),
                     [&](const PendingCarcass &p) { return p.animalId == resource->spawnId; }))
         return; // its carcass appears next frame
-    const float capacity =
-        std::max(
-            1.0f,
-            (float)gatherer->resourceCapacity);
+    const auto &role = workerRolePrototype(worker, *gatherer);
+    const float capacity = workerCapacity(role);
     if (!worker.manualDropOff &&
         (!resource ||
          !isGatherable(*resource)) &&
@@ -7701,7 +7705,7 @@ void Game::updateGathering(Object &worker, float dt) {
     const float multiplier = task && task->resourceMultiplier >= 0
         ? playerAttribute(worker.player, task->resourceMultiplier) : 1.f;
     const GenieGatherResult transfer = genieGather(
-        dt, gatherer->workRate, task ? task->workValue1 : 1.f,
+        dt, applyAttributeEffects(role.unit.workRate, 13, role.commands), task ? task->workValue1 : 1.f,
         multiplier, resource->resourceAmount, worker.carriedAmount, capacity);
     if (transfer.remaining == resource->resourceAmount &&
         transfer.carried == worker.carriedAmount) return;
@@ -19195,7 +19199,7 @@ void Game::render(Renderer &r, int screenW, int screenH) {
                     panelObject->carriedAmount > 0.001f) {
                     amount += panelObject->carriedAmount;
                     text = std::to_string((int)std::lround(amount)) + "/" +
-                           std::to_string(gatherer ? std::max<int16_t>(1, gatherer->resourceCapacity) : 0);
+                           std::to_string(gatherer ? int(workerCapacity(workerRolePrototype(*panelObject, *gatherer))) : 0);
                 } else if (amount > 0.001f) {
                     text = std::to_string((int)std::lround(amount));
                 } else {
