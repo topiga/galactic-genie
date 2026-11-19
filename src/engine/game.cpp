@@ -14644,6 +14644,18 @@ bool Game::evaluateAiFactValue(
             populationUsed(player));
         return true;
     }
+    if (fact == "nursery-headroom") {
+        if (argumentEnd != 1) return false;
+        value = 0;
+        // Clone Campaigns 591fc0 counts occupants only after they enter a completed nursery.
+        for (const Object &nursery : objects_) {
+            if (nursery.player == player && nursery.active && !nursery.underConstruction &&
+                nursery.unit && nursery.unit->id == 319)
+                value = std::max(0, value + nursery.unit->garrisonCapacity -
+                                     int(garrisonedCount(nursery, false)));
+        }
+        return true;
+    }
     if (fact == "housing-headroom") {
         // Original 57c950 reads resource 4, including housing above the match cap.
         value=int(housingCapacity(player)-populationUsed(player));

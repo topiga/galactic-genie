@@ -27,6 +27,25 @@ static void economyGameplayChecks(swgb::Assets &assets) {
     };
     auto advance=[&](int ticks) {for(int n=0;n<ticks;++n)game.update(.1f,{});};
     initialize(false);
+    const int capacity = assets.dat().civs[1].units[319].garrisonCapacity;
+    const std::string nurseryRules =
+        "(defrule (nursery-headroom == 0) => (set-goal 92 1)) "
+        "(defrule (nursery-headroom == " + std::to_string(capacity) + ") => (set-goal 92 2)) "
+        "(defrule (nursery-headroom == " + std::to_string(capacity-1) + ") => (set-goal 92 3))";
+    check(game.loadAiSourceForTesting(2,"nursery-capacity",nurseryRules,{},&error),error.c_str());
+    check(game.spawnObjectForTesting(1,319,1,40,40) &&
+          game.spawnFoundationForTesting(1,319,2,30,30,{}),"Spawn foreign nursery and owned foundation");
+    advance(65);
+    check(game.aiGoalForTesting(2,92)==1,"Only completed owned nurseries contribute headroom");
+    const auto nursery=game.spawnObjectForTesting(1,319,2,12,12);
+    advance(65);
+    check(game.aiGoalForTesting(2,92)==2,"Empty nursery contributes its DAT capacity");
+    const auto livestock=game.spawnObjectForTesting(1,833,2,15,12);
+    check(game.garrisonForTesting(livestock,nursery),"Send livestock to nursery");
+    advance(150);
+    check(game.garrisonedCount(nursery)==1 && game.aiGoalForTesting(2,92)==3,
+          "Occupied nursery subtracts the garrisoned animal");
+    initialize(false);
     check(game.spawnObjectForTesting(1,109,2,12,12)!=0,"Bantha has a nearby food depot");
     const auto bantha=game.spawnObjectForTesting(1,833,2,16,12);
     check(bantha && game.damageObjectForTesting(bantha,100),"Slaughter an owned Bantha");
