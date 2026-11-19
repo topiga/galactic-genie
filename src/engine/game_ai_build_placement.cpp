@@ -108,17 +108,28 @@ int Game::chooseAiOriginalBuildPosition(int player,const dat::Unit &unit,float &
             grid.resource(int(bucket),resource->unit->cls,float(mapSize_)-resource->y,resource->x,
                           resource->unit->collisionSize[0],resource->unit->collisionSize[1],record.invalid==1,hasCompletedFoodDepot);
         }
-    // shortcut: Native static-obstruction tile admission stands in for original
-    // path-map bits0x4003. The scoring operations/terrain cases are original;
-    // native footprint registration is not claimed to reproduce those bits.
+    // 4b0ce0 sets bit 0x4000 on the registered static footprint.
+    for(uint32_t index:staticObstructionIndices_) {
+        const auto &object=objects_[index];
+        if(!object.active || object.hidden || object.garrisonedInId>=0)continue;
+        const auto &master=*object.unit;
+        if(master.obstructionType!=1 && master.obstructionType!=2)continue;
+        if(master.obstructionClass==0)continue;
+        const auto bounds=pathMapFootprint(float(mapSize_)-object.y,object.x,
+                                           master.collisionSize[1],master.collisionSize[0]);
+        if(bounds.left<bounds.right && bounds.top<bounds.bottom && bounds.right>0 &&
+           bounds.bottom>0 && bounds.left<mapSize_ && bounds.top<mapSize_)
+            grid.forbid({bounds.left,bounds.top,bounds.right-1,bounds.bottom-1});
+    }
     for(int oy=0;oy<mapSize_;++oy)for(int ox=0;ox<mapSize_;++ox) {
         const int nx=oy,ny=mapSize_-1-ox;
         const size_t tile=size_t(ny)*mapSize_+nx;
         bool occupied=false;
+        // shortcut: retain native coverage for terrain-changing obstructions until their callbacks are ported.
         if(tile<staticObstructionCells_.size())for(uint32_t index:staticObstructionCells_[tile]) {
-            if(index>=objects_.size())continue;
             const auto &object=objects_[index];
-            if(object.active && !object.hidden && object.garrisonedInId<0) {occupied=true;break;}
+            if(object.active && !object.hidden && object.garrisonedInId<0 && object.unit->obstructionType>2 &&
+               object.unit->obstructionType!=5) {occupied=true;break;}
         }
         grid.terrain(ox,oy,terrainAt(nx,ny),occupied?1u:0u);
     }

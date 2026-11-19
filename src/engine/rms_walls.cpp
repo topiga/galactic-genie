@@ -79,14 +79,14 @@ class Controller {
         for (const auto& o: in.objects) {
             if(o.unitClass==29 || o.unitClass==30)deposits[index(int(o.x),int(o.y))]=1;
             if (o.obstructionType<=0 || o.obstructionType>2 || o.obstructionClass<=0) continue;
-            const int x0=int(double(o.x)-o.radiusX),x1=int(double(o.x)+o.radiusX)-1;
-            const int y0=int(double(o.y)-o.radiusY),y1=int(double(o.y)+o.radiusY)-1;
+            const auto bounds=pathMapFootprint(o.x,o.y,o.radiusX,o.radiusY);
+            const int x0=bounds.left,x1=bounds.right-1,y0=bounds.top,y1=bounds.bottom-1;
             for(int x=std::max(0,std::min(x0,x1)-1);x<=std::min(w-1,std::max(x0,x1)+1);++x)
                 for(int y=std::max(0,std::min(y0,y1)-1);y<=std::min(h-1,std::max(y0,y1)+1);++y)refreshed[index(x,y)]=1;
             uint32_t word=uint32_t((o.obstructionClass&63)|(o.owner<<8)|0x40)<<8;
             if (o.obstructionClass==5) word|=0x8000;
-            for (int y=int(double(o.y)-o.radiusY);y<int(double(o.y)+o.radiusY);++y)
-                for (int x=int(double(o.x)-o.radiusX);x<int(double(o.x)+o.radiusX);++x) {
+            for (int y=bounds.top;y<bounds.bottom;++y)
+                for (int x=bounds.left;x<bounds.right;++x) {
                     auto& cell=result.obstruction[y*w+x];cell=(cell&255)|word;
                 }
         }

@@ -5,6 +5,13 @@
 #include <string>
 
 namespace swgb {
+struct PathMapFootprint {
+    int left, top, right, bottom; // Exclusive right and bottom, in original map axes.
+};
+inline PathMapFootprint pathMapFootprint(float x,float y,float radiusX,float radiusY) {
+    return {int(double(x)-radiusX),int(double(y)-radiusY),
+            int(double(x)+radiusX),int(double(y)+radiusY)};
+}
 struct RmsWallObject {
     int owner = 0;
     float x = 0, y = 0, radiusX = 0, radiusY = 0;

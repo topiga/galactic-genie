@@ -2,6 +2,7 @@
 // Original588b30 scan and58e2d0 grid controls, 2026-11-18.
 #include "../src/engine/ai_build_placement.h"
 #include "../src/engine/ai_prefab_grid.h"
+#include "../src/engine/rms_walls.h"
 #include <cassert>
 #include <cstdio>
 #include <vector>
@@ -372,6 +373,11 @@ void foodNovaChecks() {
 }
 
 int main() {
+ const auto tree=swgb::pathMapFootprint(35.5f,30.5f,.5f,.5f);
+ assert(tree.left==35 && tree.right==36 && tree.top==30 && tree.bottom==31);
+ const auto narrow=swgb::pathMapFootprint(5.5f,6.5f,.25f,1.f);
+ assert(narrow.left==narrow.right && narrow.top==5 && narrow.bottom==7);
+
  foodNovaChecks();
  {const auto result=penalty(1,0);assert(result.point.x==-1 && result.point.y==-1 && result.point.score==-1 && result.draws==0);assert((result.visited==std::vector<Point>{}));}
  {const auto result=penalty(2,0);assert(result.point.x==-1 && result.point.y==-1 && result.point.score==-1 && result.draws==0);assert((result.visited==std::vector<Point>{}));}
