@@ -9305,6 +9305,7 @@ void Game::updateConstruction(float dt,int player) {
             forceBuildCheat_ &&
             building.player == localPlayer_;
         size_t workingBuilders = 0;
+        float work = 0.f;
         for (Object &builder : objects_) {
             if (!builder.active ||
                 builder.constructionTargetId !=
@@ -9331,7 +9332,16 @@ void Game::updateConstruction(float dt,int player) {
                                building.x - builder.x);
                 builder.moveGoalActive = false;
                 builder.path.clear();
-                workingBuilders++;
+                const auto *unit = builderUnit(builder);
+                if (unit && size_t(unit->id) < assets_.dat().unitHeaders.size()) {
+                    const auto &role = workerRolePrototype(builder, *unit);
+                    for (const auto &task : assets_.dat().unitHeaders[unit->id].tasks) {
+                        if (task.actionType != 101) continue;
+                        work += dt * applyAttributeEffects(role.unit.workRate, 13, role.commands) * task.workValue1;
+                        ++workingBuilders;
+                        break;
+                    }
+                }
             } else if (builder.state == State::Build) {
                 builder.state = State::Idle;
                 builder.animTime = 0.0f;
@@ -9341,14 +9351,12 @@ void Game::updateConstruction(float dt,int player) {
         if (forceComplete && workingBuilders > 0)
             building.constructionRemaining = 0.0f;
         else if (workingBuilders > 0) {
-            const float buildRate =
-                3.0f * workingBuilders /
-                (workingBuilders + 2.0f);
-            building.constructionRemaining =
-                std::max(
-                    0.0f,
-                    building.constructionRemaining -
-                        dt * buildRate);
+            // 566b37: owner attribute 195 scales work; monument 276 caps that multiplier.
+            float bonus = playerAttribute(player,195);
+            if (building.unit->id == 276) bonus = std::min(bonus,1.2f);
+            if (bonus > 0.f) work *= bonus;
+            const float share = (1.f + 0.33f * (workingBuilders - 1)) / workingBuilders;
+            building.constructionRemaining = std::max(0.f, building.constructionRemaining - work * share);
         }
         const float progress =
             building.constructionTotal > 0

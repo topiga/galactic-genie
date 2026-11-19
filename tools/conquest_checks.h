@@ -27,6 +27,21 @@ static void conquestChecks(swgb::Assets &assets) {
     check(std::abs(game.objectHitPoints(foundation)-(game.objectMaxHitPoints(foundation)-50))<.01f,
           "Construction completion preserves combat damage");
     check(game.damageObjectForTesting(foundation,100000),"Destroy completed damaged foundation");
+    for (int count : {1, 3}) {
+        start();
+        std::vector<uint32_t> builders;
+        for (auto position : {std::array<float,2>{14,16}, {18,16}, {16,14}}) {
+            builders.push_back(game.spawnObjectForTesting(1,83,1,position[0],position[1]));
+            if (int(builders.size()) == count) break;
+        }
+        auto factory = game.spawnFoundationForTesting(1,101,1,16,16,builders);
+        check(game.setConstructionProgressForTesting(factory,.2f),"Set Mech Factory progress");
+        const float initialHealth = game.objectHitPoints(factory);
+        for (int tick = 0; tick < 30; ++tick) game.update(1.f/30,{});
+        const float work = 45.f * (game.objectHitPoints(factory)-initialHealth) / game.objectMaxHitPoints(factory);
+        check(std::abs(work - (count == 1 ? 1.f : 1.66f)) < .005f,
+              "One second of original construction work with one or three builders");
+    }
     start();
     const auto enemyHome=game.objectPosition(game.commandCenterId(2));
     const auto troop=game.objectUnitId(game.commandCenterId(2)+10);
