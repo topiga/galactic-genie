@@ -8494,3 +8494,18 @@ at 1:13:30 with 26 members in assembly state. At 1:14:00 those same
 26 members had target 2213. These are observations at sample boundaries.
 The saved Windows order trace ends at 32:32, so it cannot establish when
 P2 first attacked later in that particular Windows run.
+
+The full replay at a7cda89 ended in a **P2 victory at 19,756.232 seconds
+(5:29:16)**. P2 had 30 workers and its Command Center. P3 had zero
+workers and lost its Command Center on the last step. The previous native
+run ended in a P3 victory at 1:05:50. The completed Windows references
+span 52:57–1:07:16. The replay repeats the recorded Windows clock steps
+after 3,985.095 seconds. The earlier economic recovery therefore coexists
+with a much larger full-match timing discrepancy.
+
+Desktop rendering and audio smoke passed. Optimized and ASan/UBSan
+skirmish suites reached the existing 15-minute fallback victory assertion
+and failed there. An optimized diagnostic run with a longer observation
+window still won at 922.4 seconds in each reveal mode, matching the
+previous build. The focused recovery checks passed; the preceding
+engine failed the loaded-worker case with the same fixture.
