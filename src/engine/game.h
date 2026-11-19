@@ -1171,6 +1171,12 @@ private:
         AiMilitaryPhaseCycle militaryCycle;
         int32_t nextMilitaryGroup=1;
         std::unordered_map<int, int> goals;
+        int goalValue(int id) const {
+            const auto found = goals.find(id);
+            if (found != goals.end()) return found->second;
+            // 58368a initializes the original 75 slots. Extended native slots default to zero.
+            return id >= 1 && id <= 75 ? -1 : 0;
+        }
         std::map<int, double> timers;
         // Verified fresh profile events run before the original's first PER evaluation.
         std::unordered_map<int, int> strategicNumbers = {

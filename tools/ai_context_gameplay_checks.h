@@ -8,6 +8,9 @@ static void aiContextGameplayChecks(swgb::Assets &assets) {
     swgb::Game game(assets);std::string error;
     check(game.initAridSkirmish(1,&error,false,75,true),error.c_str());
     const std::string source=
+        "(defrule (goal 1 0) => (set-goal 949 9))\n"
+        "(defrule (goal 1 -1) (goal 75 -1) => (set-goal 75 0))\n"
+        "(defrule (goal 75 0) => (set-goal 948 1))\n"
         "(defconst own-player my-player-number)\n(defconst own-civ my-civ)\n"
         "#load-if-defined EMPIRE\n#load-if-not-defined FEDERATION\n"
         "#load-if-defined TINY-MAP\n#load-if-defined DESERT-MAP\n"
@@ -18,6 +21,9 @@ static void aiContextGameplayChecks(swgb::Assets &assets) {
     check(game.loadAiSourceForTesting(2,"context-runtime",source,{},&error),error.c_str());game.update(0,{});
     check(game.aiGoalForTesting(2,950)==2,
           "Production Arid loader seeds own-player/civ aliases, DAT civilization enums and session defines before parsing");
+    check(game.aiGoalForTesting(2,948)==1 && game.aiGoalForTesting(2,949)==0 &&
+          game.aiGoalForTesting(2,1)==-1 && game.aiGoalForTesting(2,75)==0,
+          "Fresh original AI goals distinguish unset from explicitly zero");
     const auto rules=game.aiRuleCountForTesting(2);
     check(!game.loadAiSourceForTesting(2,"bad-context","(defconst fail not-a-context-constant)",{},&error),
           "Invalid replacement script fails");

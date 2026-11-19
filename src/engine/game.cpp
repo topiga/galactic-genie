@@ -1889,12 +1889,7 @@ int Game::aiGoalForTesting(
         (size_t)player >=
             aiPlayers_.size())
         return 0;
-    const auto &goals =
-        aiPlayers_[(size_t)player].goals;
-    const auto found = goals.find(goal);
-    return found == goals.end()
-               ? 0
-               : found->second;
+    return aiPlayers_[size_t(player)].goalValue(goal);
 }
 
 int Game::aiStrategicNumberForTesting(
@@ -14936,13 +14931,7 @@ Game::AiTruth Game::evaluateAiCondition(
             valueKnown);
         if (!goalKnown || !valueKnown)
             return AiTruth::Unknown;
-        const auto found =
-            state.goals.find(goal);
-        const int actual =
-            found == state.goals.end()
-                ? 0
-                : found->second;
-        return actual == expected
+        return state.goalValue(goal) == expected
                    ? AiTruth::True
                    : AiTruth::False;
     }
