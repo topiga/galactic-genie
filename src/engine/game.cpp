@@ -15625,6 +15625,11 @@ void Game::updateProductionAndDecay(float dt,int player) {
                     : building.productionQueue.front().duration;
             continue;
         }
+        // 56e390 draws on each worker exit attempt, before checking for a free exit.
+        if(unit->id==83 && genieRandomDraw(legacyRandomState_)%100>=50) {
+            const auto *alternate=findUnit(civilizationForPlayer(building.player),293);
+            if(alternate)unit=effectiveUnitForPlayer(building.player,alternate);
+        }
         const float population =
             populationUse(*unit);
         const float capacity =

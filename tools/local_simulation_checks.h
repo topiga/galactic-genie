@@ -37,6 +37,18 @@ static void localSimulationChecks(swgb::Assets &assets) {
         check(game.initScenario(scenario,&error),error.c_str());
         check(game.loadAiSourceForTesting(2,"local-admission",script,{},&error),error.c_str());
     };
+    bool trainedA=false,trainedB=false;
+    for(uint32_t seed=1;seed<=32 && !(trainedA && trainedB);++seed) {
+        initialize();
+        check(game.queueUnitForTesting(1,83),"Queue standard Command Center worker");
+        game.seedLegacyRandomForTesting(seed);
+        game.update(.2f,{});
+        const int trained=game.objectUnitId(3);
+        check(trained==83 || trained==293,"Worker exit creates a valid civilization worker");
+        trainedA|=trained==83;
+        trainedB|=trained==293;
+    }
+    check(trainedA && trainedB,"Standard worker orders produce both original worker variants");
     initialize();
     check(game.queueUnitForTesting(1,83),"Queue actual worker production for local scheduling check");
     game.lookAtObject(2);
