@@ -8593,3 +8593,59 @@ The desktop menu, rendering, sound effects and streamed music smoke passed.
 Optimized and ASan/UBSan checks still stop at the existing 900-second
 idle-opponent victory assertion. Extending only the diagnostic observation
 window yielded a win at 922.4 seconds in each map reveal mode, as before.
+
+### Seed 2 first Carbon Processing Center and worker delivery
+
+A fresh Windows replay used the same two-AI scenario, session seed 24592 and
+unpatched Clone Campaigns executable. Read-only samples of P2's InfoAI carbon
+records, world object table and bank were taken during play. A separate
+observer counted P2's owned foundations. Times below are simulation seconds.
+Windows values mark first observation and can lag the event by one sample.
+
+| P2 event | Windows replay | Native before | Native after |
+| --- | ---: | ---: | ---: |
+| Opening cached tree at distance 3 | 2069 | 2068 | 2069 |
+| Tree 2069 gone from world lookup | Seen by 269.579 | — | 267.072 |
+| Cached minimum first exceeds 5 tiles | 280.982 | 346.643 | 308.146 |
+| First Carbon Processing Center foundation | 320.758 | 671.361 | 309.423 |
+| First Troop Center foundation | 468.239 | 327.436 | 443.046 |
+
+The earlier Windows processor first appeared at 331.282 s. The opening
+Windows carbon record IDs were 2074, 2069, 2068, 2072, 2073, in that
+order. The native opening now matches all five records and byte coordinates.
+Two trees have the same truncated distance of three. The first observed
+wins the tie. Original 0x615771 appends newly exposed tiles while scanning
+sight rows. InfoAI 0x585570 visits their occupants in queue order. Native
+now orders observations within each economy refresh by sight source and
+original tile row and column. The original queue can receive callbacks
+between native refreshes, so later observations can still diverge.
+
+The PER fact (0x57c500) reads the cached minimum. Original 0x590eb0 ranks
+compatible depots by squared center distance, preferring the resource's
+movement zone, and the stored distance is truncated to a byte capped at
+255. A tree remains in the cache after it disappears until the appropriate
+refresh or selection. At 0x586fcd a missing lookup invalidates its record.
+If that ID held the minimum, 0x587431 rebuilds it after the selection pass.
+Tree 2069 depleted at almost the same time in both engines; the subsequent
+cache update was about 27 seconds later natively. By then native P2 had
+134.81 carbon. Previously it had 20.02 when this gate opened, having
+already bought the Troop Center, and waited another 325 seconds to place
+the processor. The corrected run placed it 1.277 seconds after the gate.
+
+Worker delivery has separate rules. Action 110 requests a delivery at
+0x56b897 when it exhausts a resource, even with a partial load. Automatic
+depot search (0x4af3e0) checks movement zone and route eligibility before
+ranking eligible centers. Native now deposits the partial load, keeps the
+worker's role for the return search, and skips blocked automatic depots.
+Manual delivery without a primary work target ends after unloading.
+Gameplay checks cover two adjacent trees, no-primary delivery, a nearer
+processor across water, a nearer processor behind a wall, and equal
+distances presented in reverse tile order.
+
+The partial-load and reachable-depot changes alone left the processor at
+671.361 s. Correcting observation order moved it to 309.423 s. The
+Windows center was at original coordinates (37,33), bringing the cached
+minimum down to two. Native chose (41,27), bringing it down to five;
+a second native center appeared at 13:46. Opening timing therefore agrees
+more closely than site placement. Full original depot site scoring and
+resource-selection scheduling remain open.
