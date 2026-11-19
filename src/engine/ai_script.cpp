@@ -395,7 +395,23 @@ static std::unordered_map<std::string,int> defaultAiConstants() {
         {"any-human-neutral",-110}, {"any-neutral",-111},
         {"every-ally",-201}, {"every-computer",-202}, {"every-enemy",-203},
         {"every-human",-204}, {"every-neutral",-205},
-        {"desert",9}, {"forest",12}, {"raiders",37},
+        // Original 57f95e..57fbe9 registers these map-type operands.
+        {"desert",9}, {"water-mass",10}, {"sea",11},
+        {"forest",12}, {"shoreline",13}, {"land-mass",14},
+        {"space-mass",15}, {"nova-lake",16}, {"fortress",17},
+        {"nova-assault",18}, {"precipice",19}, {"land-satellites",20},
+        {"space-satellites",21}, {"large-sea",22}, {"planets-and-moons",23},
+        {"search-and-destroy",24}, {"rivers",25}, {"team-land-satellites",26},
+        {"team-space-satellites",27}, {"tundra",29}, {"flats",30},
+        {"swamp",32}, {"savannah",31}, {"arena",33},
+        {"motherlode",35}, {"ice-lake",36}, {"raiders",37},
+        {"star-wars-world-kashyyyk",38}, {"star-wars-world-endor",39}, {"star-wars-world-yavin",40},
+        {"star-wars-world-hoth",41}, {"star-wars-world-krant",42}, {"star-wars-world-hanoon",43},
+        {"star-wars-world-geddes",44}, {"star-wars-world-kessel",45}, {"star-wars-world-tatooine",46},
+        {"star-wars-world-reytha",47}, {"star-wars-world-zaloriis",48}, {"star-wars-world-dagobah",49},
+        {"star-wars-world-naboo",50}, {"star-wars-world-mosespa",55}, {"star-wars-world-sarapin",56},
+        {"star-wars-world-aereen",57}, {"star-wars-world-eredenn",58}, {"star-wars-world-geonosis",59},
+        {"star-wars-world-tatooine-new",60}, {"custom_map",51},
     };
 }
 

@@ -57,7 +57,7 @@ static void aiContextGameplayChecks(swgb::Assets &assets) {
     auto &computer=scenario.players[1];
     computer.active=true;computer.human=false;computer.aiType=1;computer.civilization=1;
     computer.aiSource="#load-if-defined DESERT-MAP\n"
-        "(defrule (map-type desert) (not (map-type raiders)) => (set-goal 956 1))\n"
+        "(defrule (map-type desert) (nor (map-type fortress) (map-type arena) (map-type raiders)) => (set-goal 956 1))\n"
         "#else\n(defrule (map-type 2) => (set-goal 956 2))\n#end-if\n";
     check(game.initScenario(scenario,&error,2,1,9),error.c_str());game.update(0,{});
     check(game.aiGoalForTesting(2,956)==1,"Scenario AI reads the selected lobby map during compilation and play");
