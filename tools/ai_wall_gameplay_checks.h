@@ -43,5 +43,30 @@
     const auto sites=game.underConstructionObjectIds();
     check(sites.size()==1 && game.objectUnitId(sites.front())==117 && game.resource(2,2)==0,
           "Direct wall order places only the tiles the player can pay for");
+    // Expected master and center from the original gate selector (58a4b0) on these same segments.
+    struct GateCase { int length, dx, dy, master; float x,y; };
+    const GateCase cases[]={
+        {3,0,1,490,10.5f,21},{3,1,0,487,11,20.5f},{3,1,1,665,11,21},{3,1,-1,673,12,19},
+        {4,0,1,490,10.5f,22},{4,1,0,487,12,20.5f},{4,1,1,665,12,22},{4,1,-1,673,12,19}
+    };
+    for(const auto &c:cases) {
+        check(game.initScenario(scenario,&error),error.c_str());
+        check(game.researchTechnologyForTesting(2,1),"Enable gate");
+        game.setResourceForTesting(2,2,60);
+        check(game.spawnObjectForTesting(1,109,2,21,48),"Reveal gate site");
+        const int last=c.length-1;
+        game.setAiWallSegmentForTesting(2,2,{2,10,20,10+last*c.dx,20+last*c.dy,c.length,true});
+        check(game.loadAiSourceForTesting(2,"oriented-gate",R"(
+(defrule (true) => (enable-wall-placement 2) (disable-self))
+(defrule (can-build-wall 2 117) => (build-wall 2 117) (disable-self))
+(defrule (can-build-gate 2) => (build-gate 2) (disable-self))
+)",{},&error),error.c_str());
+        advance(150);
+        const auto sites=game.underConstructionObjectIds();
+        check(std::any_of(sites.begin(),sites.end(),[&](auto id) {
+            const auto position=game.objectPosition(id);
+            return game.objectUnitId(id)==c.master && position[0]==c.y && 64-position[1]==c.x;
+        }),"Queued gate master and center match Clone Campaigns");
+    }
     std::puts("PASS: AI wall exploration, whole segment cost, gate replacement and worker completion");
 }

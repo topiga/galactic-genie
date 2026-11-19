@@ -8310,3 +8310,27 @@ macOS and P2 at 36:11. P2 later reached Tech Level 4 at 1:48:49. Native P3
 was still at Tech Level 3 at defeat. Compare the missing 30–35 minute
 engagement and wall/gate construction before interpreting subsequent
 resource differences as gather-rate errors.
+
+### AI construction on surveyed wall segments
+
+The wall survey in Clone Campaigns (58a320, 578aa0) examines one segment
+at a time. It records the number of unexplored and buildable tiles. An
+outer-wall survey on the seed-2 scenario matched the players’ explored-tile
+masks on 740 of 740 early segment readings. A selected segment must have
+no unknown tiles and at least one buildable tile. The PER affordability fact
+prices that number of tiles. The build action itself dispatches the line
+without a second whole-segment funds check. The native world command pays
+for each foundation it successfully places.
+
+After a line has been ordered, the gate selector (58a4b0) can reserve it and
+choose its oriented master and center. Native gameplay tests match the
+original selector in all four orientations for segment lengths three and
+four. Another test pays 30 ore for six standard walls and 30 for a gate,
+replaces the overlapping walls, and follows a worker until the gate closes.
+A direct order with five ore buys one tile. These checks use Clone Campaigns
+data and the normal AI rule and simulation command paths.
+
+Native surveying currently runs on PER evaluation ticks and uses native
+visibility and obstruction. Wall geometry still uses the supported 120-tile
+startup profiles. Site choice, build timing and exact survey cadence remain
+open comparisons.
