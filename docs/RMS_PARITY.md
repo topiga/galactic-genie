@@ -8177,3 +8177,136 @@ final attack counter was 5,932. The previous native build won on the captured
 clock, so the improved opening exposes a full-match completion regression
 on this seed. The optimized skirmish suite, full ASan/UBSan skirmish suite
 and desktop render/audio smoke test passed.
+
+### Seed 2 livestock, military production and wall plans (2026-11-19)
+
+The original game kept a slaughtered Bantha (object 2024, prototype 833) in
+Gaia's food records while workers harvested it. Its HP was zero and it still
+held 72.72 food at 160 s. The native carcass uses graphics prototype 834.
+The AI now uses its source animal's gather class for resource admission,
+distance checks and the farming rule. Original training also checks the
+enabled base master and an idle producer, including numeric requests for
+an upgraded trooper excluded from the player's build menu.
+
+| Opening event | Windows | Native at 5cb6039 |
+| --- | ---: | ---: |
+| P2 first food delivery | 64.6 s | 122.949 s |
+| P3 first food delivery | 46.9 s | 42.821 s |
+| P2 Tech Level 2 complete | 762.2–769.7 s | 834.411 s |
+| P3 Tech Level 2 complete | 732.1–739.6 s | 694.718 s |
+| P2 farms / laser troopers around 600 s | 2 / 2 | 0 / 5 |
+| P3 farms / laser troopers around 600 s | 0 / 5 | 1 / 5 |
+
+Windows first credits are from the earlier cargo capture. The age intervals
+and army counts are from a fresh run of the same scenario and session seed.
+Intervals bracket the change between observations. At 600 s both engines had
+15 workers per AI. Windows P2 had eight hunters, six carbon workers and one
+farmer. Native P2 had eight herders and seven carbon workers. Native delivery
+callbacks through 600 s credited P2 with 767.2 food and 700.0 carbon, and
+P3 with 1,124.4 food and 740.0 carbon.
+
+The Windows nursery-headroom fact at 57c9d0 reads the count computed at
+591fc0. Each completed owned nursery (319) adds its master capacity and
+subtracts its current occupants. The original animal.per then purchases a
+nursery when it has no free slots. The native Empire AIs now unlock and train
+mounted trooper 359 through the installed tech tree. At 32:30 the native
+counts were four for P2 and two for P3. The first Windows samples containing
+a mounted trooper were at 27:01 for P2 and 30:33 for P3. The native samples
+first contained one around 31:00 and 26:00 respectively (30 s sampling).
+
+Original map constants enable the installed Desert wall rules. At startup,
+the native 120-tile scenario produced the same ordered endpoints, lengths
+and active flags for all 59 inner/outer segments inspected in the Windows
+process. Only the outer ring was enabled for each AI, and its tiles are now
+reserved during ordinary building placement. Windows bought its first walls
+and gates immediately after Tech Level 2. Wall and gate purchases, builder
+assignment and construction remain outstanding in the native AI.
+
+An intermediate desktop-clock replay at 1e7c5c4 ended in P3's victory at
+4,733.254 s (4,226 landed attacks). Its Windows clock source ended in P3's
+victory at 3,985.095 s. The native replay repeated the original frame
+intervals after the capture ended. The intermediate build's fixed-30-Hz
+run still had both centers at 9,960 s when stopped. Adding the original map
+constants and reserving wall sites changed the match again. Those intermediate
+victories are not a claim about every update schedule.
+
+A fresh Windows capture ended at 4,036.076 s (Achievements 1:07:16).
+Captain Bradei (P3) scored 9,421 to General Veers' 3,802. The final
+snapshot showed P2's goal 1 at 19, the surrender branch in resign.per.
+In the last 1.277 simulated seconds the Command Center, Troop Center, Jedi
+Temple, Mech Factory and Heavy Weapons Factory all disappeared. P2's stocks
+also dropped to zero. This matches the script deleting its own structures.
+Matching the final score screen therefore requires comparing the decision to
+concede as well as damage dealt to the Command Center. At 60:00 Windows P2
+had nine workers and no mobile military units. The native nursery build still
+had 30 workers and 23 idle soldiers, with its Command Center at full HP.
+
+The original goal constructor (583685) fills 75 slots with -1. The goal
+predicate (57c8b0) indexes this table through 58aa40. After the Windows match,
+the untouched slot 75 was still -1 for both players. P2's personality slot was
+99, while P3's was -1. The native PER loader also skips weighted load-random
+includes. In the original routine (412680), each directive draws 1–100
+and checks cumulative percentage ranges; the Moderate diplomacy script
+specifies 20/5/5. Reproducing the load-time RNG stream and when diplomacy
+includes run remains a separate comparison.
+
+The two original compiled personalities each contained 96 train actions.
+Their generic hash entry for UNIT-MEDIC was 167, yet their compiled Empire
+operand was 939. The compiler applies 4dad80 to names beginning with unit-,
+boat-, siege- and sub-, and 40fd10 to ut- research names. Running both
+original functions over IDs 0–1599 for all eight civilizations produced 51
+unit families and 25 research families. Literal numbers and signed unit-line
+constants retain their values. The independent fortress symbol registration
+at 57ec51 reads the four DAT civilization fields and the unique unit master's
+line field. For the Empire this last operand is positive 26. The native
+ordered list of train operands at bd7b0c5 matched Windows for all 96
+actions for each player. Which rules fire and when they fire can still differ.
+
+Both native AIs produced Empire medics in ordinary play. The first 30 s
+samples containing one were at 36:30 for P2 and 28:30 for P3. On Windows
+they first appeared at 29:25 and 31:48 respectively. The two native starting
+scouts were killed by Gaia predators of type 1251 at 4:56 (P3) and 7:37
+(P2). Both Windows players still had a scout at 10:00. The fresh native
+opening reproduced the first food and Tech Level 2 timings in the table
+above. P2's first carbon credit occurred at 36.654 s and P3's at 44.997 s.
+
+At 15:00 Windows P2 had 27 standard wall pieces and two gates. P3 had
+24 wall pieces and two gates. The Empire DAT lists five ore per standard wall
+(117) and 30 per gate (487), putting the visible fortifications at 195 and
+180 ore. Windows had 15 and 43 ore in the bank. Native P2 and P3 had 250
+and 280 with no fortifications. These are asset costs and bank snapshots,
+not a complete expenditure ledger. Gate end pieces are excluded.
+
+The original build-wall handler (575e40) selects the next eligible segment,
+sends its two endpoints in order and stores the selected wall master there.
+Build-gate (575d90) checks gate availability and affordability, marks the
+chosen segment and sends its oriented master, midpoint and plan tag
+(10000 times the one-based plan number plus the zero-based segment index).
+Thirteen isolated handler runs verified indices, argument order, upgraded
+wall master and rejected purchases at the dispatch boundary. They do not
+exercise subsequent Windows construction, debits or builder assignment.
+
+The original soldier-count predicate (57dfb0) reads the full soldier
+admission registry. Attack-soldier-count (57ac20) counts current members of
+type 100 groups. Defend-soldier-count (57c280) subtracts the latter from the
+former. The original three predicates agreed with 378 comparisons across
+empty and mixed groups, including an inconsistent fixture with more attackers
+than registered soldiers. Native gameplay now exposes all three to the
+packaged PER upgrade and army rules.
+
+The desktop-clock seed-2 replay at 1734244 **finished at 7,854.385 s
+(2:10:54)** with 11,215 landed attacks, P2's Command Center standing and
+P3's gone. The independently sampled economy replay also reached the match
+result. The captured clock repeats after 3,985.095 s. Windows P3 won the two
+reference runs at 3,985.095 s and 4,036.076 s. The native winner is reversed.
+
+The first hour separates the combat and opening-economy gaps. Around 30:00
+Windows P2 had eight laser troopers, four mounted troopers and two medics.
+Around 35:00 it had lost all twelve of those troopers and retained both
+medics. Native P2 had five laser troopers at 30:00 and eight at 35:00.
+At 60:00 Windows P2 had nine workers and no mobile military. Native P2 had
+30 workers and 20 mobile military. P3 completed Tech Level 3 at 27:57 on
+macOS and P2 at 36:11. P2 later reached Tech Level 4 at 1:48:49. Native P3
+was still at Tech Level 3 at defeat. Compare the missing 30–35 minute
+engagement and wall/gate construction before interpreting subsequent
+resource differences as gather-rate errors.
