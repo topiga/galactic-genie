@@ -1400,7 +1400,7 @@ private:
     float collisionRadius(const Object &object) const;
     bool workingOn(const Object &unit, uint32_t targetId) const;
     bool selfShielded(const Object &object) const;
-    Object *nextResourceLike(const Object &worker, bool failedApproach = false);
+    Object *nextResourceLike(const Object &worker, const dat::Unit &currentGatherer, bool failedApproach = false);
     // Job acknowledgement: the original plays the attack sound (master
     // +0x120) of the worker's task variant (forager, lumberjack, miner...).
     void playJobAcknowledgement(const Object &worker, const Object *target, bool build,

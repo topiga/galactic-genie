@@ -82,6 +82,19 @@ static void gatherResourceHealthChecks(swgb::Assets &assets) {
           "An empty worker releases an unreachable tree with no alternative");
 
     check(recovery.initScenario(blocked,&error),error.c_str());
+    recovery.spawnObjectForTesting(1,109,1,12.f,16.f);
+    const auto finisher=recovery.spawnObjectForTesting(1,83,1,17.f,16.5f);
+    const auto lastTree=recovery.spawnObjectForTesting(0,349,0,17.5f,16.5f);
+    const auto nextTree=recovery.spawnObjectForTesting(0,349,0,18.5f,16.5f);
+    recovery.setObjectResourceForTesting(lastTree,2.f);
+    check(recovery.issueGatherForTesting(finisher,lastTree),"Gather last two carbon beside another tree");
+    const auto openingCarbon=recovery.resource(1,1);
+    for(int i=0;i<1000 && recovery.resource(1,1)==openingCarbon;++i) recovery.update(.1f,{});
+    check(std::abs(recovery.resource(1,1)-openingCarbon-2.f)<.05f &&
+          recovery.aiGatherTargetForTesting(finisher)==nextTree,
+          "Exhausting a tree deposits partial cargo before gathering from the next tree");
+
+    check(recovery.initScenario(blocked,&error),error.c_str());
     const auto lumberjack=recovery.spawnObjectForTesting(1,83,1,16.f,16.5f);
     const auto timber=recovery.spawnObjectForTesting(0,349,0,16.5f,16.5f);
     check(recovery.issueGatherForTesting(lumberjack,timber),"Assign isolated lumberjack");

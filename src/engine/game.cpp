@@ -7282,15 +7282,12 @@ void Game::updateRepairing(float dt,int player) {
 // When a resource runs out, the worker looks around where it was for more
 // of the same (same class, e.g. trees, or at least the same resource) and
 // carries on until nothing is left in range.
-Game::Object *Game::nextResourceLike(const Object &worker, bool failedApproach) {
+Game::Object *Game::nextResourceLike(const Object &worker, const dat::Unit &currentGatherer, bool failedApproach) {
     if (worker.lastGatherType < 0) return nullptr;
-    const dat::Unit *currentGatherer =
-        gathererUnit(worker);
-    if (!currentGatherer) return nullptr;
     const float range =
         std::max(
             0.0f,
-            unitSearchRadius(worker.player,*currentGatherer));
+            unitSearchRadius(worker.player,currentGatherer));
     Object *best = nullptr;
     float bestDistance =
         std::numeric_limits<float>::max();
@@ -7308,7 +7305,7 @@ Game::Object *Game::nextResourceLike(const Object &worker, bool failedApproach) 
             gathererUnit(probe);
         if (!candidateGatherer ||
             candidateGatherer->id !=
-                currentGatherer->id)
+                currentGatherer.id)
             continue;
         const float dx = candidate.x - worker.lastGatherX, dy = candidate.y - worker.lastGatherY;
         if (dx * dx + dy * dy >
@@ -7371,7 +7368,7 @@ void Game::updateGathering(Object &worker, float dt) {
         worker.carriedAmount <
             capacity - 0.001f) {
         Object *next =
-            nextResourceLike(worker);
+            nextResourceLike(worker, *gatherer);
         if (next) {
             setGatherTarget(worker, next->spawnId);
             setDropOffTarget(worker, 0);
@@ -7434,14 +7431,14 @@ void Game::updateGathering(Object &worker, float dt) {
 
         if (!resource ||
             !isGatherable(*resource)) {
-            Object *next = nextResourceLike(worker);
+            Object *next = nextResourceLike(worker, *gatherer);
             setGatherTarget(worker, next ? next->spawnId : 0);
         }
         return;
     }
     if (!resource ||
         !isGatherable(*resource)) {
-        Object *next = nextResourceLike(worker);
+        Object *next = nextResourceLike(worker, *gatherer);
         setGatherTarget(worker, next ? next->spawnId : 0);
         worker.state = State::Idle;
         return;
@@ -7474,7 +7471,7 @@ void Game::updateGathering(Object &worker, float dt) {
             gatherClass(*resource) == 31 && resource->resourceDeathState < 3) {
             // Failed felling movement requests a drop site (56b5a2 -> 56a637).
             // Use the native continuation search for the next accessible work site.
-            Object *next = nextResourceLike(worker, true);
+            Object *next = nextResourceLike(worker, *gatherer, true);
             setGatherTarget(worker, next ? next->spawnId : 0);
             worker.manualDropOff = hasCarry(worker);
         }
@@ -7729,6 +7726,9 @@ void Game::updateGathering(Object &worker, float dt) {
             assignBuilder(worker, *resource);
             return;
         }
+        // Action 110 enters its delivery state as soon as the last resources are taken (56b880).
+        if (task && task->actionType == 110 && hasCarry(worker))
+            worker.manualDropOff = true;
         // Resource subtraction5519b0 does not kill a living base object.
         if (resource->unit->type < dat::UT_Combatant && resource->hitPoints >= 1.f)
             return;
