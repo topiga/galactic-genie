@@ -23,6 +23,17 @@ AiSessionContext Game::aiScriptContext(AiSessionContextSettings settings,
     for(const auto &civilization:assets_.dat().civs)civilizations.push_back(civilization.name2);
     auto context=makeAiSessionContext(settings,civilizations);
     const auto &data=assets_.dat();
+    if(settings.civilization>=0 && size_t(settings.civilization)<data.civs.size()) {
+        const auto &civ=data.civs[size_t(settings.civilization)];
+        const auto &unique=civ.uniqueUnitsTechs;
+        context.constants["my-unique-unit"]=unique[0];
+        context.constants["my-elite-unique-unit"]=unique[1];
+        context.constants["my-unique-unit-upgrade"]=unique[2];
+        context.constants["my-unique-research"]=unique[3];
+        // 57ed1f passes the master's signed line field through without negating it.
+        context.constants["my-unique-unit-line"]=unique[0]>=0 && size_t(unique[0])<civ.units.size() &&
+            civ.units[size_t(unique[0])].exists?civ.units[size_t(unique[0])].unitLine:0;
+    }
     if(!data.civs.empty())for(const auto &unit:data.civs.front().units) {
         if(!unit.exists || (unit.type!=dat::UT_Creatable && unit.type!=dat::UT_Building))continue;
         const auto symbol=normalizeAiSymbol(unit.name2);

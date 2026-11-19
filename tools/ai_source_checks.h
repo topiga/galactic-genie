@@ -22,13 +22,13 @@ static void aiSourceChecks(swgb::Assets &assets) {
     check(lifetime.use_count()==2,"Failed load releases the source resolver");
     const std::unordered_map<std::string,int> context{{"MY-CIV",1},{"my-player-number",2},{"FEDERATION",5}};
     auto contextLoader=[](const std::string &name,std::string &text,std::string *err) {
-        if(name=="context.per")text="(defconst root-civ my-civ) (load \"context-child\")";
+        if(name=="context.per")text="(defconst root-civ my-civ) (defconst UnIt-Medic 167) (load \"context-child\")";
         else if(name=="context-child.per")text="(defconst included-owner my-player-number) (defconst included-civ FEDERATION)";
         else {if(err)*err="context include unavailable";return false;}
         return true;
     };
     check(program.load("context.per",{},&error,contextLoader,context),error.c_str());
-    check(program.constant("root-civ")==1 && program.constant("included-owner")==2 && program.constant("included-civ")==5,
+    check(program.constant("root-civ")==1 && program.constant("unit-medic")==939 && program.constant("included-owner")==2 && program.constant("included-civ")==5,
           "Initial session constants resolve aliases in root and included files before parsing");
     check(program.loadSource("embedded-context.per","(defconst root-owner my-player-number) (load \"context-child\")",{},&error,contextLoader,context),error.c_str());
     check(program.constant("root-owner")==2 && program.constant("included-civ")==5 && !program.hasConstant("root-civ"),

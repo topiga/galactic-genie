@@ -63,10 +63,10 @@
         "(defconst medic-alias UNIT-MEDIC) (defconst raw-alias 167) "
         "(defconst upgrade-alias ut-laser-2) "
         "(defrule (true) => (set-goal 85 medic-alias) (set-goal 86 raw-alias) "
-        "(set-goal 87 upgrade-alias) (disable-self))",{},&error),error.c_str());
+        "(set-goal 87 upgrade-alias) (set-goal 88 my-unique-unit-line) (set-goal 89 my-unique-unit) (disable-self))",{},&error),error.c_str());
     for(int tick=0;tick<65;++tick)game.update(.1f,{});
     check(game.aiGoalForTesting(2,85)==939 && game.aiGoalForTesting(2,86)==167 &&
-          game.aiGoalForTesting(2,87)==261,
+          game.aiGoalForTesting(2,87)==261 && game.aiGoalForTesting(2,88)==26 && game.aiGoalForTesting(2,89)==993,
           "Empire PER maps named medic and laser research operands and preserves numeric aliases");
     std::puts("PASS production DAT unit-line constants, aliases, counts and training");
 }

@@ -522,7 +522,9 @@ void AiProgram::defineConstant(const std::string &name,int value) {
 }
 
 void AiProgram::initializeConstants(const std::unordered_map<std::string,int> &initial) {
-    const auto civ=initial.find("my-civ");
+    const auto civ=std::find_if(initial.begin(),initial.end(),[](const auto &entry){
+        return normalizeAiSymbol(entry.first)=="my-civ";
+    });
     civilization_=civ==initial.end()?0:civ->second;
     constants=defaultAiConstants();
     exactConstants_=constants;
