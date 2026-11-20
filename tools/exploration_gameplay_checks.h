@@ -52,9 +52,17 @@ static void explorationGameplayChecks(swgb::Assets &assets) {
     check(game.issueExploreForTesting(worker,30.f,40.5f)&&
           game.explorationDestinationForTesting(worker)==std::array<float,2>{27.f,40.5f}&&
           game.explorationStateForTesting(worker)==3,"Nonforced object-level retarget preserves the existing parent unchanged");
-    check(game.issueExploreForTesting(worker,30.f,40.5f,true)&&game.explorationChildStatusForTesting(worker)==0,
+    const int edge = 23 - int(assets.dat().civs[1].units[83].lineOfSight);
+    check(!game.observedForTesting(1,edge,40),"Far side of the waypoint starts unknown");
+    check(game.issueExploreForTesting(worker,24.f,40.5f,true)&&game.explorationChildStatusForTesting(worker)==0,
           "Forced exploration retarget creates a new movement child");
-    for(int i=0;i<400&&game.explorationChildStatusForTesting(worker)==0;++i)game.update(.05f,{});
+    bool crossed=false;
+    for(int i=0;i<400 && game.explorationChildStatusForTesting(worker)==0;++i) {
+        game.update(.075f,{});
+        crossed |= game.objectPosition(worker)[0]<24.f;
+    }
+    check(crossed && game.objectPosition(worker)[0]==24.f && game.observedForTesting(1,edge,40) &&
+          !game.worldSoundVisibleForTesting(edge+.5f,40.5f),"Waypoint correction retains sight from the crossing");
     check(game.explorationChildStatusForTesting(worker)==1&&game.explorationStateForTesting(worker)==11,
           "Real arrival completes only the exploration child");
     game.update(.05f,{});

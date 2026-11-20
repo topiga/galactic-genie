@@ -16031,7 +16031,15 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                     return false;
                 }
             }
-            if (o.moveGoalActive && !o.attackTargetId && !o.tacticalMovement.present) {
+            const bool explorePoint = o.explorationChild.present && o.moveGoalActive &&
+                !o.path.empty() && o.path.back()[0] == o.targetX && o.path.back()[1] == o.targetY;
+            if (explorePoint && o.pathIndex == o.path.size() &&
+                positionPassable(o, o.targetX, o.targetY, false) && !unitBlockerAt(o, o.targetX, o.targetY)) {
+                o.x = o.targetX;
+                o.y = o.targetY;
+            }
+            if (o.moveGoalActive && !o.attackTargetId && !o.tacticalMovement.present &&
+                !(explorePoint && o.pathIndex < o.path.size())) {
                 const float goalDx = o.targetX - o.x;
                 const float goalDy = o.targetY - o.y;
                 float arrival =
@@ -16116,6 +16124,19 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
             const float step = moveSpeed * dt;
             const float scale = dist <= step || dist <= 0.0001f ? 1.0f : step / dist;
             float nextX = o.x + dx * scale, nextY = o.y + dy * scale;
+            // The original reveals sight from the full step before correcting to the waypoint next update.
+            const bool finalExploreStep = explorePoint && o.pathIndex + 1 == o.path.size();
+            bool crossedExploreGoal = false;
+            if (finalExploreStep && dist > 0 && dist < step &&
+                segmentClear(o, o.x, o.y, nextX, nextY) && !unitBlockerAt(o, nextX, nextY)) {
+                const float throughX = o.x + (dx / dist) * step;
+                const float throughY = o.y + (dy / dist) * step;
+                if (segmentClear(o, nextX, nextY, throughX, throughY) && !unitBlockerAt(o, throughX, throughY)) {
+                    crossedExploreGoal = true;
+                    nextX = throughX;
+                    nextY = throughY;
+                }
+            }
             bool moved = false;
             const bool staticOk = positionPassable(o, nextX, nextY, false);
             const Object *blocker =
@@ -16297,8 +16318,10 @@ void Game::updatePlayerObjects(float dt,int player, bool auxiliary) {
                 // Reached (or passed) the waypoint.
                 const float wx = waypoint[0] - o.x, wy = waypoint[1] - o.y;
                 if (dist <= step || dist <= 0.0001f ||
-                    wx * wx + wy * wy <= 0.0025f) {
+                    (!finalExploreStep && wx * wx + wy * wy <= 0.0025f)) {
                     o.pathIndex++;
+                    if (crossedExploreGoal && !blocker && staticOk)
+                        return false;
                     if (o.pathIndex >= o.path.size()) {
                         const bool marching =
                             o.marchGroupId != 0 &&
