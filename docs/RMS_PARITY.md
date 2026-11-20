@@ -8771,3 +8771,47 @@ the combat validation failure and the same six general check failures.
 The default 900-second idle-opponent limit remains red. With the time
 window extended, native won both reveal modes at 966.9 s (previously
 922.4 s). The scripted player won at 727.0 s.
+
+### Seed 2 scout arrival and individual tree discovery
+
+On the first approach to (32,13), the Windows sight trace still showed
+(27,13) as unknown at 2.853 s. At 2.929 s the scout was at (32,13) and
+(27,13) had become explored and out of sight. By 3.155 s the AI had
+reserved (37,3) as its next destination. Native used to finish the move
+inside its arrival tolerance and send the scout back toward (27,13).
+
+An isolated 75 ms movement test ran the original x86 controller on a
+worker approaching x=1. Its successive x positions were 1.100002,
+1.040002, 0.980002 and 1.000000. The final correction was a separate
+update. Native explorers now retain the full passable step so the
+ordinary sight update can observe the crossed tile before correction.
+An asset-backed regression exercises this through a worker's exploration
+order and checks the final position, current sight and retained sight.
+
+| P2 resolved tree records | Clone Campaigns | Native before | Native after | Shared IDs before → after |
+| --- | ---: | ---: | ---: | ---: |
+| 1:00 | 68 | 146 | 67 | 59 → 32 |
+| 5:30 | 325 | 379 | 252 | 189 → 97 |
+
+The first row compares native at 60.015 s with Windows at 60.647 s.
+The second compares 330.061 s with 330.242 s. Of the 67 native trees,
+62 were visible to scout 1963 alone on their admission frame. The
+other five were in starting Command Center sight. In the previous run
+113 of 146 were visible to scout 1963 alone. The membership divergence
+increased even as the first-minute total converged.
+
+Native now chooses (37,3) after (32,13), matching the Windows destination.
+It assigns a single straight path segment. At 4.055 s it is at
+(33.218,10.565). The Windows scout was at (32.220,11.016) at 4.052 s
+and (34.045,6.955) at 6.005 s. Those samples demonstrate a bend. They
+do not identify which intermediate nodes the original planner stored.
+The Windows sight, trajectory and economy recordings came from separate
+restarts of the same scenario and seed.
+
+The full native replay ended with P2 retaining its Command Center and
+P3 losing its center and all workers at 5,853.165 s (1:37:33).
+Previously P3 won at 2:27:35. P2 founded its first processor at (27,23)
+at 5:15 and completed it at 6:10. Tech Level 3 moved from 27:12 to
+35:49, versus 29:20 in the earlier Windows capture. The native clock
+repeats recorded intervals after 3,985.095 s. These later timings are
+sensitive to earlier scouting, economy and combat decisions.
